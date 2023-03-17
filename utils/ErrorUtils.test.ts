@@ -17,7 +17,7 @@ describe('ErrorUtils', () => {
                     false
                 )
             ).toEqual(
-                'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using Orbot to connect to Tor.'
+                'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.'
             );
             expect(
                 ErrorUtils.errorToUserFriendly(
@@ -25,7 +25,7 @@ describe('ErrorUtils', () => {
                     false
                 )
             ).toEqual(
-                'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using Orbot to connect to Tor.'
+                'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.'
             );
         });
 
