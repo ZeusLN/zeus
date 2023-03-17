@@ -2,13 +2,14 @@ import * as React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { isEqual } from 'lodash';
 
 import DatePicker from 'react-native-date-picker';
 
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import ActivityStore from './../../stores/ActivityStore';
+import ActivityStore, { DEFAULT_FILTERS } from './../../stores/ActivityStore';
 
 import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
@@ -264,12 +265,20 @@ export default class ActivityFilter extends React.Component<
             }
         ];
 
+        const ClearButton = () => (
+            <Icon
+                name="cancel"
+                onPress={() => ActivityStore.resetFilters()}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
         return (
             <View
                 style={{
                     flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
+                    backgroundColor: themeColor('background')
                 }}
             >
                 <Header
@@ -281,6 +290,11 @@ export default class ActivityFilter extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={
+                        isEqual(filters, DEFAULT_FILTERS) ? null : (
+                            <ClearButton />
+                        )
+                    }
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
