@@ -18,6 +18,7 @@ interface CollapsedQRProps {
     showText?: string;
     collapseText?: string;
     copyText?: string;
+    copyValue?: string;
     hideText?: boolean;
     expanded?: boolean;
     textBottom?: boolean;
@@ -82,11 +83,14 @@ export default class CollapsedQR extends React.Component<
             value,
             showText,
             copyText,
+            copyValue,
             collapseText,
             hideText,
             expanded,
             textBottom
         } = this.props;
+
+        const { width, height } = Dimensions.get('window');
 
         return (
             <React.Fragment>
@@ -105,7 +109,7 @@ export default class CollapsedQR extends React.Component<
                     <View style={styles.qrPadding}>
                         <QRCode
                             value={value}
-                            size={Dimensions.get('window').width * 0.8}
+                            size={height > width ? width * 0.8 : height * 0.6}
                             logo={secondaryLogo}
                         />
                     </View>
@@ -141,7 +145,7 @@ export default class CollapsedQR extends React.Component<
                         onPress={() => this.toggleCollapse()}
                     />
                 )}
-                <CopyButton copyValue={value} title={copyText} />
+                <CopyButton copyValue={copyValue || value} title={copyText} />
                 {Platform.OS === 'android' && (
                     <Button
                         title={

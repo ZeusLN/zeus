@@ -25,6 +25,7 @@ interface FeeBreakdownProps {
     peerDisplay?: string;
     initiator?: boolean;
     isActive?: boolean;
+    isClosed?: boolean;
     total_satoshis_received?: string;
     total_satoshis_sent?: string;
     commit_weight?: number;
@@ -48,6 +49,7 @@ export default class FeeBreakdown extends React.Component<
             ChannelsStore,
             NodeInfoStore,
             isActive,
+            isClosed,
             total_satoshis_received,
             total_satoshis_sent,
             commit_weight,
@@ -80,7 +82,7 @@ export default class FeeBreakdown extends React.Component<
         return (
             <React.Fragment>
                 {loading && <LoadingIndicator />}
-                {!loading && localPolicy && remotePolicy ? (
+                {!loading && localPolicy && remotePolicy && (
                     <React.Fragment>
                         <KeyValue
                             keyValue={localeString('views.Channel.channelFees')}
@@ -133,7 +135,8 @@ export default class FeeBreakdown extends React.Component<
                             sensitive
                         />
                     </React.Fragment>
-                ) : (
+                )}
+                {isClosed && (
                     <React.Fragment>
                         {!loading && (
                             <View style={styles.title}>

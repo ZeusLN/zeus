@@ -771,7 +771,11 @@ export default class Receive extends React.Component<
         const haveUnifiedInvoice = !!payment_request && !!address;
         const haveInvoice = !!payment_request || !!address;
 
-        let unifiedInvoice, lnInvoice, btcAddress;
+        let unifiedInvoice,
+            lnInvoice,
+            lnInvoiceCopyValue,
+            btcAddress,
+            btcAddressCopyValue;
         // if format is case insensitive, format as all caps to save QR space, otherwise present in original format
         const onChainFormatted =
             address && address === address.toLowerCase()
@@ -789,6 +793,7 @@ export default class Receive extends React.Component<
 
         if (payment_request) {
             lnInvoice = `lightning:${payment_request.toUpperCase()}`;
+            lnInvoiceCopyValue = payment_request;
         }
 
         if (address) {
@@ -807,6 +812,12 @@ export default class Receive extends React.Component<
                         : `message=${memo.replace(/ /g, '%20')}`
                     : ''
             }`;
+
+            if (Number(satAmount) > 0 || memo) {
+                btcAddressCopyValue = btcAddress;
+            } else {
+                btcAddressCopyValue = address;
+            }
         }
 
         const belowDustLimit: boolean =
@@ -937,7 +948,7 @@ export default class Receive extends React.Component<
                                     )}
                                 </>
                             )}
-                            {creatingInvoice && (
+                            {(creatingInvoice || loading) && (
                                 <View style={{ top: 40 }}>
                                     <LoadingIndicator />
                                 </View>
@@ -961,6 +972,7 @@ export default class Receive extends React.Component<
                                         haveUnifiedInvoice && (
                                             <CollapsedQR
                                                 value={lnInvoice}
+                                                copyValue={lnInvoiceCopyValue}
                                                 copyText={localeString(
                                                     'views.Receive.copyInvoice'
                                                 )}
@@ -973,6 +985,7 @@ export default class Receive extends React.Component<
                                         haveUnifiedInvoice && (
                                             <CollapsedQR
                                                 value={btcAddress}
+                                                copyValue={btcAddressCopyValue}
                                                 copyText={localeString(
                                                     'views.Receive.copyAddress'
                                                 )}
@@ -984,6 +997,7 @@ export default class Receive extends React.Component<
                                         !haveUnifiedInvoice) && (
                                         <CollapsedQR
                                             value={lnInvoice}
+                                            copyValue={lnInvoiceCopyValue}
                                             copyText={localeString(
                                                 'views.Receive.copyAddress'
                                             )}

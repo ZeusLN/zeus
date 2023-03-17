@@ -101,14 +101,12 @@ export default class ChannelsStore {
     }
 
     @action
-    reset = () => {
+    resetOpenChannel = () => {
         this.loading = false;
         this.error = false;
         this.errorPeerConnect = false;
         this.errorMsgChannel = null;
         this.errorMsgPeer = null;
-        this.nodes = {};
-        this.channels = [];
         this.output_index = null;
         this.funding_txid_str = null;
         this.openingChannel = false;
@@ -117,6 +115,13 @@ export default class ChannelsStore {
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.channelRequest = null;
+    };
+
+    @action
+    reset = () => {
+        this.resetOpenChannel();
+        this.nodes = {};
+        this.channels = [];
         this.largestChannelSats = 0;
         this.totalOutbound = 0;
         this.totalInbound = 0;
@@ -192,57 +197,61 @@ export default class ChannelsStore {
                 this.getChannelsError();
             });
 
-        BackendUtils.getPendingChannels()
-            .then((data: any) => {
-                const pendingOpenChannels = data.pending_open_channels.map(
-                    (pending: any) => {
-                        pending.channel.pendingOpen = true;
-                        return new Channel(pending.channel);
-                    }
-                );
-                const pendingCloseChannels = data.pending_closing_channels.map(
-                    (pending: any) => {
-                        pending.channel.pendingClose = true;
-                        pending.channel.closing_txid = pending.closing_txid;
-                        return new Channel(pending.channel);
-                    }
-                );
-                const forceCloseChannels =
-                    data.pending_force_closing_channels.map((pending: any) => {
-                        pending.channel.blocks_til_maturity =
-                            pending.blocks_til_maturity;
-                        pending.channel.forceClose = true;
-                        pending.channel.closing_txid = pending.closing_txid;
-                        return new Channel(pending.channel);
-                    });
-                const waitCloseChannels = data.waiting_close_channels.map(
-                    (pending: any) => {
-                        pending.channel.closing = true;
-                        return new Channel(pending.channel);
-                    }
-                );
-                this.pendingChannels = pendingOpenChannels
-                    .concat(pendingCloseChannels)
-                    .concat(forceCloseChannels)
-                    .concat(waitCloseChannels);
-                this.error = false;
-            })
-            .catch(() => {
-                this.getChannelsError();
-            });
+        if (BackendUtils.supportsPendingChannels()) {
+            BackendUtils.getPendingChannels()
+                .then((data: any) => {
+                    const pendingOpenChannels = data.pending_open_channels.map(
+                        (pending: any) => {
+                            pending.channel.pendingOpen = true;
+                            return new Channel(pending.channel);
+                        }
+                    );
+                    const pendingCloseChannels =
+                        data.pending_closing_channels.map((pending: any) => {
+                            pending.channel.pendingClose = true;
+                            pending.channel.closing_txid = pending.closing_txid;
+                            return new Channel(pending.channel);
+                        });
+                    const forceCloseChannels =
+                        data.pending_force_closing_channels.map(
+                            (pending: any) => {
+                                pending.channel.blocks_til_maturity =
+                                    pending.blocks_til_maturity;
+                                pending.channel.forceClose = true;
+                                pending.channel.closing_txid =
+                                    pending.closing_txid;
+                                return new Channel(pending.channel);
+                            }
+                        );
+                    const waitCloseChannels = data.waiting_close_channels.map(
+                        (pending: any) => {
+                            pending.channel.closing = true;
+                            return new Channel(pending.channel);
+                        }
+                    );
+                    this.pendingChannels = pendingOpenChannels
+                        .concat(pendingCloseChannels)
+                        .concat(forceCloseChannels)
+                        .concat(waitCloseChannels);
+                    this.error = false;
+                })
+                .catch(() => {
+                    this.getChannelsError();
+                });
 
-        BackendUtils.getClosedChannels()
-            .then((data: any) => {
-                const closedChannels = data.channels.map(
-                    (channel: any) => new ClosedChannel(channel)
-                );
-                this.closedChannels = closedChannels;
-                this.error = false;
-                this.loading = false;
-            })
-            .catch(() => {
-                this.getChannelsError();
-            });
+            BackendUtils.getClosedChannels()
+                .then((data: any) => {
+                    const closedChannels = data.channels.map(
+                        (channel: any) => new ClosedChannel(channel)
+                    );
+                    this.closedChannels = closedChannels;
+                    this.error = false;
+                    this.loading = false;
+                })
+                .catch(() => {
+                    this.getChannelsError();
+                });
+        }
     };
 
     @action

@@ -67,6 +67,7 @@ import Utxo from './views/UTXOs/UTXO';
 import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
+import BumpFee from './views/BumpFee';
 
 // POS
 import Order from './views/Order';
@@ -265,6 +266,9 @@ const AppScenes = {
     },
     InvoicesSettings: {
         screen: InvoicesSettings
+    },
+    BumpFee: {
+        screen: BumpFee
     }
 };
 

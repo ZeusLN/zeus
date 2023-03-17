@@ -239,7 +239,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         if (implementation === 'lndhub') {
-            login({ login: username, password }).then(async () => {
+            await login({ login: username, password }).then(async () => {
                 BalanceStore.getLightningBalance(true);
             });
         } else if (implementation === 'lightning-node-connect') {
@@ -446,7 +446,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 screenOptions={({ route }) => ({
                                     tabBarIcon: ({ color }) => {
                                         if (route.name === 'Keypad') {
-                                            return <Bitcoin fill={color} />;
+                                            return (
+                                                <Bitcoin
+                                                    height={20}
+                                                    fill={color}
+                                                />
+                                            );
                                         }
                                         if (route.name === 'Balance') {
                                             return <Temple fill={color} />;
