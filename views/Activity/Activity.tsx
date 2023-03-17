@@ -174,17 +174,19 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     : localeString(
                                           'views.Activity.requestedPayment'
                                       );
-                                subTitle = item.isPaid
-                                    ? localeString('general.lightning')
-                                    : `${localeString(
-                                          'views.PaymentRequest.title'
-                                      )}: ${
-                                          item.isExpired
-                                              ? localeString(
-                                                    'views.Activity.expired'
-                                                )
-                                              : item.expirationDate
-                                      }`;
+                                subTitle = `${
+                                    item.isPaid
+                                        ? localeString('general.lightning')
+                                        : `${localeString(
+                                              'views.PaymentRequest.title'
+                                          )}: ${
+                                              item.isExpired
+                                                  ? localeString(
+                                                        'views.Activity.expired'
+                                                    )
+                                                  : item.expirationDate
+                                          }`
+                                }${item.memo ? `: ${item.memo}` : ''}`;
                             }
 
                             if (
@@ -194,7 +196,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                 displayName = localeString(
                                     'views.Activity.youSent'
                                 );
-                                subTitle = localeString('general.lightning');
+                                subTitle = item.getMemo
+                                    ? `${localeString('general.lightning')}: ${
+                                          item.getMemo
+                                      }`
+                                    : localeString('general.lightning');
                             }
 
                             if (
