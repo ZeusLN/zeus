@@ -67,6 +67,7 @@ export default class ActivityFilter extends React.Component<
             channels,
             sent,
             received,
+            unpaid,
             minimumAmount,
             startDate,
             endDate
@@ -244,6 +245,12 @@ export default class ActivityFilter extends React.Component<
                 label: localeString('general.received'),
                 value: received,
                 var: 'received',
+                type: 'Toggle'
+            },
+            {
+                label: localeString('views.Wallet.Invoices.unpaid'),
+                value: unpaid,
+                var: 'unpaid',
                 type: 'Toggle'
             },
             {

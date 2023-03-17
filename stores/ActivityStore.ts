@@ -20,6 +20,7 @@ interface ActivityFilter {
     channels: boolean;
     sent: boolean;
     received: boolean;
+    unpaid: boolean;
     minimumAmount: number;
     startDate: any;
     endDate: any;
@@ -38,6 +39,7 @@ export default class ActivityStore {
         channels: true,
         sent: true,
         received: true,
+        unpaid: true,
         startDate: null,
         endDate: null
     };
@@ -145,6 +147,7 @@ export default class ActivityStore {
             channels: true,
             sent: true,
             received: true,
+            unpaid: true,
             minimumAmount: 0,
             startDate: null,
             endDate: null
@@ -211,6 +214,17 @@ export default class ActivityStore {
                             localeString('general.transaction') &&
                             activity.getAmount > 0) ||
                         activity.model === localeString('views.Invoice.title')
+                    )
+            );
+        }
+
+        if (filters.unpaid == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(
+                        activity.model ===
+                            localeString('views.Invoice.title') &&
+                        !activity.isPaid
                     )
             );
         }
