@@ -64,7 +64,6 @@ export default class ActivityFilter extends React.Component<
         const {
             lightning,
             onChain,
-            channels,
             sent,
             received,
             unpaid,
@@ -227,12 +226,6 @@ export default class ActivityFilter extends React.Component<
                 label: localeString('views.ActivityFilter.onChainPayments'),
                 value: onChain,
                 var: 'onChain',
-                type: 'Toggle'
-            },
-            {
-                label: localeString('views.Wallet.Wallet.channels'),
-                value: channels,
-                var: 'channels',
                 type: 'Toggle'
             },
             {
