@@ -17,7 +17,6 @@ interface ActivityFilter {
     [index: string]: any;
     lightning: boolean;
     onChain: boolean;
-    channels: boolean;
     sent: boolean;
     received: boolean;
     unpaid: boolean;
@@ -36,7 +35,6 @@ export default class ActivityStore {
     @observable public filters: ActivityFilter = {
         lightning: true,
         onChain: true,
-        channels: true,
         sent: true,
         received: true,
         unpaid: true,
@@ -144,7 +142,6 @@ export default class ActivityStore {
         this.filters = {
             lightning: true,
             onChain: true,
-            channels: true,
             sent: true,
             received: true,
             unpaid: true,
@@ -161,16 +158,6 @@ export default class ActivityStore {
         this.filters = filters;
 
         let filteredActivity = this.activity;
-        if (filters.channels == false) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(
-                        activity.model ===
-                            localeString('general.transaction') &&
-                        activity.getAmount == 0
-                    )
-            );
-        }
 
         if (filters.lightning == false) {
             filteredActivity = filteredActivity.filter(
