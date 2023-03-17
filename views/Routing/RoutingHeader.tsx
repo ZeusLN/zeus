@@ -86,7 +86,12 @@ export function RoutingHeader(props) {
             <View style={styles.wrapper}>
                 {!fullSize && (
                     <View style={{ alignItems: 'center' }}>
-                        <Amount sats={timeframeEarned} jumboText toggleable />
+                        <Amount
+                            sats={timeframeEarned}
+                            jumboText
+                            toggleable
+                            sensitive
+                        />
                         <Text
                             style={{
                                 color: themeColor('text'),
