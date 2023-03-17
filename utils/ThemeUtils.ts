@@ -182,6 +182,17 @@ export function themeColor(themeString: string): any {
         chain: '#fff'
     };
 
+    const Popsicle: { [key: string]: any } = {
+        gradientBackground: ['#FF5C98', '#FF9C23'],
+        generalStyle: 'dark',
+        background: '#FF9C23',
+        separator: '#141414',
+        highlight: '#fff',
+        bolt: '#fff',
+        chain: '#fff',
+        secondaryText: 'lightgray'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -209,6 +220,8 @@ export function themeColor(themeString: string): any {
             return Green[themeString] || Dark[themeString];
         case 'pub':
             return Pub[themeString] || Dark[themeString];
+        case 'popsicle':
+            return Popsicle[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
