@@ -7,6 +7,10 @@ import Button from '../components/Button';
 import CopyButton from '../components/CopyButton';
 import LightningIndicator from '../components/LightningIndicator';
 import PaidIndicator from '../components/PaidIndicator';
+<<<<<<< Updated upstream
+=======
+import Screen from '../components/Screen';
+>>>>>>> Stashed changes
 
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
@@ -46,6 +50,7 @@ export default class SendingLightning extends React.Component<
             payment_route || status === 'complete' || status === 'SUCCEEDED';
 
         return (
+<<<<<<< Updated upstream
             <View
                 style={{
                     ...styles.container,
@@ -53,6 +58,10 @@ export default class SendingLightning extends React.Component<
                 }}
             >
                 <View
+=======
+            <Screen>
+                <ScrollView
+>>>>>>> Stashed changes
                     style={{
                         ...styles.content,
                         backgroundColor: themeColor('background')
@@ -226,8 +235,13 @@ export default class SendingLightning extends React.Component<
                             />
                         )}
                     </View>
+<<<<<<< Updated upstream
                 </View>
             </View>
+=======
+                </ScrollView>
+            </Screen>
+>>>>>>> Stashed changes
         );
     }
 }

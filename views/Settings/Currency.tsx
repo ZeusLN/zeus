@@ -3,6 +3,8 @@ import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import Screen from '../../components/Screen';
+
 import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore, { CURRENCY_KEYS } from './../../stores/SettingsStore';
 
@@ -79,12 +81,7 @@ export default class Currency extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
                         leftComponent={<BackButton />}
@@ -95,7 +92,7 @@ export default class Currency extends React.Component<
                                 fontFamily: 'Lato-Regular'
                             }
                         }}
-                        backgroundColor={themeColor('background')}
+                        backgroundColor="transparent"
                         containerStyle={{
                             borderBottomWidth: 0
                         }}
@@ -110,7 +107,7 @@ export default class Currency extends React.Component<
                         }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
-                            backgroundColor: themeColor('background'),
+                            backgroundColor: 'transparent',
                             borderTopWidth: 0,
                             borderBottomWidth: 0
                         }}
@@ -125,7 +122,7 @@ export default class Currency extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
+                                    backgroundColor: 'transparent'
                                 }}
                                 onPress={async () => {
                                     await updateSettings({
@@ -171,7 +168,7 @@ export default class Currency extends React.Component<
                         ItemSeparatorComponent={this.renderSeparator}
                     />
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

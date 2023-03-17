@@ -9,6 +9,10 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import DropdownSetting from './../../components/DropdownSetting';
+<<<<<<< Updated upstream
+=======
+import Screen from '../../components/Screen';
+>>>>>>> Stashed changes
 import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
@@ -99,12 +103,7 @@ export default class Privacy extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -114,7 +113,7 @@ export default class Privacy extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -302,7 +301,11 @@ export default class Privacy extends React.Component<
                         </View>
                     </ListItem>
                 </ScrollView>
+<<<<<<< Updated upstream
             </View>
+=======
+            </Screen>
+>>>>>>> Stashed changes
         );
     }
 }

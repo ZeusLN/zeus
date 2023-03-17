@@ -31,8 +31,14 @@ import Amount from '../components/Amount';
 import Button from '../components/Button';
 import CollapsedQR from '../components/CollapsedQR';
 import LoadingIndicator from '../components/LoadingIndicator';
+<<<<<<< Updated upstream
 import PaidIndicator from '../components/PaidIndicator';
 import ModalBox from '../components/ModalBox';
+=======
+import ModalBox from '../components/ModalBox';
+import Screen from '../components/Screen';
+
+>>>>>>> Stashed changes
 import {
     SuccessMessage,
     WarningMessage,
@@ -824,12 +830,7 @@ export default class Receive extends React.Component<
             Number(satAmount) !== 0 && Number(satAmount) < 546;
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -853,7 +854,7 @@ export default class Receive extends React.Component<
                             )
                         )
                     }
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -1359,13 +1360,14 @@ export default class Receive extends React.Component<
                         </TouchableOpacity>
                     ))}
                 </ModalBox>
-            </View>
+            </Screen>
         );
     }
 }
 
 const styles = StyleSheet.create({
     content: {
+        flex: 1,
         paddingLeft: 20,
         paddingRight: 20
     },

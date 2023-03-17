@@ -2,7 +2,11 @@ import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import Screen from '../../components/Screen';
+
 import SettingsStore, { LOCALE_KEYS } from './../../stores/SettingsStore';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -73,12 +77,7 @@ export default class Language extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
                         leftComponent={<BackButton />}
@@ -86,7 +85,7 @@ export default class Language extends React.Component<
                             text: localeString('views.Settings.Language.title'),
                             style: { color: themeColor('text') }
                         }}
-                        backgroundColor={themeColor('background')}
+                        backgroundColor="transparent"
                         containerStyle={{
                             borderBottomWidth: 0
                         }}
@@ -100,7 +99,7 @@ export default class Language extends React.Component<
                         }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
-                            backgroundColor: themeColor('background'),
+                            backgroundColor: 'transparent',
                             borderTopWidth: 0,
                             borderBottomWidth: 0
                         }}
@@ -115,7 +114,7 @@ export default class Language extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
+                                    backgroundColor: 'transparent'
                                 }}
                                 onPress={async () => {
                                     await updateSettings({
@@ -155,7 +154,7 @@ export default class Language extends React.Component<
                         ItemSeparatorComponent={this.renderSeparator}
                     />
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

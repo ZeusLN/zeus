@@ -21,6 +21,7 @@ import PosPane from './PosPane';
 
 import Button from './../../components/Button';
 import LayerBalances from './../../components/LayerBalances';
+import Screen from '../../components/Screen';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import BackendUtils from './../../utils/BackendUtils';
@@ -312,12 +313,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const BalanceScreen = () => {
             return (
-                <View
-                    style={{
-                        backgroundColor: themeColor('background'),
-                        flex: 1
-                    }}
-                >
+                <Screen>
                     <BalancePane
                         navigation={navigation}
                         NodeInfoStore={NodeInfoStore}
@@ -378,46 +374,31 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             </Animated.View>
                         </>
                     )}
-                </View>
+                </Screen>
             );
         };
 
         const PosScreen = () => {
             return (
-                <View
-                    style={{
-                        backgroundColor: themeColor('background'),
-                        flex: 1
-                    }}
-                >
+                <Screen>
                     <PosPane navigation={navigation} />
-                </View>
+                </Screen>
             );
         };
 
         const KeypadScreen = () => {
             return (
-                <View
-                    style={{
-                        backgroundColor: themeColor('background'),
-                        flex: 1
-                    }}
-                >
+                <Screen>
                     <KeypadPane navigation={navigation} />
-                </View>
+                </Screen>
             );
         };
 
         const ChannelsScreen = () => {
             return (
-                <View
-                    style={{
-                        backgroundColor: themeColor('background'),
-                        flex: 1
-                    }}
-                >
+                <Screen>
                     <ChannelsPane navigation={navigation} />
-                </View>
+                </Screen>
             );
         };
 
@@ -432,6 +413,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         return (
             <View style={{ flex: 1 }}>
+<<<<<<< Updated upstream
                 <View style={{ flex: 1 }}>
                     {!connecting && (!loginRequired || squareEnabled) && (
                         <NavigationContainer theme={Theme}>
@@ -527,10 +509,109 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             style={{
                                 backgroundColor: themeColor('background'),
                                 height: '100%'
+=======
+                {!connecting && (!loginRequired || squareEnabled) && (
+                    <NavigationContainer theme={Theme}>
+                        <Tab.Navigator
+                            initialRouteName={
+                                squareEnabled && posStatus === 'active'
+                                    ? 'POS'
+                                    : (settings.display &&
+                                          settings.display.defaultView) ||
+                                      'Keypad'
+                            }
+                            screenOptions={({ route }) => ({
+                                tabBarIcon: ({ color }) => {
+                                    if (route.name === 'Keypad') {
+                                        return <Bitcoin fill={color} />;
+                                    }
+                                    if (route.name === 'Balance') {
+                                        return <Temple fill={color} />;
+                                    }
+                                    if (route.name === 'POS') {
+                                        return (
+                                            <POS stroke={themeColor('text')} />
+                                        );
+                                    }
+                                    if (
+                                        BackendUtils.supportsChannelManagement()
+                                    ) {
+                                        return <ChannelsIcon fill={color} />;
+                                    }
+                                }
+                            })}
+                            tabBarOptions={{
+                                activeTintColor: error
+                                    ? themeColor('error')
+                                    : themeColor('text'),
+                                inactiveTintColor: error
+                                    ? themeColor('error')
+                                    : BackendUtils.supportsChannelManagement()
+                                    ? 'gray'
+                                    : themeColor('secondaryText'),
+                                showLabel: false
+>>>>>>> Stashed changes
                             }}
                         >
-                            <View
+                            {squareEnabled && posStatus === 'active' ? (
+                                <Tab.Screen name="POS" component={PosScreen} />
+                            ) : (
+                                <Tab.Screen
+                                    name="Balance"
+                                    component={BalanceScreen}
+                                />
+                            )}
+                            {posStatus !== 'active' && (
+                                <>
+                                    {!error ? (
+                                        <Tab.Screen
+                                            name="Keypad"
+                                            component={KeypadScreen}
+                                        />
+                                    ) : (
+                                        <Tab.Screen
+                                            name={'  '}
+                                            component={BalanceScreen}
+                                        />
+                                    )}
+                                    {BackendUtils.supportsChannelManagement() &&
+                                    !error ? (
+                                        <Tab.Screen
+                                            name={localeString(
+                                                'views.Wallet.Wallet.channels'
+                                            )}
+                                            component={ChannelsScreen}
+                                        />
+                                    ) : (
+                                        <Tab.Screen
+                                            name={' '}
+                                            component={
+                                                squareEnabled &&
+                                                posStatus === 'active'
+                                                    ? PosScreen
+                                                    : BalanceScreen
+                                            }
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </Tab.Navigator>
+                    </NavigationContainer>
+                )}
+                {connecting && (!loginRequired || squareEnabled) && (
+                    <Screen>
+                        <View
+                            style={{
+                                flex: 1,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                top: 50
+                            }}
+                        >
+                            <WordLogo
+                                height={100}
                                 style={{
+<<<<<<< Updated upstream
                                     flex: 1,
                                     justifyContent: 'center',
                                     alignItems: 'center',
@@ -595,9 +676,63 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     />
                                 </View>
                             )}
+=======
+                                    alignSelf: 'center'
+                                }}
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular',
+                                    alignSelf: 'center',
+                                    fontSize: 15,
+                                    padding: 8
+                                }}
+                            >
+                                {settings.nodes && loggedIn
+                                    ? localeString(
+                                          'views.Wallet.Wallet.connecting'
+                                      )
+                                    : localeString(
+                                          'views.Wallet.Wallet.startingUp'
+                                      )}
+                            </Text>
+                            <LoadingIndicator size={120} />
+>>>>>>> Stashed changes
                         </View>
-                    )}
-                </View>
+                        {posStatus !== 'active' && (
+                            <View
+                                style={{
+                                    bottom: 56,
+                                    position: 'absolute',
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                <Button
+                                    title={
+                                        settings.nodes
+                                            ? localeString(
+                                                  'views.Settings.title'
+                                              )
+                                            : null
+                                    }
+                                    containerStyle={{
+                                        width: 320
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('text')
+                                    }}
+                                    onPress={() => {
+                                        if (settings.nodes)
+                                            navigation.navigate('Settings');
+                                    }}
+                                    adaptiveWidth
+                                    iconOnly
+                                />
+                            </View>
+                        )}
+                    </Screen>
+                )}
             </View>
         );
     }

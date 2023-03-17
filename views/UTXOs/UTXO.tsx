@@ -9,16 +9,17 @@ import {
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Amount from './../../components/Amount';
-import KeyValue from './../../components/KeyValue';
+import Amount from '../../components/Amount';
+import KeyValue from '../../components/KeyValue';
+import Screen from '../../components/Screen';
 
-import Utxo from './../../models/Utxo';
+import Utxo from '../../models/Utxo';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
-import UrlUtils from './../../utils/UrlUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
-import NodeInfoStore from './../../stores/NodeInfoStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 interface UTXOProps {
     navigation: any;
@@ -48,13 +49,7 @@ export default class UTXO extends React.Component<UTXOProps> {
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -64,16 +59,17 @@ export default class UTXO extends React.Component<UTXOProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                <View style={styles.center}>
-                    <Amount sats={amount} jumboText toggleable sensitive />
-                </View>
 
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
+                    <View style={styles.center}>
+                        <Amount sats={amount} jumboText toggleable sensitive />
+                    </View>
+
                     <KeyValue
                         keyValue={localeString('general.outpoint')}
                         value={getOutpoint}
@@ -146,8 +142,8 @@ export default class UTXO extends React.Component<UTXOProps> {
                             sensitive
                         />
                     )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }

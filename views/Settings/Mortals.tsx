@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { Dimensions, FlatList, Text, View } from 'react-native';
+import { Dimensions, FlatList, Text } from 'react-native';
 import { Avatar, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../../components/Button';
+import Screen from '../../components/Screen';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import { localeString } from './../../utils/LocaleUtils';
@@ -38,12 +39,7 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -53,7 +49,7 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -66,8 +62,7 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
                             renderItem={({ item }) => (
                                 <ListItem
                                     containerStyle={{
-                                        backgroundColor:
-                                            themeColor('background'),
+                                        backgroundColor: 'transparent',
                                         padding: 0
                                     }}
                                     onPress={() =>
@@ -127,7 +122,7 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
                         {sponsorsError}
                     </Text>
                 )}
-            </View>
+            </Screen>
         );
     }
 }

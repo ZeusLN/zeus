@@ -8,16 +8,18 @@ import {
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import ForwardEvent from './../../models/ForwardEvent';
 
-import KeyValue from './../../components/KeyValue';
 import Amount from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
+import KeyValue from './../../components/KeyValue';
+import Screen from '../../components/Screen';
+
+import ForwardEvent from './../../models/ForwardEvent';
+
+import ChannelsStore from './../../stores/ChannelsStore';
 
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-
-import ChannelsStore from './../../stores/ChannelsStore';
 
 interface RoutingEventProps {
     navigation: any;
@@ -83,25 +85,19 @@ export default class RoutingEvent extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Routing.RoutingEvent.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     <View style={styles.amount}>
                         <Amount
                             sats={fee}
@@ -234,8 +230,8 @@ export default class RoutingEvent extends React.Component<
                         peerDisplay={chanOutLabel}
                         channelPoint={channelOutPoint}
                     />
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }
@@ -245,6 +241,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Lato-Regular'
     },
     content: {
+        flex: 1,
         paddingLeft: 20,
         paddingRight: 20
     },

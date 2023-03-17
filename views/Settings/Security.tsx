@@ -1,9 +1,14 @@
 import { inject, observer } from 'mobx-react';
 import * as React from 'react';
+<<<<<<< Updated upstream
 import { FlatList, ScrollView, View } from 'react-native';
+=======
+import { FlatList, View } from 'react-native';
+>>>>>>> Stashed changes
 import { BiometryType } from 'react-native-biometrics';
 import { Header, Icon, ListItem } from 'react-native-elements';
 
+import Screen from '../../components/Screen';
 import Switch from './../../components/Switch';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -190,7 +195,7 @@ export default class Security extends React.Component<
             <ListItem
                 containerStyle={{
                     borderBottomWidth: 0,
-                    backgroundColor: themeColor('background')
+                    backgroundColor: 'transparent'
                 }}
                 onPress={() => this.navigateSecurity(item)}
             >
@@ -234,12 +239,7 @@ export default class Security extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -249,7 +249,7 @@ export default class Security extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -297,6 +297,22 @@ export default class Security extends React.Component<
                                     color: themeColor('secondaryText'),
                                     fontFamily: 'Lato-Regular'
                                 }}
+                            />
+                        </ListItem.Content>
+                    </ListItem>
+                )}
+                {pinExists && (
+                    <ListItem
+                        containerStyle={{
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <ListItem.Content>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
+                                }}
                             >
                                 {localeString(
                                     'views.Settings.Security.scramblePIN'
@@ -309,7 +325,9 @@ export default class Security extends React.Component<
                                 this.setState({
                                     scramblePin: !scramblePin
                                 });
-                                updateSettings({ scramblePin: !scramblePin });
+                                updateSettings({
+                                    scramblePin: !scramblePin
+                                });
                             }}
                         />
                     </ListItem>
@@ -317,7 +335,7 @@ export default class Security extends React.Component<
                 {(pinExists || passphraseExists || isBiometryEnabled) && (
                     <ListItem
                         containerStyle={{
-                            backgroundColor: themeColor('background')
+                            backgroundColor: 'transparent'
                         }}
                     >
                         <ListItem.Content>
@@ -345,7 +363,7 @@ export default class Security extends React.Component<
                         />
                     </ListItem>
                 )}
-            </ScrollView>
+            </Screen>
         );
     }
 }

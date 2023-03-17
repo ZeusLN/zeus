@@ -2,12 +2,20 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import Screen from '../../components/Screen';
+import TextInput from '../../components/TextInput';
+
 import SettingsStore from '../../stores/SettingsStore';
+
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+<<<<<<< Updated upstream
 import TextInput from '../../components/TextInput';
 
+=======
+>>>>>>> Stashed changes
 interface PaymentsSettingsProps {
     navigation: any;
     SettingsStore: SettingsStore;
@@ -72,12 +80,7 @@ export default class PaymentsSettings extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -87,7 +90,7 @@ export default class PaymentsSettings extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -199,7 +202,11 @@ export default class PaymentsSettings extends React.Component<
                         </Text>
                     </View>
                 </View>
+<<<<<<< Updated upstream
             </View>
+=======
+            </Screen>
+>>>>>>> Stashed changes
         );
     }
 }

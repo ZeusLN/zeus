@@ -1,10 +1,14 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
-import Invoice from './../models/Invoice';
+
 import Amount from './../components/Amount';
 import CollapsedQR from './../components/CollapsedQR';
 import KeyValue from './../components/KeyValue';
+import Screen from '../components/Screen';
+
+import Invoice from './../models/Invoice';
+
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -43,12 +47,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -58,163 +57,179 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                <View style={styles.center}>
-                    <Amount
-                        sats={invoice.getAmount}
-                        sensitive
-                        jumboText
-                        toggleable
-                        pending={!invoice.isExpired && !invoice.isPaid}
-                        credit={invoice.isPaid}
-                    />
-                </View>
-
-                <View style={styles.content}>
-                    {getMemo && (
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.memo')}
-                            value={getMemo}
+                <ScrollView
+                    style={{
+                        flex: 1
+                    }}
+                >
+                    <View style={styles.center}>
+                        <Amount
+                            sats={invoice.getAmount}
                             sensitive
+                            jumboText
+                            toggleable
+                            pending={!invoice.isExpired && !invoice.isPaid}
+                            credit={invoice.isPaid}
                         />
-                    )}
+                    </View>
 
-                    {!!receipt && (
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.receipt')}
-                            value={receipt}
-                            sensitive
-                        />
-                    )}
+                    <View style={styles.content}>
+                        {getMemo && (
+                            <KeyValue
+                                keyValue={localeString('views.Invoice.memo')}
+                                value={getMemo}
+                                sensitive
+                            />
+                        )}
 
-                    {isPaid && (
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.settleDate')}
-                            value={invoice.settleDate}
-                            sensitive
-                        />
-                    )}
+                        {!!receipt && (
+                            <KeyValue
+                                keyValue={localeString('views.Invoice.receipt')}
+                                value={receipt}
+                                sensitive
+                            />
+                        )}
 
-                    {!!creation_date && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Invoice.creationDate'
-                            )}
-                            value={invoice.creationDate}
-                            sensitive
-                        />
-                    )}
+                        {isPaid && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.settleDate'
+                                )}
+                                value={invoice.settleDate}
+                                sensitive
+                            />
+                        )}
 
-                    {!!expirationDate && (
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.expiration')}
-                            value={expirationDate}
-                            sensitive
-                        />
-                    )}
+                        {!!creation_date && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.creationDate'
+                                )}
+                                value={invoice.creationDate}
+                                sensitive
+                            />
+                        )}
 
-                    {!!privateInvoice && (
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.private')}
-                            value={privateInvoice}
-                        />
-                    )}
+                        {!!expirationDate && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.expiration'
+                                )}
+                                value={expirationDate}
+                                sensitive
+                            />
+                        )}
 
-                    {!!fallback_addr && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Invoice.fallbackAddress'
-                            )}
-                            value={fallback_addr}
-                            sensitive
-                        />
-                    )}
+                        {!!privateInvoice && (
+                            <KeyValue
+                                keyValue={localeString('views.Invoice.private')}
+                                value={privateInvoice}
+                            />
+                        )}
 
-                    {!!cltv_expiry && (
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.cltvExpiry')}
-                            value={cltv_expiry}
-                        />
-                    )}
+                        {!!fallback_addr && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.fallbackAddress'
+                                )}
+                                value={fallback_addr}
+                                sensitive
+                            />
+                        )}
 
-                    {getRHash && (
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.rHash')}
-                            value={getRHash}
-                            sensitive
-                        />
-                    )}
+                        {!!cltv_expiry && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.cltvExpiry'
+                                )}
+                                value={cltv_expiry}
+                            />
+                        )}
 
-                    {getRPreimage && (
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.rPreimage')}
-                            value={getRPreimage}
-                            sensitive
-                        />
-                    )}
+                        {getRHash && (
+                            <KeyValue
+                                keyValue={localeString('views.Invoice.rHash')}
+                                value={getRHash}
+                                sensitive
+                            />
+                        )}
 
-                    {!!description_hash && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Invoice.descriptionHash'
-                            )}
-                            value={description_hash}
-                            sensitive
-                        />
-                    )}
+                        {getRPreimage && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.rPreimage'
+                                )}
+                                value={getRPreimage}
+                                sensitive
+                            />
+                        )}
 
-                    {!!payment_hash && (
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.paymentHash')}
-                            value={payment_hash}
-                            sensitive
-                        />
-                    )}
+                        {!!description_hash && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.descriptionHash'
+                                )}
+                                value={description_hash}
+                                sensitive
+                            />
+                        )}
 
-                    {!!payment_request && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Invoice.paymentRequest'
-                            )}
-                            value={payment_request}
-                            sensitive
-                        />
-                    )}
+                        {!!payment_hash && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.paymentHash'
+                                )}
+                                value={payment_hash}
+                                sensitive
+                            />
+                        )}
 
-                    {!!payment_request && (
-                        <CollapsedQR
-                            value={payment_request}
-                            copyText={localeString(
-                                'views.Invoice.copyPaymentRequest'
-                            )}
-                            hideText
-                        />
-                    )}
-
-                    {!!bolt11 && (
-                        <>
+                        {!!payment_request && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.paymentRequest'
                                 )}
-                                value={bolt11}
+                                value={payment_request}
                                 sensitive
                             />
+                        )}
+
+                        {!!payment_request && (
                             <CollapsedQR
-                                value={bolt11}
+                                value={payment_request}
                                 copyText={localeString(
                                     'views.Invoice.copyPaymentRequest'
                                 )}
                                 hideText
                             />
-                        </>
-                    )}
-                </View>
-            </ScrollView>
+                        )}
+
+                        {!!bolt11 && (
+                            <>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Invoice.paymentRequest'
+                                    )}
+                                    value={bolt11}
+                                    sensitive
+                                />
+                                <CollapsedQR
+                                    value={bolt11}
+                                    copyText={localeString(
+                                        'views.Invoice.copyPaymentRequest'
+                                    )}
+                                    hideText
+                                />
+                            </>
+                        )}
+                    </View>
+                </ScrollView>
+            </Screen>
         );
     }
 }

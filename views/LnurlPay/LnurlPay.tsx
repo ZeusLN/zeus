@@ -8,19 +8,20 @@ import querystring from 'querystring-es3';
 
 import Amount from './../../components/Amount';
 import Button from './../../components/Button';
-import TextInput from './../../components/TextInput';
-import { Row } from './../..//components/layout/Row';
+import Screen from './../../components/Screen';
+import TextInput from '../../components/TextInput';
+import { Row } from '../../components/layout/Row';
 
-import InvoicesStore from './../../stores/InvoicesStore';
-import LnurlPayStore from './../../stores/LnurlPayStore';
-import SettingsStore from './../../stores/SettingsStore';
-import FiatStore from './../../stores/FiatStore';
-import UnitsStore, { SATS_PER_BTC } from './../../stores/UnitsStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import LnurlPayStore from '../../stores/LnurlPayStore';
+import SettingsStore from '../../stores/SettingsStore';
+import FiatStore from '../../stores/FiatStore';
+import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import LnurlPayMetadata from './Metadata';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPayProps {
     navigation: any;
@@ -213,13 +214,7 @@ export default class LnurlPay extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -229,7 +224,7 @@ export default class LnurlPay extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -365,7 +360,11 @@ export default class LnurlPay extends React.Component<
                     ) : null}
                     <View style={styles.button}>
                         <Button
+<<<<<<< Updated upstream
                             title="Confirm"
+=======
+                            title={localeString('general.confirm')}
+>>>>>>> Stashed changes
                             titleStyle={{
                                 color: themeColor('text')
                             }}
@@ -377,7 +376,6 @@ export default class LnurlPay extends React.Component<
                             onPress={() => {
                                 this.sendValues(satAmount);
                             }}
-                            style={styles.button}
                             buttonStyle={{
                                 backgroundColor: themeColor('secondary'),
                                 borderRadius: 30
@@ -388,7 +386,7 @@ export default class LnurlPay extends React.Component<
                 <View style={styles.content}>
                     <LnurlPayMetadata metadata={lnurl.metadata} />
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

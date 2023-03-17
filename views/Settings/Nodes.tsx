@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, ScrollView, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../../components/Button';
+import Screen from '../../components/Screen';
 import LoadingIndicator from './../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 
@@ -118,28 +119,23 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
-                <View>
-                    <Header
-                        leftComponent={<BackButton />}
-                        centerComponent={{
-                            text: localeString('views.Settings.Nodes.title'),
-                            style: {
-                                color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
-                            }
-                        }}
-                        rightComponent={<AddButton />}
-                        backgroundColor={themeColor('background')}
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
-                    />
+            <Screen>
+                <Header
+                    leftComponent={<BackButton />}
+                    centerComponent={{
+                        text: localeString('views.Settings.Nodes.title'),
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
+                    }}
+                    rightComponent={<AddButton />}
+                    backgroundColor="transparent"
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
+                />
+                <ScrollView style={{ flex: 1 }}>
                     {!!nodes && nodes.length > 0 && (
                         <FlatList
                             data={nodes}
@@ -147,8 +143,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 <ListItem
                                     containerStyle={{
                                         borderBottomWidth: 0,
-                                        backgroundColor:
-                                            themeColor('background')
+                                        backgroundColor: 'transparent'
                                     }}
                                     onPress={async () => {
                                         const currentImplementation =
@@ -253,8 +248,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         />
                     )}
                     {loading && <LoadingIndicator />}
-                </View>
-            </View>
+                </ScrollView>
+            </Screen>
         );
     }
 }

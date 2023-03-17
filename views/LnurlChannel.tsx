@@ -6,16 +6,21 @@ import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 
+<<<<<<< Updated upstream
 import Button from './../components/Button';
+=======
+import Button from '../components/Button';
+import Screen from '../components/Screen';
+>>>>>>> Stashed changes
 import LightningIndicator from './../components/LightningIndicator';
 
-import ChannelsStore from './../stores/ChannelsStore';
-import NodeInfoStore from './../stores/NodeInfoStore';
+import ChannelsStore from '../stores/ChannelsStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
 
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
-import NodeUriUtils from './../utils/NodeUriUtils';
-import BackendUtils from './../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+import NodeUriUtils from '../utils/NodeUriUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 interface LnurlChannelProps {
     navigation: any;
@@ -191,12 +196,7 @@ export default class LnurlChannel extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -206,7 +206,7 @@ export default class LnurlChannel extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -327,7 +327,7 @@ export default class LnurlChannel extends React.Component<
                             )}
                     </View>
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

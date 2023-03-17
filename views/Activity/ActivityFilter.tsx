@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -10,6 +10,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import ActivityStore from './../../stores/ActivityStore';
 
+import Screen from '../../components/Screen';
 import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
@@ -265,13 +266,7 @@ export default class ActivityFilter extends React.Component<
         ];
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -281,95 +276,106 @@ export default class ActivityFilter extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                <FlatList
-                    data={FILTERS}
-                    renderItem={({ item }) => (
-                        <>
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
-                                }}
-                            >
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular'
+                <ScrollView
+                    style={{
+                        flex: 1
+                    }}
+                >
+                    <FlatList
+                        data={FILTERS}
+                        renderItem={({ item }) => (
+                            <>
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
                                     }}
                                 >
-                                    {item.label}
-                                </ListItem.Title>
-                                {item.type === 'Toggle' && (
-                                    <View
+                                    <ListItem.Title
                                         style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
+                                            color: themeColor('text'),
+                                            fontFamily: 'Lato-Regular'
                                         }}
                                     >
-                                        <Switch
-                                            value={item.value}
-                                            onValueChange={() => {
-                                                const newFilters: any = filters;
-                                                const index = `${item.var}`;
-                                                newFilters[index] =
-                                                    !filters[index];
-                                                setFilters(newFilters);
+                                        {item.label}
+                                    </ListItem.Title>
+                                    {item.type === 'Toggle' && (
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
                                             }}
-                                        />
-                                    </View>
-                                )}
-                                {item.type === 'Amount' && (
-                                    <View
-                                        style={{
-                                            flex: 1
-                                        }}
-                                    >
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            placeholder="0"
-                                            value={
-                                                item.value === 0
-                                                    ? ''
-                                                    : String(item.value)
-                                            }
-                                            onChangeText={(text: string) => {
-                                                const newMinAmount = !isNaN(
-                                                    Number(text)
-                                                )
-                                                    ? Number(text)
-                                                    : 0;
-                                                setAmountFilter(newMinAmount);
+                                        >
+                                            <Switch
+                                                value={item.value}
+                                                onValueChange={() => {
+                                                    const newFilters: any =
+                                                        filters;
+                                                    const index = `${item.var}`;
+                                                    newFilters[index] =
+                                                        !filters[index];
+                                                    setFilters(newFilters);
+                                                }}
+                                            />
+                                        </View>
+                                    )}
+                                    {item.type === 'Amount' && (
+                                        <View
+                                            style={{
+                                                flex: 1
                                             }}
-                                        />
-                                    </View>
-                                )}
-                                {item.type === 'Date' && (
-                                    <View style={{ flex: 1 }}>
-                                        <DateFilter />
-                                    </View>
-                                )}
-                                {item.type === 'DateData' && (
-                                    <View style={{ flex: 1 }}>
-                                        <DateData />
-                                    </View>
-                                )}
-                            </ListItem>
-                        </>
-                    )}
-                    keyExtractor={(item: any, index: any) =>
-                        `${item.model}-${index}`
-                    }
-                    ItemSeparatorComponent={this.renderSeparator}
-                    onEndReachedThreshold={50}
-                    refreshing={loading}
-                />
-            </View>
+                                        >
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                placeholder="0"
+                                                value={
+                                                    item.value === 0
+                                                        ? ''
+                                                        : String(item.value)
+                                                }
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    const newMinAmount = !isNaN(
+                                                        Number(text)
+                                                    )
+                                                        ? Number(text)
+                                                        : 0;
+                                                    setAmountFilter(
+                                                        newMinAmount
+                                                    );
+                                                }}
+                                            />
+                                        </View>
+                                    )}
+                                    {item.type === 'Date' && (
+                                        <View style={{ flex: 1 }}>
+                                            <DateFilter />
+                                        </View>
+                                    )}
+                                    {item.type === 'DateData' && (
+                                        <View style={{ flex: 1 }}>
+                                            <DateData />
+                                        </View>
+                                    )}
+                                </ListItem>
+                            </>
+                        )}
+                        keyExtractor={(item: any, index: any) =>
+                            `${item.model}-${index}`
+                        }
+                        ItemSeparatorComponent={this.renderSeparator}
+                        onEndReachedThreshold={50}
+                        refreshing={loading}
+                    />
+                </ScrollView>
+            </Screen>
         );
     }
 }

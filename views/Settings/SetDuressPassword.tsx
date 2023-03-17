@@ -4,6 +4,7 @@ import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
+import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import TextInput from '../../components/TextInput';
 
@@ -118,12 +119,7 @@ export default class SetDuressPassphrase extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -135,7 +131,7 @@ export default class SetDuressPassphrase extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -240,7 +236,7 @@ export default class SetDuressPassphrase extends React.Component<
                         </View>
                     )}
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

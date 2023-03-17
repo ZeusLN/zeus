@@ -2,11 +2,15 @@ import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import Pin from '../../components/Pin';
+import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
+
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+
 import SettingsStore from '../../stores/SettingsStore';
-import Pin from '../../components/Pin';
 
 interface SetDuressPinProps {
     navigation: any;
@@ -113,15 +117,10 @@ export default class SetDuressPin extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -234,7 +233,7 @@ export default class SetDuressPin extends React.Component<
                         </>
                     )}
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

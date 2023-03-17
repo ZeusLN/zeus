@@ -3,12 +3,13 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 
-import Button from './../components/Button';
-import Pin from './../components/Pin';
-import { ErrorMessage } from './../components/SuccessErrorMessage';
-import TextInput from './../components/TextInput';
+import Button from '../components/Button';
+import Pin from '../components/Pin';
+import Screen from '../components/Screen';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
+import TextInput from '../components/TextInput';
 
-import SettingsStore from './../stores/SettingsStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import { getIsBiometryRequired, verifyBiometry } from '../utils/BiometricUtils';
 import LinkingUtils from './../utils/LinkingUtils';
@@ -334,16 +335,11 @@ export default class Lockscreen extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    ...styles.container,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
                     <Header
                         leftComponent={<BackButton />}
-                        backgroundColor={themeColor('background')}
+                        backgroundColor="transparent"
                         containerStyle={{
                             borderBottomWidth: 0
                         }}
@@ -476,13 +472,14 @@ export default class Lockscreen extends React.Component<
                         </View>
                     </View>
                 )}
-            </View>
+            </Screen>
         );
     }
 }
 
 const styles = StyleSheet.create({
     content: {
+        flex: 1,
         marginTop: 100,
         paddingLeft: 20,
         paddingRight: 20,

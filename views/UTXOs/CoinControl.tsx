@@ -3,14 +3,15 @@ import { FlatList, View } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Amount from './../../components/Amount';
-import LoadingIndicator from './../../components/LoadingIndicator';
+import Amount from '../../components/Amount';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 
-import { localeString } from './../../utils/LocaleUtils';
-import BackendUtils from './../../utils/BackendUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import UTXOsStore from './../../stores/UTXOsStore';
+import UTXOsStore from '../../stores/UTXOsStore';
 
 interface CoinControlProps {
     navigation: any;
@@ -52,13 +53,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -73,7 +68,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -93,8 +88,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                themeColor('background')
+                                            backgroundColor: 'transparent'
                                         }}
                                         onPress={() => {
                                             navigation.navigate('Utxo', {
@@ -153,7 +147,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                         }}
                     />
                 )}
-            </View>
+            </Screen>
         );
     }
 }

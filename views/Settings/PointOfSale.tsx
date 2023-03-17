@@ -4,21 +4,22 @@ import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import DropdownSetting from './../../components/DropdownSetting';
+import DropdownSetting from '../../components/DropdownSetting';
 import {
     ErrorMessage,
     WarningMessage
-} from './../../components/SuccessErrorMessage';
-import Switch from './../../components/Switch';
-import TextInput from './../../components/TextInput';
+} from '../../components/SuccessErrorMessage';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
 
 import SettingsStore, {
     DEFAULT_FIAT,
     POS_CONF_PREF_KEYS
-} from './../../stores/SettingsStore';
+} from '../../stores/SettingsStore';
 
 interface PointOfSaleProps {
     navigation: any;
@@ -116,12 +117,7 @@ export default class PointOfSale extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -471,7 +467,7 @@ export default class PointOfSale extends React.Component<
                         )}
                     </ScrollView>
                 )}
-            </View>
+            </Screen>
         );
     }
 }

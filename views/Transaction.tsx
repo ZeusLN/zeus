@@ -14,6 +14,10 @@ import { inject, observer } from 'mobx-react';
 import Amount from '../components/Amount';
 import Button from '../components/Button';
 import KeyValue from '../components/KeyValue';
+<<<<<<< Updated upstream
+=======
+import Screen from '../components/Screen';
+>>>>>>> Stashed changes
 
 import BackendUtils from '../utils/BackendUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
@@ -106,12 +110,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -126,65 +125,47 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         borderBottomWidth: 0
                     }}
                 />
-                <View style={styles.center}>
-                    <Amount
-                        sats={amount}
-                        debit={Number(amount) <= 0}
-                        credit={Number(amount) > 0}
-                        sensitive
-                        jumboText
-                        toggleable
-                    />
-                </View>
-
-                <View style={styles.content}>
-                    {total_fees ? (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Transaction.totalFees'
-                            )}
-                            value={
-                                <Amount
-                                    sats={total_fees || 0}
-                                    toggleable
-                                    sensitive
-                                />
-                            }
+                <ScrollView
+                    style={{
+                        flex: 1
+                    }}
+                >
+                    <View style={styles.center}>
+                        <Amount
+                            sats={amount}
+                            debit={Number(amount) <= 0}
+                            credit={Number(amount) > 0}
+                            sensitive
+                            jumboText
+                            toggleable
                         />
-                    ) : null}
+                    </View>
 
-                    <KeyValue
-                        keyValue={localeString(
-                            'views.Transaction.transactionHash'
-                        )}
-                        value={
-                            <TouchableOpacity
-                                onPress={() =>
-                                    UrlUtils.goToBlockExplorerTXID(tx, testnet)
+                    <View style={styles.content}>
+                        {total_fees ? (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.totalFees'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={total_fees || 0}
+                                        toggleable
+                                        sensitive
+                                    />
                                 }
-                            >
-                                <Text
-                                    style={{
-                                        ...styles.valueWithLink,
-                                        color: themeColor('highlight')
-                                    }}
-                                >
-                                    {PrivacyUtils.sensitiveValue(tx)}
-                                </Text>
-                            </TouchableOpacity>
-                        }
-                    />
+                            />
+                        ) : null}
 
-                    {!!block_hash && (
                         <KeyValue
                             keyValue={localeString(
-                                'views.Transaction.blockHash'
+                                'views.Transaction.transactionHash'
                             )}
                             value={
                                 <TouchableOpacity
                                     onPress={() =>
-                                        UrlUtils.goToBlockExplorerBlockHash(
-                                            block_hash,
+                                        UrlUtils.goToBlockExplorerTXID(
+                                            tx,
                                             testnet
                                         )
                                     }
@@ -195,72 +176,93 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                             color: themeColor('highlight')
                                         }}
                                     >
-                                        {PrivacyUtils.sensitiveValue(
-                                            block_hash
-                                        )}
+                                        {PrivacyUtils.sensitiveValue(tx)}
                                     </Text>
                                 </TouchableOpacity>
                             }
                         />
-                    )}
 
-                    {!!getBlockHeight && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Transaction.blockHeight'
-                            )}
-                            value={
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        UrlUtils.goToBlockExplorerBlockHeight(
-                                            getBlockHeight.toString(),
-                                            testnet
-                                        )
-                                    }
-                                >
-                                    <Text
-                                        style={{
-                                            ...styles.valueWithLink,
-                                            color: themeColor('highlight')
-                                        }}
+                        {!!block_hash && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.blockHash'
+                                )}
+                                value={
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            UrlUtils.goToBlockExplorerBlockHash(
+                                                block_hash,
+                                                testnet
+                                            )
+                                        }
                                     >
-                                        {PrivacyUtils.sensitiveValue(
-                                            getBlockHeight.toString(),
-                                            5,
-                                            true
-                                        )}
-                                    </Text>
-                                </TouchableOpacity>
-                            }
-                        />
-                    )}
+                                        <Text
+                                            style={{
+                                                ...styles.valueWithLink,
+                                                color: themeColor('highlight')
+                                            }}
+                                        >
+                                            {PrivacyUtils.sensitiveValue(
+                                                block_hash
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                }
+                            />
+                        )}
 
-                    {!!num_confirmations && !isNull(num_confirmations) && (
-                        <KeyValue
-                            keyValue={localeString('views.Transaction.numConf')}
-                            value={num_confirmations}
-                            color={num_confirmations > 0 ? 'green' : 'red'}
-                            sensitive
-                        />
-                    )}
+                        {!!getBlockHeight && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.blockHeight'
+                                )}
+                                value={
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            UrlUtils.goToBlockExplorerBlockHeight(
+                                                getBlockHeight.toString(),
+                                                testnet
+                                            )
+                                        }
+                                    >
+                                        <Text
+                                            style={{
+                                                ...styles.valueWithLink,
+                                                color: themeColor('highlight')
+                                            }}
+                                        >
+                                            {PrivacyUtils.sensitiveValue(
+                                                getBlockHeight.toString(),
+                                                5,
+                                                true
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                }
+                            />
+                        )}
 
-                    {!!status && (
-                        <KeyValue
-                            keyValue={localeString('views.Transaction.status')}
-                            value={status}
-                        />
-                    )}
+                        {!!num_confirmations && !isNull(num_confirmations) && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.numConf'
+                                )}
+                                value={num_confirmations}
+                                color={num_confirmations > 0 ? 'green' : 'red'}
+                                sensitive
+                            />
+                        )}
 
-                    {!!date && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Transaction.timestamp'
-                            )}
-                            value={date.toString()}
-                            sensitive
-                        />
-                    )}
+                        {!!status && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.status'
+                                )}
+                                value={status}
+                            />
+                        )}
 
+<<<<<<< Updated upstream
                     {!!destAddresses && (
                         <React.Fragment>{addresses}</React.Fragment>
                     )}
@@ -280,6 +282,38 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     )}
                 </View>
             </ScrollView>
+=======
+                        {!!date && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.timestamp'
+                                )}
+                                value={date.toString()}
+                                sensitive
+                            />
+                        )}
+
+                        {!!destAddresses && (
+                            <React.Fragment>{addresses}</React.Fragment>
+                        )}
+
+                        {!isConfirmed && BackendUtils.supportsBumpFee() && (
+                            <View style={{ marginTop: 20 }}>
+                                <Button
+                                    title={localeString('views.BumpFee.title')}
+                                    onPress={() =>
+                                        navigation.navigate('BumpFee', {
+                                            outpoint: getOutpoint
+                                        })
+                                    }
+                                    noUppercase
+                                />
+                            </View>
+                        )}
+                    </View>
+                </ScrollView>
+            </Screen>
+>>>>>>> Stashed changes
         );
     }
 }

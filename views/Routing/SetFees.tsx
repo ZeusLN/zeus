@@ -3,6 +3,10 @@ import { View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+<<<<<<< Updated upstream
+=======
+import Screen from '../../components/Screen';
+>>>>>>> Stashed changes
 import SetFeesForm from '../../components/SetFeesForm';
 
 import Channel from '../../models/Channel';
@@ -85,9 +89,7 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
         );
 
         return (
-            <View
-                style={{ flex: 1, backgroundColor: themeColor('background') }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -101,7 +103,7 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -149,7 +151,7 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                     )}
                     {!channel && <SetFeesForm FeeStore={FeeStore} />}
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

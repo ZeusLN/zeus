@@ -34,6 +34,7 @@ import FiatStore from './../stores/FiatStore';
 import Amount from './../components/Amount';
 import Conversion from './../components/Conversion';
 import Button from './../components/Button';
+import Screen from '../components/Screen';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
 import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
@@ -426,12 +427,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -450,12 +446,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Scan fill={themeColor('text')} />
                         </TouchableOpacity>
                     }
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     <Text
                         style={{
                             ...styles.secondaryText,
@@ -964,8 +960,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 />
                             </View>
                         )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }
@@ -991,6 +987,7 @@ const styles = StyleSheet.create({
         paddingBottom: 10
     },
     content: {
+        flex: 1,
         padding: 20
     },
     button: {
