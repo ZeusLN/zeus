@@ -13,6 +13,7 @@ import ActivityStore from './../../stores/ActivityStore';
 import Screen from './../../components/Screen';
 import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
+import ZeusButton from './../../components/Button';
 
 interface ActivityFilterProps {
     navigation: any;
@@ -183,9 +184,15 @@ export default class ActivityFilter extends React.Component<
                             maximumDate={new Date()}
                             textColor={themeColor('text')}
                             mode="date"
+                            style={{
+                                height: 100,
+                                marginTop: 10,
+                                marginBottom: 20,
+                                alignSelf: 'center'
+                            }}
                         />
                         <View style={{ padding: 2 }}>
-                            <Button
+                            <ZeusButton
                                 onPress={() => {
                                     if (setStartDate) {
                                         setStartDateFilter(workingStartDate);
@@ -199,7 +206,6 @@ export default class ActivityFilter extends React.Component<
                                         workingEndDate: new Date()
                                     });
                                 }}
-                                buttonStyle={{ backgroundColor: 'orange' }}
                                 title={
                                     setStartDate
                                         ? localeString(
