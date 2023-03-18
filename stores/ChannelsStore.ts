@@ -233,11 +233,11 @@ export default class ChannelsStore {
                         this.nodes[channel.remotePubkey] = nodeInfo;
                         this.aliasesById[channel.channelId] = nodeInfo.alias;
                     })
-                    .catch((err: any) => {
-                        console.log(
-                            `Couldn't find node alias for ${channel.remotePubkey}`,
-                            err
-                        );
+                    .catch(() => {
+                        // console.log(
+                        //     `Couldn't find node alias for ${channel.remotePubkey}`,
+                        //     err
+                        // );
                     });
             }
             if (!channel.alias && this.aliasesById[channel.channelId]) {
