@@ -216,7 +216,9 @@ export const THEME_KEYS = [
     { key: 'Mighty', value: 'mighty' },
     { key: 'Green', value: 'green' },
     { key: 'Pub', value: 'pub' },
-    { key: 'Popsicle', value: 'popsicle' }
+    { key: 'Popsicle', value: 'popsicle' },
+    { key: 'Nostrich', value: 'nostrich' },
+    { key: 'Desert', value: 'desert' }
 ];
 
 export const DEFAULT_VIEW_KEYS = [
