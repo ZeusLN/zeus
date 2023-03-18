@@ -239,7 +239,10 @@ export default class WalletHeader extends React.Component<
                     fill={themeColor('text')}
                     width="25"
                     height="25"
-                    style={{ alignSelf: 'center', right: 20 }}
+                    style={{
+                        alignSelf: 'center',
+                        marginRight: 20
+                    }}
                 />
             </TouchableOpacity>
         );
