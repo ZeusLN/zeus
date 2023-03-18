@@ -210,7 +210,8 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             filteredChannels,
             filteredPendingChannels,
             filteredClosedChannels,
-            setSort
+            setSort,
+            showSearch
         } = ChannelsStore;
 
         let headerString;
@@ -256,35 +257,37 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     totalOutbound={totalOutbound}
                     totalOffline={totalOffline}
                 />
-                <Row>
-                    <SearchBar
-                        placeholder={localeString('general.search')}
-                        onChangeText={this.updateSearch}
-                        value={search}
-                        inputStyle={{
-                            color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
-                        }}
-                        placeholderTextColor={themeColor('secondaryText')}
-                        containerStyle={{
-                            backgroundColor: null,
-                            borderTopWidth: 0,
-                            borderBottomWidth: 0,
-                            width: windowWidth - 55
-                        }}
-                        inputContainerStyle={{
-                            borderRadius: 15,
-                            backgroundColor: themeColor('secondary')
-                        }}
-                        autoCapitalize="none"
-                    />
-                    <SortButton
-                        onValueChange={(value: any) => {
-                            setSort(value);
-                        }}
-                        values={CHANNELS_SORT_KEYS}
-                    />
-                </Row>
+                {showSearch && (
+                    <Row>
+                        <SearchBar
+                            placeholder={localeString('general.search')}
+                            onChangeText={this.updateSearch}
+                            value={search}
+                            inputStyle={{
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }}
+                            placeholderTextColor={themeColor('secondaryText')}
+                            containerStyle={{
+                                backgroundColor: null,
+                                borderTopWidth: 0,
+                                borderBottomWidth: 0,
+                                width: windowWidth - 55
+                            }}
+                            inputContainerStyle={{
+                                borderRadius: 15,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                            autoCapitalize="none"
+                        />
+                        <SortButton
+                            onValueChange={(value: any) => {
+                                setSort(value);
+                            }}
+                            values={CHANNELS_SORT_KEYS}
+                        />
+                    </Row>
+                )}
                 {loading ? (
                     <View style={{ top: 40 }}>
                         <LoadingIndicator />
