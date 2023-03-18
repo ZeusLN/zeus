@@ -33,6 +33,7 @@ import CollapsedQR from '../components/CollapsedQR';
 import LoadingIndicator from '../components/LoadingIndicator';
 import PaidIndicator from '../components/PaidIndicator';
 import ModalBox from '../components/ModalBox';
+import Screen from '../components/Screen';
 import {
     SuccessMessage,
     WarningMessage,
@@ -824,12 +825,7 @@ export default class Receive extends React.Component<
             Number(satAmount) !== 0 && Number(satAmount) < 546;
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -853,7 +849,7 @@ export default class Receive extends React.Component<
                             )
                         )
                     }
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -1351,7 +1347,7 @@ export default class Receive extends React.Component<
                                 style={{
                                     color: themeColor('text'),
                                     fontSize: 16,
-                                    fontWeight: 'regular'
+                                    fontWeight: 'normal'
                                 }}
                             >
                                 {d.description}
@@ -1359,7 +1355,7 @@ export default class Receive extends React.Component<
                         </TouchableOpacity>
                     ))}
                 </ModalBox>
-            </View>
+            </Screen>
         );
     }
 }

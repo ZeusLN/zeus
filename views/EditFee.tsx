@@ -13,6 +13,7 @@ import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
 import LightningIndicator from '../components/LightningIndicator';
+import Screen from '../components/Screen';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -75,12 +76,7 @@ export default class EditFee extends React.Component<
             </TouchableOpacity>
         );
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     centerComponent={{
                         text: displayOnly
@@ -88,7 +84,7 @@ export default class EditFee extends React.Component<
                             : localeString('views.EditFee.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     leftComponent={<BackButton />}
                     rightComponent={<ReloadButton />}
                     containerStyle={{
@@ -97,10 +93,6 @@ export default class EditFee extends React.Component<
                 />
                 <View
                     style={{
-                        backgroundColor:
-                            themeColor('generalStyle') === 'light'
-                                ? '#1d1f31'
-                                : themeColor('background'),
                         alignItems: 'center',
                         width: '100%',
                         paddingTop: 15,
@@ -118,7 +110,6 @@ export default class EditFee extends React.Component<
                     {recommendedFees['fastestFee'] && !loading && (
                         <View
                             style={{
-                                backgroundColor: themeColor('background'),
                                 justifyContent: 'space-around'
                             }}
                         >
@@ -364,7 +355,7 @@ export default class EditFee extends React.Component<
                         </View>
                     )}
                 </ScrollView>
-            </View>
+            </Screen>
         );
     }
 }

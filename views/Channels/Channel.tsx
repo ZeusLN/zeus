@@ -18,6 +18,7 @@ import Button from '../../components/Button';
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import FeeBreakdown from '../../components/FeeBreakdown';
+import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
@@ -205,23 +206,18 @@ export default class ChannelView extends React.Component<
         };
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={centerComponent}
                     rightComponent={<KeySend />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                     placement="right"
                 />
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     <View style={styles.center}>
                         <Text
                             style={{
@@ -612,8 +608,8 @@ export default class ChannelView extends React.Component<
                             </View>
                         </React.Fragment>
                     )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }

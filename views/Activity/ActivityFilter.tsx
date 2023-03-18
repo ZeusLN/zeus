@@ -10,6 +10,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import ActivityStore from './../../stores/ActivityStore';
 
+import Screen from './../../components/Screen';
 import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
@@ -265,13 +266,7 @@ export default class ActivityFilter extends React.Component<
         ];
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -281,7 +276,7 @@ export default class ActivityFilter extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -293,7 +288,7 @@ export default class ActivityFilter extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
+                                    backgroundColor: 'transparent'
                                 }}
                             >
                                 <ListItem.Title
@@ -369,7 +364,7 @@ export default class ActivityFilter extends React.Component<
                     onEndReachedThreshold={50}
                     refreshing={loading}
                 />
-            </View>
+            </Screen>
         );
     }
 }

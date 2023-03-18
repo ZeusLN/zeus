@@ -120,7 +120,7 @@ export default class Accounts extends React.Component<
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={value ? null : <AddButton />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}

@@ -23,6 +23,7 @@ import Button from './../../components/Button';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import Screen from './../../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
@@ -527,13 +528,7 @@ export default class NodeConfiguration extends React.Component<
         };
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -560,7 +555,7 @@ export default class NodeConfiguration extends React.Component<
                             />
                         )
                     }
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -1425,7 +1420,7 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
                 </ScrollView>
-            </View>
+            </Screen>
         );
     }
 }

@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
 
 import ModalBox from '../../components/ModalBox';
+import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
@@ -132,12 +133,7 @@ export default class InvoicesSettings extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -152,7 +148,7 @@ export default class InvoicesSettings extends React.Component<
                             <SettingsButton />
                         )
                     }
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -351,7 +347,7 @@ export default class InvoicesSettings extends React.Component<
                                 style={{
                                     color: themeColor('text'),
                                     fontSize: 16,
-                                    fontWeight: 'regular'
+                                    fontWeight: 'normal'
                                 }}
                             >
                                 {d.description}
@@ -359,7 +355,7 @@ export default class InvoicesSettings extends React.Component<
                         </TouchableOpacity>
                     ))}
                 </ModalBox>
-            </View>
+            </Screen>
         );
     }
 }

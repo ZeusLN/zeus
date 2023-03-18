@@ -43,9 +43,7 @@ export function ChannelsHeader(props) {
     return (
         <View
             style={{
-                ...styles.wrapper,
-                backgroundColor: themeColor('background'),
-                color: themeColor('text')
+                ...styles.wrapper
             }}
         >
             <TotalRow
