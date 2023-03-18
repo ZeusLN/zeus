@@ -192,9 +192,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
     };
 
     updateSearch = (value: string) => {
-        // const result = CURRENCY_KEYS.filter((item: any) =>
-        //     item.key.includes(value)
-        // );
         this.props.ChannelsStore.setSearch(value);
     };
 
@@ -214,9 +211,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             showSearch
         } = ChannelsStore;
 
-        // trigger channelPane update when lurkerMode status changes
-        // this allows us to redraw the channel balance bars
-        const { lurkerMode } = SettingsStore.settings.privacy;
+        const lurkerMode = SettingsStore.settings.privacy.lurkerMode;
 
         let headerString;
         let channelsData;
@@ -257,9 +252,10 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     }
                 />
                 <ChannelsHeader
-                    totalInbound={!!lurkerMode && totalInbound}
-                    totalOutbound={!!lurkerMode && totalOutbound}
-                    totalOffline={!!lurkerMode && totalOffline}
+                    totalInbound={totalInbound}
+                    totalOutbound={totalOutbound}
+                    totalOffline={totalOffline}
+                    lurkerMode={lurkerMode}
                 />
                 {showSearch && (
                     <Row>
