@@ -10,7 +10,6 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import DropdownSetting from './../../components/DropdownSetting';
-import LoadingIndicator from './../../components/LoadingIndicator';
 import Switch from './../../components/Switch';
 
 interface DisplayProps {
@@ -67,7 +66,7 @@ export default class Display extends React.Component<
         const { navigation, SettingsStore } = this.props;
         const { defaultView, displayNickname, bigKeypadButtons, theme } =
             this.state;
-        const { updateSettings, loading }: any = SettingsStore;
+        const { updateSettings }: any = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -103,139 +102,134 @@ export default class Display extends React.Component<
                         borderBottomWidth: 0
                     }}
                 />
-                {loading ? (
-                    <LoadingIndicator />
-                ) : (
-                    <ScrollView style={{ flex: 1, padding: 15 }}>
-                        <DropdownSetting
-                            title={localeString('views.Settings.Theme.title')}
-                            selectedValue={theme}
-                            onValueChange={async (value: string) => {
-                                this.setState({
-                                    theme: value
-                                });
-                                await updateSettings({
-                                    display: {
-                                        theme: value,
-                                        displayNickname,
-                                        bigKeypadButtons,
-                                        defaultView
-                                    }
-                                });
-                            }}
-                            values={THEME_KEYS}
-                        />
 
-                        <DropdownSetting
-                            title={localeString(
-                                'views.Settings.Display.defaultView'
+                <ScrollView style={{ flex: 1, padding: 15 }}>
+                    <DropdownSetting
+                        title={localeString('views.Settings.Theme.title')}
+                        selectedValue={theme}
+                        onValueChange={async (value: string) => {
+                            this.setState({
+                                theme: value
+                            });
+                            await updateSettings({
+                                display: {
+                                    theme: value,
+                                    displayNickname,
+                                    bigKeypadButtons,
+                                    defaultView
+                                }
+                            });
+                        }}
+                        values={THEME_KEYS}
+                    />
+
+                    <DropdownSetting
+                        title={localeString(
+                            'views.Settings.Display.defaultView'
+                        )}
+                        selectedValue={defaultView}
+                        onValueChange={async (value: string) => {
+                            this.setState({
+                                defaultView: value
+                            });
+                            await updateSettings({
+                                display: {
+                                    defaultView: value,
+                                    displayNickname,
+                                    bigKeypadButtons,
+                                    theme
+                                }
+                            });
+                        }}
+                        values={DEFAULT_VIEW_KEYS}
+                    />
+
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular',
+                                left: -10
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Display.displayNickname'
                             )}
-                            selectedValue={defaultView}
-                            onValueChange={async (value: string) => {
-                                this.setState({
-                                    defaultView: value
-                                });
-                                await updateSettings({
-                                    display: {
-                                        defaultView: value,
-                                        displayNickname,
-                                        bigKeypadButtons,
-                                        theme
-                                    }
-                                });
-                            }}
-                            values={DEFAULT_VIEW_KEYS}
-                        />
-
-                        <ListItem
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: themeColor('background')
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
                             }}
                         >
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular',
-                                    left: -10
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.Display.displayNickname'
-                                )}
-                            </ListItem.Title>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
-                            >
-                                <Switch
-                                    value={displayNickname}
-                                    onValueChange={async () => {
-                                        this.setState({
+                            <Switch
+                                value={displayNickname}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        displayNickname: !displayNickname
+                                    });
+                                    await updateSettings({
+                                        display: {
+                                            defaultView,
+                                            theme,
+                                            bigKeypadButtons,
                                             displayNickname: !displayNickname
-                                        });
-                                        await updateSettings({
-                                            display: {
-                                                defaultView,
-                                                theme,
-                                                bigKeypadButtons,
-                                                displayNickname:
-                                                    !displayNickname
-                                            }
-                                        });
-                                    }}
-                                />
-                            </View>
-                        </ListItem>
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
 
-                        <ListItem
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: themeColor('background')
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular',
+                                left: -10
                             }}
                         >
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular',
-                                    left: -10
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.Display.bigKeypadButtons'
-                                )}
-                            </ListItem.Title>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
-                            >
-                                <Switch
-                                    value={bigKeypadButtons}
-                                    onValueChange={async () => {
-                                        this.setState({
+                            {localeString(
+                                'views.Settings.Display.bigKeypadButtons'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={bigKeypadButtons}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        bigKeypadButtons: !bigKeypadButtons
+                                    });
+                                    await updateSettings({
+                                        display: {
+                                            defaultView,
+                                            theme,
+                                            displayNickname,
                                             bigKeypadButtons: !bigKeypadButtons
-                                        });
-                                        await updateSettings({
-                                            display: {
-                                                defaultView,
-                                                theme,
-                                                displayNickname,
-                                                bigKeypadButtons:
-                                                    !bigKeypadButtons
-                                            }
-                                        });
-                                    }}
-                                />
-                            </View>
-                        </ListItem>
-                    </ScrollView>
-                )}
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+                </ScrollView>
             </View>
         );
     }
