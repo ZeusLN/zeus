@@ -59,7 +59,7 @@ export default class PointOfSaleReconExport extends React.PureComponent<
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={<CopyBadge copyValue={reconExport} />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}

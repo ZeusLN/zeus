@@ -323,7 +323,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}

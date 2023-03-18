@@ -7,6 +7,7 @@ import Button from '../components/Button';
 import CopyButton from '../components/CopyButton';
 import LightningIndicator from '../components/LightningIndicator';
 import PaidIndicator from '../components/PaidIndicator';
+import Screen from '../components/Screen';
 
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
@@ -46,12 +47,7 @@ export default class SendingLightning extends React.Component<
             payment_route || status === 'complete' || status === 'SUCCEEDED';
 
         return (
-            <View
-                style={{
-                    ...styles.container,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <View
                     style={{
                         ...styles.content,
@@ -227,7 +223,7 @@ export default class SendingLightning extends React.Component<
                         )}
                     </View>
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

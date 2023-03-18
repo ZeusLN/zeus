@@ -14,6 +14,7 @@ import { inject, observer } from 'mobx-react';
 import Amount from '../components/Amount';
 import Button from '../components/Button';
 import KeyValue from '../components/KeyValue';
+import Screen from '../components/Screen';
 
 import BackendUtils from '../utils/BackendUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
@@ -106,12 +107,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -121,7 +117,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -137,7 +133,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     />
                 </View>
 
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     {total_fees ? (
                         <KeyValue
                             keyValue={localeString(
@@ -278,8 +274,8 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             />
                         </View>
                     )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }
