@@ -38,6 +38,7 @@ interface DisplaySettings {
     theme?: string;
     defaultView?: string;
     displayNickname?: boolean;
+    bigKeypadButtons?: boolean;
 }
 
 interface PosSettings {
@@ -50,10 +51,18 @@ interface PosSettings {
     squareDevMode?: boolean;
 }
 
-interface PaymentSettings {
+interface PaymentsSettings {
     defaultFeeMethod?: string;
     defaultFeePercentage?: string;
     defaultFeeFixed?: string;
+}
+
+interface InvoicesSettings {
+    addressType?: string;
+    memo?: string;
+    expiry?: string;
+    routeHints?: boolean;
+    ampInvoice?: boolean;
 }
 
 export interface Settings {
@@ -71,7 +80,8 @@ export interface Settings {
     privacy: PrivacySettings;
     display: DisplaySettings;
     pos: PosSettings;
-    payments: PaymentSettings;
+    payments: PaymentsSettings;
+    invoices: InvoicesSettings;
     isBiometryEnabled: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
@@ -205,7 +215,13 @@ export const THEME_KEYS = [
     { key: 'Deadpool', value: 'deadpool' },
     { key: 'Mighty', value: 'mighty' },
     { key: 'Green', value: 'green' },
-    { key: 'Pub', value: 'pub' }
+    { key: 'Pub', value: 'pub' },
+    { key: 'Popsicle', value: 'popsicle' },
+    { key: 'Nostrich', value: 'nostrich' },
+    { key: 'Desert', value: 'desert' },
+    { key: 'Orange Cream Soda', value: 'orange-cream-soda' },
+    { key: 'Mint', value: 'mint' },
+    { key: 'Red Metallic', value: 'red-metallic' }
 ];
 
 export const DEFAULT_VIEW_KEYS = [
@@ -242,7 +258,8 @@ export default class SettingsStore {
         display: {
             theme: DEFAULT_THEME,
             defaultView: 'Keypad',
-            displayNickname: false
+            displayNickname: false,
+            bigKeypadButtons: false
         },
         pos: {
             squareEnabled: false,
@@ -257,6 +274,13 @@ export default class SettingsStore {
             defaultFeeMethod: 'fixed',
             defaultFeePercentage: '0.5',
             defaultFeeFixed: '100'
+        },
+        invoices: {
+            addressType: '1',
+            memo: '',
+            expiry: '3600',
+            routeHints: false,
+            ampInvoice: false
         },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
@@ -510,9 +534,15 @@ export default class SettingsStore {
             return doTorRequest(url, RequestMethod.POST)
                 .then((response: any) => {
                     this.loading = false;
-                    this.createAccountSuccess = localeString(
-                        'stores.SettingsStore.lndhubSuccess'
-                    );
+                    if (response.error) {
+                        this.createAccountError =
+                            response.message ||
+                            localeString('stores.SettingsStore.lndhubError');
+                    } else {
+                        this.createAccountSuccess = localeString(
+                            'stores.SettingsStore.lndhubSuccess'
+                        );
+                    }
                     return response;
                 })
                 .catch((err: any) => {
@@ -532,10 +562,20 @@ export default class SettingsStore {
                     const status = response.info().status;
                     if (status == 200) {
                         const data = response.json();
+                        console.log('!!', data);
                         this.loading = false;
-                        this.createAccountSuccess = localeString(
-                            'stores.SettingsStore.lndhubSuccess'
-                        );
+                        if (data.error) {
+                            this.createAccountError =
+                                data.message ||
+                                localeString(
+                                    'stores.SettingsStore.lndhubError'
+                                );
+                        } else {
+                            this.createAccountSuccess = localeString(
+                                'stores.SettingsStore.lndhubSuccess'
+                            );
+                        }
+
                         return data;
                     } else {
                         // handle error
@@ -642,12 +682,13 @@ export default class SettingsStore {
 
     @action
     public toggleLurker = () => {
-        if (this.settings.privacy.lurkerMode) {
-            this.lurkerExposed = true;
-        } else {
+        this.lurkerExposed = true;
+        this.settings.privacy.lurkerMode = false;
+
+        setTimeout(() => {
             this.lurkerExposed = false;
-        }
-        this.settings.privacy.lurkerMode = !this.settings.privacy.lurkerMode;
+            this.settings.privacy.lurkerMode = true;
+        }, 3000);
     };
 
     @action

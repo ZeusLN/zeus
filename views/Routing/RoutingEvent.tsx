@@ -13,6 +13,7 @@ import ForwardEvent from './../../models/ForwardEvent';
 import KeyValue from './../../components/KeyValue';
 import Amount from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
+import Screen from './../../components/Screen';
 
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -83,25 +84,19 @@ export default class RoutingEvent extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Routing.RoutingEvent.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     <View style={styles.amount}>
                         <Amount
                             sats={fee}
@@ -234,8 +229,8 @@ export default class RoutingEvent extends React.Component<
                         peerDisplay={chanOutLabel}
                         channelPoint={channelOutPoint}
                     />
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }

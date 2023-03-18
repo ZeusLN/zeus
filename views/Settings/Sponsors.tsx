@@ -1,8 +1,11 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+
+import Screen from '../../components/Screen';
+
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface SponsorsProps {
     navigation: any;
@@ -36,12 +39,7 @@ function Sponsors(props: SponsorsProps) {
     ];
 
     return (
-        <View
-            style={{
-                flex: 1,
-                backgroundColor: themeColor('background')
-            }}
-        >
+        <Screen>
             <Header
                 leftComponent={<BackButton />}
                 centerComponent={{
@@ -51,7 +49,7 @@ function Sponsors(props: SponsorsProps) {
                         fontFamily: 'Lato-Regular'
                     }
                 }}
-                backgroundColor={themeColor('background')}
+                backgroundColor="transparent"
                 containerStyle={{
                     borderBottomWidth: 0
                 }}
@@ -62,7 +60,7 @@ function Sponsors(props: SponsorsProps) {
                     <ListItem
                         containerStyle={{
                             borderBottomWidth: 0,
-                            backgroundColor: themeColor('background')
+                            backgroundColor: 'theme'
                         }}
                         onPress={() => navigation.navigate(item.path)}
                     >
@@ -85,7 +83,7 @@ function Sponsors(props: SponsorsProps) {
                 keyExtractor={(item, index) => `${item.label}-${index}`}
                 ItemSeparatorComponent={renderSeparator}
             />
-        </View>
+        </Screen>
     );
 }
 

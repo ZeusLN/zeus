@@ -2,11 +2,14 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import Screen from '../../components/Screen';
+
 import SettingsStore from '../../stores/SettingsStore';
+
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import LoadingIndicator from '../../components/LoadingIndicator';
 import TextInput from '../../components/TextInput';
 
 interface PaymentsSettingsProps {
@@ -44,19 +47,6 @@ export default class PaymentsSettings extends React.Component<
         });
     }
 
-    handleSave = async () => {
-        const { feeLimitMethod, feeLimit, feePercentage } = this.state;
-        const { SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
-        await updateSettings({
-            payments: {
-                defaultFeeMethod: feeLimitMethod,
-                defaultFeePercentage: feePercentage,
-                defaultFeeFixed: feeLimit
-            }
-        });
-    };
-
     renderSeparator = () => (
         <View
             style={{
@@ -67,15 +57,15 @@ export default class PaymentsSettings extends React.Component<
     );
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const { feeLimit, feeLimitMethod, feePercentage } = this.state;
-        const { loading }: any = SettingsStore;
+        const { SettingsStore } = this.props;
+        const { updateSettings } = SettingsStore;
 
         const BackButton = () => (
             <Icon
                 name="arrow-back"
                 onPress={() => {
-                    this.handleSave();
                     navigation.navigate('Settings', {
                         refresh: true
                     });
@@ -86,12 +76,7 @@ export default class PaymentsSettings extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -101,113 +86,119 @@ export default class PaymentsSettings extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                {loading ? (
-                    <LoadingIndicator />
-                ) : (
-                    <View
+                <View
+                    style={{
+                        padding: 20
+                    }}
+                >
+                    <Text
                         style={{
-                            padding: 20
+                            fontFamily: 'Lato-Regular',
+                            paddingTop: 5,
+                            color: themeColor('text')
                         }}
                     >
+                        {`${localeString(
+                            'views.Settings.Payments.defaultFeeLimit'
+                        )}`}
+                    </Text>
+                    <View
+                        style={{
+                            flex: 1,
+                            flexWrap: 'wrap',
+                            flexDirection: 'row',
+                            justifyContent: 'flex-end',
+                            opacity: feeLimitMethod == 'percent' ? 1 : 0.25
+                        }}
+                    ></View>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            width: '95%'
+                        }}
+                    >
+                        <TextInput
+                            style={{
+                                width: '50%',
+                                opacity: feeLimitMethod == 'fixed' ? 1 : 0.25
+                            }}
+                            keyboardType="numeric"
+                            value={feeLimit}
+                            onChangeText={async (text: string) => {
+                                this.setState({
+                                    feeLimit: text
+                                });
+                                await updateSettings({
+                                    payments: {
+                                        defaultFeeMethod: 'fixed',
+                                        defaultFeePercentage: feePercentage,
+                                        defaultFeeFixed: text
+                                    }
+                                });
+                            }}
+                            onPressIn={() =>
+                                this.setState({
+                                    feeLimitMethod: 'fixed'
+                                })
+                            }
+                        />
                         <Text
                             style={{
                                 fontFamily: 'Lato-Regular',
                                 paddingTop: 5,
-                                color: themeColor('text')
+                                color: themeColor('text'),
+                                top: 28,
+                                right: 30,
+                                opacity: feeLimitMethod == 'fixed' ? 1 : 0.25
                             }}
                         >
-                            {`${localeString(
-                                'views.Settings.Payments.defaultFeeLimit'
-                            )}`}
+                            {`${localeString('general.sats')}`}
                         </Text>
-                        <View
+                        <TextInput
                             style={{
-                                flex: 1,
-                                flexWrap: 'wrap',
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end',
+                                width: '50%',
                                 opacity: feeLimitMethod == 'percent' ? 1 : 0.25
                             }}
-                        ></View>
-                        <View
+                            keyboardType="numeric"
+                            value={feePercentage}
+                            onChangeText={async (text: string) => {
+                                this.setState({
+                                    feePercentage: text
+                                });
+                                await updateSettings({
+                                    payments: {
+                                        defaultFeeMethod: 'percent',
+                                        defaultFeePercentage: text,
+                                        defaultFeeFixed: feeLimit
+                                    }
+                                });
+                            }}
+                            onPressIn={() =>
+                                this.setState({
+                                    feeLimitMethod: 'percent'
+                                })
+                            }
+                        />
+                        <Text
                             style={{
-                                flexDirection: 'row',
-                                width: '95%'
+                                fontFamily: 'Lato-Regular',
+                                paddingTop: 5,
+                                color: themeColor('text'),
+                                top: 28,
+                                right: 18,
+                                opacity: feeLimitMethod == 'percent' ? 1 : 0.25
                             }}
                         >
-                            <TextInput
-                                style={{
-                                    width: '50%',
-                                    opacity:
-                                        feeLimitMethod == 'fixed' ? 1 : 0.25
-                                }}
-                                keyboardType="numeric"
-                                value={feeLimit}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        feeLimit: text
-                                    })
-                                }
-                                onPressIn={() =>
-                                    this.setState({
-                                        feeLimitMethod: 'fixed'
-                                    })
-                                }
-                            />
-                            <Text
-                                style={{
-                                    fontFamily: 'Lato-Regular',
-                                    paddingTop: 5,
-                                    color: themeColor('text'),
-                                    top: 28,
-                                    right: 30,
-                                    opacity:
-                                        feeLimitMethod == 'fixed' ? 1 : 0.25
-                                }}
-                            >
-                                {`${localeString('general.sats')}`}
-                            </Text>
-                            <TextInput
-                                style={{
-                                    width: '50%',
-                                    opacity:
-                                        feeLimitMethod == 'percent' ? 1 : 0.25
-                                }}
-                                keyboardType="numeric"
-                                value={feePercentage}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        feePercentage: text
-                                    })
-                                }
-                                onPressIn={() =>
-                                    this.setState({
-                                        feeLimitMethod: 'percent'
-                                    })
-                                }
-                            />
-                            <Text
-                                style={{
-                                    fontFamily: 'Lato-Regular',
-                                    paddingTop: 5,
-                                    color: themeColor('text'),
-                                    top: 28,
-                                    right: 18,
-                                    opacity:
-                                        feeLimitMethod == 'percent' ? 1 : 0.25
-                                }}
-                            >
-                                {'%'}
-                            </Text>
-                        </View>
+                            {'%'}
+                        </Text>
                     </View>
-                )}
-            </View>
+                </View>
+            </Screen>
         );
     }
 }

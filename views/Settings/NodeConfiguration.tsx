@@ -23,6 +23,7 @@ import Button from './../../components/Button';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import Screen from './../../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
@@ -71,10 +72,8 @@ interface NodeConfigurationState {
     remoteKey: string;
 }
 
-const ScanBadge = ({ navigation }: { navigation: any }) => (
-    <TouchableOpacity
-        onPress={() => navigation.navigate('HandleAnythingQRScanner')}
-    >
+const ScanBadge = ({ onPress }: { onPress: () => void }) => (
+    <TouchableOpacity onPress={onPress}>
         <Scan fill={themeColor('text')} />
     </TouchableOpacity>
 );
@@ -529,13 +528,7 @@ export default class NodeConfiguration extends React.Component<
         };
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -544,8 +537,25 @@ export default class NodeConfiguration extends React.Component<
                         ),
                         style: { ...styles.text, color: themeColor('text') }
                     }}
-                    rightComponent={<ScanBadge navigation={navigation} />}
-                    backgroundColor={themeColor('background')}
+                    rightComponent={
+                        implementation === 'eclair' ? null : (
+                            <ScanBadge
+                                onPress={() =>
+                                    implementation === 'spark'
+                                        ? navigation.navigate(
+                                              'SparkQRScanner',
+                                              {
+                                                  index
+                                              }
+                                          )
+                                        : navigation.navigate(
+                                              'HandleAnythingQRScanner'
+                                          )
+                                }
+                            />
+                        )
+                    }
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -648,7 +658,10 @@ export default class NodeConfiguration extends React.Component<
                                                     lndhubUrl,
                                                     certVerification
                                                 ).then((data: any) => {
-                                                    if (data) {
+                                                    if (
+                                                        data.login &&
+                                                        data.password
+                                                    ) {
                                                         this.setState({
                                                             username:
                                                                 data.login,
@@ -1281,7 +1294,7 @@ export default class NodeConfiguration extends React.Component<
                     </View>
 
                     {!existingAccount && implementation === 'lndhub' && (
-                        <View style={styles.button}>
+                        <View style={{ ...styles.button, marginTop: 20 }}>
                             <Button
                                 title={localeString(
                                     'views.Settings.AddEditNode.createLndhub'
@@ -1365,115 +1378,6 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {implementation === 'lnd' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanLndconnect'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'LNDConnectConfigQRScanner',
-                                        {
-                                            index
-                                        }
-                                    )
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'lightning-node-connect' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanLnc'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'LightningNodeConnectQRScanner',
-                                        {
-                                            index
-                                        }
-                                    )
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'c-lightning-REST' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanCLightningRest'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'CLightningRestQRScanner',
-                                        {
-                                            index
-                                        }
-                                    )
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {(implementation === 'lnd' ||
-                        implementation === 'c-lightning-REST') && (
-                        <View style={{ ...styles.button, marginBottom: 40 }}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanBtcpay'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'BTCPayConfigQRScanner',
-                                        {
-                                            index
-                                        }
-                                    )
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'lndhub' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanLndhub'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate('LNDHubQRScanner', {
-                                        index
-                                    })
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'spark' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanSpark'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate('SparkQRScanner', {
-                                        index
-                                    })
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
                     {saved && (
                         <View style={styles.button}>
                             <Button
@@ -1516,7 +1420,7 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
                 </ScrollView>
-            </View>
+            </Screen>
         );
     }
 }

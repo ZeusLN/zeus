@@ -343,7 +343,7 @@ export default class Lockscreen extends React.Component<
                 {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
                     <Header
                         leftComponent={<BackButton />}
-                        backgroundColor={themeColor('background')}
+                        backgroundColor="transparent"
                         containerStyle={{
                             borderBottomWidth: 0
                         }}

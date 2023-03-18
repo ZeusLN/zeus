@@ -18,6 +18,7 @@ import Button from '../../components/Button';
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import FeeBreakdown from '../../components/FeeBreakdown';
+import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
@@ -110,10 +111,9 @@ export default class ChannelView extends React.Component<
     };
 
     render() {
-        const { navigation, ChannelsStore, SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
             this.state;
-        const { nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
@@ -132,12 +132,12 @@ export default class ChannelView extends React.Component<
             total_satoshis_sent,
             remotePubkey,
             capacity,
-            alias,
             channelId,
             initiator,
             alias_scids,
             local_chan_reserve_sat,
             remote_chan_reserve_sat,
+            displayName,
             // closed
             closeHeight,
             closeType,
@@ -164,12 +164,7 @@ export default class ChannelView extends React.Component<
         );
         const bumpable: boolean = pendingOpen;
 
-        const peerName =
-            (nodes[remotePubkey] && nodes[remotePubkey].alias) ||
-            alias ||
-            channelId;
-
-        const peerDisplay = PrivacyUtils.sensitiveValue(peerName, 8);
+        const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
 
         const BackButton = () => (
             <Icon
@@ -211,23 +206,18 @@ export default class ChannelView extends React.Component<
         };
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={centerComponent}
                     rightComponent={<KeySend />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                     placement="right"
                 />
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     <View style={styles.center}>
                         <Text
                             style={{
@@ -618,8 +608,8 @@ export default class ChannelView extends React.Component<
                             </View>
                         </React.Fragment>
                     )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }

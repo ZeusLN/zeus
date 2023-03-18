@@ -4,6 +4,7 @@ import { FlatList, ScrollView, View } from 'react-native';
 import { BiometryType } from 'react-native-biometrics';
 import { Header, Icon, ListItem } from 'react-native-elements';
 
+import Screen from './../../components/Screen';
 import Switch from './../../components/Switch';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -190,7 +191,7 @@ export default class Security extends React.Component<
             <ListItem
                 containerStyle={{
                     borderBottomWidth: 0,
-                    backgroundColor: themeColor('background')
+                    backgroundColor: 'transparent'
                 }}
                 onPress={() => this.navigateSecurity(item)}
             >
@@ -234,12 +235,7 @@ export default class Security extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -249,103 +245,109 @@ export default class Security extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                <FlatList
-                    data={displaySecurityItems}
-                    renderItem={this.renderItem}
-                    keyExtractor={(item, index) => `${item.label}-${index}`}
-                    ItemSeparatorComponent={this.renderSeparator}
-                />
-                {settings.supportedBiometryType !== undefined && (
-                    <ListItem
-                        containerStyle={{
-                            backgroundColor: themeColor('background')
-                        }}
-                    >
-                        <ListItem.Content>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
-                                }}
-                            >
-                                {localeString(
-                                    `views.Settings.Security.${this.state.supportedBiometryType}.title`
-                                )}
-                            </ListItem.Title>
-                        </ListItem.Content>
+                <ScrollView>
+                    <FlatList
+                        data={displaySecurityItems}
+                        renderItem={this.renderItem}
+                        keyExtractor={(item, index) => `${item.label}-${index}`}
+                        ItemSeparatorComponent={this.renderSeparator}
+                    />
+                    {settings.supportedBiometryType !== undefined && (
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: themeColor('background')
+                            }}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        `views.Settings.Security.${this.state.supportedBiometryType}.title`
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
 
-                        <Switch
-                            value={isBiometryEnabled}
-                            onValueChange={this.handleBiometricsSwitchChange}
-                        />
-                    </ListItem>
-                )}
-                {pinExists && (
-                    <ListItem
-                        containerStyle={{
-                            backgroundColor: themeColor('background')
-                        }}
-                    >
-                        <ListItem.Content>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.Security.scramblePIN'
-                                )}
-                            </ListItem.Title>
-                        </ListItem.Content>
-                        <Switch
-                            value={scramblePin}
-                            onValueChange={async () => {
-                                this.setState({
-                                    scramblePin: !scramblePin
-                                });
-                                updateSettings({ scramblePin: !scramblePin });
+                            <Switch
+                                value={isBiometryEnabled}
+                                onValueChange={
+                                    this.handleBiometricsSwitchChange
+                                }
+                            />
+                        </ListItem>
+                    )}
+                    {pinExists && (
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: themeColor('background')
                             }}
-                        />
-                    </ListItem>
-                )}
-                {(pinExists || passphraseExists || isBiometryEnabled) && (
-                    <ListItem
-                        containerStyle={{
-                            backgroundColor: themeColor('background')
-                        }}
-                    >
-                        <ListItem.Content>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Security.scramblePIN'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Switch
+                                value={scramblePin}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        scramblePin: !scramblePin
+                                    });
+                                    updateSettings({
+                                        scramblePin: !scramblePin
+                                    });
                                 }}
-                            >
-                                {localeString(
-                                    'views.Settings.Security.loginBackground'
-                                )}
-                            </ListItem.Title>
-                        </ListItem.Content>
-                        <Switch
-                            value={loginBackground}
-                            onValueChange={async () => {
-                                this.setState({
-                                    loginBackground: !loginBackground
-                                });
-                                updateSettings({
-                                    loginBackground: !loginBackground
-                                });
+                            />
+                        </ListItem>
+                    )}
+                    {(pinExists || passphraseExists || isBiometryEnabled) && (
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: themeColor('background')
                             }}
-                        />
-                    </ListItem>
-                )}
-            </ScrollView>
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Security.loginBackground'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Switch
+                                value={loginBackground}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        loginBackground: !loginBackground
+                                    });
+                                    updateSettings({
+                                        loginBackground: !loginBackground
+                                    });
+                                }}
+                            />
+                        </ListItem>
+                    )}
+                </ScrollView>
+            </Screen>
         );
     }
 }

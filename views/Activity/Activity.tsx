@@ -11,6 +11,7 @@ import { inject, observer } from 'mobx-react';
 
 import Amount from '../../components/Amount';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -133,13 +134,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -150,7 +145,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         }
                     }}
                     rightComponent={<FilterButton />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -174,17 +169,19 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     : localeString(
                                           'views.Activity.requestedPayment'
                                       );
-                                subTitle = item.isPaid
-                                    ? localeString('general.lightning')
-                                    : `${localeString(
-                                          'views.PaymentRequest.title'
-                                      )}: ${
-                                          item.isExpired
-                                              ? localeString(
-                                                    'views.Activity.expired'
-                                                )
-                                              : item.expirationDate
-                                      }`;
+                                subTitle = `${
+                                    item.isPaid
+                                        ? localeString('general.lightning')
+                                        : `${localeString(
+                                              'views.PaymentRequest.title'
+                                          )}: ${
+                                              item.isExpired
+                                                  ? localeString(
+                                                        'views.Activity.expired'
+                                                    )
+                                                  : item.expirationDate
+                                          }`
+                                }${item.memo ? `: ${item.memo}` : ''}`;
                             }
 
                             if (
@@ -194,7 +191,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                 displayName = localeString(
                                     'views.Activity.youSent'
                                 );
-                                subTitle = localeString('general.lightning');
+                                subTitle = item.getMemo
+                                    ? `${localeString('general.lightning')}: ${
+                                          item.getMemo
+                                      }`
+                                    : localeString('general.lightning');
                             }
 
                             if (
@@ -230,8 +231,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                themeColor('background')
+                                            backgroundColor: 'transparent'
                                         }}
                                         onPress={() => {
                                             if (
@@ -343,7 +343,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         }}
                     />
                 )}
-            </View>
+            </Screen>
         );
     }
 }

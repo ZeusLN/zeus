@@ -121,7 +121,7 @@ export default class SetDuressPin extends React.Component<
             >
                 <Header
                     leftComponent={<BackButton />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
