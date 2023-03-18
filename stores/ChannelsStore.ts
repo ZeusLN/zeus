@@ -64,6 +64,7 @@ export default class ChannelsStore {
         dir: 'DESC',
         type: 'numeric'
     };
+    @observable public showSearch: boolean = false;
 
     settingsStore: SettingsStore;
 
@@ -576,7 +577,13 @@ export default class ChannelsStore {
             });
     };
 
+    @action
     public setChannelsType = (type: ChannelsType) => {
         this.channelsType = type;
+    };
+
+    @action
+    public toggleSearch = () => {
+        this.showSearch = !this.showSearch;
     };
 }
