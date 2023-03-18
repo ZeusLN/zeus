@@ -218,7 +218,10 @@ export const THEME_KEYS = [
     { key: 'Pub', value: 'pub' },
     { key: 'Popsicle', value: 'popsicle' },
     { key: 'Nostrich', value: 'nostrich' },
-    { key: 'Desert', value: 'desert' }
+    { key: 'Desert', value: 'desert' },
+    { key: 'Orange Cream Soda', value: 'orange-cream-soda' },
+    { key: 'Mint', value: 'mint' },
+    { key: 'Red Metallic', value: 'red-metallic' }
 ];
 
 export const DEFAULT_VIEW_KEYS = [

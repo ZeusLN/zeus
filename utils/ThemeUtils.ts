@@ -216,6 +216,44 @@ export function themeColor(themeString: string): any {
         separator: '#141414'
     };
 
+    const OrangeCreamSoda: { [key: string]: any } = {
+        gradientBackground: [
+            '#FDB777',
+            '#FDA766',
+            '#FD9346',
+            '#FD7F2C',
+            '#FF6200'
+        ],
+        generalStyle: 'dark',
+        background: '#FF6200',
+        secondary: '#141414',
+        separator: '#141414'
+    };
+
+    const Mint: { [key: string]: any } = {
+        gradientBackground: [
+            '#ADF0D3',
+            '#98E4C4',
+            '#84D8B6',
+            '#6FCCA7',
+            '#5BC099',
+            '#46B48A'
+        ],
+        generalStyle: 'dark',
+        background: '#46B48A',
+        secondary: '#141414',
+        secondaryText: '#FFFDF2',
+        separator: '#141414'
+    };
+
+    const RedMetallic: { [key: string]: any } = {
+        gradientBackground: ['#961E1E', '#A72F2F', '#B94A4A'],
+        generalStyle: 'dark',
+        background: '#961E1E',
+        secondary: '#141414',
+        separator: '#141414'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -249,6 +287,12 @@ export function themeColor(themeString: string): any {
             return Nostrich[themeString] || Dark[themeString];
         case 'desert':
             return Desert[themeString] || Dark[themeString];
+        case 'orange-cream-soda':
+            return OrangeCreamSoda[themeString] || Dark[themeString];
+        case 'mint':
+            return Mint[themeString] || Dark[themeString];
+        case 'red-metallic':
+            return RedMetallic[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
