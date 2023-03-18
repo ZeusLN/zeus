@@ -322,13 +322,10 @@ export default class LnurlPay extends React.Component<
                         }
                         toggleUnits={changeUnits}
                     />
-                    {units !== 'sats' && (
-                        <Amount sats={satAmount} fixedUnits="sats" toggleable />
+                    {fiat !== 'Disabled' && units !== 'fiat' && (
+                        <Amount sats={satAmount} fixedUnits="fiat" toggleable />
                     )}
-                    {units !== 'BTC' && (
-                        <Amount sats={satAmount} fixedUnits="BTC" toggleable />
-                    )}
-                    {units === 'fiat' && (
+                    {fiat !== 'Disabled' && (
                         <TouchableOpacity onPress={() => changeUnits()}>
                             <Text
                                 style={{
@@ -336,9 +333,15 @@ export default class LnurlPay extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {FiatStore.getRate()}
+                                {FiatStore.getRate(units === 'sats')}
                             </Text>
                         </TouchableOpacity>
+                    )}
+                    {units !== 'sats' && (
+                        <Amount sats={satAmount} fixedUnits="sats" toggleable />
+                    )}
+                    {units !== 'BTC' && (
+                        <Amount sats={satAmount} fixedUnits="BTC" toggleable />
                     )}
                     {lnurl.commentAllowed > 0 ? (
                         <>
