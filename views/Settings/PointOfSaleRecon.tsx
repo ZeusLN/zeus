@@ -10,6 +10,7 @@ import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 
+import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Spacer } from '../../components/layout/Spacer';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -227,12 +228,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         ];
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -240,7 +236,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={<ExportBadge navigation={navigation} />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -305,7 +301,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
                         )}
                     </View>
                 )}
-            </View>
+            </Screen>
         );
     }
 }

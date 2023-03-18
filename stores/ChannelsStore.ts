@@ -64,6 +64,7 @@ export default class ChannelsStore {
         dir: 'DESC',
         type: 'numeric'
     };
+    @observable public showSearch: boolean = false;
 
     settingsStore: SettingsStore;
 
@@ -167,12 +168,15 @@ export default class ChannelsStore {
         const query = this.search;
         const filtered = channels.filter(
             (channel: Channel) =>
-                channel.alias?.includes(query) ||
-                channel.alias?.toLocaleLowerCase().includes(query) ||
-                channel.remotePubkey.includes(query) ||
-                channel.remotePubkey.toLowerCase().includes(query) ||
-                channel.channelId.includes(query) ||
-                channel.channelId.toLowerCase().includes(query)
+                channel.alias
+                    ?.toLocaleLowerCase()
+                    .includes(query.toLocaleLowerCase()) ||
+                channel.remotePubkey
+                    .toLocaleLowerCase()
+                    .includes(query.toLocaleLowerCase()) ||
+                channel.channelId
+                    .toLocaleLowerCase()
+                    .includes(query.toLocaleLowerCase())
         );
 
         const sorted = filtered.sort((a: any, b: any) => {
@@ -576,7 +580,13 @@ export default class ChannelsStore {
             });
     };
 
+    @action
     public setChannelsType = (type: ChannelsType) => {
         this.channelsType = type;
+    };
+
+    @action
+    public toggleSearch = () => {
+        this.showSearch = !this.showSearch;
     };
 }

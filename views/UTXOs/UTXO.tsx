@@ -11,6 +11,7 @@ import { inject, observer } from 'mobx-react';
 
 import Amount from './../../components/Amount';
 import KeyValue from './../../components/KeyValue';
+import Screen from './../../components/Screen';
 
 import Utxo from './../../models/Utxo';
 
@@ -48,13 +49,7 @@ export default class UTXO extends React.Component<UTXOProps> {
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -64,16 +59,16 @@ export default class UTXO extends React.Component<UTXOProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                <View style={styles.center}>
-                    <Amount sats={amount} jumboText toggleable sensitive />
-                </View>
+                <ScrollView style={styles.content}>
+                    <View style={styles.center}>
+                        <Amount sats={amount} jumboText toggleable sensitive />
+                    </View>
 
-                <View style={styles.content}>
                     <KeyValue
                         keyValue={localeString('general.outpoint')}
                         value={getOutpoint}
@@ -146,8 +141,8 @@ export default class UTXO extends React.Component<UTXOProps> {
                             sensitive
                         />
                     )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }
