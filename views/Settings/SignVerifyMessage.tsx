@@ -6,6 +6,7 @@ import { inject, observer } from 'mobx-react';
 import Button from './../../components/Button';
 import CopyButton from './../../components/CopyButton';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import Screen from './../../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
@@ -134,12 +135,7 @@ export default class SignVerifyMessage extends React.Component<
         const buttons = [{ element: signButton }, { element: verifyButton }];
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -149,13 +145,13 @@ export default class SignVerifyMessage extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
 
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
@@ -364,8 +360,8 @@ export default class SignVerifyMessage extends React.Component<
                             />
                         </View>
                     )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }

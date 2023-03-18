@@ -215,7 +215,8 @@ export const THEME_KEYS = [
     { key: 'Deadpool', value: 'deadpool' },
     { key: 'Mighty', value: 'mighty' },
     { key: 'Green', value: 'green' },
-    { key: 'Pub', value: 'pub' }
+    { key: 'Pub', value: 'pub' },
+    { key: 'Popsicle', value: 'popsicle' }
 ];
 
 export const DEFAULT_VIEW_KEYS = [

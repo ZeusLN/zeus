@@ -25,7 +25,9 @@ import POS from '../../assets/images/SVG/POS.svg';
 import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
 
-import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
+import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
+import Screen from '../../components/Screen';
+
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import BackendUtils from './../../utils/BackendUtils';
@@ -91,32 +93,26 @@ export default class Settings extends React.Component<
         });
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
-                <Header
-                    leftComponent={<BackButton />}
-                    centerComponent={{
-                        text: localeString('views.Settings.title'),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
-                        }
-                    }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
-                />
+            <Screen>
                 <ScrollView
                     style={{
-                        flex: 1,
-                        backgroundColor: themeColor('background')
+                        flex: 1
                     }}
                 >
+                    <Header
+                        leftComponent={<BackButton />}
+                        centerComponent={{
+                            text: localeString('views.Settings.title'),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }
+                        }}
+                        backgroundColor="transparent"
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
+                    />
                     <TouchableOpacity
                         onPress={() => navigation.navigate('Nodes')}
                     >
@@ -724,7 +720,7 @@ export default class Settings extends React.Component<
                         </Text>
                     </TouchableWithoutFeedback>
                 </ScrollView>
-            </View>
+            </Screen>
         );
     }
 }
