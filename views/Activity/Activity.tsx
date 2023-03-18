@@ -117,7 +117,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 
         const CloseButton = () => (
             <Icon
-                name="close"
+                name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
                 color={themeColor('text')}
                 underlayColor="transparent"
