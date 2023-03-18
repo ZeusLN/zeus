@@ -181,12 +181,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     <TouchableOpacity
                         onPress={() => UnitsStore.changeUnits()}
                         onLongPress={() => {
-                            if (lurkerMode) {
-                                SettingsStore.toggleLurker();
-                            }
-                        }}
-                        onPressOut={() => {
-                            if (!lurkerMode && lurkerExposed) {
+                            if (!lurkerExposed && lurkerMode) {
                                 SettingsStore.toggleLurker();
                             }
                         }}
@@ -240,15 +235,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 <TouchableOpacity
                     onPress={() => UnitsStore.changeUnits()}
                     onLongPress={() => {
-                        if (lurkerMode) {
+                        if (!lurkerExposed && lurkerMode) {
                             SettingsStore.toggleLurker();
-                        }
-                    }}
-                    onPressOut={() => {
-                        if (!lurkerMode && lurkerExposed) {
-                            setTimeout(() => {
-                                SettingsStore.toggleLurker();
-                            }, 3000);
                         }
                     }}
                 >

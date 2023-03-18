@@ -213,6 +213,10 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             setSort
         } = ChannelsStore;
 
+        // trigger channelPane update when lurkerMode status changes
+        // this allows us to redraw the channel balance bars
+        const { lurkerMode } = SettingsStore.settings.privacy;
+
         let headerString;
         let channelsData;
         switch (channelsType) {
@@ -252,9 +256,9 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     }
                 />
                 <ChannelsHeader
-                    totalInbound={totalInbound}
-                    totalOutbound={totalOutbound}
-                    totalOffline={totalOffline}
+                    totalInbound={!!lurkerMode && totalInbound}
+                    totalOutbound={!!lurkerMode && totalOutbound}
+                    totalOffline={!!lurkerMode && totalOffline}
                 />
                 <Row>
                     <SearchBar
