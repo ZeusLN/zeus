@@ -275,7 +275,7 @@ export default class ActivityFilter extends React.Component<
         const ClearButton = () => (
             <Icon
                 name="cancel"
-                onPress={() => ActivityStore.resetFilters()}
+                onPress={async () => await ActivityStore.resetFilters()}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -330,12 +330,12 @@ export default class ActivityFilter extends React.Component<
                                     >
                                         <Switch
                                             value={item.value}
-                                            onValueChange={() => {
+                                            onValueChange={async () => {
                                                 const newFilters: any = filters;
                                                 const index = `${item.var}`;
                                                 newFilters[index] =
                                                     !filters[index];
-                                                setFilters(newFilters);
+                                                await setFilters(newFilters);
                                             }}
                                         />
                                     </View>
