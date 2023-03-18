@@ -682,12 +682,13 @@ export default class SettingsStore {
 
     @action
     public toggleLurker = () => {
-        if (this.settings.privacy.lurkerMode) {
-            this.lurkerExposed = true;
-        } else {
+        this.lurkerExposed = true;
+        this.settings.privacy.lurkerMode = false;
+
+        setTimeout(() => {
             this.lurkerExposed = false;
-        }
-        this.settings.privacy.lurkerMode = !this.settings.privacy.lurkerMode;
+            this.settings.privacy.lurkerMode = true;
+        }, 3000);
     };
 
     @action

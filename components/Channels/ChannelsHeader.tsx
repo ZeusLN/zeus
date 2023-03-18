@@ -32,7 +32,7 @@ function TotalRow({
                 {/* TODO: localize */}
                 <Body secondary>Total {kind}</Body>
             </Row>
-            <Amount sats={amount} sensitive />
+            <Amount sats={amount} sensitive toggleable />
         </Row>
     );
 }
