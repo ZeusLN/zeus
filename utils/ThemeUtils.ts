@@ -193,6 +193,29 @@ export function themeColor(themeString: string): any {
         secondaryText: 'lightgray'
     };
 
+    const Nostrich: { [key: string]: any } = {
+        gradientBackground: [
+            '#000',
+            '#1B1B1B',
+            '#2A1E36',
+            '#3A2152',
+            '#49236D',
+            '#582688'
+        ],
+        generalStyle: 'dark',
+        background: '#000',
+        secondary: '#141414',
+        separator: '#141414'
+    };
+
+    const Desert: { [key: string]: any } = {
+        gradientBackground: ['#006BB6', '#BEC0C2', '#F58426', '#000000'],
+        generalStyle: 'dark',
+        background: '#000',
+        secondary: '#141414',
+        separator: '#141414'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -222,6 +245,10 @@ export function themeColor(themeString: string): any {
             return Pub[themeString] || Dark[themeString];
         case 'popsicle':
             return Popsicle[themeString] || Dark[themeString];
+        case 'nostrich':
+            return Nostrich[themeString] || Dark[themeString];
+        case 'desert':
+            return Desert[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
