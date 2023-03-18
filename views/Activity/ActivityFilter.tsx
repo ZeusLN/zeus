@@ -11,8 +11,10 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import ActivityStore, { DEFAULT_FILTERS } from './../../stores/ActivityStore';
 
+import Screen from './../../components/Screen';
 import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
+import ZeusButton from './../../components/Button';
 
 interface ActivityFilterProps {
     navigation: any;
@@ -183,9 +185,15 @@ export default class ActivityFilter extends React.Component<
                             maximumDate={new Date()}
                             textColor={themeColor('text')}
                             mode="date"
+                            style={{
+                                height: 100,
+                                marginTop: 10,
+                                marginBottom: 20,
+                                alignSelf: 'center'
+                            }}
                         />
                         <View style={{ padding: 2 }}>
-                            <Button
+                            <ZeusButton
                                 onPress={() => {
                                     if (setStartDate) {
                                         setStartDateFilter(workingStartDate);
@@ -199,7 +207,6 @@ export default class ActivityFilter extends React.Component<
                                         workingEndDate: new Date()
                                     });
                                 }}
-                                buttonStyle={{ backgroundColor: 'orange' }}
                                 title={
                                     setStartDate
                                         ? localeString(
@@ -275,12 +282,7 @@ export default class ActivityFilter extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -295,7 +297,7 @@ export default class ActivityFilter extends React.Component<
                             <ClearButton />
                         )
                     }
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -307,7 +309,7 @@ export default class ActivityFilter extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
+                                    backgroundColor: 'transparent'
                                 }}
                             >
                                 <ListItem.Title
@@ -383,7 +385,7 @@ export default class ActivityFilter extends React.Component<
                     onEndReachedThreshold={50}
                     refreshing={loading}
                 />
-            </View>
+            </Screen>
         );
     }
 }

@@ -4,6 +4,7 @@ import { Image, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 
+import ChannelsStore from '../stores/ChannelsStore';
 import SettingsStore from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
@@ -20,6 +21,7 @@ import Add from '../assets/images/SVG/Add.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import POS from '../assets/images/SVG/POS.svg';
+import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
 
 import stores from '../stores/Stores';
@@ -49,17 +51,6 @@ const protectedNavigation = async (
         navigation.navigate(route);
     }
 };
-
-const OpenChannelButton = ({ navigation }: { navigation: any }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('OpenChannel')}>
-        <Add
-            fill={themeColor('text')}
-            width="25"
-            height="25"
-            style={{ alignSelf: 'center' }}
-        />
-    </TouchableOpacity>
-);
 
 const TempleButton = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
@@ -114,6 +105,7 @@ const POSBadge = ({
 );
 
 interface WalletHeaderProps {
+    ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
     PosStore: PosStore;
@@ -128,7 +120,7 @@ interface WalletHeaderState {
     clipboard: string;
 }
 
-@inject('SettingsStore', 'NodeInfoStore', 'PosStore')
+@inject('ChannelsStore', 'SettingsStore', 'NodeInfoStore', 'PosStore')
 @observer
 export default class WalletHeader extends React.Component<
     WalletHeaderProps,
@@ -163,6 +155,7 @@ export default class WalletHeader extends React.Component<
             toggle,
             SettingsStore,
             NodeInfoStore,
+            ChannelsStore,
             PosStore
         } = this.props;
         const { settings, posStatus, setPosStatus } = SettingsStore;
@@ -240,6 +233,33 @@ export default class WalletHeader extends React.Component<
             </>
         );
 
+        const SearchButton = () => (
+            <TouchableOpacity onPress={() => ChannelsStore.toggleSearch()}>
+                <Search
+                    fill={themeColor('text')}
+                    width="25"
+                    height="25"
+                    style={{
+                        alignSelf: 'center',
+                        marginRight: 20
+                    }}
+                />
+            </TouchableOpacity>
+        );
+
+        const OpenChannelButton = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('OpenChannel')}
+            >
+                <Add
+                    fill={themeColor('text')}
+                    width="25"
+                    height="25"
+                    style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
+        );
+
         return (
             <Header
                 leftComponent={loading ? undefined : <SettingsButton />}
@@ -278,7 +298,10 @@ export default class WalletHeader extends React.Component<
                     posStatus === 'active' ? (
                         <TempleButton navigation={navigation} />
                     ) : channels ? (
-                        <OpenChannelButton navigation={navigation} />
+                        <Row>
+                            <SearchButton />
+                            <OpenChannelButton />
+                        </Row>
                     ) : (
                         <View style={{ flex: 1, flexDirection: 'row' }}>
                             {(stores.balanceStore.loadingBlockchainBalance ||

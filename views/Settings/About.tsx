@@ -1,8 +1,11 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+
+import Screen from '../../components/Screen';
+
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface AboutProps {
     navigation: any;
@@ -35,12 +38,7 @@ function About(props: AboutProps) {
     ];
 
     return (
-        <View
-            style={{
-                flex: 1,
-                backgroundColor: themeColor('background')
-            }}
-        >
+        <Screen>
             <Header
                 leftComponent={<BackButton />}
                 centerComponent={{
@@ -50,7 +48,7 @@ function About(props: AboutProps) {
                         fontFamily: 'Lato-Regular'
                     }
                 }}
-                backgroundColor={themeColor('background')}
+                backgroundColor="transparent"
                 containerStyle={{
                     borderBottomWidth: 0
                 }}
@@ -61,7 +59,7 @@ function About(props: AboutProps) {
                     <ListItem
                         containerStyle={{
                             borderBottomWidth: 0,
-                            backgroundColor: themeColor('background')
+                            backgroundColor: 'transparent'
                         }}
                         onPress={() => navigation.navigate(item.path)}
                     >
@@ -84,7 +82,7 @@ function About(props: AboutProps) {
                 keyExtractor={(item, index) => `${item.label}-${index}`}
                 ItemSeparatorComponent={renderSeparator}
             />
-        </View>
+        </Screen>
     );
 }
 

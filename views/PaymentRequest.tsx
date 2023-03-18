@@ -16,6 +16,7 @@ import Button from '../components/Button';
 import HopPicker from '../components/HopPicker';
 import KeyValue from '../components/KeyValue';
 import LoadingIndicator from '../components/LoadingIndicator';
+import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 
@@ -290,12 +291,7 @@ export default class PaymentRequest extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -305,7 +301,7 @@ export default class PaymentRequest extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -901,7 +897,7 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
                 </ScrollView>
-            </View>
+            </Screen>
         );
     }
 }

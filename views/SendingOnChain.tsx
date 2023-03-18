@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 import Button from '../components/Button';
 import CopyButton from '../components/CopyButton';
 import LoadingIndicator from '../components/LoadingIndicator';
+import Screen from '../components/Screen';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -36,12 +37,7 @@ export default class SendingOnChain extends React.Component<
         const { testnet } = NodeInfoStore;
 
         return (
-            <View
-                style={{
-                    ...styles.container,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <View
                     style={{
                         ...styles.content
@@ -187,7 +183,7 @@ export default class SendingOnChain extends React.Component<
                         )}
                     </View>
                 </View>
-            </View>
+            </Screen>
         );
     }
 }
