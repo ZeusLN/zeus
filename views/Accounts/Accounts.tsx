@@ -1,13 +1,11 @@
 import * as React from 'react';
-import { View } from 'react-native';
-
 import { Header, Icon } from 'react-native-elements';
-
 import { inject, observer } from 'mobx-react';
 
 import Button from './../../components/Button';
 import LayerBalances from './../../components/LayerBalances';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import Screen from './../../components/Screen';
 
 import BalanceStore from './../../stores/BalanceStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -108,9 +106,7 @@ export default class Accounts extends React.Component<
         );
 
         return (
-            <View
-                style={{ flex: 1, backgroundColor: themeColor('background') }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -170,7 +166,7 @@ export default class Accounts extends React.Component<
                         }
                     />
                 )}
-            </View>
+            </Screen>
         );
     }
 }
