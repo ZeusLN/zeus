@@ -75,7 +75,7 @@ export default class ActivityFilter extends React.Component<
 
         const CloseButton = () => (
             <Icon
-                name="close"
+                name="arrow-back"
                 onPress={() =>
                     navigation.navigate('Activity', { refresh: true })
                 }
