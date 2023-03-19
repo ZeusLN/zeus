@@ -8,6 +8,7 @@ import querystring from 'querystring-es3';
 
 import Amount from './../../components/Amount';
 import Button from './../../components/Button';
+import Screen from './../../components/Screen';
 import TextInput from './../../components/TextInput';
 import { Row } from './../..//components/layout/Row';
 
@@ -213,13 +214,7 @@ export default class LnurlPay extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -391,7 +386,7 @@ export default class LnurlPay extends React.Component<
                 <View style={styles.content}>
                     <LnurlPayMetadata metadata={lnurl.metadata} />
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

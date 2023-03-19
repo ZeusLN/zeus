@@ -8,6 +8,7 @@ import querystring from 'querystring-es3';
 
 import Button from './../components/Button';
 import LightningIndicator from './../components/LightningIndicator';
+import Screen from './../components/Screen';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -191,12 +192,7 @@ export default class LnurlChannel extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -327,7 +323,7 @@ export default class LnurlChannel extends React.Component<
                             )}
                     </View>
                 </View>
-            </View>
+            </Screen>
         );
     }
 }
