@@ -12,6 +12,7 @@ import {
     ErrorMessage,
     WarningMessage
 } from './../../components/SuccessErrorMessage';
+import Screen from './../../components/Screen';
 import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
@@ -116,12 +117,7 @@ export default class PointOfSale extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -164,7 +160,7 @@ export default class PointOfSale extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
+                                    backgroundColor: 'transparent'
                                 }}
                             >
                                 <ListItem.Title
@@ -471,7 +467,7 @@ export default class PointOfSale extends React.Component<
                         )}
                     </ScrollView>
                 )}
-            </View>
+            </Screen>
         );
     }
 }
