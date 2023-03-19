@@ -20,10 +20,11 @@ import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 
+import ChannelsStore from '../stores/ChannelsStore';
+import FiatStore from '../stores/FiatStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import TransactionsStore, { SendPaymentReq } from '../stores/TransactionsStore';
-import UnitsStore from '../stores/UnitsStore';
-import ChannelsStore from '../stores/ChannelsStore';
+import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 import SettingsStore from '../stores/SettingsStore';
 
 import FeeUtils from '../utils/FeeUtils';
@@ -44,6 +45,7 @@ interface InvoiceProps {
     UnitsStore: UnitsStore;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
+    FiatStore: FiatStore;
 }
 
 interface InvoiceState {
@@ -61,6 +63,7 @@ interface InvoiceState {
 }
 
 @inject(
+    'FiatStore',
     'InvoicesStore',
     'TransactionsStore',
     'UnitsStore',
@@ -203,6 +206,7 @@ export default class PaymentRequest extends React.Component<
     render() {
         const {
             InvoicesStore,
+            FiatStore,
             UnitsStore,
             ChannelsStore,
             SettingsStore,
@@ -231,6 +235,10 @@ export default class PaymentRequest extends React.Component<
             feeEstimate,
             clearPayReq
         } = InvoicesStore;
+        const { units, changeUnits } = UnitsStore;
+        const { fiatRates, getSymbol } = FiatStore;
+        const { settings } = SettingsStore;
+        const { fiat } = settings;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
         const expiry = pay_req && pay_req.expiry;
@@ -239,6 +247,33 @@ export default class PaymentRequest extends React.Component<
         const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
+
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
+        const rate =
+            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
+                ? fiatEntry.rate
+                : 0;
+
+        // conversion
+        let satAmount: string | number;
+        switch (units) {
+            case 'sats':
+                satAmount = customAmount;
+                break;
+            case 'BTC':
+                satAmount = Number(customAmount) * SATS_PER_BTC;
+                break;
+            case 'fiat':
+                satAmount = Number(
+                    (Number(customAmount.replace(/,/g, '.')) / Number(rate)) *
+                        Number(SATS_PER_BTC)
+                ).toFixed(0);
+                break;
+        }
 
         // handle fee percents that use commas
         const maxFeePercentFormatted = maxFeePercent.replace(/,/g, '.');
@@ -330,7 +365,7 @@ export default class PaymentRequest extends React.Component<
 
                     {!loading && !loadingFeeEstimate && !!pay_req && (
                         <View style={styles.content}>
-                            <View style={styles.center}>
+                            <>
                                 {isNoAmountInvoice ? (
                                     <>
                                         <Text
@@ -361,7 +396,62 @@ export default class PaymentRequest extends React.Component<
                                                 color: themeColor('text')
                                             }}
                                             placeholderTextColor="gray"
+                                            prefix={
+                                                units !== 'sats' &&
+                                                (units === 'BTC'
+                                                    ? '₿'
+                                                    : !getSymbol().rtl
+                                                    ? getSymbol().symbol
+                                                    : null)
+                                            }
+                                            suffix={
+                                                units === 'sats'
+                                                    ? units
+                                                    : getSymbol().rtl &&
+                                                      units === 'fiat' &&
+                                                      getSymbol().symbol
+                                            }
+                                            toggleUnits={changeUnits}
                                         />
+                                        {fiat !== 'Disabled' &&
+                                            units !== 'fiat' && (
+                                                <Amount
+                                                    sats={satAmount}
+                                                    fixedUnits="fiat"
+                                                    toggleable
+                                                />
+                                            )}
+                                        {fiat !== 'Disabled' && (
+                                            <TouchableOpacity
+                                                onPress={() => changeUnits()}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {FiatStore.getRate(
+                                                        units === 'sats'
+                                                    )}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        {units !== 'sats' && (
+                                            <Amount
+                                                sats={satAmount}
+                                                fixedUnits="sats"
+                                                toggleable
+                                            />
+                                        )}
+                                        {units !== 'BTC' && (
+                                            <Amount
+                                                sats={satAmount}
+                                                fixedUnits="BTC"
+                                                toggleable
+                                            />
+                                        )}
                                     </>
                                 ) : (
                                     <Amount
@@ -370,7 +460,7 @@ export default class PaymentRequest extends React.Component<
                                         toggleable
                                     />
                                 )}
-                            </View>
+                            </>
 
                             {!!description && (
                                 <KeyValue
@@ -854,11 +944,12 @@ export default class PaymentRequest extends React.Component<
                             {!!pay_req && (
                                 <View style={styles.button}>
                                     <Button
-                                        title="Pay this invoice"
+                                        title={localeString(
+                                            'views.PaymentRequest.payInvoice'
+                                        )}
                                         icon={{
                                             name: 'send',
-                                            size: 25,
-                                            color: 'white'
+                                            size: 25
                                         }}
                                         onPress={() => {
                                             this.sendPayment(
@@ -867,7 +958,9 @@ export default class PaymentRequest extends React.Component<
                                                 {
                                                     payment_request:
                                                         paymentRequest,
-                                                    amount: customAmount,
+                                                    amount: satAmount
+                                                        ? satAmount.toString()
+                                                        : undefined,
                                                     max_parts:
                                                         enableMultiPathPayment
                                                             ? maxParts
@@ -904,7 +997,8 @@ export default class PaymentRequest extends React.Component<
 
 const styles = StyleSheet.create({
     content: {
-        padding: 20
+        paddingLeft: 20,
+        paddingRight: 20
     },
     label: {
         fontFamily: 'Lato-Regular',
@@ -919,10 +1013,5 @@ const styles = StyleSheet.create({
         paddingBottom: 15,
         paddingLeft: 10,
         paddingRight: 10
-    },
-    center: {
-        alignItems: 'center',
-        paddingTop: 15,
-        paddingBottom: 15
     }
 });

@@ -682,6 +682,30 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }
                                     toggleUnits={changeUnits}
                                 />
+
+                                {fiat !== 'Disabled' && units !== 'fiat' && (
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="fiat"
+                                        toggleable
+                                    />
+                                )}
+                                {fiat !== 'Disabled' && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {FiatStore.getRate(
+                                                units === 'sats'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
                                 {units !== 'sats' && (
                                     <Amount
                                         sats={satAmount}
@@ -695,20 +719,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         fixedUnits="BTC"
                                         toggleable
                                     />
-                                )}
-                                {units === 'fiat' && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {FiatStore.getRate()}
-                                        </Text>
-                                    </TouchableOpacity>
                                 )}
 
                                 {BackendUtils.supportsAMP() && (

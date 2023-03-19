@@ -13,6 +13,7 @@ import BigNumber from 'bignumber.js';
 import Amount from './../components/Amount';
 import Button from './../components/Button';
 import KeyValue from './../components/KeyValue';
+import Screen from './../components/Screen';
 import { Spacer } from './../components/layout/Spacer';
 import TextInput from './../components/TextInput';
 
@@ -308,12 +309,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -329,7 +325,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     }}
                 />
 
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     {lineItems.map((item: any, index: number) => {
                         const keyValue =
                             item.quantity > 1
@@ -698,8 +694,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             disabled={isNaN(Number(totalSats))}
                         />
                     )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }

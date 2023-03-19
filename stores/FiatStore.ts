@@ -1,6 +1,9 @@
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import BigNumber from 'bignumber.js';
+
 import SettingsStore from './SettingsStore';
+import { SATS_PER_BTC } from './UnitsStore';
 
 interface CurrencyDisplayRules {
     symbol: string;
@@ -288,14 +291,19 @@ export default class FiatStore {
     };
 
     @action
-    public getRate = () => {
+    public getRate = (sats: boolean) => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
+
         if (fiat && this.fiatRates.filter) {
             const fiatEntry = this.fiatRates.filter(
                 (entry: any) => entry.code === fiat
             )[0];
-            const rate = (fiatEntry && fiatEntry.rate) || 0;
+            const rate = sats
+                ? (fiatEntry &&
+                      new BigNumber(fiatEntry.rate).div(SATS_PER_BTC)) ||
+                  0
+                : (fiatEntry && fiatEntry.rate) || 0;
             const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
                 fiatEntry && fiatEntry.code
             );
@@ -305,10 +313,22 @@ export default class FiatStore {
                 : this.numberWithCommas(rate);
 
             if (rtl) {
+                if (sats) {
+                    return `${formattedRate}${
+                        space ? ' ' : ''
+                    }${symbol} sat/${fiat}`;
+                }
+
                 return `${formattedRate}${
                     space ? ' ' : ''
                 }${symbol} BTC/${fiat}`;
             } else {
+                if (sats) {
+                    return `${symbol}${
+                        space ? ' ' : ''
+                    }${formattedRate} sat/${fiat}`;
+                }
+
                 return `${symbol}${
                     space ? ' ' : ''
                 }${formattedRate} BTC/${fiat}`;

@@ -9,6 +9,7 @@ import { HMAC as sha256HMAC } from 'fast-sha256';
 
 import Button from './../components/Button';
 import LightningIndicator from './../components/LightningIndicator';
+import Screen from './../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
@@ -261,12 +262,7 @@ export default class LnurlAuth extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -356,7 +352,7 @@ export default class LnurlAuth extends React.Component<
                             )}
                     </View>
                 </View>
-            </View>
+            </Screen>
         );
     }
 }
