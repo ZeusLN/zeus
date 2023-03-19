@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
+import Screen from '../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
@@ -121,9 +122,7 @@ export default class BumpFee extends React.PureComponent<
         ];
 
         return (
-            <View
-                style={{ flex: 1, backgroundColor: themeColor('background') }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -336,7 +335,7 @@ export default class BumpFee extends React.PureComponent<
                         />
                     </View>
                 </View>
-            </View>
+            </Screen>
         );
     }
 }
