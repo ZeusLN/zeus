@@ -367,7 +367,7 @@
     "views.Payment.path": "Path",
     "views.PaymentRequest.title": "Lightning Invoice",
     "views.PaymentRequest.error": "Error loading invoice",
-    "views.PaymentRequest.customAmt": "Custom Amount (in satoshis)",
+    "views.PaymentRequest.customAmt": "Custom Amount",
     "views.PaymentRequest.payDefault": "Pay default amount",
     "views.PaymentRequest.payCustom": "Pay custom amount",
     "views.PaymentRequest.feeEstimate": "Fee Estimate",
