@@ -254,6 +254,17 @@ export function themeColor(themeString: string): any {
         separator: '#141414'
     };
 
+    const Watermelon: { [key: string]: any } = {
+        gradientBackground: ['#FF5C98', 'green'],
+        generalStyle: 'dark',
+        background: 'green',
+        separator: '#141414',
+        highlight: '#fff',
+        bolt: '#fff',
+        chain: '#fff',
+        secondaryText: 'lightgray'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -293,6 +304,8 @@ export function themeColor(themeString: string): any {
             return Mint[themeString] || Dark[themeString];
         case 'red-metallic':
             return RedMetallic[themeString] || Dark[themeString];
+        case 'watermelon':
+            return Watermelon[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }

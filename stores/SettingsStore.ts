@@ -221,7 +221,8 @@ export const THEME_KEYS = [
     { key: 'Desert', value: 'desert' },
     { key: 'Orange Cream Soda', value: 'orange-cream-soda' },
     { key: 'Mint', value: 'mint' },
-    { key: 'Red Metallic', value: 'red-metallic' }
+    { key: 'Red Metallic', value: 'red-metallic' },
+    { key: 'Watermelon', value: 'watermelon' }
 ];
 
 export const DEFAULT_VIEW_KEYS = [
