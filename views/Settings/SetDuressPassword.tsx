@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -118,12 +119,7 @@ export default class SetDuressPassphrase extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -240,7 +236,7 @@ export default class SetDuressPassphrase extends React.Component<
                         </View>
                     )}
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

@@ -260,7 +260,7 @@ export default class Security extends React.Component<
                     {settings.supportedBiometryType !== undefined && (
                         <ListItem
                             containerStyle={{
-                                backgroundColor: themeColor('background')
+                                backgroundColor: 'transparent'
                             }}
                         >
                             <ListItem.Content>
@@ -287,7 +287,7 @@ export default class Security extends React.Component<
                     {pinExists && (
                         <ListItem
                             containerStyle={{
-                                backgroundColor: themeColor('background')
+                                backgroundColor: 'transparent'
                             }}
                         >
                             <ListItem.Content>
@@ -318,7 +318,7 @@ export default class Security extends React.Component<
                     {(pinExists || passphraseExists || isBiometryEnabled) && (
                         <ListItem
                             containerStyle={{
-                                backgroundColor: themeColor('background')
+                                backgroundColor: 'transparent'
                             }}
                         >
                             <ListItem.Content>

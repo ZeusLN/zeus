@@ -13,6 +13,7 @@ import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 
+import Amount from './../components/Amount';
 import Button from './../components/Button';
 import LightningIndicator from './../components/LightningIndicator';
 import Screen from './../components/Screen';
@@ -31,9 +32,11 @@ import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-import ChannelsStore from './../stores/ChannelsStore';
-import SettingsStore from './../stores/SettingsStore';
 import BalanceStore from './../stores/BalanceStore';
+import ChannelsStore from './../stores/ChannelsStore';
+import FiatStore from './../stores/FiatStore';
+import SettingsStore from './../stores/SettingsStore';
+import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
 import UTXOsStore from './../stores/UTXOsStore';
 
 import Scan from './../assets/images/SVG/Scan.svg';
@@ -43,7 +46,9 @@ interface OpenChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
     BalanceStore: BalanceStore;
+    FiatStore: FiatStore;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
     UTXOsStore: UTXOsStore;
 }
 
@@ -61,7 +66,14 @@ interface OpenChannelState {
     utxoBalance: number;
 }
 
-@inject('ChannelsStore', 'SettingsStore', 'BalanceStore', 'UTXOsStore')
+@inject(
+    'ChannelsStore',
+    'FiatStore',
+    'SettingsStore',
+    'BalanceStore',
+    'UnitsStore',
+    'UTXOsStore'
+)
 @observer
 export default class OpenChannel extends React.Component<
     OpenChannelProps,
@@ -211,6 +223,8 @@ export default class OpenChannel extends React.Component<
         const {
             ChannelsStore,
             BalanceStore,
+            FiatStore,
+            UnitsStore,
             UTXOsStore,
             SettingsStore,
             navigation
@@ -227,7 +241,9 @@ export default class OpenChannel extends React.Component<
             scidAlias
         } = this.state;
         const { implementation, settings } = SettingsStore;
-        const { privacy } = settings;
+        const { fiatRates, getSymbol } = FiatStore;
+        const { units, changeUnits } = UnitsStore;
+        const { fiat, privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
         const {
@@ -240,6 +256,34 @@ export default class OpenChannel extends React.Component<
             channelSuccess
         } = ChannelsStore;
         const { confirmedBlockchainBalance } = BalanceStore;
+
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
+        const rate =
+            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
+                ? fiatEntry.rate
+                : 0;
+
+        // conversion
+        let satAmount: string | number;
+        switch (units) {
+            case 'sats':
+                satAmount = local_funding_amount;
+                break;
+            case 'BTC':
+                satAmount = Number(local_funding_amount) * SATS_PER_BTC;
+                break;
+            case 'fiat':
+                satAmount = Number(
+                    (Number(local_funding_amount.replace(/,/g, '.')) /
+                        Number(rate)) *
+                        Number(SATS_PER_BTC)
+                ).toFixed(0);
+                break;
+        }
 
         const BackButton = () => (
             <Icon
@@ -384,28 +428,80 @@ export default class OpenChannel extends React.Component<
                         </Text>
                         <TextInput
                             keyboardType="numeric"
-                            placeholder={localeString(
-                                'views.OpenChannel.amtExample'
-                            )}
                             value={local_funding_amount}
                             onChangeText={(text: string) =>
                                 this.setState({ local_funding_amount: text })
                             }
                             locked={openingChannel}
+                            prefix={
+                                units !== 'sats' &&
+                                (units === 'BTC'
+                                    ? '₿'
+                                    : !getSymbol().rtl
+                                    ? getSymbol().symbol
+                                    : null)
+                            }
+                            suffix={
+                                units === 'sats'
+                                    ? units
+                                    : getSymbol().rtl &&
+                                      units === 'fiat' &&
+                                      getSymbol().symbol
+                            }
+                            toggleUnits={changeUnits}
                         />
+                        {local_funding_amount !== 'all' && (
+                            <View style={{ marginBottom: 10 }}>
+                                {fiat !== 'Disabled' && units !== 'fiat' && (
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="fiat"
+                                        toggleable
+                                    />
+                                )}
+                                {fiat !== 'Disabled' && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {FiatStore.getRate(
+                                                units === 'sats'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                {units !== 'sats' && (
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="sats"
+                                        toggleable
+                                    />
+                                )}
+                                {units !== 'BTC' && (
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="BTC"
+                                        toggleable
+                                    />
+                                )}
+                            </View>
+                        )}
+
                         {local_funding_amount === 'all' && (
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {`${
-                                    utxoBalance > 0
-                                        ? utxoBalance
-                                        : confirmedBlockchainBalance
-                                } ${localeString('views.Receive.satoshis')}`}
-                            </Text>
+                            <View style={{ marginBottom: 20 }}>
+                                <Amount
+                                    sats={
+                                        utxoBalance > 0
+                                            ? utxoBalance
+                                            : confirmedBlockchainBalance
+                                    }
+                                    toggleable
+                                />
+                            </View>
                         )}
 
                         <Text
@@ -544,7 +640,13 @@ export default class OpenChannel extends React.Component<
                                     size: 25,
                                     color: 'white'
                                 }}
-                                onPress={() => connectPeer(this.state)}
+                                onPress={() =>
+                                    connectPeer({
+                                        ...this.state,
+                                        local_funding_amount:
+                                            satAmount.toString()
+                                    })
+                                }
                             />
                         </View>
 

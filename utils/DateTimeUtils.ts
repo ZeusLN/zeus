@@ -16,7 +16,7 @@ class DateTimeUtils {
     };
 
     listFormattedDateShort = (timestamp: number | string) =>
-        this.listFormattedDate(timestamp, "mmm d 'yy");
+        this.listFormattedDate(timestamp, 'mmm d, HH:MM');
 }
 
 const dateTimeUtils = new DateTimeUtils();
