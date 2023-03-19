@@ -5,6 +5,7 @@ import { Header, Icon } from 'react-native-elements';
 
 import Button from './../components/Button';
 import Pin from './../components/Pin';
+import Screen from './../components/Screen';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
 
@@ -334,12 +335,7 @@ export default class Lockscreen extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    ...styles.container,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
                     <Header
                         leftComponent={<BackButton />}
@@ -476,7 +472,7 @@ export default class Lockscreen extends React.Component<
                         </View>
                     </View>
                 )}
-            </View>
+            </Screen>
         );
     }
 }
