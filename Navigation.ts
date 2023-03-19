@@ -64,6 +64,7 @@ import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 import BumpFee from './views/BumpFee';
+import QR from './views/QR';
 
 // POS
 import Order from './views/Order';
@@ -250,6 +251,9 @@ const AppScenes = {
     },
     BumpFee: {
         screen: BumpFee
+    },
+    QR: {
+        screen: QR
     }
 };
 
