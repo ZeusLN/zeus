@@ -944,11 +944,12 @@ export default class PaymentRequest extends React.Component<
                             {!!pay_req && (
                                 <View style={styles.button}>
                                     <Button
-                                        title="Pay this invoice"
+                                        title={localeString(
+                                            'views.PaymentRequest.payInvoice'
+                                        )}
                                         icon={{
                                             name: 'send',
-                                            size: 25,
-                                            color: 'white'
+                                            size: 25
                                         }}
                                         onPress={() => {
                                             this.sendPayment(

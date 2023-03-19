@@ -153,7 +153,7 @@ export default class SendingLightning extends React.Component<
 
                     <View style={styles.buttons}>
                         {payment_hash && !(!!error || !!payment_error) && (
-                            <View style={{ margin: 10, width: '100%' }}>
+                            <View style={{ marginBottom: 10, width: '100%' }}>
                                 <CopyButton
                                     title={localeString(
                                         'views.SendingLightning.copyPaymentHash'
