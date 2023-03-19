@@ -112,7 +112,9 @@ export default class Conversion extends React.Component<
                 {showRate && (
                     <>
                         <Text style={{ color: themeColor('secondaryText') }}>
-                            {` | ${getRate()}`}
+                            {` | ${getRate(
+                                this.props.UnitsStore.units === 'sats'
+                            )}`}
                         </Text>
                     </>
                 )}
@@ -150,7 +152,9 @@ export default class Conversion extends React.Component<
                 {showRate && (
                     <>
                         <Text style={{ color: themeColor('secondaryText') }}>
-                            {` | ${getRate()}`}
+                            {` | ${getRate(
+                                this.props.UnitsStore.units === 'sats'
+                            )}`}
                         </Text>
                     </>
                 )}
