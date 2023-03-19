@@ -325,6 +325,17 @@ export default class PaymentRequest extends React.Component<
             />
         );
 
+        const QRButton = () => (
+            <Icon
+                name="qr-code"
+                onPress={() => {
+                    navigation.navigate('QR', { value: paymentRequest });
+                }}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
         return (
             <Screen>
                 <Header
@@ -336,6 +347,7 @@ export default class PaymentRequest extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={<QRButton />}
                     backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
