@@ -353,7 +353,7 @@
     "views.OpenChannel.nodePubkey": "Node pubkey",
     "views.OpenChannel.host": "Host",
     "views.OpenChannel.hostPort": "Hostname:Port",
-    "views.OpenChannel.localAmt": "Local amount (in satoshis)",
+    "views.OpenChannel.localAmt": "Local amount",
     "views.OpenChannel.amtExample": "20000 (min)",
     "views.OpenChannel.numConf": "Number of Confirmations",
     "views.OpenChannel.satsPerByte": "Satoshis per byte",
