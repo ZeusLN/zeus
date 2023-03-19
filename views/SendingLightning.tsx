@@ -50,8 +50,7 @@ export default class SendingLightning extends React.Component<
             <Screen>
                 <View
                     style={{
-                        ...styles.content,
-                        backgroundColor: themeColor('background')
+                        ...styles.content
                     }}
                 >
                     {loading && <LightningIndicator />}
