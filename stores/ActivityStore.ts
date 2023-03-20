@@ -222,7 +222,9 @@ export default class ActivityStore {
                         (activity.model ===
                             localeString('general.transaction') &&
                             activity.getAmount > 0) ||
-                        activity.model === localeString('views.Invoice.title')
+                        (activity.model ===
+                            localeString('views.Invoice.title') &&
+                            activity.isPaid)
                     )
             );
         }
