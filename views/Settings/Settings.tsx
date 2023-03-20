@@ -94,25 +94,25 @@ export default class Settings extends React.Component<
 
         return (
             <Screen>
+                <Header
+                    leftComponent={<BackButton />}
+                    centerComponent={{
+                        text: localeString('views.Settings.title'),
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
+                    }}
+                    backgroundColor="transparent"
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
+                />
                 <ScrollView
                     style={{
                         flex: 1
                     }}
                 >
-                    <Header
-                        leftComponent={<BackButton />}
-                        centerComponent={{
-                            text: localeString('views.Settings.title'),
-                            style: {
-                                color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
-                            }
-                        }}
-                        backgroundColor="transparent"
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
-                    />
                     <TouchableOpacity
                         onPress={() => navigation.navigate('Nodes')}
                     >
