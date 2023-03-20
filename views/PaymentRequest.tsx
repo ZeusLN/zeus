@@ -454,11 +454,13 @@ export default class PaymentRequest extends React.Component<
                                         )}
                                     </>
                                 ) : (
-                                    <Amount
-                                        sats={requestAmount}
-                                        jumboText
-                                        toggleable
-                                    />
+                                    <View style={styles.center}>
+                                        <Amount
+                                            sats={requestAmount}
+                                            jumboText
+                                            toggleable
+                                        />
+                                    </View>
                                 )}
                             </>
 
@@ -1013,5 +1015,9 @@ const styles = StyleSheet.create({
         paddingBottom: 15,
         paddingLeft: 10,
         paddingRight: 10
+    },
+    center: {
+        alignItems: 'center',
+        paddingBottom: 15
     }
 });
