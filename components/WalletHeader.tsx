@@ -15,6 +15,7 @@ import NodeIdenticon from '../components/NodeIdenticon';
 
 import { isClipboardValue } from '../utils/handleAnything';
 import { localeString } from '../utils/LocaleUtils';
+import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
@@ -282,7 +283,9 @@ export default class WalletHeader extends React.Component<
                     ) : settings.display && settings.display.displayNickname ? (
                         <View style={{ top: 5 }}>
                             <Row>
-                                <Body>{displayName}</Body>
+                                <Body>
+                                    {PrivacyUtils.sensitiveValue(displayName)}
+                                </Body>
                                 <NetworkBadge />
                                 <TorBadge />
                             </Row>
