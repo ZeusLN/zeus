@@ -713,7 +713,8 @@ export default class Settings extends React.Component<
                                 fontSize: 16,
                                 color: '#A7A9AC',
                                 alignSelf: 'center',
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'Lato-Regular',
+                                marginBottom: 20
                             }}
                         >
                             {`Zeus v${version}`}
