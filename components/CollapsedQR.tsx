@@ -9,7 +9,7 @@ import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-const secondaryLogo = require('../assets/images/secondary.png');
+const logo = require('../assets/images/Launcher.png');
 
 let simulation: any;
 
@@ -110,7 +110,7 @@ export default class CollapsedQR extends React.Component<
                         <QRCode
                             value={value}
                             size={height > width ? width * 0.8 : height * 0.6}
-                            logo={secondaryLogo}
+                            logo={logo}
                         />
                     </View>
                 )}

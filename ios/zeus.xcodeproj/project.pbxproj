@@ -75,12 +75,10 @@
 		D1F6E94001C348F4BF7300D7 /* Caret Right.svg in Resources */ = {isa = PBXBuildFile; fileRef = 89366F98367041A3AD6768BD /* Caret Right.svg */; };
 		D2619D32728445B6A89A8E90 /* Question.svg in Resources */ = {isa = PBXBuildFile; fileRef = 19F1DF8577E64E24B856F202 /* Question.svg */; };
 		D33C80065CFF40A9B839465D /* Caret Left.svg in Resources */ = {isa = PBXBuildFile; fileRef = 571E23F345EB49B99F8150D2 /* Caret Left.svg */; };
-		D39FF9B4BE30499AA85412A6 /* secondary.png in Resources */ = {isa = PBXBuildFile; fileRef = 205F59F6157B4D46BDB7B826 /* secondary.png */; };
 		D48BA6E6D2C944E085CD4C6D /* Filter On.svg in Resources */ = {isa = PBXBuildFile; fileRef = CBA0591D71884F909710032D /* Filter On.svg */; };
 		D568F3B438EB4A808C0FDF80 /* Currency.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8E58364B7EB64F938378D743 /* Currency.svg */; };
 		D66A263DF39F48088A0F8784 /* tor.png in Resources */ = {isa = PBXBuildFile; fileRef = C79E350A2A9640088B2E0231 /* tor.png */; };
 		D939E2C93F2B4F279F9923FD /* 1.png in Resources */ = {isa = PBXBuildFile; fileRef = F2D9FC1C959D40C29AA07FD5 /* 1.png */; };
-		D946E96321314A37803868BB /* secondary-full.png in Resources */ = {isa = PBXBuildFile; fileRef = F90E2A4AC40A40CA94A1D8FE /* secondary-full.png */; };
 		DECF80F7FBFA4D17BB0238D9 /* ErrorIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = B23A03CFAFEF40D790A7B4E6 /* ErrorIcon.svg */; };
 		DEFE5B1336674812BAE3E366 /* Coins.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8F0CAEBF09CC44E0A55DFB2A /* Coins.svg */; };
 		E248E368B08141929FF4B67F /* Caret Up.svg in Resources */ = {isa = PBXBuildFile; fileRef = F3F9827E17844DA7AC951B88 /* Caret Up.svg */; };
@@ -293,7 +291,6 @@
 		19F1DF8577E64E24B856F202 /* Question.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Question.svg; path = ../assets/images/SVG/Question.svg; sourceTree = "<group>"; };
 		1AD743129802428BA25522C5 /* libReactNativePermissions.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libReactNativePermissions.a; sourceTree = "<group>"; };
 		1F20C8EE28BE46F6B99E5ED3 /* Alert.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Alert.svg; path = ../assets/images/SVG/Alert.svg; sourceTree = "<group>"; };
-		205F59F6157B4D46BDB7B826 /* secondary.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = secondary.png; path = ../assets/images/secondary.png; sourceTree = "<group>"; };
 		224DF75E684C18FB15931B17 /* Pods-zeus-zeusTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-zeusTests.debug.xcconfig"; path = "Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests.debug.xcconfig"; sourceTree = "<group>"; };
 		226FAAEEA94A478A945F9A57 /* Menu.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Menu.svg; path = ../assets/images/SVG/Menu.svg; sourceTree = "<group>"; };
 		259ED6E1C36A4BB38A5BFB8B /* Temple.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Temple.svg; path = ../assets/images/SVG/Temple.svg; sourceTree = "<group>"; };
@@ -400,7 +397,6 @@
 		F2D9FC1C959D40C29AA07FD5 /* 1.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 1.png; path = ../assets/images/intro/1.png; sourceTree = "<group>"; };
 		F3F9827E17844DA7AC951B88 /* Caret Up.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Up.svg"; path = "../assets/images/SVG/Caret Up.svg"; sourceTree = "<group>"; };
 		F7E8164B32C144C1970E0E8E /* AntDesign.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AntDesign.ttf; path = "../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf"; sourceTree = "<group>"; };
-		F90E2A4AC40A40CA94A1D8FE /* secondary-full.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "secondary-full.png"; path = "../assets/images/secondary-full.png"; sourceTree = "<group>"; };
 		FB2BF1C8E61649A58A6E1A61 /* Caret Right-3.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right-3.svg"; path = "../assets/images/SVG/Caret Right-3.svg"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -717,8 +713,6 @@
 				DEE698AC647848D9B6DB13F6 /* 3.png */,
 				6F3CEE7DB9174923BAB26C47 /* 4.png */,
 				107D5D19C89849838D993B6C /* splash.png */,
-				F90E2A4AC40A40CA94A1D8FE /* secondary-full.png */,
-				205F59F6157B4D46BDB7B826 /* secondary.png */,
 				1F20C8EE28BE46F6B99E5ED3 /* Alert.svg */,
 				C8B74E7F5FE74AB1B75DD331 /* Backspace.svg */,
 				291FF6091426421DB569BEC4 /* Bitcoin.svg */,
@@ -1134,8 +1128,6 @@
 				C941FD1729484DBB8E375B20 /* 3.png in Resources */,
 				2B701B9D101047A89EC4CDB6 /* 4.png in Resources */,
 				4EE81C6E19444556B31C4756 /* splash.png in Resources */,
-				D946E96321314A37803868BB /* secondary-full.png in Resources */,
-				D39FF9B4BE30499AA85412A6 /* secondary.png in Resources */,
 				1D498675CD1F48BBBA31EFD4 /* Alert.svg in Resources */,
 				5ED36312F2F94778BE7418C2 /* Backspace.svg in Resources */,
 				BC7117BDDCFB483CB2345DDB /* Bitcoin.svg in Resources */,
