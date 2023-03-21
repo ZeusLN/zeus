@@ -283,7 +283,7 @@ export default class LightningNodeConnect {
             .then((data: walletrpc.ListUnspentResponse) => snakeize(data));
     bumpFee = async (req: walletrpc.BumpFeeRequest) =>
         await this.lnc.lnd.walletKit
-            .bumpFee(req)
+            .bumpFee(snakeize(req))
             .then((data: walletrpc.BumpFeeResponse) => snakeize(data));
     listAccounts = async () =>
         await this.lnc.lnd.walletKit
