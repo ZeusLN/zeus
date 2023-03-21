@@ -122,6 +122,8 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getMemo(): string {
+        // TODO remove once BTCPay Server issue is resolved
+        // https://github.com/btcpayserver/btcpayserver/issues/4801
         // parse out LNURLp data from BTCPay
         if (this.isLnurlP) {
             try {
