@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import {
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+    TouchableOpacity
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
@@ -43,145 +50,156 @@ export default class SendingOnChain extends React.Component<
                         ...styles.content
                     }}
                 >
-                    {loading && <LoadingIndicator />}
-                    {loading && (
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString('views.SendingOnChain.broadcasting')}
-                        </Text>
-                    )}
-                    {publishSuccess && (
-                        <>
-                            <WordLogo
-                                height={150}
-                                style={{
-                                    alignSelf: 'center'
-                                }}
-                            />
-                            <Image
-                                source={Success}
-                                style={{
-                                    width: 290,
-                                    height: 290,
-                                    marginTop: -50,
-                                    marginBottom: -50
-                                }}
-                            />
-                        </>
-                    )}
-                    {(error || error_msg) && (
-                        <>
-                            <Error width="27%" />
+                    <ScrollView>
+                        {loading && <LoadingIndicator />}
+                        {loading && (
                             <Text
                                 style={{
-                                    color: '#FF9090',
-                                    fontFamily: 'Lato-Regular',
-                                    fontSize: 32
+                                    ...styles.text,
+                                    color: themeColor('text')
                                 }}
                             >
-                                {localeString('general.error')}
+                                {localeString(
+                                    'views.SendingOnChain.broadcasting'
+                                )}
                             </Text>
-                        </>
-                    )}
-                    {error && error_msg && (
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: 'white',
-                                padding: 20,
-                                fontSize: 30,
-                                alignSelf: 'center'
-                            }}
-                        >
-                            {error_msg}
-                        </Text>
-                    )}
-                    {publishSuccess && (
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: themeColor('text'),
-                                padding: 20,
-                                fontSize: 22,
-                                alignSelf: 'center'
-                            }}
-                        >
-                            {localeString('views.SendingOnChain.success')}
-                        </Text>
-                    )}
-                    {txid && (
-                        <TouchableOpacity
-                            onPress={() =>
-                                UrlUtils.goToBlockExplorerTXID(txid, testnet)
-                            }
-                        >
+                        )}
+                        {publishSuccess && (
+                            <>
+                                <WordLogo
+                                    height={150}
+                                    style={{
+                                        alignSelf: 'center'
+                                    }}
+                                />
+                                <Image
+                                    source={Success}
+                                    style={{
+                                        width: 290,
+                                        height: 290,
+                                        marginTop: -50,
+                                        marginBottom: -50
+                                    }}
+                                />
+                            </>
+                        )}
+                        {(error || error_msg) && (
+                            <>
+                                <Error width="27%" />
+                                <Text
+                                    style={{
+                                        color: '#FF9090',
+                                        fontFamily: 'Lato-Regular',
+                                        fontSize: 32
+                                    }}
+                                >
+                                    {localeString('general.error')}
+                                </Text>
+                            </>
+                        )}
+                        {error && error_msg && (
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: 'white',
+                                    padding: 20,
+                                    fontSize: 30,
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                {error_msg}
+                            </Text>
+                        )}
+                        {publishSuccess && (
                             <Text
                                 style={{
                                     ...styles.text,
                                     color: themeColor('text'),
                                     padding: 20,
-                                    fontSize: 15
+                                    fontSize: 22,
+                                    alignSelf: 'center'
                                 }}
                             >
-                                {`${localeString(
-                                    'views.SendingOnChain.txid'
-                                )}: ${txid}`}
+                                {localeString('views.SendingOnChain.success')}
                             </Text>
-                        </TouchableOpacity>
-                    )}
-
-                    <View style={styles.buttons}>
+                        )}
                         {txid && (
-                            <View style={{ marginBottom: 10, width: '100%' }}>
-                                <CopyButton
+                            <TouchableOpacity
+                                onPress={() =>
+                                    UrlUtils.goToBlockExplorerTXID(
+                                        txid,
+                                        testnet
+                                    )
+                                }
+                            >
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('text'),
+                                        padding: 20,
+                                        fontSize: 15
+                                    }}
+                                >
+                                    {`${localeString(
+                                        'views.SendingOnChain.txid'
+                                    )}: ${txid}`}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+
+                        <View style={styles.buttons}>
+                            {txid && (
+                                <View
+                                    style={{ marginBottom: 10, width: '100%' }}
+                                >
+                                    <CopyButton
+                                        title={localeString(
+                                            'views.SendingOnChain.copyTxid'
+                                        )}
+                                        copyValue={txid}
+                                    />
+                                </View>
+                            )}
+
+                            {error && (
+                                <Button
                                     title={localeString(
-                                        'views.SendingOnChain.copyTxid'
+                                        'views.SendingLightning.tryAgain'
                                     )}
-                                    copyValue={txid}
+                                    icon={{
+                                        name: 'return-up-back',
+                                        type: 'ionicon',
+                                        size: 25
+                                    }}
+                                    onPress={() => navigation.goBack()}
+                                    containerStyle={{
+                                        width: '100%',
+                                        margin: 20
+                                    }}
                                 />
-                            </View>
-                        )}
+                            )}
 
-                        {error && (
-                            <Button
-                                title={localeString(
-                                    'views.SendingLightning.tryAgain'
-                                )}
-                                icon={{
-                                    name: 'return-up-back',
-                                    type: 'ionicon',
-                                    size: 25
-                                }}
-                                onPress={() => navigation.goBack()}
-                                containerStyle={{
-                                    width: '100%',
-                                    margin: 20
-                                }}
-                            />
-                        )}
-
-                        {(publishSuccess || error) && (
-                            <Button
-                                title={localeString(
-                                    'views.SendingOnChain.goToWallet'
-                                )}
-                                icon={{
-                                    name: 'list',
-                                    size: 25,
-                                    color: themeColor('background')
-                                }}
-                                titleStyle={{
-                                    color: themeColor('background')
-                                }}
-                                containerStyle={{ width: '100%' }}
-                                onPress={() => navigation.navigate('Wallet')}
-                            />
-                        )}
-                    </View>
+                            {(publishSuccess || error) && (
+                                <Button
+                                    title={localeString(
+                                        'views.SendingOnChain.goToWallet'
+                                    )}
+                                    icon={{
+                                        name: 'list',
+                                        size: 25,
+                                        color: themeColor('background')
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
+                                    containerStyle={{ width: '100%' }}
+                                    onPress={() =>
+                                        navigation.navigate('Wallet')
+                                    }
+                                />
+                            )}
+                        </View>
+                    </ScrollView>
                 </View>
             </Screen>
         );
