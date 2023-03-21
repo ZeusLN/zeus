@@ -171,17 +171,23 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                       );
                                 subTitle = `${
                                     item.isPaid
-                                        ? localeString('general.lightning')
-                                        : `${localeString(
-                                              'views.PaymentRequest.title'
-                                          )}: ${
+                                        ? item.isLnurlP
+                                            ? 'LNURLp'
+                                            : localeString('general.lightning')
+                                        : `${
+                                              item.isLnurlP
+                                                  ? 'LNURLp'
+                                                  : localeString(
+                                                        'general.lightning'
+                                                    )
+                                          }: ${
                                               item.isExpired
                                                   ? localeString(
                                                         'views.Activity.expired'
                                                     )
                                                   : item.expirationDate
                                           }`
-                                }${item.memo ? `: ${item.memo}` : ''}`;
+                                }${item.getMemo ? `: ${item.getMemo}` : ''}`;
                             }
 
                             if (
