@@ -394,6 +394,8 @@ export default class FiatStore {
     // BTC_DOP = yadio(BTC_DOP);
     @action
     public getFiatRates = () => {
+        // try not to slam endpoint
+        if (this.loading) return;
         this.loading = true;
         ReactNativeBlobUtil.fetch(
             'GET',
