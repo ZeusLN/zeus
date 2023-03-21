@@ -1018,6 +1018,7 @@ const styles = StyleSheet.create({
     },
     center: {
         alignItems: 'center',
-        paddingBottom: 15
+        marginTop: 25,
+        marginBottom: 25
     }
 });
