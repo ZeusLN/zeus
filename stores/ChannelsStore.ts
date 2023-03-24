@@ -1,5 +1,6 @@
 import { action, observable, reaction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
+import BigNumber from 'bignumber.js';
 
 import Channel from './../models/Channel';
 import ClosedChannel from './../models/ClosedChannel';
@@ -270,17 +271,27 @@ export default class ChannelsStore {
                     (channel: any) => new Channel(channel)
                 );
                 channels.forEach((channel: Channel) => {
-                    const channelRemoteBalance = Number(channel.remoteBalance);
-                    const channelLocalBalance = Number(channel.localBalance);
+                    const channelRemoteBalance = new BigNumber(
+                        channel.remoteBalance
+                    );
+                    const channelLocalBalance = new BigNumber(
+                        channel.localBalance
+                    );
                     const channelTotal =
-                        channelRemoteBalance + channelLocalBalance;
-                    if (channelTotal > this.largestChannelSats)
-                        this.largestChannelSats = channelTotal;
+                        channelRemoteBalance.plus(channelLocalBalance);
+                    if (channelTotal.gt(this.largestChannelSats))
+                        this.largestChannelSats = channelTotal.toNumber();
                     if (!channel.isActive) {
-                        this.totalOffline += channelTotal;
+                        this.totalOffline = new BigNumber(this.totalOffline)
+                            .plus(channelTotal)
+                            .toNumber();
                     } else {
-                        this.totalInbound += channelRemoteBalance;
-                        this.totalOutbound += channelLocalBalance;
+                        this.totalInbound = new BigNumber(this.totalInbound)
+                            .plus(channelRemoteBalance)
+                            .toNumber();
+                        this.totalOutbound = new BigNumber(this.totalOutbound)
+                            .plus(channelLocalBalance)
+                            .toNumber();
                     }
                 });
                 this.channels = channels;
