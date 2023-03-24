@@ -99,7 +99,7 @@ export default class Settings extends React.Component<
                     centerComponent={{
                         text: localeString('views.Settings.title'),
                         style: {
-                            color: themeColor('text'),
+                            color: themeColor('secondaryText'),
                             fontFamily: 'Lato-Regular'
                         }
                     }}
@@ -147,7 +147,7 @@ export default class Settings extends React.Component<
                                 <Text
                                     style={{
                                         fontSize: 20,
-                                        color: themeColor('text'),
+                                        color: themeColor('secondaryText'),
                                         paddingLeft: 20,
                                         fontFamily: 'Lato-Regular'
                                     }}
@@ -172,7 +172,7 @@ export default class Settings extends React.Component<
                                 <Text
                                     style={{
                                         fontSize: 16,
-                                        color: themeColor('text'),
+                                        color: themeColor('secondaryText'),
                                         opacity: 0.6,
                                         top: -10,
                                         paddingLeft: 85,
@@ -212,11 +212,11 @@ export default class Settings extends React.Component<
                                 style={styles.columnField}
                                 onPress={() => navigation.navigate('NodeInfo')}
                             >
-                                <NodeOn color={themeColor('text')} />
+                                <NodeOn color={themeColor('secondaryText')} />
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.NodeInfo.title')}
@@ -241,12 +241,12 @@ export default class Settings extends React.Component<
                         >
                             <View style={styles.columnField}>
                                 <View>
-                                    <AccountIcon stroke={themeColor('text')} />
+                                    <AccountIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     Accounts
@@ -259,12 +259,12 @@ export default class Settings extends React.Component<
                             <View style={styles.separationLine} />
                             <View style={styles.columnField}>
                                 <View>
-                                    <ContactIcon stroke={themeColor('text')} />
+                                    <ContactIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     Contacts
@@ -292,12 +292,12 @@ export default class Settings extends React.Component<
                                 }
                             >
                                 <View>
-                                    <SendIcon stroke={themeColor('text')} />
+                                    <SendIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Settings.payments')}
@@ -315,12 +315,12 @@ export default class Settings extends React.Component<
                                 }
                             >
                                 <View>
-                                    <ReceiveIcon stroke={themeColor('text')} />
+                                    <ReceiveIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -355,13 +355,13 @@ export default class Settings extends React.Component<
                                 >
                                     <View>
                                         <ReceiveIcon
-                                            stroke={themeColor('text')}
+                                            stroke={themeColor('secondaryText')}
                                         />
                                     </View>
                                     <Text
                                         style={{
                                             ...styles.columnText,
-                                            color: themeColor('text')
+                                            color: themeColor('secondaryText')
                                         }}
                                     >
                                         {localeString(
@@ -390,12 +390,12 @@ export default class Settings extends React.Component<
                                 onPress={() => navigation.navigate('Privacy')}
                             >
                                 <View>
-                                    <PrivacyIcon stroke={themeColor('text')} />
+                                    <PrivacyIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Settings.privacy')}
@@ -412,12 +412,12 @@ export default class Settings extends React.Component<
                                 onPress={() => navigation.navigate('Security')}
                             >
                                 <View>
-                                    <SecurityIcon stroke={themeColor('text')} />
+                                    <SecurityIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Settings.security')}
@@ -435,12 +435,12 @@ export default class Settings extends React.Component<
                                 }
                             >
                                 <View>
-                                    <SignIcon stroke={themeColor('text')} />
+                                    <SignIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -468,12 +468,12 @@ export default class Settings extends React.Component<
                                 onPress={() => navigation.navigate('Privacy')}
                             >
                                 <View>
-                                    <PrivacyIcon stroke={themeColor('text')} />
+                                    <PrivacyIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Settings.privacy')}
@@ -490,12 +490,12 @@ export default class Settings extends React.Component<
                                 onPress={() => navigation.navigate('Security')}
                             >
                                 <View>
-                                    <SecurityIcon stroke={themeColor('text')} />
+                                    <SecurityIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Settings.security')}
@@ -523,14 +523,14 @@ export default class Settings extends React.Component<
                             >
                                 <View style={{ padding: 4 }}>
                                     <LanguageIcon
-                                        stroke={themeColor('text')}
+                                        stroke={themeColor('secondaryText')}
                                         fill={themeColor('secondary')}
                                     />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -557,12 +557,12 @@ export default class Settings extends React.Component<
                                 onPress={() => navigation.navigate('Currency')}
                             >
                                 <View>
-                                    <CurrencyIcon stroke={themeColor('text')} />
+                                    <CurrencyIcon stroke={themeColor('secondaryText')} />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -581,14 +581,14 @@ export default class Settings extends React.Component<
                             >
                                 <View style={{ padding: 4 }}>
                                     <LanguageIcon
-                                        stroke={themeColor('text')}
+                                        stroke={themeColor('secondaryText')}
                                         fill={themeColor('secondary')}
                                     />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -616,14 +616,14 @@ export default class Settings extends React.Component<
                         >
                             <View style={{ paddingLeft: 5, paddingTop: 2 }}>
                                 <BrushIcon
-                                    stroke={themeColor('text')}
+                                    stroke={themeColor('secondaryText')}
                                     fill={themeColor('secondary')}
                                 />
                             </View>
                             <Text
                                 style={{
                                     ...styles.columnText,
-                                    color: themeColor('text')
+                                    color: themeColor('secondaryText')
                                 }}
                             >
                                 {localeString('views.Settings.Display.title')}
@@ -651,14 +651,14 @@ export default class Settings extends React.Component<
                             >
                                 <View style={{ paddingLeft: 5, paddingTop: 2 }}>
                                     <POS
-                                        stroke={themeColor('text')}
+                                        stroke={themeColor('secondaryText')}
                                         fill={themeColor('secondary')}
                                     />
                                 </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('general.pos')}
@@ -688,7 +688,7 @@ export default class Settings extends React.Component<
                             <Text
                                 style={{
                                     ...styles.columnText,
-                                    color: themeColor('text')
+                                    color: themeColor('secondaryText')
                                 }}
                             >
                                 {localeString('general.about')}

@@ -23,6 +23,7 @@ interface AmountDisplayProps {
     space?: boolean;
     jumboText?: boolean;
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
+    colorOverride?: string;
     pending?: boolean;
 }
 
@@ -36,6 +37,7 @@ function AmountDisplay({
     space = false,
     jumboText = false,
     color = undefined,
+    colorOverride = undefined,
     pending = false
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
@@ -60,13 +62,18 @@ function AmountDisplay({
     );
 
     const FiatSymbol = () => (
-        <Body secondary jumbo={jumboText} color={color}>
+        <Body
+            secondary
+            jumbo={jumboText}
+            color={color}
+            colorOverride={colorOverride}
+        >
             {actualSymbol}
         </Body>
     );
 
     const TextSpace = () => (
-        <Body jumbo={jumboText} color={color}>
+        <Body jumbo={jumboText} color={color} colorOverride={colorOverride}>
             {' '}
         </Body>
     );
@@ -77,12 +84,21 @@ function AmountDisplay({
             return (
                 <Row align="flex-end">
                     {pending ? <Pending /> : null}
-                    <Body jumbo={jumboText} color={color}>
+                    <Body
+                        jumbo={jumboText}
+                        color={color}
+                        colorOverride={colorOverride}
+                    >
                         {amount}
                     </Body>
                     <Spacer width={2} />
                     <View style={{ paddingBottom: jumboText ? 8 : 1.5 }}>
-                        <Body secondary small={!jumboText} color={color}>
+                        <Body
+                            secondary
+                            small={!jumboText}
+                            color={color}
+                            colorOverride={colorOverride}
+                        >
                             {plural ? 'sats' : 'sat'}
                         </Body>
                     </View>
@@ -93,7 +109,11 @@ function AmountDisplay({
             if (rtl) {
                 return (
                     <Row align="flex-end">
-                        <Body jumbo={jumboText} color={color}>
+                        <Body
+                            jumbo={jumboText}
+                            color={color}
+                            colorOverride={colorOverride}
+                        >
                             {negative ? '-' : ''}
                             {amount === 'N/A' ? (
                                 <LoadingIndicator size={20} />
@@ -112,7 +132,11 @@ function AmountDisplay({
                         {pending ? <Pending /> : null}
                         {amount !== 'N/A' && <FiatSymbol />}
                         {space ? <TextSpace /> : <Spacer width={1} />}
-                        <Body jumbo={jumboText} color={color}>
+                        <Body
+                            jumbo={jumboText}
+                            color={color}
+                            colorOverride={colorOverride}
+                        >
                             {negative ? '-' : ''}
                             {amount === 'N/A' ? (
                                 <LoadingIndicator size={20} />
@@ -138,6 +162,7 @@ interface AmountProps {
     debit?: boolean;
     // If credit or debit doesn't cover the use case
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
+    colorOverride?: string;
     toggleable?: boolean;
     pending?: boolean;
 }
@@ -156,6 +181,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
             debit = false,
             toggleable = false,
             color = undefined,
+            colorOverride = undefined,
             pending = false
         } = this.props;
         const UnitsStore = this.props.UnitsStore!;
@@ -193,6 +219,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                             negative={false}
                             jumboText={jumboText}
                             pending={pending}
+                            colorOverride={colorOverride}
                         />
                     </TouchableOpacity>
                 );
@@ -206,6 +233,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     negative={false}
                     jumboText={jumboText}
                     pending={pending}
+                    colorOverride={colorOverride}
                 />
             );
         }
@@ -246,6 +274,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         jumboText={jumboText}
                         color={textColor}
                         pending={pending}
+                        colorOverride={colorOverride}
                     />
                 </TouchableOpacity>
             );
@@ -260,6 +289,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 jumboText={jumboText}
                 color={textColor}
                 pending={pending}
+                colorOverride={colorOverride}
             />
         );
     }

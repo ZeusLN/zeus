@@ -48,12 +48,21 @@ const Row = ({ item }: { item: DataRow }) => (
         <View style={styles.left}>
             {item.layer === 'On-chain' ? <OnChainSvg /> : <LightningSvg />}
             <Spacer width={5} />
-            <Text style={{ ...styles.layerText, color: themeColor('text') }}>
+            <Text
+                style={{
+                    ...styles.layerText,
+                    color: themeColor('secondaryText')
+                }}
+            >
                 {item.layer}
             </Text>
         </View>
 
-        <Amount sats={item.balance} sensitive />
+        <Amount
+            sats={item.balance}
+            colorOverride={themeColor('secondaryText')}
+            sensitive
+        />
     </RectButton>
 );
 
