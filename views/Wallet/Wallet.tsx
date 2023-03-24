@@ -453,9 +453,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     : themeColor('text'),
                                 inactiveTintColor: error
                                     ? themeColor('error')
-                                    : BackendUtils.supportsChannelManagement()
-                                    ? 'gray'
-                                    : themeColor('secondaryText'),
+                                    : 'gray',
                                 showLabel: false
                             }}
                         >
