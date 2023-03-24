@@ -114,9 +114,11 @@ export default class Receive extends React.Component<
         rate: 0
     };
 
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
+    async componentDidMount() {
+        const { navigation, InvoicesStore, SettingsStore } = this.props;
+        const { reset } = InvoicesStore;
+        const { getSettings, posStatus } = SettingsStore;
+
         const settings = await getSettings();
 
         this.setState({
@@ -126,12 +128,7 @@ export default class Receive extends React.Component<
             routeHints: settings.invoices.routeHints || false,
             ampInvoice: settings.invoices.ampInvoice || false
         });
-    }
 
-    async componentDidMount() {
-        const { navigation, InvoicesStore, SettingsStore } = this.props;
-        const { reset } = InvoicesStore;
-        const { settings, posStatus } = SettingsStore;
         const lnOnly =
             settings &&
             posStatus &&
