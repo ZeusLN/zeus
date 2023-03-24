@@ -343,7 +343,7 @@ export default class PaymentRequest extends React.Component<
                 />
 
                 {(loading || loadingFeeEstimate) && (
-                    <View style={{ top: 40 }}>
+                    <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />
                     </View>
                 )}

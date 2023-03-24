@@ -246,7 +246,7 @@ export default class Routing extends React.PureComponent<
                             }}
                         />
                         {loading && (
-                            <View style={{ top: 40 }}>
+                            <View style={{ marginTop: 40 }}>
                                 <LoadingIndicator />
                             </View>
                         )}

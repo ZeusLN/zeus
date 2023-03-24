@@ -289,7 +289,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     </Row>
                 )}
                 {loading ? (
-                    <View style={{ top: 40 }}>
+                    <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />
                     </View>
                 ) : (

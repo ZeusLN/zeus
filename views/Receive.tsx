@@ -942,7 +942,7 @@ export default class Receive extends React.Component<
                                 </>
                             )}
                             {(creatingInvoice || loading) && (
-                                <View style={{ top: 40 }}>
+                                <View style={{ marginTop: 40 }}>
                                     <LoadingIndicator />
                                 </View>
                             )}
