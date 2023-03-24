@@ -117,15 +117,19 @@ export default class BalancePane extends React.PureComponent<
             balancePane = (
                 <View
                     style={{
-                        alignItems: 'center',
-                        height: 240
+                        alignItems: 'center'
                     }}
                 >
                     <WalletHeader
                         navigation={navigation}
                         SettingsStore={SettingsStore}
                     />
-                    <View style={{ marginTop: 40 }}>
+                    <View
+                        style={{
+                            marginTop: 20,
+                            marginBottom: 20
+                        }}
+                    >
                         {implementation === 'lndhub' ? (
                             <LightningBalance />
                         ) : (
