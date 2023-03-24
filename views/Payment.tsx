@@ -137,21 +137,25 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             />
                         )}
 
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Payment.paymentPreimage'
-                            )}
-                            value={getPreimage}
-                            sensitive
-                        />
+                        {getPreimage && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.paymentPreimage'
+                                )}
+                                value={getPreimage}
+                                sensitive
+                            />
+                        )}
 
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Payment.creationDate'
-                            )}
-                            value={date}
-                            sensitive
-                        />
+                        {date && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.creationDate'
+                                )}
+                                value={date}
+                                sensitive
+                            />
+                        )}
 
                         {enhancedPath.length > 0 && (
                             <KeyValue

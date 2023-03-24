@@ -52,9 +52,11 @@ export function ChannelItem({
             }}
         >
             <Row justify="space-between">
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                    <Body>{PrivacyUtils.sensitiveValue(title)}</Body>
-                </View>
+                {title && (
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                        <Body>{PrivacyUtils.sensitiveValue(title)}</Body>
+                    </View>
+                )}
                 {pendingTimelock ? (
                     <View style={{ flexDirection: 'row', marginRight: 5 }}>
                         <ClockIcon
