@@ -117,7 +117,8 @@ export default class BalancePane extends React.PureComponent<
             balancePane = (
                 <View
                     style={{
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        minHeight: 200
                     }}
                 >
                     <WalletHeader
@@ -126,7 +127,7 @@ export default class BalancePane extends React.PureComponent<
                     />
                     <View
                         style={{
-                            marginTop: 20,
+                            marginTop: 40,
                             marginBottom: 20
                         }}
                     >
