@@ -45,12 +45,12 @@ export default class SendingOnChain extends React.Component<
 
         return (
             <Screen>
-                <View
-                    style={{
-                        ...styles.content
-                    }}
-                >
-                    <ScrollView>
+                <ScrollView>
+                    <View
+                        style={{
+                            ...styles.content
+                        }}
+                    >
                         {loading && <LoadingIndicator />}
                         {loading && (
                             <Text
@@ -199,8 +199,8 @@ export default class SendingOnChain extends React.Component<
                                 />
                             )}
                         </View>
-                    </ScrollView>
-                </View>
+                    </View>
+                </ScrollView>
             </Screen>
         );
     }
