@@ -101,39 +101,7 @@ export default class Invoice extends BaseModel {
         );
     }
 
-    @computed public get isLnurlP(): boolean {
-        if (this.memo || this.description) {
-            try {
-                const parsed = JSON.parse(this.memo || this.description);
-                if (Array.isArray(parsed)) {
-                    const memoArray = parsed[0];
-                    const destinationArray = parsed[1];
-                    if (
-                        Array.isArray(memoArray) &&
-                        Array.isArray(destinationArray)
-                    ) {
-                        return true;
-                    }
-                }
-            } catch {}
-        }
-
-        return false;
-    }
-
     @computed public get getMemo(): string {
-        // TODO remove once BTCPay Server issue is resolved
-        // https://github.com/btcpayserver/btcpayserver/issues/4801
-        // parse out LNURLp data from BTCPay
-        if (this.isLnurlP) {
-            try {
-                const parsed = JSON.parse(this.memo || this.description);
-                const destinationArray = parsed[1];
-                const destination = destinationArray[1];
-                return destination;
-            } catch {}
-        }
-
         return this.memo || this.description;
     }
 
