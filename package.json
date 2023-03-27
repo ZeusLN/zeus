@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "0.7.4-rc1",
+  "version": "0.7.4-rc2",
   "private": true,
   "playStore": false,
   "jest": {
