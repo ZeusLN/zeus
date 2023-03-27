@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -19,18 +19,71 @@ export default class PaymentPath extends React.Component<PaymentPathProps, {}> {
         const paths: any = [];
         value.map((path: any, index: number) => {
             const hops: any = [];
+            let title = '';
+            path.map((hop: any, key: number) => {
+                title +=
+                    hop.node.length >= 66
+                        ? `${PrivacyUtils.sensitiveValue(hop.node).slice(
+                              0,
+                              6
+                          )}...`
+                        : PrivacyUtils.sensitiveValue(hop.node);
+                if (key + 1 !== path.length) {
+                    title += ', ';
+                }
+            });
             if (value.length > 1) {
                 hops.push(
-                    <Text
-                        style={{
-                            fontSize: 15,
-                            color: themeColor('text'),
-                            fontFamily: 'Lato-Bold',
-                            marginBottom: 20
-                        }}
-                    >
-                        {`Path ${index + 1}`}
-                    </Text>
+                    <TouchableOpacity onPress={() => console.log(index)}>
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 6,
+                                margin: 10,
+                                // height: 60,
+                                marginBottom: 20,
+                                width: '100%',
+                                left: -10,
+                                paddingLeft: 5,
+                                paddingTop: 10,
+                                paddingBottom: 10
+                            }}
+                        >
+                            <Row align="flex-end">
+                                <View
+                                    style={{
+                                        height: 40, //any of height
+                                        width: 40, //any of width
+                                        justifyContent: 'center',
+                                        borderRadius: 20,
+                                        backgroundColor:
+                                            themeColor('highlight'),
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            fontSize: 15,
+                                            color: themeColor('background'),
+                                            fontFamily: 'Lato-Bold'
+                                        }}
+                                    >
+                                        {path.length}
+                                    </Text>
+                                </View>
+                                <Text
+                                    style={{
+                                        fontSize: 17,
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Bold',
+                                        margin: 10
+                                    }}
+                                >
+                                    {title}
+                                </Text>
+                            </Row>
+                        </View>
+                    </TouchableOpacity>
                 );
             }
             path.map((hop: any, key: number) => {
