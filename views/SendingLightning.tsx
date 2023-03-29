@@ -15,6 +15,7 @@ import LnurlPayStore from '../stores/LnurlPayStore';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import Clock from '../assets/images/SVG/Clock.svg';
 import Error from '../assets/images/SVG/Error.svg';
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
@@ -46,6 +47,8 @@ export default class SendingLightning extends React.Component<
         const success =
             payment_route || status === 'complete' || status === 'SUCCEEDED';
 
+        const inTransit = status === 'IN_FLIGHT';
+
         return (
             <Screen>
                 <ScrollView>
@@ -64,6 +67,15 @@ export default class SendingLightning extends React.Component<
                             >
                                 {localeString('views.SendingLightning.sending')}
                             </Text>
+                        )}
+                        {!!inTransit && !error && (
+                            <View style={{ marginTop: 10, marginBottom: 10 }}>
+                                <Clock
+                                    color={themeColor('bitcoin')}
+                                    width={180}
+                                    height={180}
+                                />
+                            </View>
                         )}
                         {!!success && !error && (
                             <>
