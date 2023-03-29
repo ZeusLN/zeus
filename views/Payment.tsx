@@ -3,26 +3,25 @@ import { StyleSheet, ScrollView, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Amount from './../components/Amount';
-import KeyValue from './../components/KeyValue';
-import Screen from './../components/Screen';
+import Amount from '../components/Amount';
+import KeyValue from '../components/KeyValue';
+import PaymentPath from '../components/PaymentPath';
+import Screen from '../components/Screen';
 
-import Payment from './../models/Payment';
-import PrivacyUtils from './../utils/PrivacyUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import Payment from '../models/Payment';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-import SettingsStore from './../stores/SettingsStore';
-import LnurlPayStore from './../stores/LnurlPayStore';
+import LnurlPayStore from '../stores/LnurlPayStore';
+
 import LnurlPayHistorical from './LnurlPay/Historical';
 
 interface PaymentProps {
     navigation: any;
-    SettingsStore: SettingsStore;
     LnurlPayStore: LnurlPayStore;
 }
 
-@inject('SettingsStore', 'LnurlPayStore')
+@inject('LnurlPayStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     state = {
@@ -39,10 +38,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { privacy } = settings;
-        const lurkerMode = (privacy && privacy.lurkerMode) || false;
+        const { navigation } = this.props;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
@@ -158,17 +154,16 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         )}
 
                         {enhancedPath.length > 0 && (
-                            <KeyValue
-                                keyValue={localeString('views.Payment.path')}
-                                value={
-                                    lurkerMode
-                                        ? PrivacyUtils.sensitiveValue(
-                                              enhancedPath.join(', ')
-                                          )
-                                        : `${enhancedPath}`
-                                }
-                                sensitive
-                            />
+                            <>
+                                <KeyValue
+                                    keyValue={
+                                        enhancedPath.length > 1
+                                            ? 'Paths'
+                                            : localeString('views.Payment.path')
+                                    }
+                                />
+                                <PaymentPath value={enhancedPath} />
+                            </>
                         )}
                     </View>
                 </ScrollView>
