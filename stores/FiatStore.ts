@@ -156,8 +156,8 @@ export default class FiatStore {
             },
             MXN: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             MYR: {
-                symbol: 'MR',
-                space: true,
+                symbol: 'RM',
+                space: false,
                 rtl: false,
                 separatorSwap: false
             },
