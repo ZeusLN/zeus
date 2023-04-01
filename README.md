@@ -123,6 +123,16 @@ Zeus is proud to be integrated on the following platforms:
 3. `cd ios && pod install`
 4. open `ios/zeus.xcworkspace` in Xcode and hit Run.
 
+## Contributing
+
+Please be sure to run `yarn run tsc` to check for type errors, `yarn run test` to run all tests, and `yarn run prettier` to run the prettier
+
+If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
+
+If you're looking for a quick way to get a lightning development environment running, check out [Polar](https://github.com/jamaljsr/polar).
+
+NOTE: When configuring a new node on Android in dev, the `Host` field must be `10.0.2.2` - `127.0.0.1` or `localhost` won't work.
+
 ## Reproducible builds
 
 Reproducible builds are available for Android only right now. You'll need Docker installed to be able to build the app this way:
@@ -143,16 +153,6 @@ If you want to install the APK built this way onto your own smartphone, you'll n
 2. Create your certificate, if you haven't done so already. If you already have the certificate from previous builds, it's advised that you use the same one so you are able to upgrade from one APK to the next one without reinstalling first: `keytool -genkeypair -alias zeus -keystore zeus.pfx -v -storetype PKCS12 -keyalg RSA -keysize 2048 -storepass your_keystore_password -keypass your_key_password -validity 10000 -dname "cn=Unknown, ou=Unknown, o=Unknown, c=Unknown"`
 3. Sign the chosen APK file using this command: `java -jar /usr/bin/apksigner sign -v --ks zeus.pfx --ks-key-alias zeus --ks-pass pass:your_keystore_password --key-pass pass:your_key_password zeus-universal.apk`
 4. Copy the signed APK to your smartphone and install it by tapping over the file. If you get an error, you'll have to uninstall your currently installed version of Zeus first. Note that you'll lose your connections and you'll need to reconfigure Zeus again to connect to your node.
-
-## Contributing
-
-Please be sure to run `yarn run tsc` to check for type errors, `yarn run test` to run all tests, and `yarn run prettier` to run the prettier
-
-If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
-
-If you're looking for a quick way to get a lightning development environment running, check out [Polar](https://github.com/jamaljsr/polar).
-
-NOTE: When configuring a new node on Android in dev, the `Host` field must be `10.0.2.2` - `127.0.0.1` or `localhost` won't work.
 
 ## Translations
 
