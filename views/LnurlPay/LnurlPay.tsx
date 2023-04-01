@@ -3,25 +3,25 @@ import * as React from 'react';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 
-import Amount from './../../components/Amount';
-import Button from './../../components/Button';
-import Screen from './../../components/Screen';
-import TextInput from './../../components/TextInput';
-import { Row } from './../..//components/layout/Row';
+import Amount from '../../components/Amount';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import TextInput from '../../components/TextInput';
+import { Row } from '../..//components/layout/Row';
 
-import InvoicesStore from './../../stores/InvoicesStore';
-import LnurlPayStore from './../../stores/LnurlPayStore';
-import SettingsStore from './../../stores/SettingsStore';
-import FiatStore from './../../stores/FiatStore';
-import UnitsStore, { SATS_PER_BTC } from './../../stores/UnitsStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import LnurlPayStore from '../../stores/LnurlPayStore';
+import SettingsStore from '../../stores/SettingsStore';
+import FiatStore from '../../stores/FiatStore';
+import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import LnurlPayMetadata from './Metadata';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPayProps {
     navigation: any;
@@ -204,19 +204,10 @@ export default class LnurlPay extends React.Component<
 
         const lnurl = navigation.getParam('lnurlParams');
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: 'Send',
                         style: {
@@ -224,10 +215,7 @@ export default class LnurlPay extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <View style={styles.content}>
                     <Text

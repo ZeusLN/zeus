@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import BigNumber from 'bignumber.js';
 import { LNURLWithdrawParams } from 'js-lnurl';
-import { ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
 
@@ -30,6 +30,7 @@ import WordLogo from '../assets/images/SVG/Word Logo.svg';
 import Amount from '../components/Amount';
 import Button from '../components/Button';
 import CollapsedQR from '../components/CollapsedQR';
+import Header from '../components/Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import PaidIndicator from '../components/PaidIndicator';
 import ModalBox from '../components/ModalBox';
@@ -846,10 +847,6 @@ export default class Receive extends React.Component<
                             )
                         )
                     }
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
                 />
 
                 <ScrollView style={styles.content}>
