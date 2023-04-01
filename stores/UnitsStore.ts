@@ -60,7 +60,9 @@ export default class UnitsStore {
         fixedUnits?: string
     ): ValueDisplayProps => {
         const { settings } = this.settingsStore;
-        const { fiat } = settings;
+        const { fiat, display } = settings;
+        const showAllDecimalPlaces: boolean =
+            (display && display.showAllDecimalPlaces) || false;
         const units = fixedUnits || this.units;
 
         const sats = Number(value);
@@ -69,7 +71,10 @@ export default class UnitsStore {
 
         if (units === 'BTC') {
             return {
-                amount: FeeUtils.toFixed(absValueSats / SATS_PER_BTC),
+                amount: FeeUtils.toFixed(
+                    absValueSats / SATS_PER_BTC,
+                    showAllDecimalPlaces
+                ),
                 unit: 'BTC',
                 negative,
                 space: false
