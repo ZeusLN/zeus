@@ -23,6 +23,7 @@ interface DisplayState {
     defaultView: string;
     displayNickname: boolean;
     bigKeypadButtons: boolean;
+    showAllDecimalPlaces: boolean;
 }
 
 @inject('SettingsStore')
@@ -35,7 +36,8 @@ export default class Display extends React.Component<
         theme: 'Dark',
         defaultView: 'Keypad',
         displayNickname: false,
-        bigKeypadButtons: false
+        bigKeypadButtons: false,
+        showAllDecimalPlaces: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -50,7 +52,11 @@ export default class Display extends React.Component<
             displayNickname:
                 (settings.display && settings.display.displayNickname) || false,
             bigKeypadButtons:
-                (settings.display && settings.display.bigKeypadButtons) || false
+                (settings.display && settings.display.bigKeypadButtons) ||
+                false,
+            showAllDecimalPlaces:
+                (settings.display && settings.display.showAllDecimalPlaces) ||
+                false
         });
     }
 
@@ -65,8 +71,13 @@ export default class Display extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { defaultView, displayNickname, bigKeypadButtons, theme } =
-            this.state;
+        const {
+            defaultView,
+            displayNickname,
+            bigKeypadButtons,
+            theme,
+            showAllDecimalPlaces
+        } = this.state;
         const { updateSettings }: any = SettingsStore;
 
         const BackButton = () => (
@@ -111,7 +122,8 @@ export default class Display extends React.Component<
                                     theme: value,
                                     displayNickname,
                                     bigKeypadButtons,
-                                    defaultView
+                                    defaultView,
+                                    showAllDecimalPlaces
                                 }
                             });
                         }}
@@ -132,7 +144,8 @@ export default class Display extends React.Component<
                                     defaultView: value,
                                     displayNickname,
                                     bigKeypadButtons,
-                                    theme
+                                    theme,
+                                    showAllDecimalPlaces
                                 }
                             });
                         }}
@@ -174,7 +187,8 @@ export default class Display extends React.Component<
                                             defaultView,
                                             theme,
                                             bigKeypadButtons,
-                                            displayNickname: !displayNickname
+                                            displayNickname: !displayNickname,
+                                            showAllDecimalPlaces
                                         }
                                     });
                                 }}
@@ -217,7 +231,54 @@ export default class Display extends React.Component<
                                             defaultView,
                                             theme,
                                             displayNickname,
-                                            bigKeypadButtons: !bigKeypadButtons
+                                            bigKeypadButtons: !bigKeypadButtons,
+                                            showAllDecimalPlaces
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular',
+                                left: -10
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Display.showAllDecimalPlaces'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={showAllDecimalPlaces}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        showAllDecimalPlaces:
+                                            !showAllDecimalPlaces
+                                    });
+                                    await updateSettings({
+                                        display: {
+                                            defaultView,
+                                            theme,
+                                            displayNickname,
+                                            bigKeypadButtons,
+                                            showAllDecimalPlaces:
+                                                !showAllDecimalPlaces
                                         }
                                     });
                                 }}

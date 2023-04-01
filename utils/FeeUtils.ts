@@ -18,7 +18,8 @@ class FeeUtils {
 
         return split[0];
     };
-    toFixed = (x: any) => {
+    toFixed = (x: any, showAllDecimalPlaces?: boolean) => {
+        if (showAllDecimalPlaces) return x.toFixed(8);
         return x.toFixed(8).replace(/\.?0+$/, '');
     };
 }
