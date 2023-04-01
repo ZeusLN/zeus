@@ -33,20 +33,19 @@ static void ClearKeychainIfNecessary() {
         // Set the appropriate value so we don't clear next time the app is launched
         [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"HAS_RUN_BEFORE"];
 
-    // TODO for now leave delete process disabled and enable for v0.7.5
-    //     NSArray *secItemClasses = @[
-    //         (__bridge id)kSecClassGenericPassword,
-    //         (__bridge id)kSecClassInternetPassword,
-    //         (__bridge id)kSecClassCertificate,
-    //         (__bridge id)kSecClassKey,
-    //         (__bridge id)kSecClassIdentity
-    //     ];
+        NSArray *secItemClasses = @[
+            (__bridge id)kSecClassGenericPassword,
+            (__bridge id)kSecClassInternetPassword,
+            (__bridge id)kSecClassCertificate,
+            (__bridge id)kSecClassKey,
+            (__bridge id)kSecClassIdentity
+        ];
 
-    //     // Maps through all Keychain classes and deletes all items that match
-    //     for (id secItemClass in secItemClasses) {
-    //         NSDictionary *spec = @{(__bridge id)kSecClass: secItemClass};
-    //         SecItemDelete((__bridge CFDictionaryRef)spec);
-    //     }
+        // Maps through all Keychain classes and deletes all items that match
+        for (id secItemClass in secItemClasses) {
+            NSDictionary *spec = @{(__bridge id)kSecClass: secItemClass};
+            SecItemDelete((__bridge CFDictionaryRef)spec);
+        }
     }
 }
 
