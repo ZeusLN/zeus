@@ -1093,7 +1093,7 @@ export default class Receive extends React.Component<
                                                 ? ` (${Math.ceil(
                                                       lnurl.minWithdrawable /
                                                           1000
-                                                  )}--${Math.floor(
+                                                  )} - ${Math.floor(
                                                       lnurl.maxWithdrawable /
                                                           1000
                                                   )})`
