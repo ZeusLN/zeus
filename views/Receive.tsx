@@ -114,7 +114,7 @@ export default class Receive extends React.Component<
         rate: 0
     };
 
-    async componentDidMount() {
+    async UNSAFE_componentWillMount() {
         const { navigation, InvoicesStore, SettingsStore } = this.props;
         const { reset } = InvoicesStore;
         const { getSettings, posStatus } = SettingsStore;
