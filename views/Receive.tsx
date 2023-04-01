@@ -226,8 +226,8 @@ export default class Receive extends React.Component<
         if (this.onChainInterval) clearInterval(this.onChainInterval);
     };
 
-    navBack = () => {
-        const { InvoicesStore, navigation } = this.props;
+    onBack = () => {
+        const { InvoicesStore } = this.props;
         const { reset } = InvoicesStore;
         // kill all listeners and pollers before navigating back
         this.clearListeners();
@@ -235,10 +235,6 @@ export default class Receive extends React.Component<
 
         // clear invoice
         reset();
-
-        navigation.navigate('Wallet', {
-            refresh: true
-        });
     };
 
     autoGenerateInvoice = (
@@ -645,17 +641,6 @@ export default class Receive extends React.Component<
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    this.navBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const ClearButton = () => (
             <Icon
                 name="cancel"
@@ -825,7 +810,8 @@ export default class Receive extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
+                    onBack={this.onBack}
                     centerComponent={{
                         text:
                             posStatus === 'active'
@@ -847,6 +833,7 @@ export default class Receive extends React.Component<
                             )
                         )
                     }
+                    navigation={navigation}
                 />
 
                 <ScrollView style={styles.content}>

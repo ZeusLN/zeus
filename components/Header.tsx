@@ -9,22 +9,29 @@ interface HeaderProps {
     containerStyle?: any;
     placement?: 'left' | 'center' | 'right' | undefined;
     navigation?: any;
+    onBack?: () => void;
 }
 
 function ZeusHeader(props: HeaderProps) {
-    const BackButton = () => (
+    const BackButton = (onBack?: () => void) => (
         <Icon
             name="arrow-back"
-            onPress={() => props.navigation.goBack()}
+            onPress={() => {
+                if (onBack) onBack();
+                props.navigation.goBack();
+            }}
             color={themeColor('text')}
             underlayColor="transparent"
         />
     );
 
-    const CloseButton = () => (
+    const CloseButton = (onBack?: () => void) => (
         <Icon
             name="close"
-            onPress={() => props.navigation.goBack()}
+            onPress={() => {
+                if (onBack) onBack();
+                props.navigation.goBack();
+            }}
             color={themeColor('text')}
             underlayColor="transparent"
         />
@@ -35,21 +42,22 @@ function ZeusHeader(props: HeaderProps) {
         centerComponent,
         rightComponent,
         containerStyle,
-        placement
+        placement,
+        onBack
     } = props;
     return (
         <Header
             leftComponent={
                 leftComponent === 'Back'
-                    ? BackButton
+                    ? BackButton(onBack)
                     : leftComponent === 'Close'
-                    ? CloseButton
+                    ? CloseButton(onBack)
                     : leftComponent
                     ? leftComponent
-                    : null
+                    : undefined
             }
-            centerComponent={centerComponent ? centerComponent : null}
-            rightComponent={rightComponent ? rightComponent : null}
+            centerComponent={centerComponent ? centerComponent : undefined}
+            rightComponent={rightComponent ? rightComponent : undefined}
             backgroundColor="transparent"
             containerStyle={{
                 ...containerStyle,
