@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Header } from 'react-native-elements';
+import { Badge } from 'react-native-elements';
 import { Image, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -10,6 +10,7 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 
 import Button from '../components/Button';
+import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
@@ -342,10 +343,6 @@ export default class WalletHeader extends React.Component<
                         </View>
                     )
                 }
-                backgroundColor="transparent"
-                containerStyle={{
-                    borderBottomWidth: 0
-                }}
             />
         );
     }

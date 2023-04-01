@@ -8,35 +8,35 @@ import {
     TouchableOpacity
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { hash, STORAGE_KEY } from './../../backends/LNC/credentialStore';
+import { hash, STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
-import AddressUtils, { CUSTODIAL_LNDHUBS } from './../../utils/AddressUtils';
-import ConnectionFormatUtils from './../../utils/ConnectionFormatUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import BackendUtils from './../../utils/BackendUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import AddressUtils, { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
+import ConnectionFormatUtils from '../../utils/ConnectionFormatUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import Button from './../../components/Button';
-import CollapsedQR from './../../components/CollapsedQR';
-import DropdownSetting from './../../components/DropdownSetting';
-import LoadingIndicator from './../../components/LoadingIndicator';
-import Screen from './../../components/Screen';
+import Button from '../../components/Button';
+import CollapsedQR from '../../components/CollapsedQR';
+import DropdownSetting from '../../components/DropdownSetting';
+import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
-} from './../../components/SuccessErrorMessage';
-import Switch from './../../components/Switch';
-import TextInput from './../../components/TextInput';
+} from '../../components/SuccessErrorMessage';
+import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
 
 import SettingsStore, {
     INTERFACE_KEYS,
     LNC_MAILBOX_KEYS
-} from './../../stores/SettingsStore';
+} from '../../stores/SettingsStore';
 
-import Scan from './../../assets/images/SVG/Scan.svg';
+import Scan from '../../assets/images/SVG/Scan.svg';
 
 interface NodeConfigurationProps {
     navigation: any;
@@ -466,17 +466,6 @@ export default class NodeConfiguration extends React.Component<
             createAccount
         } = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() =>
-                    navigation.navigate('Settings', { refresh: true })
-                }
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const CertInstallInstructions = () => (
             <View style={styles.button}>
                 <Button
@@ -530,7 +519,7 @@ export default class NodeConfiguration extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString(
                             'views.Settings.AddEditNode.nodeConfig'
@@ -555,10 +544,7 @@ export default class NodeConfiguration extends React.Component<
                             />
                         )
                     }
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>

@@ -1,15 +1,16 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
+import { Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Screen from './../../components/Screen';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
 
-import UnitsStore from './../../stores/UnitsStore';
-import SettingsStore, { CURRENCY_KEYS } from './../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
+import SettingsStore, { CURRENCY_KEYS } from '../../stores/SettingsStore';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface CurrencyProps {
     navigation: any;
@@ -71,20 +72,11 @@ export default class Currency extends React.Component<
         const { selectedCurrency, search, currencies } = this.state;
         const { updateSettings, getSettings }: any = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
-                        leftComponent={<BackButton />}
+                        leftComponent="Back"
                         centerComponent={{
                             text: localeString('views.Settings.Currency.title'),
                             style: {
@@ -92,10 +84,7 @@ export default class Currency extends React.Component<
                                 fontFamily: 'Lato-Regular'
                             }
                         }}
-                        backgroundColor="transparent"
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
+                        navigation={navigation}
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}

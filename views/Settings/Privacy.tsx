@@ -1,17 +1,16 @@
 import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import SettingsStore, {
-    BLOCK_EXPLORER_KEYS
-} from './../../stores/SettingsStore';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import SettingsStore, { BLOCK_EXPLORER_KEYS } from '../../stores/SettingsStore';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import DropdownSetting from './../../components/DropdownSetting';
-import Screen from './../../components/Screen';
-import Switch from './../../components/Switch';
-import TextInput from './../../components/TextInput';
+import DropdownSetting from '../../components/DropdownSetting';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
 
 interface PrivacyProps {
     navigation: any;
@@ -86,23 +85,10 @@ export default class Privacy extends React.Component<
         } = this.state;
         const { updateSettings }: any = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() =>
-                    navigation.navigate('Settings', {
-                        refresh: true
-                    })
-                }
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Settings.Privacy.title'),
                         style: {
@@ -110,10 +96,7 @@ export default class Privacy extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView style={{ flex: 1, padding: 15 }}>
                     <DropdownSetting
