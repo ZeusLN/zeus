@@ -1,7 +1,16 @@
 import * as React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import { BarCodeReadEvent, FlashMode, RNCamera } from 'react-native-camera';
+import {
+    Dimensions,
+    StyleSheet,
+    Text,
+    View,
+    Platform,
+    TouchableOpacity
+} from 'react-native';
+import { CameraScreen, Camera } from 'react-native-camera-kit';
 import { launchImageLibrary } from 'react-native-image-picker';
+// import Permissions, { PERMISSIONS, RESULTS } from 'react-native-permissions';
+
 const LocalQRCode = require('@remobile/react-native-qrcode-local-image');
 
 import Button from './../components/Button';
@@ -22,8 +31,10 @@ interface QRProps {
 }
 
 interface QRState {
-    cameraStatus: any;
-    torch: FlashMode;
+    cameraAuthorized: any;
+    isCameraOpen: boolean;
+    qrCodeData: string;
+    flashMode: any;
 }
 
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
@@ -31,32 +42,18 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
         super(props);
 
         this.state = {
-            cameraStatus: null,
-            torch: RNCamera.Constants.FlashMode.off
+            cameraAuthorized: false,
+            isCameraOpen: false,
+            qrCodeData: '',
+            flashMode: 'off'
         };
     }
     scannedCache: { [name: string]: number } = {};
     maskLength = (Dimensions.get('window').width * 80) / 100;
 
-    handleCameraStatusChange = (event: any) => {
-        this.setState((state) => {
-            return {
-                ...state,
-                cameraStatus: event.cameraStatus
-            };
-        });
-    };
-
-    handleFlash = () => {
-        this.setState((state) => {
-            return {
-                ...state,
-                torch:
-                    this.state.torch === RNCamera.Constants.FlashMode.torch
-                        ? RNCamera.Constants.FlashMode.off
-                        : RNCamera.Constants.FlashMode.torch
-            };
-        });
+    toggleFlash = () => {
+        const { flashMode } = this.state;
+        this.setState({ flashMode: flashMode === 'torch' ? 'off' : 'torch' });
     };
 
     handleRead = (data: any) => {
@@ -90,128 +87,69 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
             }
         );
     };
+    onQRCodeScan = (event: { nativeEvent: { codeStringValue: any } }) => {
+        this.handleRead(event.nativeEvent.codeStringValue);
+    };
 
     render() {
-        const { cameraStatus } = this.state;
         const { text, goBack } = this.props;
 
         return (
-            <>
-                {cameraStatus !==
-                    RNCamera.Constants.CameraStatus.NOT_AUTHORIZED && (
-                    <View
-                        style={{
-                            flex: 1,
-                            flexDirection: 'row',
-                            alignItems: 'center'
-                        }}
-                    >
-                        <RNCamera
-                            style={styles.preview}
-                            onBarCodeRead={(ret: BarCodeReadEvent) =>
-                                this.handleRead(ret.data)
-                            }
-                            androidCameraPermissionOptions={{
-                                title: localeString(
-                                    'components.QRCodeScanner.cameraPermissionTitle'
-                                ),
-                                message: localeString(
-                                    'components.QRCodeScanner.cameraPermission'
-                                ),
-                                buttonPositive: localeString('general.ok'),
-                                buttonNegative: localeString('general.cancel')
-                            }}
-                            captureAudio={false}
-                            onStatusChange={this.handleCameraStatusChange}
-                            barCodeTypes={[RNCamera.Constants.BarCodeType.qr]}
-                            flashMode={
-                                this.state.cameraStatus ===
-                                RNCamera.Constants.CameraStatus.READY
-                                    ? this.state.torch
-                                    : RNCamera.Constants.FlashMode.off
-                            }
-                        >
-                            <View style={styles.overlay} />
-                            <View style={styles.actionOverlay}>
-                                <View style={{ marginTop: 8, marginRight: 5 }}>
-                                    {this.state.torch ===
-                                    RNCamera.Constants.FlashMode.torch ? (
-                                        <FlashOnIcon
-                                            width={35}
-                                            height={35}
-                                            onPress={this.handleFlash}
-                                        />
-                                    ) : (
-                                        <FlashOffIcon
-                                            width={35}
-                                            height={35}
-                                            onPress={this.handleFlash}
-                                        />
-                                    )}
-                                </View>
-                                <GalleryIcon
-                                    width={50}
-                                    height={50}
-                                    onPress={this.handleOpenGallery}
-                                    backgroundColor="red"
-                                />
-                            </View>
-                            <Text style={styles.textOverlay}>{text}</Text>
-                            <View
-                                style={[
-                                    styles.contentRow,
-                                    { height: this.maskLength }
-                                ]}
-                            >
-                                <View style={styles.overlay} />
-                                <View style={styles.scan}>
-                                    <ScanFrameSvg height="100%" />
-                                </View>
-                                <View style={styles.overlay} />
-                            </View>
-                            <View style={styles.overlay} />
-                            <View style={styles.cancelOverlay}>
-                                <Button
-                                    title={localeString('general.cancel')}
-                                    onPress={() => goBack()}
-                                    iconOnly
-                                    noUppercase
-                                />
-                            </View>
-                        </RNCamera>
-                    </View>
+            <View style={styles.container}>
+                <CameraScreen
+                    scanBarcode={true}
+                    onReadCode={this.onQRCodeScan}
+                    torchOnImage={<FlashOnIcon width={35} height={35} />}
+                    torchOffImage={<FlashOffIcon width={35} height={35} />}
+                    torchImageStyle={{
+                        marginTop: 8,
+                        marginRight: 5,
+                        borderColor: 'red'
+                    }}
+                />
+
+                <View style={styles.actionOverlay}>
+                    <TouchableOpacity onPress={this.handleOpenGallery}>
+                        <GalleryIcon width={50} height={50} />
+                    </TouchableOpacity>
+                </View>
+                {text !== undefined && (
+                    <Text style={styles.textOverlay}>{text}</Text>
                 )}
-                {cameraStatus ===
-                    RNCamera.Constants.CameraStatus.NOT_AUTHORIZED && (
-                    <View style={styles.content}>
-                        <Text
-                            style={{
-                                fontFamily: 'Lato-Regular',
-                                textAlign: 'center',
-                                padding: 15
-                            }}
-                        >
-                            {localeString(
-                                'components.QRCodeScanner.noCameraAccess'
-                            )}
-                        </Text>
-                        <Button
-                            title={localeString('general.goBack')}
-                            onPress={() => goBack()}
-                            secondary
-                            containerStyle={{ width: 200 }}
-                            adaptiveWidth
-                        />
+
+                <View style={[styles.contentRow, { height: this.maskLength }]}>
+                    <View style={styles.overlay} />
+                    <View style={styles.scan}>
+                        <ScanFrameSvg height="100%" />
                     </View>
-                )}
-            </>
+                    <View style={styles.overlay} />
+                </View>
+                <View
+                    style={{
+                        flex: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                >
+                    <Button
+                        title={localeString('general.cancel')}
+                        onPress={() => goBack()}
+                        iconOnly
+                        noUppercase
+                    />
+                </View>
+            </View>
         );
     }
 }
 
 const styles = StyleSheet.create({
-    preview: {
+    container: {
         flex: 1
+    },
+    flashButton: {
+        marginTop: 8,
+        marginRight: 5
     },
     overlay: {
         flex: 1,
@@ -226,10 +164,7 @@ const styles = StyleSheet.create({
         right: 10,
         top: '7%'
     },
-    cancelOverlay: {
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        paddingBottom: 50
-    },
+
     textOverlay: {
         backgroundColor: 'rgba(0,0,0,0.5)',
         color: 'white',
@@ -237,7 +172,9 @@ const styles = StyleSheet.create({
         fontSize: 15
     },
     contentRow: {
-        flexDirection: 'row'
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end'
     },
     content: {
         flex: 1,
