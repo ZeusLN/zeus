@@ -6,10 +6,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, Header, Icon, ListItem } from 'react-native-elements';
+import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Amount from '../../components/Amount';
+import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 
@@ -116,15 +117,6 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
 
-        const CloseButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const FilterButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('ActivityFilter')}
@@ -136,7 +128,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         return (
             <Screen>
                 <Header
-                    leftComponent={<CloseButton />}
+                    leftComponent="Close"
                     centerComponent={{
                         text: localeString('general.activity'),
                         style: {
@@ -145,10 +137,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         }
                     }}
                     rightComponent={<FilterButton />}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>

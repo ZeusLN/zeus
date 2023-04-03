@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from 'react-native-elements';
 
-import Screen from './../../components/Screen';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
-import UrlUtils from './../../utils/UrlUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 interface HelpProps {
     navigation: any;
@@ -21,15 +22,6 @@ function Help(props: HelpProps) {
                 height: 1,
                 backgroundColor: themeColor('separator')
             }}
-        />
-    );
-
-    const BackButton = () => (
-        <Icon
-            name="arrow-back"
-            onPress={() => navigation.goBack()}
-            color={themeColor('text')}
-            underlayColor="transparent"
         />
     );
 
@@ -55,7 +47,7 @@ function Help(props: HelpProps) {
     return (
         <Screen>
             <Header
-                leftComponent={<BackButton />}
+                leftComponent="Back"
                 centerComponent={{
                     text: localeString('general.help'),
                     style: {
@@ -63,10 +55,7 @@ function Help(props: HelpProps) {
                         fontFamily: 'Lato-Regular'
                     }
                 }}
-                backgroundColor="transparent"
-                containerStyle={{
-                    borderBottomWidth: 0
-                }}
+                navigation={navigation}
             />
             <FlatList
                 data={HELP_ITEMS}

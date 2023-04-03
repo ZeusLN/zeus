@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Header, Icon } from 'react-native-elements';
 
 import NfcManager, {
     NfcEvents,
@@ -20,32 +19,34 @@ import NfcManager, {
     Ndef
 } from 'react-native-nfc-manager';
 
-import handleAnything, { isClipboardValue } from './../utils/handleAnything';
+import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
-import InvoicesStore from './../stores/InvoicesStore';
-import NodeInfoStore from './../stores/NodeInfoStore';
-import TransactionsStore from './../stores/TransactionsStore';
-import BalanceStore from './../stores/BalanceStore';
-import UTXOsStore from './../stores/UTXOsStore';
-import SettingsStore from './../stores/SettingsStore';
-import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
-import FiatStore from './../stores/FiatStore';
+import InvoicesStore from '../stores/InvoicesStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
+import TransactionsStore from '../stores/TransactionsStore';
+import BalanceStore from '../stores/BalanceStore';
+import UTXOsStore from '../stores/UTXOsStore';
+import SettingsStore from '../stores/SettingsStore';
+import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import FiatStore from '../stores/FiatStore';
 
-import Amount from './../components/Amount';
-import Conversion from './../components/Conversion';
-import Button from './../components/Button';
-import { ErrorMessage } from './../components/SuccessErrorMessage';
-import Screen from './../components/Screen';
-import Switch from './../components/Switch';
-import TextInput from './../components/TextInput';
-import UTXOPicker from './../components/UTXOPicker';
+import Amount from '../components/Amount';
+import Button from '../components/Button';
+import Conversion from '../components/Conversion';
 
-import BackendUtils from './../utils/BackendUtils';
-import NFCUtils from './../utils/NFCUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import Header from '../components/Header';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
+import Screen from '../components/Screen';
+import Switch from '../components/Switch';
+import TextInput from '../components/TextInput';
+import UTXOPicker from '../components/UTXOPicker';
 
-import Scan from './../assets/images/SVG/Scan.svg';
+import BackendUtils from '../utils/BackendUtils';
+import NFCUtils from '../utils/NFCUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+
+import Scan from '../assets/images/SVG/Scan.svg';
 
 interface SendProps {
     exitSetup: any;
@@ -408,15 +409,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                 break;
         }
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
         if (BackendUtils.supportsOnchainSends()) {
@@ -429,7 +421,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Send.title'),
                         style: {
@@ -446,10 +438,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Scan fill={themeColor('text')} />
                         </TouchableOpacity>
                     }
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView style={styles.content}>
                     <Text

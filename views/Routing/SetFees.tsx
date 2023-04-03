@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import SetFeesForm from '../../components/SetFeesForm';
 
@@ -76,19 +76,10 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
         // CLN
         const channelFee = channelFees[channelPoint];
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: channel
                             ? `${localeString(
@@ -100,10 +91,7 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <View
                     style={{
