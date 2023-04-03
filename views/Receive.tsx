@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import BigNumber from 'bignumber.js';
 import { LNURLWithdrawParams } from 'js-lnurl';
-import { ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
 
@@ -30,6 +30,7 @@ import WordLogo from '../assets/images/SVG/Word Logo.svg';
 import Amount from '../components/Amount';
 import Button from '../components/Button';
 import CollapsedQR from '../components/CollapsedQR';
+import Header from '../components/Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import PaidIndicator from '../components/PaidIndicator';
 import ModalBox from '../components/ModalBox';
@@ -225,8 +226,8 @@ export default class Receive extends React.Component<
         if (this.onChainInterval) clearInterval(this.onChainInterval);
     };
 
-    navBack = () => {
-        const { InvoicesStore, navigation } = this.props;
+    onBack = () => {
+        const { InvoicesStore } = this.props;
         const { reset } = InvoicesStore;
         // kill all listeners and pollers before navigating back
         this.clearListeners();
@@ -234,10 +235,6 @@ export default class Receive extends React.Component<
 
         // clear invoice
         reset();
-
-        navigation.navigate('Wallet', {
-            refresh: true
-        });
     };
 
     autoGenerateInvoice = (
@@ -644,17 +641,6 @@ export default class Receive extends React.Component<
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    this.navBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const ClearButton = () => (
             <Icon
                 name="cancel"
@@ -824,7 +810,8 @@ export default class Receive extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
+                    onBack={this.onBack}
                     centerComponent={{
                         text:
                             posStatus === 'active'
@@ -846,10 +833,7 @@ export default class Receive extends React.Component<
                             )
                         )
                     }
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
 
                 <ScrollView style={styles.content}>

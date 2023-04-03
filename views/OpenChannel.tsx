@@ -10,36 +10,36 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Header, Icon } from 'react-native-elements';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 
-import Amount from './../components/Amount';
-import Button from './../components/Button';
-import LightningIndicator from './../components/LightningIndicator';
-import Screen from './../components/Screen';
+import Amount from '../components/Amount';
+import Header from '../components/Header';
+import Button from '../components/Button';
+import LightningIndicator from '../components/LightningIndicator';
+import Screen from '../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
-} from './../components/SuccessErrorMessage';
-import Switch from './../components/Switch';
-import TextInput from './../components/TextInput';
-import UTXOPicker from './../components/UTXOPicker';
+} from '../components/SuccessErrorMessage';
+import Switch from '../components/Switch';
+import TextInput from '../components/TextInput';
+import UTXOPicker from '../components/UTXOPicker';
 
-import handleAnything from './../utils/handleAnything';
-import NFCUtils from './../utils/NFCUtils';
-import NodeUriUtils from './../utils/NodeUriUtils';
-import BackendUtils from './../utils/BackendUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import handleAnything from '../utils/handleAnything';
+import NFCUtils from '../utils/NFCUtils';
+import NodeUriUtils from '../utils/NodeUriUtils';
+import BackendUtils from '../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-import BalanceStore from './../stores/BalanceStore';
-import ChannelsStore from './../stores/ChannelsStore';
-import FiatStore from './../stores/FiatStore';
-import SettingsStore from './../stores/SettingsStore';
-import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
-import UTXOsStore from './../stores/UTXOsStore';
+import BalanceStore from '../stores/BalanceStore';
+import ChannelsStore from '../stores/ChannelsStore';
+import FiatStore from '../stores/FiatStore';
+import SettingsStore from '../stores/SettingsStore';
+import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import UTXOsStore from '../stores/UTXOsStore';
 
-import Scan from './../assets/images/SVG/Scan.svg';
+import Scan from '../assets/images/SVG/Scan.svg';
 
 interface OpenChannelProps {
     exitSetup: any;
@@ -285,15 +285,6 @@ export default class OpenChannel extends React.Component<
                 break;
         }
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const ScanButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('NodeQRCodeScanner')}
@@ -305,7 +296,7 @@ export default class OpenChannel extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.OpenChannel.openChannel'),
                         style: {
@@ -313,11 +304,8 @@ export default class OpenChannel extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    rightComponent={<ScanButton />}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    rightComponent={ScanButton}
+                    navigation={navigation}
                 />
                 <ScrollView
                     style={{

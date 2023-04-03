@@ -1,20 +1,20 @@
 import { inject, observer } from 'mobx-react';
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 
-import Button from './../components/Button';
-import Pin from './../components/Pin';
-import Screen from './../components/Screen';
-import { ErrorMessage } from './../components/SuccessErrorMessage';
-import TextInput from './../components/TextInput';
+import Button from '../components/Button';
+import Header from '../components/Header';
+import Pin from '../components/Pin';
+import Screen from '../components/Screen';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
+import TextInput from '../components/TextInput';
 
-import SettingsStore from './../stores/SettingsStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import { getIsBiometryRequired, verifyBiometry } from '../utils/BiometricUtils';
-import LinkingUtils from './../utils/LinkingUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import LinkingUtils from '../utils/LinkingUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
 interface LockscreenProps {
     navigation: any;
@@ -325,25 +325,10 @@ export default class Lockscreen extends React.Component<
             deleteDuressPin
         } = this.state;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
-                    <Header
-                        leftComponent={<BackButton />}
-                        backgroundColor="transparent"
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
-                    />
+                    <Header leftComponent="Back" navigation={navigation} />
                 )}
                 {!!passphrase && (
                     <ScrollView style={styles.container}>

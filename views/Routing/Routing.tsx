@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { FlatList, View, Text, TouchableOpacity } from 'react-native';
-import { ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import Header from '../../components/Header';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Spacer } from '../../components/layout/Spacer';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -14,7 +15,7 @@ import FeeStore from '../../stores/FeeStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import { RoutingListItem } from './RoutingListItem';
 import { RoutingHeader } from './RoutingHeader';
@@ -97,15 +98,6 @@ export default class Routing extends React.PureComponent<
                       forwardingEvents.length
                   })`
                 : localeString('general.routing');
-
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         const FeeBadge = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity onPress={() => navigation.navigate('SetFees')}>
@@ -204,16 +196,13 @@ export default class Routing extends React.PureComponent<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: headerString,
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={<FeeBadge navigation={navigation} />}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <RoutingHeader
                     dayEarned={dayEarned}

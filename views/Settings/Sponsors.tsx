@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from 'react-native-elements';
 
+import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -23,15 +24,6 @@ function Sponsors(props: SponsorsProps) {
         />
     );
 
-    const BackButton = () => (
-        <Icon
-            name="arrow-back"
-            onPress={() => navigation.goBack()}
-            color={themeColor('text')}
-            underlayColor="transparent"
-        />
-    );
-
     const ABOUT_ITEMS = [
         { label: localeString('views.Olympians.title'), path: 'Olympians' },
         { label: localeString('views.Gods.title'), path: 'Gods' },
@@ -41,7 +33,7 @@ function Sponsors(props: SponsorsProps) {
     return (
         <Screen>
             <Header
-                leftComponent={<BackButton />}
+                leftComponent="Back"
                 centerComponent={{
                     text: localeString('views.Sponsors.title'),
                     style: {
@@ -49,10 +41,7 @@ function Sponsors(props: SponsorsProps) {
                         fontFamily: 'Lato-Regular'
                     }
                 }}
-                backgroundColor="transparent"
-                containerStyle={{
-                    borderBottomWidth: 0
-                }}
+                navigation={navigation}
             />
             <FlatList
                 data={ABOUT_ITEMS}
