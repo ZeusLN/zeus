@@ -1212,19 +1212,14 @@ export default class NodeConfiguration extends React.Component<
                             )}
                     </View>
 
-                    {!existingAccount &&
-                        implementation === Implementation.lndhub && (
+                    {!existingAccount && implementation === Implementation.lndhub && (
                             <View style={{ ...styles.button, marginTop: 20 }}>
                                 <Button
                                     title={localeString(
                                         'views.Settings.AddEditNode.createLndhub'
                                     )}
                                     onPress={() => {
-                                        if (
-                                            CUSTODIAL_LNDHUBS.includes(
-                                                lndhubUrl
-                                            )
-                                        ) {
+                                        if (CUSTODIAL_LNDHUBS.includes(lndhubUrl)) {
                                             this.setState({
                                                 showLndHubModal: true
                                             });

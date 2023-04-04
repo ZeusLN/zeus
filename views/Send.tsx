@@ -673,8 +673,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     toggleUnits={changeUnits}
                                 />
 
-                                {fiat !== 'Disabled' &&
-                                    units !== Units.fiat && (
+                                {fiat !== 'Disabled' && units !== Units.fiat && (
                                         <Amount
                                             sats={satAmount}
                                             fixedUnits={Units.fiat}

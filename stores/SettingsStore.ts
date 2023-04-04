@@ -490,8 +490,7 @@ export default class SettingsStore {
                     this.lndhubUrl = node.lndhubUrl;
                     this.macaroonHex = node.macaroonHex;
                     this.accessKey = node.accessKey;
-                    this.implementation =
-                        node.implementation || Implementation.lnd;
+                    this.implementation = node.implementation || Implementation.lnd;
                     this.certVerification = node.certVerification || false;
                     this.enableTor = node.enableTor;
                     // LNC
