@@ -105,9 +105,7 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                             feeRate={`${
                                 Number(policy.fee_rate_milli_msat) / 10000
                             }`}
-                            timeLockDelta={chanInfo[
-                                channelId
-                            ].node1Policy.time_lock_delta.toString()}
+                            timeLockDelta={policy.time_lock_delta.toString()}
                             minHtlc={`${Number(policy.min_htlc) / 1000}`}
                             maxHtlc={`${Number(policy.max_htlc_msat) / 1000}`}
                             channelPoint={channelPoint}

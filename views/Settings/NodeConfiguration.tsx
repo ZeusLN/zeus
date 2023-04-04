@@ -749,79 +749,6 @@ export default class NodeConfiguration extends React.Component<
                     </View>
                 </Modal>
 
-                {false && (
-                    <View style={{ height: 200 }}>
-                        <View style={{ alignItems: 'center', top: 40 }}></View>
-                        <Text
-                            style={{
-                                alignSelf: 'center',
-                                top: 50,
-                                fontSize: 23,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {nickname
-                                ? nickname
-                                : host
-                                ? `${host}:${port}`
-                                : ''}
-                        </Text>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'center',
-                                top: 60
-                            }}
-                        >
-                            {false && (
-                                <View
-                                    style={{
-                                        backgroundColor: '#FFB040',
-                                        height: 26,
-                                        width: 70,
-                                        borderRadius: 8,
-                                        right: 5
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            alignSelf: 'center',
-                                            padding: 2
-                                        }}
-                                    >
-                                        Mainnet
-                                    </Text>
-                                </View>
-                            )}
-                            {enableTor && (
-                                <View
-                                    style={{
-                                        backgroundColor: '#8A3ABD',
-                                        height: 26,
-                                        width: 70,
-                                        borderRadius: 8,
-                                        left: 5
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            alignSelf: 'center',
-                                            padding: 2
-                                        }}
-                                    >
-                                        Tor
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-                    </View>
-                )}
-
                 <ScrollView
                     ref="_scrollView"
                     style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
@@ -1094,16 +1021,15 @@ export default class NodeConfiguration extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.AddEditNode.restPort'
+                                        'views.Settings.AddEditNode.macaroon'
                                     )}
                                 </Text>
                                 <TextInput
-                                    keyboardType="numeric"
-                                    placeholder={'443/8080'}
-                                    value={port}
+                                    placeholder={'0A...'}
+                                    value={macaroonHex}
                                     onChangeText={(text: string) =>
                                         this.setState({
-                                            port: text.trim(),
+                                            macaroonHex: text.trim(),
                                             saved: false
                                         })
                                     }
@@ -1116,15 +1042,16 @@ export default class NodeConfiguration extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.AddEditNode.macaroon'
+                                        'views.Settings.AddEditNode.restPort'
                                     )}
                                 </Text>
                                 <TextInput
-                                    placeholder={'0A...'}
-                                    value={macaroonHex}
+                                    keyboardType="numeric"
+                                    placeholder={'443/8080'}
+                                    value={port}
                                     onChangeText={(text: string) =>
                                         this.setState({
-                                            macaroonHex: text.trim(),
+                                            port: text.trim(),
                                             saved: false
                                         })
                                     }

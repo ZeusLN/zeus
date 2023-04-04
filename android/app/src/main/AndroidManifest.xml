@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.VIBRATE"/>
+
     <uses-feature android:name="android.hardware.nfc.hce" android:required="false" />
 
     <queries>

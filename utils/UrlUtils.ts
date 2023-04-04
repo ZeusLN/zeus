@@ -40,8 +40,19 @@ const goToBlockExplorerBlockHeight = (
 ) => goToBlockExplorer('block-height', height, testnet);
 const goToBlockExplorerBlockHash = (hash: string, testnet: boolean) =>
     goToBlockExplorer('block', hash, testnet);
+const goToBlockExplorerChannelId = (channelId: string, testnet: boolean) =>
+    goToBlockExplorer('lightning/channel', channelId, testnet);
+const goToBlockExplorerPubkey = (pubKey: string, testnet: boolean) =>
+    goToBlockExplorer('lightning/node', pubKey, testnet);
 
 const goToUrl = (url: string) => {
+    stores.modalStore.setUrl(url);
+    stores.modalStore.setClipboardValue(url);
+    stores.modalStore.toggleExternalLinkModal(true);
+    stores.modalStore.setAction(() => leaveZeus(url));
+};
+
+const leaveZeus = (url: string) => {
     Linking.canOpenURL(url).then((supported: boolean) => {
         if (supported) {
             Linking.openURL(url);
@@ -56,5 +67,7 @@ export default {
     goToBlockExplorerAddress,
     goToBlockExplorerBlockHeight,
     goToBlockExplorerBlockHash,
+    goToBlockExplorerChannelId,
+    goToBlockExplorerPubkey,
     goToUrl
 };

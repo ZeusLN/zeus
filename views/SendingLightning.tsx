@@ -4,7 +4,6 @@ import { inject, observer } from 'mobx-react';
 import LnurlPaySuccess from './LnurlPay/Success';
 
 import Button from '../components/Button';
-import CopyButton from '../components/CopyButton';
 import LightningIndicator from '../components/LightningIndicator';
 import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
@@ -15,9 +14,11 @@ import LnurlPayStore from '../stores/LnurlPayStore';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import Clock from '../assets/images/SVG/Clock.svg';
 import Error from '../assets/images/SVG/Error.svg';
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
+import CopyBox from '../components/CopyBox';
 
 interface SendingLightningProps {
     navigation: any;
@@ -46,6 +47,8 @@ export default class SendingLightning extends React.Component<
         const success =
             payment_route || status === 'complete' || status === 'SUCCEEDED';
 
+        const inTransit = status === 'IN_FLIGHT';
+
         return (
             <Screen>
                 <ScrollView>
@@ -65,14 +68,16 @@ export default class SendingLightning extends React.Component<
                                 {localeString('views.SendingLightning.sending')}
                             </Text>
                         )}
+                        {(!!success || !!inTransit) && !error && (
+                            <WordLogo
+                                height={150}
+                                style={{
+                                    alignSelf: 'center'
+                                }}
+                            />
+                        )}
                         {!!success && !error && (
                             <>
-                                <WordLogo
-                                    height={150}
-                                    style={{
-                                        alignSelf: 'center'
-                                    }}
-                                />
                                 <Image
                                     source={Success}
                                     style={{
@@ -84,6 +89,34 @@ export default class SendingLightning extends React.Component<
                                 />
                                 <PaidIndicator />
                             </>
+                        )}
+                        {!!inTransit && !error && (
+                            <View
+                                style={{
+                                    padding: 20,
+                                    marginTop: 10,
+                                    marginBottom: 10,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <Clock
+                                    color={themeColor('bitcoin')}
+                                    width={180}
+                                    height={180}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular',
+                                        fontSize: 22,
+                                        marginTop: 25
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.SendingLightning.inTransit'
+                                    )}
+                                </Text>
+                            </View>
                         )}
                         {(!!error || !!payment_error) && (
                             <>
@@ -99,7 +132,7 @@ export default class SendingLightning extends React.Component<
                                 </Text>
                                 <Text
                                     style={{
-                                        color: 'white',
+                                        color: themeColor('text'),
                                         fontFamily: 'Lato-Regular',
                                         padding: 20,
                                         marginBottom: 60,
@@ -137,18 +170,24 @@ export default class SendingLightning extends React.Component<
                                 />
                             )}
                         {!!payment_hash && !(!!error || !!payment_error) && (
-                            <Text
+                            <View
                                 style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
-                                    paddingTop: 20,
-                                    paddingLeft: 50,
-                                    paddingRight: 50,
-                                    fontSize: 15
+                                    padding: 20
                                 }}
-                            >{`${localeString(
-                                'views.SendingLightning.paymentHash'
-                            )}: ${payment_hash}`}</Text>
+                            >
+                                <CopyBox
+                                    heading={localeString(
+                                        'views.SendingLightning.paymentHash'
+                                    )}
+                                    headingCopied={`${localeString(
+                                        'views.SendingLightning.paymentHash'
+                                    )} ${localeString(
+                                        'components.ExternalLinkModal.copied'
+                                    )}`}
+                                    theme="dark"
+                                    URL={payment_hash}
+                                />
+                            </View>
                         )}
 
                         <View style={styles.buttons}>
@@ -159,14 +198,7 @@ export default class SendingLightning extends React.Component<
                                         marginBottom: 10,
                                         width: '100%'
                                     }}
-                                >
-                                    <CopyButton
-                                        title={localeString(
-                                            'views.SendingLightning.copyPaymentHash'
-                                        )}
-                                        copyValue={payment_hash}
-                                    />
-                                </View>
+                                ></View>
                             )}
 
                             {payment_error == `FAILURE_REASON_NO_ROUTE` && (
@@ -206,7 +238,10 @@ export default class SendingLightning extends React.Component<
                                 </>
                             )}
 
-                            {(!!error || !!payment_error || !!success) && (
+                            {(!!error ||
+                                !!payment_error ||
+                                !!success ||
+                                !!inTransit) && (
                                 <Button
                                     title={localeString(
                                         'views.SendingLightning.goToWallet'
