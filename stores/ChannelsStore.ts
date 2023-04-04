@@ -13,15 +13,10 @@ import SettingsStore from './SettingsStore';
 
 import Base64Utils from './../utils/Base64Utils';
 import BackendUtils from './../utils/BackendUtils';
+import { ChannelsType, Implementation } from '../enums';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
-}
-
-export enum ChannelsType {
-    Open = 0,
-    Pending = 1,
-    Closed = 2
 }
 
 export default class ChannelsStore {
@@ -225,7 +220,8 @@ export default class ChannelsStore {
         channels.forEach(async (channel: Channel) => {
             if (!channel.remotePubkey) return;
             if (
-                this.settingsStore.implementation !== 'c-lightning-REST' &&
+                this.settingsStore.implementation !==
+                    Implementation.clightningREST &&
                 !this.nodes[channel.remotePubkey]
             ) {
                 await this.getNodeInfo(channel.remotePubkey)

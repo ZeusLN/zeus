@@ -9,6 +9,7 @@ import Spark from '../backends/Spark';
 import Eclair from '../backends/Eclair';
 // Custodial
 import LndHub from '../backends/LndHub';
+import { Implementation } from '../enums';
 
 class BackendUtils {
     lnd: LND;
@@ -29,17 +30,17 @@ class BackendUtils {
     getClass = () => {
         const { implementation } = stores.settingsStore;
         switch (implementation) {
-            case 'lnd':
+            case Implementation.lnd:
                 return this.lnd;
-            case 'lightning-node-connect':
+            case Implementation.LightningNodeConnect:
                 return this.lightningNodeConnect;
-            case 'c-lightning-REST':
+            case Implementation.clightningREST:
                 return this.clightningREST;
-            case 'spark':
+            case Implementation.spark:
                 return this.spark;
-            case 'eclair':
+            case Implementation.eclair:
                 return this.eclair;
-            case 'lndhub':
+            case Implementation.lndhub:
                 return this.lndHub;
             default:
                 return this.lnd;

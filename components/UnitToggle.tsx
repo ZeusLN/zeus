@@ -5,6 +5,7 @@ import Button from './../components/Button';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
+import { Units } from '../enums';
 
 interface UnitToggleProps {
     UnitsStore: UnitsStore;
@@ -24,7 +25,7 @@ export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
         return (
             <React.Fragment>
                 <Button
-                    title={units === 'fiat' ? fiat : units}
+                    title={units === Units.fiat ? fiat : units}
                     icon={{
                         name: 'import-export',
                         size: 25

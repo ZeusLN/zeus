@@ -15,6 +15,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { Implementation } from '../../enums';
 
 interface InvoicesSettingsProps {
     navigation: any;
@@ -170,7 +171,7 @@ export default class InvoicesSettings extends React.Component<
                         }}
                     />
 
-                    {implementation !== 'lndhub' && (
+                    {implementation !== Implementation.lndhub && (
                         <>
                             <Text
                                 style={{

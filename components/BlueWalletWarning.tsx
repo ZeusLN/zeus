@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { ErrorMessage } from './SuccessErrorMessage';
 import stores from '../stores/Stores';
 import { localeString } from '../utils/LocaleUtils';
+import { Implementation } from '../enums';
 
 export default function BlueWalletWarning() {
     const SettingsStore = stores.settingsStore;
@@ -9,7 +10,7 @@ export default function BlueWalletWarning() {
         SettingsStore.settings.nodes &&
         SettingsStore.settings.nodes[SettingsStore.settings.selectedNode || 0];
     const isLndHubIo =
-        node.implementation === 'lndhub' &&
+        node.implementation === Implementation.lndhub &&
         (node.lndhubUrl.includes('https://lndhub.io') ||
             node.lndhubUrl.includes('https://lndhub.herokuapp.com'));
 

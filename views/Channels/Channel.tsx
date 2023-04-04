@@ -33,6 +33,7 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import Edit from '../../assets/images/SVG/Edit.svg';
 import Share from '../../assets/images/SVG/Share.svg';
+import { TransactionType } from '../../enums';
 
 interface ChannelProps {
     navigation: any;
@@ -180,7 +181,7 @@ export default class ChannelView extends React.Component<
                 onPress={() =>
                     navigation.navigate('Send', {
                         destination: remotePubkey,
-                        transactionType: 'Keysend',
+                        transactionType: TransactionType.Keysend,
                         isValid: true
                     })
                 }

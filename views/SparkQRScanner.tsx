@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Alert } from 'react-native';
 import QRCodeScanner from './../components/QRCodeScanner';
 import { localeString } from './../utils/LocaleUtils';
+import { Implementation } from '../enums';
 
 interface SparkQRProps {
     navigation: any;
@@ -17,7 +18,7 @@ export default class SparkQRScanner extends React.Component<SparkQRProps, {}> {
 
         if (url && accessKey) {
             navigation.navigate('NodeConfiguration', {
-                node: { url, accessKey, implementation: 'spark' },
+                node: { url, accessKey, implementation: Implementation.spark },
                 enableTor: url && url.includes('.onion'),
                 index
             });

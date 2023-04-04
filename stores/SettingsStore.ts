@@ -9,6 +9,7 @@ import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 // lndhub
 import LoginRequest from './../models/LoginRequest';
+import { FeeMethod, Implementation } from '../enums';
 
 interface Node {
     host?: string;
@@ -95,12 +96,18 @@ export const BLOCK_EXPLORER_KEYS = [
 ];
 
 export const INTERFACE_KEYS = [
-    { key: 'LND (REST)', value: 'lnd' },
-    { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
-    { key: 'Core Lightning (c-lightning-REST)', value: 'c-lightning-REST' },
-    { key: 'Core Lightning (Sparko)', value: 'spark' },
-    { key: 'Eclair', value: 'eclair' },
-    { key: 'LNDHub', value: 'lndhub' }
+    { key: 'LND (REST)', value: Implementation.lnd },
+    {
+        key: 'LND (Lightning Node Connect)',
+        value: Implementation.LightningNodeConnect
+    },
+    {
+        key: 'Core Lightning (c-lightning-REST)',
+        value: Implementation.clightningREST
+    },
+    { key: 'Core Lightning (Sparko)', value: Implementation.spark },
+    { key: 'Eclair', value: Implementation.eclair },
+    { key: 'LNDHub', value: Implementation.lndhub }
 ];
 
 export const LNC_MAILBOX_KEYS = [
@@ -274,7 +281,7 @@ export default class SettingsStore {
             squareDevMode: false
         },
         payments: {
-            defaultFeeMethod: 'fixed',
+            defaultFeeMethod: FeeMethod.fixed,
             defaultFeePercentage: '0.5',
             defaultFeeFixed: '100'
         },
@@ -441,7 +448,9 @@ export default class SettingsStore {
                 host: uri,
                 macaroonHex: adminMacaroon || macaroon,
                 implementation:
-                    type === 'clightning-rest' ? 'c-lightning-REST' : 'lnd'
+                    type === 'clightning-rest'
+                        ? Implementation.clightningREST
+                        : Implementation.lnd
             };
 
             return config;
@@ -475,7 +484,8 @@ export default class SettingsStore {
                     this.lndhubUrl = node.lndhubUrl;
                     this.macaroonHex = node.macaroonHex;
                     this.accessKey = node.accessKey;
-                    this.implementation = node.implementation || 'lnd';
+                    this.implementation =
+                        node.implementation || Implementation.lnd;
                     this.certVerification = node.certVerification || false;
                     this.enableTor = node.enableTor;
                     // LNC

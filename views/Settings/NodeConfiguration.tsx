@@ -37,6 +37,7 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
+import { Implementation } from '../../enums';
 
 interface NodeConfigurationProps {
     navigation: any;
@@ -93,7 +94,7 @@ export default class NodeConfiguration extends React.Component<
         index: null,
         active: false,
         newEntry: false,
-        implementation: 'lnd',
+        implementation: Implementation.lnd,
         certVerification: false,
         enableTor: false,
         existingAccount: false,
@@ -160,7 +161,7 @@ export default class NodeConfiguration extends React.Component<
                     username,
                     password,
                     lndhubUrl: host,
-                    implementation: 'lndhub',
+                    implementation: Implementation.lndhub,
                     suggestImport: '',
                     enableTor: host.includes('.onion'),
                     existingAccount
@@ -169,7 +170,7 @@ export default class NodeConfiguration extends React.Component<
                 this.setState({
                     username,
                     password,
-                    implementation: 'lndhub',
+                    implementation: Implementation.lndhub,
                     suggestImport: '',
                     existingAccount
                 });
@@ -188,7 +189,7 @@ export default class NodeConfiguration extends React.Component<
     async componentDidMount() {
         await this.initFromProps(this.props);
         const { implementation, pairingPhrase } = this.state;
-        if (implementation === 'lightning-node-connect') {
+        if (implementation === Implementation.LightningNodeConnect) {
             const key = `${STORAGE_KEY}:${hash(pairingPhrase)}`;
             const json: any = await EncryptedStorage.getItem(key);
             const parsed = JSON.parse(json);
@@ -248,7 +249,7 @@ export default class NodeConfiguration extends React.Component<
                 accessKey,
                 username,
                 password,
-                implementation: implementation || 'lnd',
+                implementation: implementation || Implementation.lnd,
                 certVerification,
                 index,
                 active,
@@ -292,7 +293,7 @@ export default class NodeConfiguration extends React.Component<
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
         if (
-            implementation === 'lndhub' &&
+            implementation === Implementation.lndhub &&
             (!lndhubUrl || !username || !password)
         ) {
             throw new Error('lndhub settings missing.');
@@ -331,7 +332,7 @@ export default class NodeConfiguration extends React.Component<
             });
 
             if (nodes.length === 1) {
-                if (implementation === 'lightning-node-connect') {
+                if (implementation === Implementation.LightningNodeConnect) {
                     BackendUtils.disconnect();
                 }
                 setConnectingStatus(true);
@@ -491,7 +492,8 @@ export default class NodeConfiguration extends React.Component<
                     this.setState({
                         implementation: value,
                         saved: false,
-                        certVerification: value === 'lndhub' ? true : false
+                        certVerification:
+                            value === Implementation.lndhub ? true : false
                     });
                 }}
                 values={INTERFACE_KEYS}
@@ -527,10 +529,10 @@ export default class NodeConfiguration extends React.Component<
                         style: { ...styles.text, color: themeColor('text') }
                     }}
                     rightComponent={
-                        implementation === 'eclair' ? null : (
+                        implementation === Implementation.eclair ? null : (
                             <ScanBadge
                                 onPress={() =>
-                                    implementation === 'spark'
+                                    implementation === Implementation.spark
                                         ? navigation.navigate(
                                               'SparkQRScanner',
                                               {
@@ -826,13 +828,13 @@ export default class NodeConfiguration extends React.Component<
                 >
                     <View style={styles.form}>
                         {!!createAccountError &&
-                            implementation === 'lndhub' &&
+                            implementation === Implementation.lndhub &&
                             !loading && (
                                 <ErrorMessage message={createAccountError} />
                             )}
 
                         {!!createAccountSuccess &&
-                            implementation === 'lndhub' &&
+                            implementation === Implementation.lndhub &&
                             !loading && (
                                 <SuccessMessage
                                     message={createAccountSuccess}
@@ -865,8 +867,8 @@ export default class NodeConfiguration extends React.Component<
 
                         <NodeInterface />
 
-                        {(implementation === 'spark' ||
-                            implementation == 'eclair') && (
+                        {(implementation === Implementation.spark ||
+                            implementation == Implementation.eclair) && (
                             <>
                                 <Text
                                     style={{
@@ -891,7 +893,7 @@ export default class NodeConfiguration extends React.Component<
                                     autoCorrect={false}
                                 />
 
-                                {implementation === 'spark' && (
+                                {implementation === Implementation.spark && (
                                     <>
                                         <Text
                                             style={{
@@ -917,7 +919,7 @@ export default class NodeConfiguration extends React.Component<
                                         />
                                     </>
                                 )}
-                                {implementation === 'eclair' && (
+                                {implementation === Implementation.eclair && (
                                     <>
                                         <Text
                                             style={{
@@ -945,7 +947,7 @@ export default class NodeConfiguration extends React.Component<
                                 )}
                             </>
                         )}
-                        {implementation === 'lndhub' && (
+                        {implementation === Implementation.lndhub && (
                             <>
                                 <Text
                                     style={{
@@ -1060,8 +1062,9 @@ export default class NodeConfiguration extends React.Component<
                                 )}
                             </>
                         )}
-                        {(implementation === 'lnd' ||
-                            implementation === 'c-lightning-REST') && (
+                        {(implementation === Implementation.lnd ||
+                            implementation ===
+                                Implementation.clightningREST) && (
                             <>
                                 <Text
                                     style={{
@@ -1130,7 +1133,8 @@ export default class NodeConfiguration extends React.Component<
                             </>
                         )}
 
-                        {implementation === 'lightning-node-connect' && (
+                        {implementation ===
+                            Implementation.LightningNodeConnect && (
                             <>
                                 <Mailbox />
                                 {mailboxServer === 'custom-defined' && (
@@ -1228,7 +1232,8 @@ export default class NodeConfiguration extends React.Component<
                             </>
                         )}
 
-                        {implementation !== 'lightning-node-connect' && (
+                        {implementation !==
+                            Implementation.LightningNodeConnect && (
                             <>
                                 <Text
                                     style={{
@@ -1252,7 +1257,8 @@ export default class NodeConfiguration extends React.Component<
                             </>
                         )}
 
-                        {implementation !== 'lightning-node-connect' &&
+                        {implementation !==
+                            Implementation.LightningNodeConnect &&
                             !enableTor && (
                                 <>
                                     <Text
@@ -1279,36 +1285,41 @@ export default class NodeConfiguration extends React.Component<
                             )}
                     </View>
 
-                    {!existingAccount && implementation === 'lndhub' && (
-                        <View style={{ ...styles.button, marginTop: 20 }}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.createLndhub'
-                                )}
-                                onPress={() => {
-                                    if (CUSTODIAL_LNDHUBS.includes(lndhubUrl)) {
-                                        this.setState({
-                                            showLndHubModal: true
-                                        });
-                                    } else {
-                                        createAccount(
-                                            lndhubUrl,
-                                            certVerification,
-                                            enableTor
-                                        ).then((data: any) => {
-                                            if (data) {
-                                                this.setState({
-                                                    username: data.login,
-                                                    password: data.password,
-                                                    existingAccount: true
-                                                });
-                                            }
-                                        });
-                                    }
-                                }}
-                            />
-                        </View>
-                    )}
+                    {!existingAccount &&
+                        implementation === Implementation.lndhub && (
+                            <View style={{ ...styles.button, marginTop: 20 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.AddEditNode.createLndhub'
+                                    )}
+                                    onPress={() => {
+                                        if (
+                                            CUSTODIAL_LNDHUBS.includes(
+                                                lndhubUrl
+                                            )
+                                        ) {
+                                            this.setState({
+                                                showLndHubModal: true
+                                            });
+                                        } else {
+                                            createAccount(
+                                                lndhubUrl,
+                                                certVerification,
+                                                enableTor
+                                            ).then((data: any) => {
+                                                if (data) {
+                                                    this.setState({
+                                                        username: data.login,
+                                                        password: data.password,
+                                                        existingAccount: true
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    }}
+                                />
+                            </View>
+                        )}
 
                     <View style={{ ...styles.button, marginTop: 20 }}>
                         <Button
@@ -1326,7 +1337,8 @@ export default class NodeConfiguration extends React.Component<
                                     !saved &&
                                     !certVerification &&
                                     !enableTor &&
-                                    implementation !== 'lightning-node-connect'
+                                    implementation !==
+                                        Implementation.LightningNodeConnect
                                 ) {
                                     this.setState({ showCertModal: true });
                                 } else {
@@ -1335,7 +1347,7 @@ export default class NodeConfiguration extends React.Component<
                             }}
                             // disable save button if no creds passed
                             disabled={
-                                implementation === 'lndhub' &&
+                                implementation === Implementation.lndhub &&
                                 !(username && password)
                             }
                         />

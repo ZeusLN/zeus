@@ -20,8 +20,10 @@ import { ChannelItem } from './Channels/ChannelItem';
 import Channel from '../models/Channel';
 
 import stores from '../stores/Stores';
-import ChannelsStore, { ChannelsType } from '../stores/ChannelsStore';
+import ChannelsStore from '../stores/ChannelsStore';
 import UnitsStore from '../stores/UnitsStore';
+
+import { ChannelsType } from '../enums';
 
 interface ChannelPickerProps {
     title?: string;
