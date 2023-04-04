@@ -37,6 +37,7 @@ import { Row } from '../components/layout/Row';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
+import { FeeMethod, Implementation, Units } from '../enums';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -84,7 +85,7 @@ export default class PaymentRequest extends React.Component<
         maxParts: '16',
         maxShardAmt: '',
         feeLimitSat: '100',
-        feeOption: 'fixed',
+        feeOption: FeeMethod.fixed,
         maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null,
@@ -97,7 +98,7 @@ export default class PaymentRequest extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            feeOption: settings.payments.defaultFeeMethod || 'fixed',
+            feeOption: settings.payments.defaultFeeMethod || FeeMethod.fixed,
             feeLimitSat: settings.payments.defaultFeeFixed || '100',
             maxFeePercent: settings.payments.defaultFeePercentage || '0.5'
         });
@@ -171,7 +172,7 @@ export default class PaymentRequest extends React.Component<
             this.props;
         let feeLimitSat = fee_limit_sat;
 
-        if (feeOption == 'fixed') {
+        if (feeOption == FeeMethod.fixed) {
             // If the fee limit is not set, use a default routing fee calculation
             if (!fee_limit_sat) {
                 const { pay_req } = InvoicesStore;
@@ -181,7 +182,7 @@ export default class PaymentRequest extends React.Component<
                     Number(invoiceAmount)
                 );
             }
-        } else if (feeOption == 'percent') {
+        } else if (feeOption == FeeMethod.percent) {
             feeLimitSat = percentAmount;
         }
 
@@ -262,13 +263,13 @@ export default class PaymentRequest extends React.Component<
         // conversion
         let satAmount: string | number;
         switch (units) {
-            case 'sats':
+            case Units.sats:
                 satAmount = customAmount;
                 break;
-            case 'BTC':
+            case Units.BTC:
                 satAmount = Number(customAmount) * SATS_PER_BTC;
                 break;
-            case 'fiat':
+            case Units.fiat:
                 satAmount = Number(
                     (Number(customAmount.replace(/,/g, '.')) / Number(rate)) *
                         Number(SATS_PER_BTC)
@@ -309,7 +310,8 @@ export default class PaymentRequest extends React.Component<
         const { enableTor, implementation } = SettingsStore;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
-        const isCLightning: boolean = implementation === 'c-lightning-REST';
+        const isCLightning: boolean =
+            implementation === Implementation.clightningREST;
 
         const isNoAmountInvoice: boolean =
             !requestAmount || requestAmount === 0;
@@ -394,27 +396,27 @@ export default class PaymentRequest extends React.Component<
                                             }}
                                             placeholderTextColor="gray"
                                             prefix={
-                                                units !== 'sats' &&
-                                                (units === 'BTC'
+                                                units !== Units.sats &&
+                                                (units === Units.BTC
                                                     ? '₿'
                                                     : !getSymbol().rtl
                                                     ? getSymbol().symbol
                                                     : null)
                                             }
                                             suffix={
-                                                units === 'sats'
+                                                units === Units.sats
                                                     ? units
                                                     : getSymbol().rtl &&
-                                                      units === 'fiat' &&
+                                                      units === Units.fiat &&
                                                       getSymbol().symbol
                                             }
                                             toggleUnits={changeUnits}
                                         />
                                         {fiat !== 'Disabled' &&
-                                            units !== 'fiat' && (
+                                            units !== Units.fiat && (
                                                 <Amount
                                                     sats={satAmount}
-                                                    fixedUnits="fiat"
+                                                    fixedUnits={Units.fiat}
                                                     toggleable
                                                 />
                                             )}
@@ -430,22 +432,22 @@ export default class PaymentRequest extends React.Component<
                                                     }}
                                                 >
                                                     {FiatStore.getRate(
-                                                        units === 'sats'
+                                                        units === Units.sats
                                                     )}
                                                 </Text>
                                             </TouchableOpacity>
                                         )}
-                                        {units !== 'sats' && (
+                                        {units !== Units.sats && (
                                             <Amount
                                                 sats={satAmount}
-                                                fixedUnits="sats"
+                                                fixedUnits={Units.sats}
                                                 toggleable
                                             />
                                         )}
-                                        {units !== 'BTC' && (
+                                        {units !== Units.BTC && (
                                             <Amount
                                                 sats={satAmount}
-                                                fixedUnits="BTC"
+                                                fixedUnits={Units.BTC}
                                                 toggleable
                                             />
                                         )}
@@ -602,7 +604,8 @@ export default class PaymentRequest extends React.Component<
                                                     flexDirection: 'row',
                                                     justifyContent: 'flex-end',
                                                     opacity:
-                                                        feeOption == 'percent'
+                                                        feeOption ==
+                                                        FeeMethod.percent
                                                             ? 1
                                                             : 0.25
                                                 }}
@@ -630,7 +633,8 @@ export default class PaymentRequest extends React.Component<
                                                     style={{
                                                         width: '50%',
                                                         opacity:
-                                                            feeOption == 'fixed'
+                                                            feeOption ==
+                                                            FeeMethod.fixed
                                                                 ? 1
                                                                 : 0.25
                                                     }}
@@ -645,7 +649,8 @@ export default class PaymentRequest extends React.Component<
                                                     }
                                                     onPressIn={() =>
                                                         this.setState({
-                                                            feeOption: 'fixed'
+                                                            feeOption:
+                                                                FeeMethod.fixed
                                                         })
                                                     }
                                                 />
@@ -658,7 +663,8 @@ export default class PaymentRequest extends React.Component<
                                                         top: 28,
                                                         right: 30,
                                                         opacity:
-                                                            feeOption == 'fixed'
+                                                            feeOption ==
+                                                            FeeMethod.fixed
                                                                 ? 1
                                                                 : 0.25
                                                     }}
@@ -672,7 +678,7 @@ export default class PaymentRequest extends React.Component<
                                                         width: '50%',
                                                         opacity:
                                                             feeOption ==
-                                                            'percent'
+                                                            FeeMethod.percent
                                                                 ? 1
                                                                 : 0.25
                                                     }}
@@ -687,7 +693,8 @@ export default class PaymentRequest extends React.Component<
                                                     }
                                                     onPressIn={() =>
                                                         this.setState({
-                                                            feeOption: 'percent'
+                                                            feeOption:
+                                                                FeeMethod.percent
                                                         })
                                                     }
                                                 />
@@ -701,7 +708,7 @@ export default class PaymentRequest extends React.Component<
                                                         right: 18,
                                                         opacity:
                                                             feeOption ==
-                                                            'percent'
+                                                            FeeMethod.percent
                                                                 ? 1
                                                                 : 0.25
                                                     }}

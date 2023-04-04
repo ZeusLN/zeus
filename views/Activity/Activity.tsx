@@ -22,6 +22,7 @@ import ActivityStore from '../../stores/ActivityStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
+import { Implementation } from '../../enums';
 
 interface ActivityProps {
     navigation: any;
@@ -40,7 +41,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         const { getActivityAndFilter, getFilters } = ActivityStore;
         const filters = await getFilters();
         await getActivityAndFilter(filters);
-        if (SettingsStore.implementation === 'lightning-node-connect') {
+        if (
+            SettingsStore.implementation === Implementation.LightningNodeConnect
+        ) {
             this.subscribeEvents();
         }
     }

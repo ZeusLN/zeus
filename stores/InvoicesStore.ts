@@ -9,6 +9,7 @@ import Invoice from './../models/Invoice';
 import SettingsStore from './SettingsStore';
 import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { Implementation } from '../enums';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -44,7 +45,7 @@ export default class InvoicesStore {
                     this.pay_req &&
                     this.pay_req.destination &&
                     (BackendUtils.isLNDBased() ||
-                        this.settingsStore.implementation === 'spark')
+                        this.settingsStore.implementation === Implementation.spark)
                 ) {
                     this.getRoutes(
                         this.pay_req.destination,
@@ -188,7 +189,8 @@ export default class InvoicesStore {
                         data.message.toString() || data.error.toString();
                     this.error_msg =
                         errString === 'Bad arguments' &&
-                        this.settingsStore.implementation === 'lndhub' &&
+                        this.settingsStore.implementation ===
+                            Implementation.lndhub &&
                         req.value === '0'
                             ? localeString(
                                   'stores.InvoicesStore.zeroAmountLndhub'

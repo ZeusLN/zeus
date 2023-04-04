@@ -2,8 +2,9 @@ import { action, observable } from 'mobx';
 import SettingsStore from './SettingsStore';
 import FiatStore from './FiatStore';
 import FeeUtils from './../utils/FeeUtils';
+import { Units } from '../enums';
 
-type Units = 'sats' | 'BTC' | 'fiat';
+type UnitsType = 'sats' | 'BTC' | 'fiat';
 
 // 100_000_000
 export const SATS_PER_BTC = 100000000;
@@ -19,7 +20,7 @@ interface ValueDisplayProps {
 }
 
 export default class UnitsStore {
-    @observable public units: Units = 'sats';
+    @observable public units: UnitsType = Units.sats;
     settingsStore: SettingsStore;
     fiatStore: FiatStore;
 
@@ -34,17 +35,17 @@ export default class UnitsStore {
         const { fiat } = settings;
 
         if (!fiat || fiat === 'Disabled') {
-            this.units = this.units == 'sats' ? 'BTC' : 'sats';
+            this.units = this.units == Units.sats ? Units.BTC : Units.sats;
         } else {
             switch (this.units) {
-                case 'sats':
-                    this.units = 'BTC';
+                case Units.sats:
+                    this.units = Units.BTC;
                     break;
-                case 'BTC':
-                    this.units = 'fiat';
+                case Units.BTC:
+                    this.units = Units.fiat;
                     break;
-                case 'fiat':
-                    this.units = 'sats';
+                case Units.fiat:
+                    this.units = Units.sats;
                     break;
             }
         }
@@ -52,7 +53,7 @@ export default class UnitsStore {
 
     @action
     public resetUnits = () => {
-        this.units = 'sats';
+        this.units = Units.sats;
     };
 
     @action getUnformattedAmount = (
@@ -69,20 +70,20 @@ export default class UnitsStore {
         const negative = sats < 0;
         const absValueSats = Math.abs(sats);
 
-        if (units === 'BTC') {
+        if (units === Units.BTC) {
             return {
                 amount: FeeUtils.toFixed(
                     absValueSats / SATS_PER_BTC,
                     showAllDecimalPlaces
                 ),
-                unit: 'BTC',
+                unit: Units.BTC,
                 negative,
                 space: false
             };
-        } else if (units === 'sats') {
+        } else if (units === Units.sats) {
             return {
                 amount: this.fiatStore.numberWithCommas(absValueSats),
-                unit: 'sats',
+                unit: Units.sats,
                 negative,
                 plural: !(Number(value) === 1 || Number(value) === -1)
             };
@@ -93,7 +94,7 @@ export default class UnitsStore {
             if (!currency || currency === 'Disabled') {
                 return {
                     amount: 'Disabled',
-                    unit: 'fiat',
+                    unit: Units.fiat,
                     symbol: '$'
                 };
             }
@@ -114,7 +115,7 @@ export default class UnitsStore {
                     amount: separatorSwap
                         ? this.fiatStore.numberWithDecimals(amount)
                         : this.fiatStore.numberWithCommas(amount),
-                    unit: 'fiat',
+                    unit: Units.fiat,
                     symbol,
                     negative,
                     plural: false,
@@ -134,7 +135,7 @@ export default class UnitsStore {
         const units = fixedUnits || this.units;
 
         const [wholeSats] = value.toString().split('.');
-        if (units === 'BTC') {
+        if (units === Units.BTC) {
             // handle negative values
             const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
             if (valueToProcess.includes('-')) {
@@ -147,12 +148,12 @@ export default class UnitsStore {
             return `₿${FeeUtils.toFixed(
                 Number(wholeSats || 0) / SATS_PER_BTC
             )}`;
-        } else if (units === 'sats') {
+        } else if (units === Units.sats) {
             const sats = `${this.fiatStore.numberWithCommas(value) || 0} ${
                 Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
             }`;
             return sats;
-        } else if (units === 'fiat' && fiat) {
+        } else if (units === Units.fiat && fiat) {
             if (this.fiatStore.fiatRates && this.fiatStore.fiatRates.filter) {
                 const fiatEntry = this.fiatStore.fiatRates.filter(
                     (entry: any) => entry.code === fiat

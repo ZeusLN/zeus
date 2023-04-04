@@ -6,6 +6,7 @@ import TransactionRequest from './../models/TransactionRequest';
 import SettingsStore from './SettingsStore';
 import BackendUtils from './../utils/BackendUtils';
 import Base64Utils from './../utils/Base64Utils';
+import { Implementation } from '../enums';
 
 const keySendPreimageType = '5482373484';
 const keySendMessageType = '34349334';
@@ -271,11 +272,15 @@ export default class TransactionsStore {
         }
 
         const payFunc =
-            this.settingsStore.implementation === 'c-lightning-REST' && pubkey
+            this.settingsStore.implementation ===
+                Implementation.clightningREST && pubkey
                 ? BackendUtils.sendKeysend
                 : BackendUtils.payLightningInvoice;
 
-        if (this.settingsStore.implementation === 'lightning-node-connect') {
+        if (
+            this.settingsStore.implementation ===
+            Implementation.LightningNodeConnect
+        ) {
             return payFunc(data);
         } else {
             payFunc(data)

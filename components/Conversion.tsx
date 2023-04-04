@@ -13,6 +13,7 @@ import SettingsStore, { DEFAULT_FIAT } from '../stores/SettingsStore';
 import { themeColor } from '../utils/ThemeUtils';
 
 import ClockIcon from '../assets/images/SVG/Clock.svg';
+import { Units } from '../enums';
 
 interface ConversionProps {
     amount: string | number;
@@ -76,13 +77,13 @@ export default class Conversion extends React.Component<
         if (amount) {
             const amountStr = amount.toString();
             switch (units) {
-                case 'sats':
+                case Units.sats:
                     satAmount = amountStr;
                     break;
-                case 'BTC':
+                case Units.BTC:
                     satAmount = Number(amountStr) * SATS_PER_BTC;
                     break;
-                case 'fiat':
+                case Units.fiat:
                     satAmount = Number(
                         (Number(amountStr.replace(/,/g, '.')) / Number(rate)) *
                             Number(SATS_PER_BTC)
@@ -96,7 +97,7 @@ export default class Conversion extends React.Component<
         if (!fiat || fiat === DEFAULT_FIAT || (!amount && !sats)) return;
 
         const ConversionDisplay = ({
-            units = 'sats',
+            units = Units.sats,
             showRate
         }: {
             units: string;
@@ -113,7 +114,7 @@ export default class Conversion extends React.Component<
                     <>
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {` | ${getRate(
-                                this.props.UnitsStore.units === 'sats'
+                                this.props.UnitsStore.units === Units.sats
                             )}`}
                         </Text>
                     </>
@@ -122,7 +123,7 @@ export default class Conversion extends React.Component<
         );
 
         const ConversionPendingDisplay = ({
-            units = 'sats',
+            units = Units.sats,
             showRate
         }: {
             units: string;
@@ -153,7 +154,7 @@ export default class Conversion extends React.Component<
                     <>
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {` | ${getRate(
-                                this.props.UnitsStore.units === 'sats'
+                                this.props.UnitsStore.units === Units.sats
                             )}`}
                         </Text>
                     </>
@@ -165,31 +166,31 @@ export default class Conversion extends React.Component<
         // an on-chain debit is a negative number, but a lightning debit isn't
         return (
             <>
-                {units === 'fiat' && (
+                {units === Units.fiat && (
                     <TouchableOpacity onPress={() => this.toggleShowRate()}>
                         {satsPending ? (
                             <ConversionPendingDisplay
-                                units="sats"
+                                units={Units.sats}
                                 showRate={showRate}
                             />
                         ) : (
                             <ConversionDisplay
-                                units="sats"
+                                units={Units.sats}
                                 showRate={showRate}
                             />
                         )}
                     </TouchableOpacity>
                 )}
-                {units !== 'fiat' && (
+                {units !== Units.fiat && (
                     <TouchableOpacity onPress={() => this.toggleShowRate()}>
                         {satsPending ? (
                             <ConversionPendingDisplay
-                                units="fiat"
+                                units={Units.fiat}
                                 showRate={showRate}
                             />
                         ) : (
                             <ConversionDisplay
-                                units="fiat"
+                                units={Units.fiat}
                                 showRate={showRate}
                             />
                         )}

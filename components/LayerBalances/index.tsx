@@ -19,6 +19,7 @@ import BlueWalletWarning from '../../components/BlueWalletWarning';
 
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
+import { TransactionType } from '../../enums';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
@@ -46,7 +47,11 @@ const Row = ({ item }: { item: DataRow }) => (
         }}
     >
         <View style={styles.left}>
-            {item.layer === 'On-chain' ? <OnChainSvg /> : <LightningSvg />}
+            {item.layer === TransactionType.OnChain ? (
+                <OnChainSvg />
+            ) : (
+                <LightningSvg />
+            )}
             <Spacer width={5} />
             <Text style={{ ...styles.layerText, color: themeColor('text') }}>
                 {item.layer}
@@ -110,18 +115,18 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         if (!BackendUtils.supportsOnchainReceiving()) {
             DATA = [
                 {
-                    layer: 'Lightning',
+                    layer: TransactionType.Lightning,
                     balance: lightningBalance
                 }
             ];
         } else {
             DATA = [
                 {
-                    layer: 'Lightning',
+                    layer: TransactionType.Lightning,
                     balance: lightningBalance
                 },
                 {
-                    layer: 'On-chain',
+                    layer: TransactionType.OnChain,
                     balance: totalBlockchainBalance
                 }
             ];

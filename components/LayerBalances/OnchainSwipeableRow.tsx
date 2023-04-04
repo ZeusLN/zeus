@@ -17,6 +17,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 import Coins from './../../assets/images/SVG/Coins.svg';
 import Receive from './../../assets/images/SVG/Receive.svg';
 import Send from './../../assets/images/SVG/Send.svg';
+import { TransactionType } from '../../enums';
 
 interface OnchainSwipeableRowProps {
     navigation: any;
@@ -138,7 +139,7 @@ export default class OnchainSwipeableRow extends Component<
         navigation.navigate('Send', {
             destination: value,
             amount,
-            transactionType: 'On-chain'
+            transactionType: TransactionType.OnChain
         });
     };
 

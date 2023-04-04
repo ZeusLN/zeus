@@ -10,12 +10,13 @@ import { Spacer } from './layout/Spacer';
 import { Row } from './layout/Row';
 import { Body } from './text/Body';
 import LoadingIndicator from './LoadingIndicator';
+import { Units } from '../enums';
 
-type Units = 'sats' | 'BTC' | 'fiat';
+type UnitType = 'sats' | 'BTC' | 'fiat';
 
 interface AmountDisplayProps {
     amount: string;
-    unit: Units;
+    unit: UnitType;
     symbol?: string;
     negative?: boolean;
     plural?: boolean;
@@ -38,11 +39,11 @@ function AmountDisplay({
     color = undefined,
     pending = false
 }: AmountDisplayProps) {
-    if (unit === 'fiat' && !symbol) {
+    if (unit === Units.fiat && !symbol) {
         console.error('Must include a symbol when rendering fiat');
     }
 
-    const actualSymbol = unit === 'BTC' ? '₿' : symbol;
+    const actualSymbol = unit === Units.BTC ? '₿' : symbol;
 
     const Pending = () => (
         <View
@@ -73,7 +74,7 @@ function AmountDisplay({
 
     // TODO this could probably be made more readable by componentizing the repeat bits
     switch (unit) {
-        case 'sats':
+        case Units.sats:
             return (
                 <Row align="flex-end">
                     {pending ? <Pending /> : null}
@@ -88,8 +89,8 @@ function AmountDisplay({
                     </View>
                 </Row>
             );
-        case 'BTC':
-        case 'fiat':
+        case Units.BTC:
+        case Units.fiat:
             if (rtl) {
                 return (
                     <Row align="flex-end">
@@ -173,7 +174,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
         // display fiat amounts when rate fetch fails as $N/A
         if (unformattedAmount.error) {
             const amount = 'N/A';
-            const unit = 'fiat';
+            const unit = Units.fiat;
             const symbol = '$';
 
             if (toggleable) {

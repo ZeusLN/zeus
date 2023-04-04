@@ -22,6 +22,7 @@ import LnurlPayMetadata from './Metadata';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { Units } from '../../enums';
 
 interface LnurlPayProps {
     navigation: any;
@@ -188,13 +189,13 @@ export default class LnurlPay extends React.Component<
 
         let satAmount: string | number;
         switch (units) {
-            case 'sats':
+            case Units.sats:
                 satAmount = amount;
                 break;
-            case 'BTC':
+            case Units.BTC:
                 satAmount = Number(amount) * SATS_PER_BTC;
                 break;
-            case 'fiat':
+            case Units.fiat:
                 satAmount = Number(
                     (Number(amount.replace(/,/g, '.')) / Number(rate)) *
                         Number(SATS_PER_BTC)
@@ -289,24 +290,28 @@ export default class LnurlPay extends React.Component<
                         }
                         style={styles.textInput}
                         prefix={
-                            units !== 'sats' &&
-                            (units === 'BTC'
+                            units !== Units.sats &&
+                            (units === Units.BTC
                                 ? '₿'
                                 : !getSymbol().rtl
                                 ? getSymbol().symbol
                                 : null)
                         }
                         suffix={
-                            units === 'sats'
+                            units === Units.sats
                                 ? units
                                 : getSymbol().rtl &&
-                                  units === 'fiat' &&
+                                  units === Units.fiat &&
                                   getSymbol().symbol
                         }
                         toggleUnits={changeUnits}
                     />
-                    {fiat !== 'Disabled' && units !== 'fiat' && (
-                        <Amount sats={satAmount} fixedUnits="fiat" toggleable />
+                    {fiat !== 'Disabled' && units !== Units.fiat && (
+                        <Amount
+                            sats={satAmount}
+                            fixedUnits={Units.fiat}
+                            toggleable
+                        />
                     )}
                     {fiat !== 'Disabled' && (
                         <TouchableOpacity onPress={() => changeUnits()}>
@@ -316,15 +321,23 @@ export default class LnurlPay extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {FiatStore.getRate(units === 'sats')}
+                                {FiatStore.getRate(units === Units.sats)}
                             </Text>
                         </TouchableOpacity>
                     )}
-                    {units !== 'sats' && (
-                        <Amount sats={satAmount} fixedUnits="sats" toggleable />
+                    {units !== Units.sats && (
+                        <Amount
+                            sats={satAmount}
+                            fixedUnits={Units.sats}
+                            toggleable
+                        />
                     )}
                     {units !== 'BTC' && (
-                        <Amount sats={satAmount} fixedUnits="BTC" toggleable />
+                        <Amount
+                            sats={satAmount}
+                            fixedUnits={Units.BTC}
+                            toggleable
+                        />
                     )}
                     {lnurl.commentAllowed > 0 ? (
                         <>

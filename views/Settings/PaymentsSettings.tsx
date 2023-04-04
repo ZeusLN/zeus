@@ -11,6 +11,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import TextInput from '../../components/TextInput';
+import { FeeMethod } from '../../enums';
 
 interface PaymentsSettingsProps {
     navigation: any;
@@ -30,7 +31,7 @@ export default class PaymentsSettings extends React.Component<
     PaymentsSettingsState
 > {
     state = {
-        feeLimitMethod: 'fixed',
+        feeLimitMethod: FeeMethod.fixed,
         feeLimit: '100',
         feePercentage: '0.5'
     };
@@ -41,7 +42,7 @@ export default class PaymentsSettings extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            feeLimitMethod: settings.payments.defaultFeeMethod || 'fixed',
+            feeLimitMethod: settings.payments.defaultFeeMethod || FeeMethod.fixed,
             feeLimit: settings.payments.defaultFeeFixed || '100',
             feePercentage: settings.payments.defaultFeePercentage || '0.5'
         });
@@ -97,7 +98,8 @@ export default class PaymentsSettings extends React.Component<
                             flexWrap: 'wrap',
                             flexDirection: 'row',
                             justifyContent: 'flex-end',
-                            opacity: feeLimitMethod == 'percent' ? 1 : 0.25
+                            opacity:
+                                feeLimitMethod == FeeMethod.percent ? 1 : 0.25
                         }}
                     ></View>
                     <View
@@ -109,7 +111,8 @@ export default class PaymentsSettings extends React.Component<
                         <TextInput
                             style={{
                                 width: '50%',
-                                opacity: feeLimitMethod == 'fixed' ? 1 : 0.25
+                                opacity:
+                                    feeLimitMethod == FeeMethod.fixed ? 1 : 0.25
                             }}
                             keyboardType="numeric"
                             value={feeLimit}
@@ -119,7 +122,7 @@ export default class PaymentsSettings extends React.Component<
                                 });
                                 await updateSettings({
                                     payments: {
-                                        defaultFeeMethod: 'fixed',
+                                        defaultFeeMethod: FeeMethod.fixed,
                                         defaultFeePercentage: feePercentage,
                                         defaultFeeFixed: text
                                     }
@@ -127,7 +130,7 @@ export default class PaymentsSettings extends React.Component<
                             }}
                             onPressIn={() =>
                                 this.setState({
-                                    feeLimitMethod: 'fixed'
+                                    feeLimitMethod: FeeMethod.fixed
                                 })
                             }
                         />
@@ -138,7 +141,8 @@ export default class PaymentsSettings extends React.Component<
                                 color: themeColor('text'),
                                 top: 28,
                                 right: 30,
-                                opacity: feeLimitMethod == 'fixed' ? 1 : 0.25
+                                opacity:
+                                    feeLimitMethod == FeeMethod.fixed ? 1 : 0.25
                             }}
                         >
                             {`${localeString('general.sats')}`}
@@ -146,7 +150,10 @@ export default class PaymentsSettings extends React.Component<
                         <TextInput
                             style={{
                                 width: '50%',
-                                opacity: feeLimitMethod == 'percent' ? 1 : 0.25
+                                opacity:
+                                    feeLimitMethod == FeeMethod.percent
+                                        ? 1
+                                        : 0.25
                             }}
                             keyboardType="numeric"
                             value={feePercentage}
@@ -156,7 +163,7 @@ export default class PaymentsSettings extends React.Component<
                                 });
                                 await updateSettings({
                                     payments: {
-                                        defaultFeeMethod: 'percent',
+                                        defaultFeeMethod: FeeMethod.percent,
                                         defaultFeePercentage: text,
                                         defaultFeeFixed: feeLimit
                                     }
@@ -164,7 +171,7 @@ export default class PaymentsSettings extends React.Component<
                             }}
                             onPressIn={() =>
                                 this.setState({
-                                    feeLimitMethod: 'percent'
+                                    feeLimitMethod: FeeMethod.percent
                                 })
                             }
                         />
@@ -175,7 +182,10 @@ export default class PaymentsSettings extends React.Component<
                                 color: themeColor('text'),
                                 top: 28,
                                 right: 18,
-                                opacity: feeLimitMethod == 'percent' ? 1 : 0.25
+                                opacity:
+                                    feeLimitMethod == FeeMethod.percent
+                                        ? 1
+                                        : 0.25
                             }}
                         >
                             {'%'}

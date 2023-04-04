@@ -1,5 +1,6 @@
 import Base64Utils from './Base64Utils';
 import MacaroonUtils from './MacaroonUtils';
+import { Implementation } from '../enums';
 
 class ConnectionFormatUtils {
     processLndConnectUrl = (input: string) => {
@@ -108,7 +109,7 @@ class ConnectionFormatUtils {
             port,
             macaroonHex,
             enableTor,
-            implementation: 'c-lightning-REST'
+            implementation: Implementation.clightningREST
         };
     };
 }

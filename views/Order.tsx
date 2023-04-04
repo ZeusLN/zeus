@@ -24,6 +24,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import SettingsStore from '../stores/SettingsStore';
 import FiatStore from '../stores/FiatStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import { CustomType, Units } from '../enums';
 
 interface OrderProps {
     navigation: any;
@@ -57,8 +58,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             selectedIndex: disableTips ? 3 : 0,
             customPercentage: disableTips ? '0' : '21',
             customAmount: '',
-            customType: 'percentage',
-            bitcoinUnits: 'sats'
+            customType: CustomType.Percentage,
+            bitcoinUnits: Units.sats
         };
     }
 
@@ -228,7 +229,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         .toFixed(0);
                     break;
                 default:
-                    if (customType === 'percentage') {
+                    if (customType === CustomType.Percentage) {
                         totalSats = new BigNumber(subTotalSats)
                             .multipliedBy(`1.${customPercentage || 0}`)
                             .plus(taxSats)
@@ -240,7 +241,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 )
                             )
                             .toFixed(0);
-                    } else if (customType === 'amount') {
+                    } else if (customType === CustomType.Amount) {
                         if (units === 'fiat') {
                             const customSats = new BigNumber(customAmount)
                                 .div(rate)
@@ -347,9 +348,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         onPress={() => {
                             this.setState({
                                 bitcoinUnits:
-                                    this.state.bitcoinUnits === 'sats'
-                                        ? 'BTC'
-                                        : 'sats'
+                                    this.state.bitcoinUnits === Units.sats
+                                        ? Units.BTC
+                                        : Units.sats
                             });
                         }}
                     >
@@ -358,14 +359,14 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 'pos.views.Order.subtotalBitcoin'
                             )}
                             value={
-                                bitcoinUnits === 'sats' ? (
+                                bitcoinUnits === Units.sats ? (
                                     <Amount
-                                        fixedUnits="sats"
+                                        fixedUnits={Units.sats}
                                         sats={subTotalSats}
                                     />
                                 ) : (
                                     <Amount
-                                        fixedUnits="BTC"
+                                        fixedUnits={Units.BTC}
                                         sats={subTotalSats}
                                     />
                                 )
@@ -433,7 +434,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         }}
                                         onPressIn={() =>
                                             this.setState({
-                                                customType: 'percentage'
+                                                customType:
+                                                    CustomType.Percentage
                                             })
                                         }
                                         autoCapitalize="none"
@@ -442,7 +444,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                             width: '50%',
                                             marginRight: 10,
                                             opacity:
-                                                customType == 'percentage'
+                                                customType ==
+                                                CustomType.Percentage
                                                     ? 1
                                                     : 0.25
                                         }}
@@ -453,19 +456,19 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         onChangeText={(text: string) => {
                                             if (text.includes('-')) return;
                                             if (
-                                                units === 'sats' &&
+                                                units === Units.sats &&
                                                 (text.includes(',') ||
                                                     text.includes('.'))
                                             )
                                                 return;
                                             if (
-                                                units === 'BTC' &&
+                                                units === Units.BTC &&
                                                 text.split('.')[1] &&
                                                 text.split('.')[1].length === 9
                                             )
                                                 return;
                                             if (
-                                                units === 'fiat' &&
+                                                units === Units.fiat &&
                                                 text.split('.')[1] &&
                                                 text.split('.')[1].length === 3
                                             )
@@ -476,7 +479,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         }}
                                         onPressIn={() =>
                                             this.setState({
-                                                customType: 'amount'
+                                                customType: CustomType.Amount
                                             })
                                         }
                                         autoCapitalize="none"
@@ -484,23 +487,23 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         style={{
                                             width: '50%',
                                             opacity:
-                                                customType == 'amount'
+                                                customType == CustomType.Amount
                                                     ? 1
                                                     : 0.25
                                         }}
                                         prefix={
-                                            units !== 'sats' &&
-                                            (units === 'BTC'
+                                            units !== Units.sats &&
+                                            (units === Units.BTC
                                                 ? '₿'
                                                 : !getSymbol().rtl
                                                 ? getSymbol().symbol
                                                 : null)
                                         }
                                         suffix={
-                                            units === 'sats'
+                                            units === Units.sats
                                                 ? units
                                                 : getSymbol().rtl &&
-                                                  units === 'fiat' &&
+                                                  units === Units.fiat &&
                                                   getSymbol().symbol
                                         }
                                         toggleUnits={() => {
@@ -524,9 +527,10 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 onPress={() => {
                                     this.setState({
                                         bitcoinUnits:
-                                            this.state.bitcoinUnits === 'sats'
-                                                ? 'BTC'
-                                                : 'sats'
+                                            this.state.bitcoinUnits ===
+                                            Units.sats
+                                                ? Units.BTC
+                                                : Units.sats
                                     });
                                 }}
                             >
@@ -535,14 +539,14 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         'pos.views.Order.tipBitcoin'
                                     )}
                                     value={
-                                        bitcoinUnits === 'sats' ? (
+                                        bitcoinUnits === Units.sats ? (
                                             <Amount
-                                                fixedUnits="sats"
+                                                fixedUnits={Units.sats}
                                                 sats={tipSats}
                                             />
                                         ) : (
                                             <Amount
-                                                fixedUnits="BTC"
+                                                fixedUnits={Units.BTC}
                                                 sats={tipSats}
                                             />
                                         )
@@ -567,9 +571,10 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 onPress={() => {
                                     this.setState({
                                         bitcoinUnits:
-                                            this.state.bitcoinUnits === 'sats'
-                                                ? 'BTC'
-                                                : 'sats'
+                                            this.state.bitcoinUnits ===
+                                            Units.sats
+                                                ? Units.BTC
+                                                : Units.sats
                                     });
                                 }}
                             >
@@ -578,14 +583,14 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         'pos.views.Order.tipBitcoin'
                                     )}
                                     value={
-                                        bitcoinUnits === 'sats' ? (
+                                        bitcoinUnits === Units.sats ? (
                                             <Amount
-                                                fixedUnits="sats"
+                                                fixedUnits={Units.sats}
                                                 sats={tipSats}
                                             />
                                         ) : (
                                             <Amount
-                                                fixedUnits="BTC"
+                                                fixedUnits={Units.BTC}
                                                 sats={tipSats}
                                             />
                                         )
@@ -630,9 +635,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         onPress={() => {
                             this.setState({
                                 bitcoinUnits:
-                                    this.state.bitcoinUnits === 'sats'
-                                        ? 'BTC'
-                                        : 'sats'
+                                    this.state.bitcoinUnits === Units.sats
+                                        ? Units.BTC
+                                        : Units.sats
                             });
                         }}
                     >
@@ -641,13 +646,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 'pos.views.Order.totalBitcoin'
                             )}
                             value={
-                                bitcoinUnits === 'sats' ? (
+                                bitcoinUnits === Units.sats ? (
                                     <Amount
-                                        fixedUnits="sats"
+                                        fixedUnits={Units.sats}
                                         sats={totalSats}
                                     />
                                 ) : (
-                                    <Amount fixedUnits="BTC" sats={totalSats} />
+                                    <Amount
+                                        fixedUnits={Units.BTC}
+                                        sats={totalSats}
+                                    />
                                 )
                             }
                         />
@@ -660,9 +668,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             onPress={() =>
                                 navigation.navigate('Receive', {
                                     amount:
-                                        units === 'sats'
+                                        units === Units.sats
                                             ? totalSats
-                                            : units === 'BTC'
+                                            : units === Units.BTC
                                             ? new BigNumber(totalSats)
                                                   .div(SATS_PER_BTC)
                                                   .toFixed(8)

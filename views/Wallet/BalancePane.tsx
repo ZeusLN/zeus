@@ -13,6 +13,7 @@ import NodeInfoStore from './../../stores/NodeInfoStore';
 import SettingsStore from './../../stores/SettingsStore';
 
 import { version, playStore } from './../../package.json';
+import { Implementation } from '../../enums';
 
 interface BalancePaneProps {
     navigation: any;
@@ -131,7 +132,7 @@ export default class BalancePane extends React.PureComponent<
                             marginBottom: 20
                         }}
                     >
-                        {implementation === 'lndhub' ? (
+                        {implementation === Implementation.lndhub ? (
                             <LightningBalance />
                         ) : (
                             <BalanceViewCombined />

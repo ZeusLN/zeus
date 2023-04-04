@@ -40,6 +40,7 @@ import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
 import Scan from '../assets/images/SVG/Scan.svg';
+import { Implementation, Units } from '../enums';
 
 interface OpenChannelProps {
     exitSetup: any;
@@ -183,7 +184,7 @@ export default class OpenChannel extends React.Component<
         const newState: any = {};
         newState.utxos = utxos;
         newState.utxoBalance = utxoBalance;
-        if (implementation === 'c-lightning-REST') {
+        if (implementation === Implementation.clightningREST) {
             newState.local_funding_amount = 'all';
         }
         this.setState(newState);
@@ -270,13 +271,13 @@ export default class OpenChannel extends React.Component<
         // conversion
         let satAmount: string | number;
         switch (units) {
-            case 'sats':
+            case Units.sats:
                 satAmount = local_funding_amount;
                 break;
-            case 'BTC':
+            case Units.BTC:
                 satAmount = Number(local_funding_amount) * SATS_PER_BTC;
                 break;
-            case 'fiat':
+            case Units.fiat:
                 satAmount = Number(
                     (Number(local_funding_amount.replace(/,/g, '.')) /
                         Number(rate)) *
@@ -422,31 +423,32 @@ export default class OpenChannel extends React.Component<
                             }
                             locked={openingChannel}
                             prefix={
-                                units !== 'sats' &&
-                                (units === 'BTC'
+                                units !== Units.sats &&
+                                (units === Units.BTC
                                     ? '₿'
                                     : !getSymbol().rtl
                                     ? getSymbol().symbol
                                     : null)
                             }
                             suffix={
-                                units === 'sats'
+                                units === Units.sats
                                     ? units
                                     : getSymbol().rtl &&
-                                      units === 'fiat' &&
+                                      units === Units.fiat &&
                                       getSymbol().symbol
                             }
                             toggleUnits={changeUnits}
                         />
                         {local_funding_amount !== 'all' && (
                             <View style={{ marginBottom: 10 }}>
-                                {fiat !== 'Disabled' && units !== 'fiat' && (
-                                    <Amount
-                                        sats={satAmount}
-                                        fixedUnits="fiat"
-                                        toggleable
-                                    />
-                                )}
+                                {fiat !== 'Disabled' &&
+                                    units !== Units.fiat && (
+                                        <Amount
+                                            sats={satAmount}
+                                            fixedUnits={Units.fiat}
+                                            toggleable
+                                        />
+                                    )}
                                 {fiat !== 'Disabled' && (
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
@@ -457,22 +459,22 @@ export default class OpenChannel extends React.Component<
                                             }}
                                         >
                                             {FiatStore.getRate(
-                                                units === 'sats'
+                                                units === Units.sats
                                             )}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
-                                {units !== 'sats' && (
+                                {units !== Units.sats && (
                                     <Amount
                                         sats={satAmount}
-                                        fixedUnits="sats"
+                                        fixedUnits={Units.sats}
                                         toggleable
                                     />
                                 )}
-                                {units !== 'BTC' && (
+                                {units !== Units.BTC && (
                                     <Amount
                                         sats={satAmount}
-                                        fixedUnits="BTC"
+                                        fixedUnits={Units.BTC}
                                         toggleable
                                     />
                                 )}
@@ -567,7 +569,7 @@ export default class OpenChannel extends React.Component<
                         </>
 
                         {BackendUtils.supportsCoinControl() &&
-                            implementation !== 'lnd' && (
+                            implementation !== Implementation.lnd && (
                                 <UTXOPicker
                                     onValueChange={this.selectUTXOs}
                                     UTXOsStore={UTXOsStore}

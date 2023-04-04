@@ -23,6 +23,7 @@ import Refresh from '../assets/images/SVG/Refresh.svg';
 import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 
 import FeeStore from './../stores/FeeStore';
+import { FeeType } from '../enums';
 
 interface EditFeeProps {
     FeeStore: FeeStore;
@@ -98,7 +99,7 @@ export default class EditFee extends React.Component<
                             <LightningIndicator />
                         </View>
                     )}
-                    {recommendedFees['fastestFee'] && !loading && (
+                    {recommendedFees[FeeType.FastestFee] && !loading && (
                         <View
                             style={{
                                 justifyContent: 'space-around'
@@ -107,9 +108,9 @@ export default class EditFee extends React.Component<
                             <TouchableWithoutFeedback
                                 onPress={() =>
                                     this.setState({
-                                        selectedFee: 'fastestFee',
+                                        selectedFee: FeeType.FastestFee,
                                         fee: recommendedFees[
-                                            'fastestFee'
+                                            FeeType.FastestFee
                                         ].toString()
                                     })
                                 }
@@ -119,7 +120,7 @@ export default class EditFee extends React.Component<
                                         ...styles.feeBox,
                                         borderColor:
                                             !displayOnly &&
-                                            selectedFee === 'fastestFee'
+                                            selectedFee === FeeType.FastestFee
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
                                         borderWidth: 3
@@ -141,16 +142,16 @@ export default class EditFee extends React.Component<
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {recommendedFees['fastestFee']}
+                                        {recommendedFees[FeeType.FastestFee]}
                                     </Text>
                                 </View>
                             </TouchableWithoutFeedback>
                             <TouchableWithoutFeedback
                                 onPress={() =>
                                     this.setState({
-                                        selectedFee: 'halfHourFee',
+                                        selectedFee: FeeType.HalfHourFee,
                                         fee: recommendedFees[
-                                            'halfHourFee'
+                                            FeeType.HalfHourFee
                                         ].toString()
                                     })
                                 }
@@ -160,7 +161,7 @@ export default class EditFee extends React.Component<
                                         ...styles.feeBox,
                                         borderColor:
                                             !displayOnly &&
-                                            selectedFee === 'halfHourFee'
+                                            selectedFee === FeeType.HalfHourFee
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
                                         borderWidth: 3
@@ -182,7 +183,7 @@ export default class EditFee extends React.Component<
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {recommendedFees['halfHourFee']}
+                                        {recommendedFees[FeeType.HalfHourFee]}
                                     </Text>
                                 </View>
                             </TouchableWithoutFeedback>
@@ -190,9 +191,9 @@ export default class EditFee extends React.Component<
                             <TouchableWithoutFeedback
                                 onPress={() =>
                                     this.setState({
-                                        selectedFee: 'hourFee',
+                                        selectedFee: FeeType.HourFee,
                                         fee: recommendedFees[
-                                            'hourFee'
+                                            FeeType.HourFee
                                         ].toString()
                                     })
                                 }
@@ -202,7 +203,7 @@ export default class EditFee extends React.Component<
                                         ...styles.feeBox,
                                         borderColor:
                                             !displayOnly &&
-                                            selectedFee === 'hourFee'
+                                            selectedFee === FeeType.HourFee
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
                                         borderWidth: 3
@@ -222,16 +223,16 @@ export default class EditFee extends React.Component<
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {recommendedFees['hourFee']}
+                                        {recommendedFees[FeeType.HourFee]}
                                     </Text>
                                 </View>
                             </TouchableWithoutFeedback>
                             <TouchableWithoutFeedback
                                 onPress={() =>
                                     this.setState({
-                                        selectedFee: 'minimumFee',
+                                        selectedFee: FeeType.MinimumFee,
                                         fee: recommendedFees[
-                                            'minimumFee'
+                                            FeeType.MinimumFee
                                         ].toString()
                                     })
                                 }
@@ -241,7 +242,7 @@ export default class EditFee extends React.Component<
                                         ...styles.feeBox,
                                         borderColor:
                                             !displayOnly &&
-                                            selectedFee === 'minimumFee'
+                                            selectedFee === FeeType.MinimumFee
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
                                         borderWidth: 3
@@ -263,7 +264,7 @@ export default class EditFee extends React.Component<
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {recommendedFees['minimumFee']}
+                                        {recommendedFees[FeeType.MinimumFee]}
                                     </Text>
                                 </View>
                             </TouchableWithoutFeedback>

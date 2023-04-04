@@ -21,6 +21,7 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import DropdownSetting from '../components/DropdownSetting';
 import SettingsStore, { LNDHUB_AUTH_MODES } from '../stores/SettingsStore';
+import { Implementation } from '../enums';
 
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
@@ -152,7 +153,7 @@ export default class LnurlAuth extends React.Component<
     }
     componentDidMount() {
         const { implementation } = this.props.SettingsStore;
-        if (implementation === 'lndhub') {
+        if (implementation === Implementation.lndhub) {
             this.props.SettingsStore.updateSettings({
                 lndHubLnAuthMode: this.state.lndHubLnAuthMode
             });
