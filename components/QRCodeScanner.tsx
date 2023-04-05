@@ -7,7 +7,7 @@ import {
     Platform,
     TouchableOpacity
 } from 'react-native';
-import { CameraScreen, Camera } from 'react-native-camera-kit';
+import { Camera } from 'react-native-camera-kit';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 const LocalQRCode = require('@remobile/react-native-qrcode-local-image');
@@ -154,6 +154,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                             scanBarcode={true}
                             torchMode={isTorchOn ? 'on' : 'off'}
                             onReadCode={this.onQRCodeScan}
+                            focusMode="off"
                         />
                         <View style={styles.actionOverlay}>
                             <TouchableOpacity
@@ -174,10 +175,13 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                             <Text style={styles.textOverlay}>{text}</Text>
                         )}
                         <View
-                            style={[
-                                styles.contentRow,
-                                { height: this.maskLength }
-                            ]}
+                            style={{
+                                position: 'absolute',
+                                top: '30%',
+                                left:
+                                    (Dimensions.get('window').width * 11) / 100,
+                                height: this.maskLength
+                            }}
                         >
                             <View style={styles.overlay} />
                             <View style={styles.scan}>
@@ -185,13 +189,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                             </View>
                             <View style={styles.overlay} />
                         </View>
-                        <View
-                            style={{
-                                flex: 1,
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
-                        >
+                        <View style={styles.cancelOverlay}>
                             <Button
                                 title={localeString('general.cancel')}
                                 onPress={() => goBack()}
@@ -257,14 +255,14 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 15
     },
-    contentRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end'
-    },
     content: {
         flex: 1,
         justifyContent: 'center',
         backgroundColor: 'rgba(0,0,0,0.5)'
+    },
+    cancelOverlay: {
+        position: 'absolute',
+        width: '100%',
+        bottom: 60
     }
 });
