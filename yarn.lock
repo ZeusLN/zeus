@@ -7824,16 +7824,6 @@ react-native-camera-kit@13.0.0:
   dependencies:
     lodash "^4.14.2"
 
-react-native-cli@^2.0.1:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/react-native-cli/-/react-native-cli-2.0.1.tgz#f2cd3c7aa1b83828cdfba630e2dfd817df766d54"
-  integrity sha512-QgkB1urUhGe9q1vcqQLIfNdCd/Qf3MdNQe19QO6lVjhIVKljlVMKtaK8RaZ8PCNB/cdXlO/G3tKUGk+ghMXE6w==
-  dependencies:
-    chalk "^1.1.1"
-    minimist "^1.2.0"
-    prompt "^0.2.14"
-    semver "^5.0.3"
-
 react-native-codegen@^0.70.6:
   version "0.70.6"
   resolved "https://registry.yarnpkg.com/react-native-codegen/-/react-native-codegen-0.70.6.tgz#2ce17d1faad02ad4562345f8ee7cbe6397eda5cb"
