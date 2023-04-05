@@ -12,6 +12,7 @@ import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
 import Amount from '../components/Amount';
+import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
 import HopPicker from '../components/HopPicker';
 import KeyValue from '../components/KeyValue';
@@ -21,10 +22,9 @@ import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 
 import ChannelsStore from '../stores/ChannelsStore';
-import FiatStore from '../stores/FiatStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import TransactionsStore, { SendPaymentReq } from '../stores/TransactionsStore';
-import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import UnitsStore from '../stores/UnitsStore';
 import SettingsStore from '../stores/SettingsStore';
 
 import FeeUtils from '../utils/FeeUtils';
@@ -45,11 +45,11 @@ interface InvoiceProps {
     UnitsStore: UnitsStore;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
-    FiatStore: FiatStore;
 }
 
 interface InvoiceState {
     customAmount: string;
+    satAmount: string | number;
     enableMultiPathPayment: boolean;
     enableAtomicMultiPathPayment: boolean;
     maxParts: string;
@@ -63,7 +63,6 @@ interface InvoiceState {
 }
 
 @inject(
-    'FiatStore',
     'InvoicesStore',
     'TransactionsStore',
     'UnitsStore',
@@ -78,6 +77,7 @@ export default class PaymentRequest extends React.Component<
     listener: any;
     state = {
         customAmount: '',
+        satAmount: '',
         enableMultiPathPayment: true,
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
@@ -206,7 +206,6 @@ export default class PaymentRequest extends React.Component<
     render() {
         const {
             InvoicesStore,
-            FiatStore,
             UnitsStore,
             ChannelsStore,
             SettingsStore,
@@ -223,6 +222,7 @@ export default class PaymentRequest extends React.Component<
             outgoingChanId,
             lastHopPubkey,
             customAmount,
+            satAmount,
             settingsToggle
         } = this.state;
         const {
@@ -235,10 +235,6 @@ export default class PaymentRequest extends React.Component<
             feeEstimate,
             clearPayReq
         } = InvoicesStore;
-        const { units, changeUnits } = UnitsStore;
-        const { fiatRates, getSymbol } = FiatStore;
-        const { settings } = SettingsStore;
-        const { fiat } = settings;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
         const expiry = pay_req && pay_req.expiry;
@@ -247,33 +243,6 @@ export default class PaymentRequest extends React.Component<
         const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
-
-        const fiatEntry =
-            fiat && fiatRates && fiatRates.filter
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
-
-        const rate =
-            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
-                ? fiatEntry.rate
-                : 0;
-
-        // conversion
-        let satAmount: string | number;
-        switch (units) {
-            case 'sats':
-                satAmount = customAmount;
-                break;
-            case 'BTC':
-                satAmount = Number(customAmount) * SATS_PER_BTC;
-                break;
-            case 'fiat':
-                satAmount = Number(
-                    (Number(customAmount.replace(/,/g, '.')) / Number(rate)) *
-                        Number(SATS_PER_BTC)
-                ).toFixed(0);
-                break;
-        }
 
         // handle fee percents that use commas
         const maxFeePercentFormatted = maxFeePercent.replace(/,/g, '.');
@@ -367,92 +336,21 @@ export default class PaymentRequest extends React.Component<
                         <View style={styles.content}>
                             <>
                                 {isNoAmountInvoice ? (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.PaymentRequest.customAmt'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            placeholder={
-                                                requestAmount
-                                                    ? requestAmount.toString()
-                                                    : '0'
-                                            }
-                                            value={customAmount}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    customAmount: text
-                                                })
-                                            }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
-                                            prefix={
-                                                units !== 'sats' &&
-                                                (units === 'BTC'
-                                                    ? '₿'
-                                                    : !getSymbol().rtl
-                                                    ? getSymbol().symbol
-                                                    : null)
-                                            }
-                                            suffix={
-                                                units === 'sats'
-                                                    ? units
-                                                    : getSymbol().rtl &&
-                                                      units === 'fiat' &&
-                                                      getSymbol().symbol
-                                            }
-                                            toggleUnits={changeUnits}
-                                        />
-                                        {fiat !== 'Disabled' &&
-                                            units !== 'fiat' && (
-                                                <Amount
-                                                    sats={satAmount}
-                                                    fixedUnits="fiat"
-                                                    toggleable
-                                                />
-                                            )}
-                                        {fiat !== 'Disabled' && (
-                                            <TouchableOpacity
-                                                onPress={() => changeUnits()}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {FiatStore.getRate(
-                                                        units === 'sats'
-                                                    )}
-                                                </Text>
-                                            </TouchableOpacity>
+                                    <AmountInput
+                                        amount={customAmount}
+                                        title={localeString(
+                                            'views.PaymentRequest.customAmt'
                                         )}
-                                        {units !== 'sats' && (
-                                            <Amount
-                                                sats={satAmount}
-                                                fixedUnits="sats"
-                                                toggleable
-                                            />
-                                        )}
-                                        {units !== 'BTC' && (
-                                            <Amount
-                                                sats={satAmount}
-                                                fixedUnits="BTC"
-                                                toggleable
-                                            />
-                                        )}
-                                    </>
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                customAmount: amount,
+                                                satAmount
+                                            });
+                                        }}
+                                    />
                                 ) : (
                                     <View style={styles.center}>
                                         <Amount
