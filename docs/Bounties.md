@@ -4,11 +4,11 @@ The Zeus team is putting up the tasks listed below for bounty. Working code must
 
 ## Core Lightning: Commando/lnmessage connection
 
-Payout: 3,000,000 sats (0.03 BTC)
+Payout: 3,500,000 sats (0.035 BTC)
 
 Currently, Zeus supports remote connections to Core Lightning (CLN) through c-lightning-REST and Spark. We'd like for users to connect to CLN nodes using the [Commando](https://lightning.readthedocs.io/lightning-commando.7.html) and [lnmessage](https://github.com/aaronbarnardsound/lnmessage). We've made some pretty good progress on [this branch](https://github.com/ZeusLN/zeus/compare/master...kaloudis:zeus:lnsocket) that you can use but we are having issues getting the socket to work. lnmessage has params for `socket` and `tcpSocket` that you should be able to configure and override.
 
-Additional bounty patrons: @sathoarder
+Additional bounty patrons: @sathoarder, Seth For Privacy
 
 ## Point of Sale: Clover integration
 
