@@ -5,7 +5,8 @@ import {
     Text,
     View,
     Platform,
-    TouchableOpacity
+    TouchableOpacity,
+    PermissionsAndroid
 } from 'react-native';
 import { Camera } from 'react-native-camera-kit';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -33,24 +34,23 @@ interface QRState {
     cameraStatus: any;
     isTorchOn: boolean;
 }
+const CameraAuthStatus = Object.freeze({
+    AUTHORIZED: 'AUTHORIZED',
+    NOT_AUTHORIZED: 'NOT_AUTHORIZED',
+    UNKNOWN: 'UNKNOWN'
+});
 
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     constructor(props: QRProps) {
         super(props);
 
         this.state = {
-            cameraStatus: '',
+            cameraStatus: CameraAuthStatus.UNKNOWN,
             isTorchOn: false
         };
     }
     scannedCache: { [name: string]: number } = {};
     maskLength = (Dimensions.get('window').width * 80) / 100;
-
-    CameraAuthStatus = Object.freeze({
-        AUTHORIZED: 'AUTHORIZED',
-        NOT_AUTHORIZED: 'NOT_AUTHORIZED',
-        UNKNOWN: 'UNKNOWN'
-    });
 
     handleRead = (data: any) => {
         const hash = createHash('sha256').update(data).digest().toString('hex');
@@ -98,6 +98,43 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
 
     async componentDidMount() {
         if (Platform.OS !== 'ios' && Platform.OS !== 'macos') {
+            // For android
+            // Returns true or false
+            const permissionAndroid = await PermissionsAndroid.check(
+                'android.permission.CAMERA'
+            );
+            if (permissionAndroid) {
+                this.setState({
+                    cameraStatus: CameraAuthStatus.AUTHORIZED
+                });
+            } else
+                try {
+                    const granted = await PermissionsAndroid.request(
+                        PermissionsAndroid.PERMISSIONS.CAMERA,
+                        {
+                            title: localeString(
+                                'components.QRCodeScanner.cameraPermissionTitle'
+                            ),
+                            message: localeString(
+                                'components.QRCodeScanner.cameraPermission'
+                            ),
+                            buttonNegative: localeString('general.cancel'),
+                            buttonPositive: localeString('general.ok')
+                        }
+                    );
+                    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+                        this.setState({
+                            cameraStatus: CameraAuthStatus.AUTHORIZED
+                        });
+                    } else {
+                        this.setState({
+                            cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
+                        });
+                    }
+                } catch (err) {
+                    console.warn(err);
+                }
+
             return;
         }
         let isUserAuthorizedCamera;
@@ -106,31 +143,35 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
         switch (isCameraAuthorized) {
             case true:
                 this.setState({
-                    cameraStatus: this.CameraAuthStatus.AUTHORIZED
+                    cameraStatus: CameraAuthStatus.AUTHORIZED
                 });
-
                 break;
             case false:
-                this.setState({
-                    cameraStatus: this.CameraAuthStatus.NOT_AUTHORIZED
-                });
                 isUserAuthorizedCamera =
                     await Camera.requestDeviceCameraAuthorization();
                 if (isUserAuthorizedCamera) {
                     this.setState({
-                        cameraStatus: this.CameraAuthStatus.NOT_AUTHORIZED
+                        cameraStatus: CameraAuthStatus.AUTHORIZED
+                    });
+                } else {
+                    this.setState({
+                        cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
                     });
                 }
                 break;
             case -1:
                 this.setState({
-                    cameraStatus: this.CameraAuthStatus.UNKNOWN
+                    cameraStatus: CameraAuthStatus.UNKNOWN
                 });
                 isUserAuthorizedCamera =
                     await Camera.requestDeviceCameraAuthorization();
                 if (isUserAuthorizedCamera) {
                     this.setState({
-                        cameraStatus: this.CameraAuthStatus.AUTHORIZED
+                        cameraStatus: CameraAuthStatus.AUTHORIZED
+                    });
+                } else {
+                    this.setState({
+                        cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
                     });
                 }
                 break;
@@ -143,7 +184,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
 
         return (
             <>
-                {cameraStatus !== this.CameraAuthStatus.NOT_AUTHORIZED && (
+                {cameraStatus === CameraAuthStatus.AUTHORIZED && (
                     <View
                         style={{
                             flex: 1
@@ -200,7 +241,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     </View>
                 )}
 
-                {cameraStatus === this.CameraAuthStatus.NOT_AUTHORIZED && (
+                {cameraStatus === CameraAuthStatus.NOT_AUTHORIZED && (
                     <View style={styles.content}>
                         <Text
                             style={{
