@@ -28,6 +28,7 @@ interface QRProps {
     text?: string;
     handleQRScanned: any;
     goBack: any;
+    navigation: any;
 }
 
 interface QRState {
@@ -97,6 +98,11 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     };
 
     async componentDidMount() {
+        // triggers when loaded from navigation or back action
+        this.props.navigation.addListener('didFocus', () => {
+            this.scannedCache = {};
+        });
+
         if (Platform.OS !== 'ios' && Platform.OS !== 'macos') {
             // For android
             // Returns true or false
@@ -176,6 +182,11 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                 }
                 break;
         }
+    }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('didFocus');
     }
 
     render() {

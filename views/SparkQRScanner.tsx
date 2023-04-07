@@ -45,6 +45,7 @@ export default class SparkQRScanner extends React.Component<SparkQRProps, {}> {
                 goBack={() =>
                     navigation.navigate('NodeConfiguration', { index })
                 }
+                navigation={navigation}
             />
         );
     }
