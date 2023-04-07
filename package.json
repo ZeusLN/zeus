@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "react-native start",
-    "postinstall": "rn-nodeify --install --hack; npx jetify; yarn run patch; yarn run install-lnc",
+    "postinstall": "rn-nodeify --install --hack; npx jetify; yarn run patch; react-native setup-ios-permissions; yarn run install-lnc; pod-install",
     "test": "jest",
     "tsc": "tsc",
     "lint": "eslint --ext .js,.ts,.tsx '*.@(js|ts|tsx)' .",
@@ -84,6 +84,7 @@
     "react-native-linear-gradient": "2.6.2",
     "react-native-nfc-manager": "3.13.0",
     "react-native-os": "aprock/react-native-os#5/head",
+    "react-native-permissions": "3.8.0",
     "react-native-qrcode-svg": "6.1.2",
     "react-native-randombytes": "3.5.3",
     "react-native-restart": "0.0.24",
@@ -121,7 +122,6 @@
     "@types/object-hash": "2.2.1",
     "@types/react": "17.0.2",
     "@types/react-native": "0.67.2",
-    "@types/react-native-permissions": "2.0.0",
     "@types/react-native-vector-icons": "6.4.5",
     "@types/react-test-renderer": "16.9.2",
     "@typescript-eslint/eslint-plugin": "5.38.0",
@@ -137,6 +137,7 @@
     "jest": "26.6.3",
     "jetifier": "2.0.0",
     "metro-react-native-babel-preset": "0.72.3",
+    "pod-install": "0.1.38",
     "prettier": "2.4.1",
     "react-test-renderer": "18.1.0",
     "rn-nodeify": "10.3.0",
@@ -193,5 +194,8 @@
     "tty": "tty-browserify",
     "vm": "vm-browserify",
     "tls": false
-  }
+  },
+  "reactNativePermissionsIOS": [
+    "Camera"
+  ]
 }

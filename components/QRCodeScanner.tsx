@@ -168,45 +168,6 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
                 });
             }
-            // let isUserAuthorizedCamera;
-            // const isCameraAuthorized =
-            //     await Camera.checkDeviceCameraAuthorizationStatus();
-            // switch (isCameraAuthorized) {
-            //     case true:
-            //         this.setState({
-            //             cameraStatus: CameraAuthStatus.AUTHORIZED
-            //         });
-            //         break;
-            //     case false:
-            //         isUserAuthorizedCamera =
-            //             await Camera.requestDeviceCameraAuthorization();
-            //         if (isUserAuthorizedCamera) {
-            //             this.setState({
-            //                 cameraStatus: CameraAuthStatus.AUTHORIZED
-            //             });
-            //         } else {
-            //             this.setState({
-            //                 cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
-            //             });
-            //         }
-            //         break;
-            //     case -1:
-            //         this.setState({
-            //             cameraStatus: CameraAuthStatus.UNKNOWN
-            //         });
-            //         isUserAuthorizedCamera =
-            //             await Camera.requestDeviceCameraAuthorization();
-            //         if (isUserAuthorizedCamera) {
-            //             this.setState({
-            //                 cameraStatus: CameraAuthStatus.AUTHORIZED
-            //             });
-            //         } else {
-            //             this.setState({
-            //                 cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
-            //             });
-            //         }
-            //         break;
-            // }
         }
     }
 
