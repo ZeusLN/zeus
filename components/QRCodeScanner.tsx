@@ -9,6 +9,7 @@ import {
     PermissionsAndroid
 } from 'react-native';
 import { Camera } from 'react-native-camera-kit';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 const LocalQRCode = require('@remobile/react-native-qrcode-local-image');
@@ -143,19 +144,17 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
 
             return;
         }
-        let isUserAuthorizedCamera;
-        const isCameraAuthorized =
-            await Camera.checkDeviceCameraAuthorizationStatus();
-        switch (isCameraAuthorized) {
-            case true:
-                this.setState({
-                    cameraStatus: CameraAuthStatus.AUTHORIZED
-                });
-                break;
-            case false:
-                isUserAuthorizedCamera =
-                    await Camera.requestDeviceCameraAuthorization();
-                if (isUserAuthorizedCamera) {
+        // Camera permission for IOS
+        else {
+            const cameraPermission = PERMISSIONS.IOS.CAMERA;
+            const status = await check(cameraPermission);
+
+            if (status === RESULTS.GRANTED) {
+                this.setState({ cameraStatus: CameraAuthStatus.AUTHORIZED });
+            } else if (status === RESULTS.DENIED) {
+                const result = await request(cameraPermission);
+
+                if (result === RESULTS.GRANTED) {
                     this.setState({
                         cameraStatus: CameraAuthStatus.AUTHORIZED
                     });
@@ -164,23 +163,50 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                         cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
                     });
                 }
-                break;
-            case -1:
+            } else {
                 this.setState({
-                    cameraStatus: CameraAuthStatus.UNKNOWN
+                    cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
                 });
-                isUserAuthorizedCamera =
-                    await Camera.requestDeviceCameraAuthorization();
-                if (isUserAuthorizedCamera) {
-                    this.setState({
-                        cameraStatus: CameraAuthStatus.AUTHORIZED
-                    });
-                } else {
-                    this.setState({
-                        cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
-                    });
-                }
-                break;
+            }
+            // let isUserAuthorizedCamera;
+            // const isCameraAuthorized =
+            //     await Camera.checkDeviceCameraAuthorizationStatus();
+            // switch (isCameraAuthorized) {
+            //     case true:
+            //         this.setState({
+            //             cameraStatus: CameraAuthStatus.AUTHORIZED
+            //         });
+            //         break;
+            //     case false:
+            //         isUserAuthorizedCamera =
+            //             await Camera.requestDeviceCameraAuthorization();
+            //         if (isUserAuthorizedCamera) {
+            //             this.setState({
+            //                 cameraStatus: CameraAuthStatus.AUTHORIZED
+            //             });
+            //         } else {
+            //             this.setState({
+            //                 cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
+            //             });
+            //         }
+            //         break;
+            //     case -1:
+            //         this.setState({
+            //             cameraStatus: CameraAuthStatus.UNKNOWN
+            //         });
+            //         isUserAuthorizedCamera =
+            //             await Camera.requestDeviceCameraAuthorization();
+            //         if (isUserAuthorizedCamera) {
+            //             this.setState({
+            //                 cameraStatus: CameraAuthStatus.AUTHORIZED
+            //             });
+            //         } else {
+            //             this.setState({
+            //                 cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
+            //             });
+            //         }
+            //         break;
+            // }
         }
     }
 
