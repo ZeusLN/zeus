@@ -122,11 +122,11 @@ export default class Receive extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            addressType: settings.invoices.addressType || '1',
-            memo: settings.invoices.memo || '',
-            expiry: settings.invoices.expiry || '3600',
-            routeHints: settings.invoices.routeHints || false,
-            ampInvoice: settings.invoices.ampInvoice || false
+            addressType: settings?.invoices?.addressType || '1',
+            memo: settings?.invoices?.memo || '',
+            expiry: settings?.invoices?.expiry || '3600',
+            routeHints: settings?.invoices?.routeHints || false,
+            ampInvoice: settings?.invoices?.ampInvoice || false
         });
 
         const lnOnly =
