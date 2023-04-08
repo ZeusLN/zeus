@@ -1,8 +1,11 @@
+import { observer } from 'mobx-react';
 import React from 'react';
+import { SafeAreaView } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
 import { themeColor } from '../utils/ThemeUtils';
 
+@observer
 export default class Screen extends React.PureComponent {
     render() {
         return (
@@ -16,7 +19,9 @@ export default class Screen extends React.PureComponent {
                     flex: 1
                 }}
             >
-                {this.props.children}
+                <SafeAreaView style={{ flex: 1 }}>
+                    {this.props.children}
+                </SafeAreaView>
             </LinearGradient>
         );
     }

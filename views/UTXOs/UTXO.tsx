@@ -6,10 +6,10 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Amount from './../../components/Amount';
+import Header from '../../components/Header';
 import KeyValue from './../../components/KeyValue';
 import Screen from './../../components/Screen';
 
@@ -39,19 +39,10 @@ export default class UTXO extends React.Component<UTXOProps> {
         const amount = utxo.getAmount;
         const tx = utxo.txid || utxo.outpoint.txid_str;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('CoinControl')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('general.utxo'),
                         style: {
@@ -59,10 +50,7 @@ export default class UTXO extends React.Component<UTXOProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView style={styles.content}>
                     <View style={styles.center}>

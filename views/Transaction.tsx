@@ -8,11 +8,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Amount from '../components/Amount';
 import Button from '../components/Button';
+import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
 
@@ -97,19 +97,10 @@ export default class TransactionView extends React.Component<TransactionProps> {
             )
         );
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Transaction.title'),
                         style: {
@@ -117,10 +108,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <View style={styles.center}>
                     <Amount

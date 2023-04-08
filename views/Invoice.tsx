@@ -1,15 +1,15 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
-import Invoice from './../models/Invoice';
+import Invoice from '../models/Invoice';
 
-import Amount from './../components/Amount';
-import CollapsedQR from './../components/CollapsedQR';
-import KeyValue from './../components/KeyValue';
-import Screen from './../components/Screen';
+import Amount from '../components/Amount';
+import Header from '../components/Header';
+import CollapsedQR from '../components/CollapsedQR';
+import KeyValue from '../components/KeyValue';
+import Screen from '../components/Screen';
 
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
 interface InvoiceProps {
     navigation: any;
@@ -26,29 +26,19 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             getMemo,
             receipt,
             creation_date,
-            description_hash,
+            getDescriptionHash,
             payment_hash,
             getRPreimage,
             cltv_expiry,
             expirationDate,
-            payment_request,
-            bolt11
+            getPaymentRequest
         } = invoice;
         const privateInvoice = invoice.private;
-
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Invoice.title'),
                         style: {
@@ -56,10 +46,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView>
                     <View style={styles.center}>
@@ -74,13 +61,13 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     </View>
 
                     <View style={styles.content}>
-                        {getMemo && (
-                            <KeyValue
-                                keyValue={localeString('views.Invoice.memo')}
-                                value={getMemo}
-                                sensitive
-                            />
-                        )}
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.memo')}
+                            value={
+                                getMemo || localeString('models.Invoice.noMemo')
+                            }
+                            sensitive
+                        />
 
                         {!!receipt && (
                             <KeyValue
@@ -164,12 +151,12 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
-                        {!!description_hash && (
+                        {!!getDescriptionHash && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.descriptionHash'
                                 )}
-                                value={description_hash}
+                                value={getDescriptionHash}
                                 sensitive
                             />
                         )}
@@ -184,43 +171,24 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
-                        {!!payment_request && (
+                        {!!getPaymentRequest && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.paymentRequest'
                                 )}
-                                value={payment_request}
+                                value={getPaymentRequest}
                                 sensitive
                             />
                         )}
 
-                        {!!payment_request && (
+                        {!!getPaymentRequest && (
                             <CollapsedQR
-                                value={payment_request}
+                                value={getPaymentRequest}
                                 copyText={localeString(
                                     'views.Invoice.copyPaymentRequest'
                                 )}
                                 hideText
                             />
-                        )}
-
-                        {!!bolt11 && (
-                            <>
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Invoice.paymentRequest'
-                                    )}
-                                    value={bolt11}
-                                    sensitive
-                                />
-                                <CollapsedQR
-                                    value={bolt11}
-                                    copyText={localeString(
-                                        'views.Invoice.copyPaymentRequest'
-                                    )}
-                                    hideText
-                                />
-                            </>
                         )}
                     </View>
                 </ScrollView>

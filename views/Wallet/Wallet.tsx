@@ -240,9 +240,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         if (implementation === 'lndhub') {
-            await login({ login: username, password }).then(async () => {
-                BalanceStore.getLightningBalance(true);
-            });
+            if (connecting) {
+                await login({ login: username, password }).then(async () => {
+                    BalanceStore.getLightningBalance(true);
+                });
+            }
         } else if (implementation === 'lightning-node-connect') {
             let error;
             if (connecting) {
@@ -451,9 +453,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     : themeColor('text'),
                                 inactiveTintColor: error
                                     ? themeColor('error')
-                                    : BackendUtils.supportsChannelManagement()
-                                    ? 'gray'
-                                    : themeColor('secondaryText'),
+                                    : 'gray',
                                 showLabel: false
                             }}
                         >

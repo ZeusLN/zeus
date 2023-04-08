@@ -3,20 +3,20 @@ import * as React from 'react';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 
-import Button from './../components/Button';
-import LightningIndicator from './../components/LightningIndicator';
-import Screen from './../components/Screen';
+import Button from '../components/Button';
+import Header from '../components/Header';
+import LightningIndicator from '../components/LightningIndicator';
+import Screen from '../components/Screen';
 
-import ChannelsStore from './../stores/ChannelsStore';
-import NodeInfoStore from './../stores/NodeInfoStore';
+import ChannelsStore from '../stores/ChannelsStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
 
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
-import NodeUriUtils from './../utils/NodeUriUtils';
-import BackendUtils from './../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+import NodeUriUtils from '../utils/NodeUriUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 interface LnurlChannelProps {
     navigation: any;
@@ -182,19 +182,10 @@ export default class LnurlChannel extends React.Component<
         const { domain, privateChannel } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: 'Incoming Channel',
                         style: {
@@ -202,10 +193,7 @@ export default class LnurlChannel extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <View style={styles.content}>
                     <Text
