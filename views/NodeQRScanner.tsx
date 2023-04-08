@@ -26,14 +26,14 @@ function NodeQRScanner(props: NodeQRProps) {
                 { cancelable: false }
             );
 
-            navigation.navigate('OpenChannel');
+            navigation.goBack();
         }
     };
 
     return (
         <QRCodeScanner
             handleQRScanned={handleNodeScanned}
-            goBack={() => navigation.navigate('OpenChannel')}
+            goBack={() => navigation.goBack()}
             navigation={navigation}
         />
     );

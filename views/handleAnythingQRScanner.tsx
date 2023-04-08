@@ -45,7 +45,7 @@ export default class handleAnythingQRScanner extends React.Component<
                 if (route) {
                     navigation.navigate(route, props);
                 } else {
-                    navigation.navigate('Send');
+                    navigation.goBack();
                 }
             })
             .catch((err) => {
@@ -65,7 +65,7 @@ export default class handleAnythingQRScanner extends React.Component<
                     loading: false
                 });
 
-                navigation.navigate('Send');
+                navigation.goBack();
             });
     };
 
