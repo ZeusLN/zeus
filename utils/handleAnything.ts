@@ -278,7 +278,7 @@ const handleAnything = async (
         const raw: string = findlnurl(value) || lnurl || '';
         return getlnurlParams(raw).then((params: any) => {
             if (params.status === 'ERROR' && params.domain.endsWith('.onion')) {
-                // TODO handle fetching of params with Tor
+                // TODO handle fetching of params with internal Tor
                 throw new Error(`${params.domain} says: ${params.reason}`);
             }
 
