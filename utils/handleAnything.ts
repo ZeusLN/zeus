@@ -197,7 +197,7 @@ const handleAnything = async (
             'utils.handleAnything.lightningAddressError'
         );
         // handle Tor LN addresses
-        if (value.endsWith('.onion')) {
+        if (settingsStore.enableTor) {
             await doTorRequest(url, RequestMethod.GET)
                 .then((response: any) => {
                     return [
