@@ -21,21 +21,20 @@ import NfcManager, {
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
+import BalanceStore from '../stores/BalanceStore';
+import FiatStore from '../stores/FiatStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
-import TransactionsStore from '../stores/TransactionsStore';
-import BalanceStore from '../stores/BalanceStore';
-import UTXOsStore from '../stores/UTXOsStore';
 import SettingsStore from '../stores/SettingsStore';
-import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
-import FiatStore from '../stores/FiatStore';
+import TransactionsStore from '../stores/TransactionsStore';
+import UnitsStore from '../stores/UnitsStore';
+import UTXOsStore from '../stores/UTXOsStore';
 
 import Amount from '../components/Amount';
+import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
-import Conversion from '../components/Conversion';
-
-import Header from '../components/Header';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
+import Header from '../components/Header';
 import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
@@ -66,6 +65,7 @@ interface SendState {
     transactionType: string | null;
     destination: string;
     amount: string;
+    satAmount: string | number;
     fee: string;
     error_msg: string;
     utxos: Array<string>;
@@ -109,6 +109,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType,
             destination: destination || '',
             amount: amount || '',
+            satAmount: '',
             fee: '2',
             utxos: [],
             utxoBalance: 0,
@@ -365,6 +366,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType,
             destination,
             amount,
+            satAmount,
             fee,
             confirmationTarget,
             utxoBalance,
@@ -381,33 +383,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { fiat, privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates, getSymbol } = FiatStore;
-
-        const fiatEntry =
-            fiat && fiatRates && fiatRates.filter
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
-
-        const rate =
-            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
-                ? fiatEntry.rate
-                : 0;
-
-        let satAmount: string | number;
-        switch (units) {
-            case 'sats':
-                satAmount = amount;
-                break;
-            case 'BTC':
-                satAmount = Number(amount) * SATS_PER_BTC;
-                break;
-            case 'fiat':
-                satAmount = Number(
-                    (Number(amount.replace(/,/g, '.')) / Number(rate)) *
-                        Number(SATS_PER_BTC)
-                ).toFixed(0);
-                break;
-        }
+        const { getSymbol } = FiatStore;
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
@@ -504,42 +480,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
-                                <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text
-                                        style={{
-                                            ...styles.secondaryText,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString('views.Send.amount')}
-                                    </Text>
-                                </TouchableOpacity>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    value={amount}
-                                    onChangeText={(text: string) =>
-                                        this.setState({ amount: text })
-                                    }
-                                    style={styles.textInput}
-                                    prefix={
-                                        units !== 'sats' &&
-                                        (units === 'BTC'
-                                            ? '₿'
-                                            : !getSymbol().rtl
-                                            ? getSymbol().symbol
-                                            : null)
-                                    }
-                                    suffix={
-                                        units === 'sats'
-                                            ? units
-                                            : getSymbol().rtl &&
-                                              units === 'fiat' &&
-                                              getSymbol().symbol
-                                    }
-                                    toggleUnits={changeUnits}
+                                <AmountInput
+                                    amount={amount}
+                                    title={localeString('views.Send.amount')}
+                                    onAmountChange={(
+                                        amount: string,
+                                        satAmount: string | number
+                                    ) => {
+                                        this.setState({
+                                            amount,
+                                            satAmount
+                                        });
+                                    }}
+                                    hideConversion={amount === 'all'}
                                 />
+
                                 <View style={{ paddingBottom: 15 }}>
-                                    <Conversion amount={amount} />
                                     {amount === 'all' && (
                                         <>
                                             <Amount
@@ -549,7 +505,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                         : confirmedBlockchainBalance
                                                 }
                                                 fixedUnits="BTC"
-                                                toggleable
                                             />
                                             <Amount
                                                 sats={
@@ -558,7 +513,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                         : confirmedBlockchainBalance
                                                 }
                                                 fixedUnits="sats"
-                                                toggleable
                                             />
                                         </>
                                     )}
