@@ -1,20 +1,21 @@
 import * as React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { Button, Header, Icon, ListItem } from 'react-native-elements';
+import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { isEqual } from 'lodash';
 
 import DatePicker from 'react-native-date-picker';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import ActivityStore, { DEFAULT_FILTERS } from './../../stores/ActivityStore';
+import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
 
-import Screen from './../../components/Screen';
-import Switch from './../../components/Switch';
-import TextInput from './../../components/TextInput';
-import ZeusButton from './../../components/Button';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
+import ZeusButton from '../../components/Button';
 
 interface ActivityFilterProps {
     navigation: any;
@@ -74,17 +75,6 @@ export default class ActivityFilter extends React.Component<
             startDate,
             endDate
         } = filters;
-
-        const CloseButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() =>
-                    navigation.navigate('Activity', { refresh: true })
-                }
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         const DateFilter = () => (
             <View
@@ -284,7 +274,7 @@ export default class ActivityFilter extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={<CloseButton />}
+                    leftComponent="Close"
                     centerComponent={{
                         text: localeString('views.ActivityFilter.title'),
                         style: {
@@ -297,10 +287,7 @@ export default class ActivityFilter extends React.Component<
                             <ClearButton />
                         )
                     }
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <FlatList
                     data={FILTERS}

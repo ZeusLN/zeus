@@ -48,17 +48,17 @@ export function ChannelsHeader(props) {
         >
             <TotalRow
                 kind="outbound"
-                amount={totalOutbound}
+                amount={totalOutbound.toFixed(3)}
                 color={themeColor('outbound')}
             />
             <TotalRow
                 kind="inbound"
-                amount={totalInbound}
+                amount={totalInbound.toFixed(3)}
                 color={themeColor('inbound')}
             />
             <TotalRow
                 kind="offline"
-                amount={totalOffline}
+                amount={totalOffline.toFixed(3)}
                 color={themeColor('secondaryText')}
             />
         </View>

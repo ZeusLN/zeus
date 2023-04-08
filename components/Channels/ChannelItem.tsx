@@ -21,14 +21,20 @@ export function ChannelItem({
     outbound,
     largestTotal,
     status,
-    pendingTimelock
+    pendingTimelock,
+    noBorder,
+    hideLabels,
+    selected
 }: {
-    title: string;
+    title?: string;
     inbound: number;
     outbound: number;
     largestTotal?: number;
-    status: Status;
+    status?: Status;
     pendingTimelock?: String;
+    noBorder?: boolean;
+    hideLabels?: boolean;
+    selected?: boolean;
 }) {
     const { settings } = Stores.settingsStore;
     const { privacy } = settings;
@@ -48,13 +54,17 @@ export function ChannelItem({
                 padding: 16,
                 justifyContent: 'space-around',
                 borderBottomColor: themeColor('secondary'),
-                borderBottomWidth: 1
+                borderBottomWidth: noBorder ? 0 : 1
             }}
         >
             <Row justify="space-between">
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                    <Body>{PrivacyUtils.sensitiveValue(title)}</Body>
-                </View>
+                {title && (
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                        <Body color={selected ? 'highlight' : 'text'}>
+                            {PrivacyUtils.sensitiveValue(title)}
+                        </Body>
+                    </View>
+                )}
                 {pendingTimelock ? (
                     <View style={{ flexDirection: 'row', marginRight: 5 }}>
                         <ClockIcon
@@ -66,7 +76,7 @@ export function ChannelItem({
                         <Body small={true}>{pendingTimelock}</Body>
                     </View>
                 ) : null}
-                <Tag status={status} />
+                {status && <Tag status={status} />}
             </Row>
             {inbound && outbound && (
                 <Row style={{ marginTop: 15, marginBottom: 15 }}>
@@ -79,10 +89,12 @@ export function ChannelItem({
                     />
                 </Row>
             )}
-            <Row justify="space-between">
-                <Amount sats={outbound} sensitive />
-                <Amount sats={inbound} sensitive />
-            </Row>
+            {!hideLabels && (
+                <Row justify="space-between">
+                    <Amount sats={outbound} sensitive />
+                    <Amount sats={inbound} sensitive />
+                </Row>
+            )}
         </View>
     );
 }

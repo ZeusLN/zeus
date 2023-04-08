@@ -5,9 +5,10 @@ import { inject, observer } from 'mobx-react';
 import Amount from '../components/Amount';
 
 import { Row } from '../components/layout/Row';
+import { getSatAmount } from '../components/AmountInput';
 
 import FiatStore from '../stores/UnitsStore';
-import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import UnitsStore from '../stores/UnitsStore';
 import SettingsStore, { DEFAULT_FIAT } from '../stores/SettingsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -59,38 +60,13 @@ export default class Conversion extends React.Component<
         const { settings } = SettingsStore;
         const { fiat } = settings;
 
-        const { fiatRates, getRate }: any = FiatStore;
-
-        // calculate fiat rate
-        const fiatEntry =
-            fiat && fiatRates && fiatRates.filter
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
-
-        const rate =
-            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
-                ? fiatEntry.rate
-                : 0;
+        const { getRate }: any = FiatStore;
 
         let satAmount: string | number;
-        if (amount) {
-            const amountStr = amount.toString();
-            switch (units) {
-                case 'sats':
-                    satAmount = amountStr;
-                    break;
-                case 'BTC':
-                    satAmount = Number(amountStr) * SATS_PER_BTC;
-                    break;
-                case 'fiat':
-                    satAmount = Number(
-                        (Number(amountStr.replace(/,/g, '.')) / Number(rate)) *
-                            Number(SATS_PER_BTC)
-                    ).toFixed(0);
-                    break;
-            }
-        } else if (sats) {
+        if (sats) {
             satAmount = sats;
+        } else {
+            satAmount = getSatAmount(amount);
         }
 
         if (!fiat || fiat === DEFAULT_FIAT || (!amount && !sats)) return;

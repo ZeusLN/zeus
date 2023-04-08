@@ -1,19 +1,19 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Amount from './../components/Amount';
-import KeyValue from './../components/KeyValue';
-import Screen from './../components/Screen';
+import Amount from '../components/Amount';
+import Header from '../components/Header';
+import KeyValue from '../components/KeyValue';
+import Screen from '../components/Screen';
 
-import Payment from './../models/Payment';
-import PrivacyUtils from './../utils/PrivacyUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import Payment from '../models/Payment';
+import PrivacyUtils from '../utils/PrivacyUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-import SettingsStore from './../stores/SettingsStore';
-import LnurlPayStore from './../stores/LnurlPayStore';
+import SettingsStore from '../stores/SettingsStore';
+import LnurlPayStore from '../stores/LnurlPayStore';
 import LnurlPayHistorical from './LnurlPay/Historical';
 
 interface PaymentProps {
@@ -55,21 +55,12 @@ export default class PaymentView extends React.Component<PaymentProps> {
         } = payment;
         const date = getDisplayTime;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const lnurlpaytx = this.state.lnurlpaytx;
 
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Payment.title'),
                         style: {
@@ -77,10 +68,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView>
                     <View style={styles.center}>
@@ -137,21 +125,25 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             />
                         )}
 
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Payment.paymentPreimage'
-                            )}
-                            value={getPreimage}
-                            sensitive
-                        />
+                        {getPreimage && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.paymentPreimage'
+                                )}
+                                value={getPreimage}
+                                sensitive
+                            />
+                        )}
 
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Payment.creationDate'
-                            )}
-                            value={date}
-                            sensitive
-                        />
+                        {date && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.creationDate'
+                                )}
+                                value={date}
+                                sensitive
+                            />
+                        )}
 
                         {enhancedPath.length > 0 && (
                             <KeyValue

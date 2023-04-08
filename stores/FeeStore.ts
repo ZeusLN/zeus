@@ -2,11 +2,12 @@ import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
-import BackendUtils from './../utils/BackendUtils';
-import Base64Utils from './../utils/Base64Utils';
-import ForwardEvent from './../models/ForwardEvent';
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
+
+import BackendUtils from '../utils/BackendUtils';
+import Base64Utils from '../utils/Base64Utils';
+import ForwardEvent from '../models/ForwardEvent';
 
 export default class FeeStore {
     @observable public fees: any = {};
@@ -274,6 +275,7 @@ export default class FeeStore {
                             this.loading = false;
                         });
                 } else {
+                    this.bumpFeeError = true;
                     this.bumpFeeErrorMsg = err.toString();
                     this.loading = false;
                 }

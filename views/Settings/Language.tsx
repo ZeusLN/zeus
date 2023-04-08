@@ -1,14 +1,15 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
+import { Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Screen from './../../components/Screen';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
 
-import SettingsStore, { LOCALE_KEYS } from './../../stores/SettingsStore';
+import SettingsStore, { LOCALE_KEYS } from '../../stores/SettingsStore';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LanguageProps {
     navigation: any;
@@ -67,28 +68,16 @@ export default class Language extends React.Component<
         const { locales, selectedLocale, search } = this.state;
         const { updateSettings }: any = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
-                        leftComponent={<BackButton />}
+                        leftComponent="Back"
                         centerComponent={{
                             text: localeString('views.Settings.Language.title'),
                             style: { color: themeColor('text') }
                         }}
-                        backgroundColor="transparent"
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
+                        navigation={navigation}
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}

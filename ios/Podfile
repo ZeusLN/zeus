@@ -18,6 +18,8 @@ target 'zeus' do
 
   pod 'react-native-blob-util', :path => '../node_modules/react-native-blob-util'
 
+  pod 'ReactNativeCameraKit', :path => '../node_modules/react-native-camera-kit'
+
   target 'zeusTests' do
     inherit! :complete
     # Pods for testing

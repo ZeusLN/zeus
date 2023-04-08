@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Header } from 'react-native-elements';
+import { Badge } from 'react-native-elements';
 import { Image, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -10,11 +10,13 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 
 import Button from '../components/Button';
+import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
 import { isClipboardValue } from '../utils/handleAnything';
 import { localeString } from '../utils/LocaleUtils';
+import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
@@ -282,7 +284,9 @@ export default class WalletHeader extends React.Component<
                     ) : settings.display && settings.display.displayNickname ? (
                         <View style={{ top: 5 }}>
                             <Row>
-                                <Body>{displayName}</Body>
+                                <Body>
+                                    {PrivacyUtils.sensitiveValue(displayName)}
+                                </Body>
                                 <NetworkBadge />
                                 <TorBadge />
                             </Row>
@@ -339,10 +343,6 @@ export default class WalletHeader extends React.Component<
                         </View>
                     )
                 }
-                backgroundColor="transparent"
-                containerStyle={{
-                    borderBottomWidth: 0
-                }}
             />
         );
     }

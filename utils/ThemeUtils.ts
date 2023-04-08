@@ -203,7 +203,7 @@ export function themeColor(themeString: string): any {
             '#582688'
         ],
         generalStyle: 'dark',
-        background: '#000',
+        background: '#582688',
         secondary: '#141414',
         separator: '#141414'
     };
@@ -227,7 +227,8 @@ export function themeColor(themeString: string): any {
         generalStyle: 'dark',
         background: '#FF6200',
         secondary: '#141414',
-        separator: '#141414'
+        separator: '#141414',
+        secondaryText: '#FFFFFF'
     };
 
     const Mint: { [key: string]: any } = {
@@ -241,17 +242,30 @@ export function themeColor(themeString: string): any {
         ],
         generalStyle: 'dark',
         background: '#46B48A',
-        secondary: '#141414',
         secondaryText: '#FFFDF2',
-        separator: '#141414'
+        separator: '#141414',
+        highlight: '#fff',
+        bolt: '#fff',
+        chain: '#fff'
     };
 
     const RedMetallic: { [key: string]: any } = {
         gradientBackground: ['#961E1E', '#A72F2F', '#B94A4A'],
         generalStyle: 'dark',
-        background: '#961E1E',
+        background: '#B94A4A',
         secondary: '#141414',
         separator: '#141414'
+    };
+
+    const Watermelon: { [key: string]: any } = {
+        gradientBackground: ['#FF5C98', 'green'],
+        generalStyle: 'dark',
+        background: 'green',
+        separator: '#141414',
+        highlight: '#fff',
+        bolt: '#fff',
+        chain: '#fff',
+        secondaryText: 'lightgray'
     };
 
     switch (theme) {
@@ -293,6 +307,8 @@ export function themeColor(themeString: string): any {
             return Mint[themeString] || Dark[themeString];
         case 'red-metallic':
             return RedMetallic[themeString] || Dark[themeString];
+        case 'watermelon':
+            return Watermelon[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }

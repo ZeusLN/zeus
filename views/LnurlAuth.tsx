@@ -3,24 +3,24 @@ import * as React from 'react';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 import { HMAC as sha256HMAC } from 'fast-sha256';
 
-import Button from './../components/Button';
-import LightningIndicator from './../components/LightningIndicator';
-import Screen from './../components/Screen';
+import Button from '../components/Button';
+import Header from '../components/Header';
+import LightningIndicator from '../components/LightningIndicator';
+import Screen from '../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
-} from './../components/SuccessErrorMessage';
+} from '../components/SuccessErrorMessage';
 
-import { themeColor } from './../utils/ThemeUtils';
-import { localeString } from './../utils/LocaleUtils';
-import BackendUtils from './../utils/BackendUtils';
-import Base64Utils from './../utils/Base64Utils';
-import DropdownSetting from './../components/DropdownSetting';
-import SettingsStore, { LNDHUB_AUTH_MODES } from './../stores/SettingsStore';
+import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import BackendUtils from '../utils/BackendUtils';
+import Base64Utils from '../utils/Base64Utils';
+import DropdownSetting from '../components/DropdownSetting';
+import SettingsStore, { LNDHUB_AUTH_MODES } from '../stores/SettingsStore';
 
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
@@ -235,15 +235,6 @@ export default class LnurlAuth extends React.Component<
             chooseAuthMode
         } = this.state;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const LndHubAuthMode = () => (
             <DropdownSetting
                 title={localeString('views.LnurlAuth.lndHubAuthMode')}
@@ -264,7 +255,7 @@ export default class LnurlAuth extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: 'Authentication Request',
                         style: {
@@ -272,10 +263,7 @@ export default class LnurlAuth extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <View style={styles.content}>
                     <Text
