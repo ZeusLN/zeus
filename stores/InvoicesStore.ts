@@ -111,6 +111,7 @@ export default class InvoicesStore {
         routeHints?: boolean,
         addressType?: string
     ) => {
+        this.creatingInvoice = true;
         return this.createInvoice(
             memo,
             value,
@@ -127,7 +128,6 @@ export default class InvoicesStore {
                 rHash: string;
                 paymentRequest: string;
             }) => {
-                this.creatingInvoice = true;
                 if (BackendUtils.supportsOnchainReceiving()) {
                     return this.getNewAddress(
                         addressType
@@ -207,7 +207,7 @@ export default class InvoicesStore {
                     const u = url.parse(lnurl.callback);
                     const qs = querystring.parse(u.query);
                     qs.k1 = lnurl.k1;
-                    qs.pr = this.payment_request;
+                    qs.pr = invoice.getPaymentRequest;
                     u.search = querystring.stringify(qs);
                     u.query = querystring.stringify(qs);
 

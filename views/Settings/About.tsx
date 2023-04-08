@@ -1,8 +1,12 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { Icon, ListItem } from 'react-native-elements';
+
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface AboutProps {
     navigation: any;
@@ -20,29 +24,15 @@ function About(props: AboutProps) {
         />
     );
 
-    const BackButton = () => (
-        <Icon
-            name="arrow-back"
-            onPress={() => navigation.goBack()}
-            color={themeColor('text')}
-            underlayColor="transparent"
-        />
-    );
-
     const ABOUT_ITEMS = [
         { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         { label: localeString('general.help'), path: 'Help' }
     ];
 
     return (
-        <View
-            style={{
-                flex: 1,
-                backgroundColor: themeColor('background')
-            }}
-        >
+        <Screen>
             <Header
-                leftComponent={<BackButton />}
+                leftComponent="Back"
                 centerComponent={{
                     text: localeString('general.about'),
                     style: {
@@ -50,10 +40,7 @@ function About(props: AboutProps) {
                         fontFamily: 'Lato-Regular'
                     }
                 }}
-                backgroundColor={themeColor('background')}
-                containerStyle={{
-                    borderBottomWidth: 0
-                }}
+                navigation={navigation}
             />
             <FlatList
                 data={ABOUT_ITEMS}
@@ -61,7 +48,7 @@ function About(props: AboutProps) {
                     <ListItem
                         containerStyle={{
                             borderBottomWidth: 0,
-                            backgroundColor: themeColor('background')
+                            backgroundColor: 'transparent'
                         }}
                         onPress={() => navigation.navigate(item.path)}
                     >
@@ -84,7 +71,7 @@ function About(props: AboutProps) {
                 keyExtractor={(item, index) => `${item.label}-${index}`}
                 ItemSeparatorComponent={renderSeparator}
             />
-        </View>
+        </Screen>
     );
 }
 

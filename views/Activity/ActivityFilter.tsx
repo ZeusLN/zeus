@@ -1,17 +1,21 @@
 import * as React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { Button, Header, Icon, ListItem } from 'react-native-elements';
+import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { isEqual } from 'lodash';
 
 import DatePicker from 'react-native-date-picker';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import ActivityStore from './../../stores/ActivityStore';
+import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
 
-import Switch from './../../components/Switch';
-import TextInput from './../../components/TextInput';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
+import ZeusButton from '../../components/Button';
 
 interface ActivityFilterProps {
     navigation: any;
@@ -64,24 +68,13 @@ export default class ActivityFilter extends React.Component<
         const {
             lightning,
             onChain,
-            channels,
             sent,
             received,
+            unpaid,
             minimumAmount,
             startDate,
             endDate
         } = filters;
-
-        const CloseButton = () => (
-            <Icon
-                name="close"
-                onPress={() =>
-                    navigation.navigate('Activity', { refresh: true })
-                }
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         const DateFilter = () => (
             <View
@@ -182,9 +175,15 @@ export default class ActivityFilter extends React.Component<
                             maximumDate={new Date()}
                             textColor={themeColor('text')}
                             mode="date"
+                            style={{
+                                height: 100,
+                                marginTop: 10,
+                                marginBottom: 20,
+                                alignSelf: 'center'
+                            }}
                         />
                         <View style={{ padding: 2 }}>
-                            <Button
+                            <ZeusButton
                                 onPress={() => {
                                     if (setStartDate) {
                                         setStartDateFilter(workingStartDate);
@@ -198,7 +197,6 @@ export default class ActivityFilter extends React.Component<
                                         workingEndDate: new Date()
                                     });
                                 }}
-                                buttonStyle={{ backgroundColor: 'orange' }}
                                 title={
                                     setStartDate
                                         ? localeString(
@@ -229,12 +227,6 @@ export default class ActivityFilter extends React.Component<
                 type: 'Toggle'
             },
             {
-                label: localeString('views.Wallet.Wallet.channels'),
-                value: channels,
-                var: 'channels',
-                type: 'Toggle'
-            },
-            {
                 label: localeString('general.sent'),
                 value: sent,
                 var: 'sent',
@@ -244,6 +236,12 @@ export default class ActivityFilter extends React.Component<
                 label: localeString('general.received'),
                 value: received,
                 var: 'received',
+                type: 'Toggle'
+            },
+            {
+                label: localeString('views.Wallet.Invoices.unpaid'),
+                value: unpaid,
+                var: 'unpaid',
                 type: 'Toggle'
             },
             {
@@ -264,16 +262,19 @@ export default class ActivityFilter extends React.Component<
             }
         ];
 
+        const ClearButton = () => (
+            <Icon
+                name="cancel"
+                onPress={async () => await ActivityStore.resetFilters()}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<CloseButton />}
+                    leftComponent="Close"
                     centerComponent={{
                         text: localeString('views.ActivityFilter.title'),
                         style: {
@@ -281,10 +282,12 @@ export default class ActivityFilter extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    rightComponent={
+                        isEqual(filters, DEFAULT_FILTERS) ? null : (
+                            <ClearButton />
+                        )
+                    }
+                    navigation={navigation}
                 />
                 <FlatList
                     data={FILTERS}
@@ -293,7 +296,7 @@ export default class ActivityFilter extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
+                                    backgroundColor: 'transparent'
                                 }}
                             >
                                 <ListItem.Title
@@ -314,12 +317,12 @@ export default class ActivityFilter extends React.Component<
                                     >
                                         <Switch
                                             value={item.value}
-                                            onValueChange={() => {
+                                            onValueChange={async () => {
                                                 const newFilters: any = filters;
                                                 const index = `${item.var}`;
                                                 newFilters[index] =
                                                     !filters[index];
-                                                setFilters(newFilters);
+                                                await setFilters(newFilters);
                                             }}
                                         />
                                     </View>
@@ -369,7 +372,7 @@ export default class ActivityFilter extends React.Component<
                     onEndReachedThreshold={50}
                     refreshing={loading}
                 />
-            </View>
+            </Screen>
         );
     }
 }

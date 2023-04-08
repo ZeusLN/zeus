@@ -1,24 +1,26 @@
 import * as React from 'react';
 import { FlatList, ScrollView, Text, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import DropdownSetting from './../../components/DropdownSetting';
+import DropdownSetting from '../../components/DropdownSetting';
+import Header from '../../components/Header';
 import {
     ErrorMessage,
     WarningMessage
-} from './../../components/SuccessErrorMessage';
-import Switch from './../../components/Switch';
-import TextInput from './../../components/TextInput';
+} from '../../components/SuccessErrorMessage';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
 
 import SettingsStore, {
     DEFAULT_FIAT,
     POS_CONF_PREF_KEYS
-} from './../../stores/SettingsStore';
+} from '../../stores/SettingsStore';
 
 interface PointOfSaleProps {
     navigation: any;
@@ -102,28 +104,10 @@ export default class PointOfSale extends React.Component<
             }
         ];
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() =>
-                    navigation.navigate('Settings', {
-                        refresh: true
-                    })
-                }
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('general.pos'),
                         style: {
@@ -131,10 +115,7 @@ export default class PointOfSale extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 {fiat === DEFAULT_FIAT ? (
                     <View style={{ flex: 1, padding: 15 }}>
@@ -164,7 +145,7 @@ export default class PointOfSale extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
+                                    backgroundColor: 'transparent'
                                 }}
                             >
                                 <ListItem.Title
@@ -471,7 +452,7 @@ export default class PointOfSale extends React.Component<
                         )}
                     </ScrollView>
                 )}
-            </View>
+            </Screen>
         );
     }
 }

@@ -1,16 +1,18 @@
 import * as React from 'react';
-import { Dimensions, FlatList, Text, View } from 'react-native';
-import { Avatar, Header, Icon, ListItem } from 'react-native-elements';
+import { Dimensions, FlatList, Text } from 'react-native';
+import { Avatar, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../../components/Button';
-import LoadingIndicator from './../../components/LoadingIndicator';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
-import UrlUtils from './../../utils/UrlUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
-import SettingsStore from './../../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 interface OlympiansProps {
     navigation: any;
@@ -28,24 +30,10 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
         const { navigation, SettingsStore } = this.props;
         const { sponsorsError, olympians, loading } = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Olympians.title'),
                         style: {
@@ -53,10 +41,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 {loading && <LoadingIndicator />}
                 {!loading && !sponsorsError && (
@@ -66,8 +51,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                             renderItem={({ item }) => (
                                 <ListItem
                                     containerStyle={{
-                                        backgroundColor:
-                                            themeColor('background'),
+                                        backgroundColor: 'transparent',
                                         padding: 0
                                     }}
                                     onPress={() =>
@@ -127,7 +111,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                         {sponsorsError}
                     </Text>
                 )}
-            </View>
+            </Screen>
         );
     }
 }

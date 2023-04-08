@@ -5,31 +5,38 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    View
+    View,
+    TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Header, Icon } from 'react-native-elements';
+import { Icon } from 'react-native-elements';
 
-import Amount from './../components/Amount';
-import Button from './../components/Button';
-import HopPicker from './../components/HopPicker';
-import KeyValue from './../components/KeyValue';
-import LoadingIndicator from './../components/LoadingIndicator';
-import Switch from './../components/Switch';
-import TextInput from './../components/TextInput';
+import Amount from '../components/Amount';
+import AmountInput from '../components/AmountInput';
+import Button from '../components/Button';
+import Header from '../components/Header';
+import HopPicker from '../components/HopPicker';
+import KeyValue from '../components/KeyValue';
+import LoadingIndicator from '../components/LoadingIndicator';
+import Screen from '../components/Screen';
+import Switch from '../components/Switch';
+import TextInput from '../components/TextInput';
 
-import InvoicesStore from './../stores/InvoicesStore';
-import TransactionsStore, {
-    SendPaymentReq
-} from './../stores/TransactionsStore';
-import UnitsStore from './../stores/UnitsStore';
-import ChannelsStore from './../stores/ChannelsStore';
-import SettingsStore from './../stores/SettingsStore';
+import ChannelsStore from '../stores/ChannelsStore';
+import InvoicesStore from '../stores/InvoicesStore';
+import TransactionsStore, { SendPaymentReq } from '../stores/TransactionsStore';
+import UnitsStore from '../stores/UnitsStore';
+import SettingsStore from '../stores/SettingsStore';
 
-import FeeUtils from './../utils/FeeUtils';
-import { localeString } from './../utils/LocaleUtils';
-import BackendUtils from './../utils/BackendUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import FeeUtils from '../utils/FeeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import BackendUtils from '../utils/BackendUtils';
+import { themeColor } from '../utils/ThemeUtils';
+
+import { Row } from '../components/layout/Row';
+
+import CaretDown from '../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -43,6 +50,7 @@ interface InvoiceProps {
 
 interface InvoiceState {
     customAmount: string;
+    satAmount: string | number;
     enableMultiPathPayment: boolean;
     enableAtomicMultiPathPayment: boolean;
     maxParts: string;
@@ -52,6 +60,7 @@ interface InvoiceState {
     maxFeePercent: string;
     outgoingChanId: string | null;
     lastHopPubkey: string | null;
+    settingsToggle: boolean;
 }
 
 @inject(
@@ -69,6 +78,7 @@ export default class PaymentRequest extends React.Component<
     listener: any;
     state = {
         customAmount: '',
+        satAmount: '',
         enableMultiPathPayment: true,
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
@@ -77,7 +87,8 @@ export default class PaymentRequest extends React.Component<
         feeOption: 'fixed',
         maxFeePercent: '0.5',
         outgoingChanId: null,
-        lastHopPubkey: null
+        lastHopPubkey: null,
+        settingsToggle: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -211,7 +222,9 @@ export default class PaymentRequest extends React.Component<
             maxFeePercent,
             outgoingChanId,
             lastHopPubkey,
-            customAmount
+            customAmount,
+            satAmount,
+            settingsToggle
         } = this.state;
         const {
             pay_req,
@@ -283,14 +296,9 @@ export default class PaymentRequest extends React.Component<
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent={BackButton}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: {
@@ -298,14 +306,10 @@ export default class PaymentRequest extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
                 />
 
                 {(loading || loadingFeeEstimate) && (
-                    <View style={{ top: 40 }}>
+                    <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />
                     </View>
                 )}
@@ -327,47 +331,33 @@ export default class PaymentRequest extends React.Component<
 
                     {!loading && !loadingFeeEstimate && !!pay_req && (
                         <View style={styles.content}>
-                            <View style={styles.center}>
+                            <>
                                 {isNoAmountInvoice ? (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.PaymentRequest.customAmt'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            placeholder={
-                                                requestAmount
-                                                    ? requestAmount.toString()
-                                                    : '0'
-                                            }
-                                            value={customAmount}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    customAmount: text
-                                                })
-                                            }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
-                                        />
-                                    </>
-                                ) : (
-                                    <Amount
-                                        sats={requestAmount}
-                                        jumboText
-                                        toggleable
+                                    <AmountInput
+                                        amount={customAmount}
+                                        title={localeString(
+                                            'views.PaymentRequest.customAmt'
+                                        )}
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                customAmount: amount,
+                                                satAmount
+                                            });
+                                        }}
                                     />
+                                ) : (
+                                    <View style={styles.center}>
+                                        <Amount
+                                            sats={requestAmount}
+                                            jumboText
+                                            toggleable
+                                        />
+                                    </View>
                                 )}
-                            </View>
+                            </>
 
                             {!!description && (
                                 <KeyValue
@@ -446,338 +436,417 @@ export default class PaymentRequest extends React.Component<
                                 />
                             )}
 
-                            {isLnd && (
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.PaymentRequest.feeLimit'
-                                        )} (${localeString(
-                                            'general.optional'
-                                        )})`}
-                                    </Text>
-                                    {this.displayFeeRecommendation()}
+                            {(isLnd || isCLightning) && (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        this.setState({
+                                            settingsToggle: !settingsToggle
+                                        });
+                                    }}
+                                >
                                     <View
                                         style={{
-                                            flex: 1,
-                                            flexWrap: 'wrap',
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end',
-                                            opacity:
-                                                feeOption == 'percent'
-                                                    ? 1
-                                                    : 0.25
+                                            marginTop: 10,
+                                            marginBottom: 10
                                         }}
                                     >
-                                        <Text
-                                            style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            <Amount sats={percentAmount} />
-                                        </Text>
+                                        <Row justify="space-between">
+                                            <View style={{ width: '95%' }}>
+                                                <KeyValue
+                                                    keyValue={localeString(
+                                                        'views.Settings.title'
+                                                    )}
+                                                />
+                                            </View>
+                                            {settingsToggle ? (
+                                                <CaretDown
+                                                    fill={themeColor('text')}
+                                                    width="20"
+                                                    height="20"
+                                                />
+                                            ) : (
+                                                <CaretRight
+                                                    fill={themeColor('text')}
+                                                    width="20"
+                                                    height="20"
+                                                />
+                                            )}
+                                        </Row>
                                     </View>
-                                    <View
-                                        style={{
-                                            flexDirection: 'row',
-                                            width: '95%'
-                                        }}
-                                    >
-                                        <TextInput
-                                            style={{
-                                                width: '50%',
-                                                opacity:
-                                                    feeOption == 'fixed'
-                                                        ? 1
-                                                        : 0.25
-                                            }}
-                                            keyboardType="numeric"
-                                            value={feeLimitSat}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    feeLimitSat: text
-                                                })
-                                            }
-                                            onPressIn={() =>
-                                                this.setState({
-                                                    feeOption: 'fixed'
-                                                })
-                                            }
-                                        />
-                                        <Text
-                                            style={{
-                                                ...styles.label,
-                                                color: themeColor('text'),
-                                                top: 28,
-                                                right: 30,
-                                                opacity:
-                                                    feeOption == 'fixed'
-                                                        ? 1
-                                                        : 0.25
-                                            }}
-                                        >
-                                            {`${localeString('general.sats')}`}
-                                        </Text>
-                                        <TextInput
-                                            style={{
-                                                width: '50%',
-                                                opacity:
-                                                    feeOption == 'percent'
-                                                        ? 1
-                                                        : 0.25
-                                            }}
-                                            keyboardType="numeric"
-                                            value={maxFeePercent}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    maxFeePercent: text
-                                                })
-                                            }
-                                            onPressIn={() =>
-                                                this.setState({
-                                                    feeOption: 'percent'
-                                                })
-                                            }
-                                        />
-                                        <Text
-                                            style={{
-                                                ...styles.label,
-                                                color: themeColor('text'),
-                                                top: 28,
-                                                right: 18,
-                                                opacity:
-                                                    feeOption == 'percent'
-                                                        ? 1
-                                                        : 0.25
-                                            }}
-                                        >
-                                            {'%'}
-                                        </Text>
-                                    </View>
-                                </>
+                                </TouchableOpacity>
                             )}
 
-                            {isCLightning && (
+                            {settingsToggle && (
                                 <>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.PaymentRequest.feeLimit'
-                                        )} (${localeString(
-                                            'general.percentage'
-                                        )})`}
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={'0.5'}
-                                        value={maxFeePercent}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                maxFeePercent: text
-                                            })
-                                        }
-                                    />
-                                </>
-                            )}
-
-                            {!!pay_req && BackendUtils.supportsHopPicking() && (
-                                <>
-                                    {
-                                        <HopPicker
-                                            onValueChange={(item: any) =>
-                                                this.setState({
-                                                    outgoingChanId: item
-                                                        ? item.channelId
-                                                        : null
-                                                })
-                                            }
-                                            title={localeString(
-                                                'views.PaymentRequest.firstHop'
-                                            )}
-                                            ChannelsStore={ChannelsStore}
-                                            UnitsStore={UnitsStore}
-                                        />
-                                    }
-                                    {
-                                        <HopPicker
-                                            onValueChange={(item: any) =>
-                                                this.setState({
-                                                    lastHopPubkey: item
-                                                        ? item.remote_pubkey
-                                                        : null
-                                                })
-                                            }
-                                            title={localeString(
-                                                'views.PaymentRequest.lastHop'
-                                            )}
-                                            ChannelsStore={ChannelsStore}
-                                            UnitsStore={UnitsStore}
-                                        />
-                                    }
-                                </>
-                            )}
-
-                            {!!pay_req &&
-                                BackendUtils.supportsMPP() &&
-                                !enableTor && (
-                                    <React.Fragment>
-                                        <Text
-                                            style={{
-                                                ...styles.label,
-                                                color: themeColor('text'),
-                                                top: 25
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.PaymentRequest.mpp'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
-                                            }}
-                                        >
-                                            <Switch
-                                                value={enableMultiPathPayment}
-                                                onValueChange={() => {
-                                                    const enable =
-                                                        !enableMultiPathPayment;
-                                                    this.setState({
-                                                        enableMultiPathPayment:
-                                                            enable,
-                                                        enableAtomicMultiPathPayment:
-                                                            enableMultiPathPayment
-                                                                ? false
-                                                                : true
-                                                    });
+                                    {isLnd && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor('text')
                                                 }}
+                                            >
+                                                {`${localeString(
+                                                    'views.PaymentRequest.feeLimit'
+                                                )} (${localeString(
+                                                    'general.optional'
+                                                )})`}
+                                            </Text>
+                                            {this.displayFeeRecommendation()}
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexWrap: 'wrap',
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'flex-end',
+                                                    opacity:
+                                                        feeOption == 'percent'
+                                                            ? 1
+                                                            : 0.25
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        ...styles.label,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    <Amount
+                                                        sats={percentAmount}
+                                                    />
+                                                </Text>
+                                            </View>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    width: '95%'
+                                                }}
+                                            >
+                                                <TextInput
+                                                    style={{
+                                                        width: '50%',
+                                                        opacity:
+                                                            feeOption == 'fixed'
+                                                                ? 1
+                                                                : 0.25
+                                                    }}
+                                                    keyboardType="numeric"
+                                                    value={feeLimitSat}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            feeLimitSat: text
+                                                        })
+                                                    }
+                                                    onPressIn={() =>
+                                                        this.setState({
+                                                            feeOption: 'fixed'
+                                                        })
+                                                    }
+                                                />
+                                                <Text
+                                                    style={{
+                                                        ...styles.label,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        top: 28,
+                                                        right: 30,
+                                                        opacity:
+                                                            feeOption == 'fixed'
+                                                                ? 1
+                                                                : 0.25
+                                                    }}
+                                                >
+                                                    {`${localeString(
+                                                        'general.sats'
+                                                    )}`}
+                                                </Text>
+                                                <TextInput
+                                                    style={{
+                                                        width: '50%',
+                                                        opacity:
+                                                            feeOption ==
+                                                            'percent'
+                                                                ? 1
+                                                                : 0.25
+                                                    }}
+                                                    keyboardType="numeric"
+                                                    value={maxFeePercent}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            maxFeePercent: text
+                                                        })
+                                                    }
+                                                    onPressIn={() =>
+                                                        this.setState({
+                                                            feeOption: 'percent'
+                                                        })
+                                                    }
+                                                />
+                                                <Text
+                                                    style={{
+                                                        ...styles.label,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        top: 28,
+                                                        right: 18,
+                                                        opacity:
+                                                            feeOption ==
+                                                            'percent'
+                                                                ? 1
+                                                                : 0.25
+                                                    }}
+                                                >
+                                                    {'%'}
+                                                </Text>
+                                            </View>
+                                        </>
+                                    )}
+
+                                    {isCLightning && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.PaymentRequest.feeLimit'
+                                                )} (${localeString(
+                                                    'general.percentage'
+                                                )})`}
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                placeholder={'0.5'}
+                                                value={maxFeePercent}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        maxFeePercent: text
+                                                    })
+                                                }
                                             />
-                                        </View>
-                                    </React.Fragment>
-                                )}
+                                        </>
+                                    )}
 
-                            {!!pay_req && BackendUtils.supportsAMP() && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text'),
-                                            top: 25
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.amp'
+                                    {!!pay_req &&
+                                        BackendUtils.supportsHopPicking() && (
+                                            <>
+                                                {
+                                                    <HopPicker
+                                                        onValueChange={(
+                                                            item: any
+                                                        ) =>
+                                                            this.setState({
+                                                                outgoingChanId:
+                                                                    item
+                                                                        ? item.channelId
+                                                                        : null
+                                                            })
+                                                        }
+                                                        title={localeString(
+                                                            'views.PaymentRequest.firstHop'
+                                                        )}
+                                                        ChannelsStore={
+                                                            ChannelsStore
+                                                        }
+                                                        UnitsStore={UnitsStore}
+                                                    />
+                                                }
+                                                {
+                                                    <HopPicker
+                                                        onValueChange={(
+                                                            item: any
+                                                        ) =>
+                                                            this.setState({
+                                                                lastHopPubkey:
+                                                                    item
+                                                                        ? item.remote_pubkey
+                                                                        : null
+                                                            })
+                                                        }
+                                                        title={localeString(
+                                                            'views.PaymentRequest.lastHop'
+                                                        )}
+                                                        ChannelsStore={
+                                                            ChannelsStore
+                                                        }
+                                                        UnitsStore={UnitsStore}
+                                                    />
+                                                }
+                                            </>
                                         )}
-                                    </Text>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
-                                        }}
-                                    >
-                                        <Switch
-                                            value={enableAmp}
-                                            onValueChange={() => {
-                                                const enable =
-                                                    !enableAtomicMultiPathPayment;
-                                                this.setState({
-                                                    enableAtomicMultiPathPayment:
-                                                        enable,
-                                                    enableMultiPathPayment:
-                                                        enable ||
-                                                        enableMultiPathPayment
-                                                });
-                                            }}
-                                            disabled={
-                                                lockAtomicMultiPathPayment
-                                            }
-                                        />
-                                    </View>
-                                </React.Fragment>
-                            )}
 
-                            {ampOrMppEnabled && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.maxParts'
+                                    {!!pay_req &&
+                                        BackendUtils.supportsMPP() &&
+                                        !enableTor && (
+                                            <React.Fragment>
+                                                <Text
+                                                    style={{
+                                                        ...styles.label,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        top: 25
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.PaymentRequest.mpp'
+                                                    )}
+                                                </Text>
+                                                <View
+                                                    style={{
+                                                        flex: 1,
+                                                        flexDirection: 'row',
+                                                        justifyContent:
+                                                            'flex-end'
+                                                    }}
+                                                >
+                                                    <Switch
+                                                        value={
+                                                            enableMultiPathPayment
+                                                        }
+                                                        onValueChange={() => {
+                                                            const enable =
+                                                                !enableMultiPathPayment;
+                                                            this.setState({
+                                                                enableMultiPathPayment:
+                                                                    enable,
+                                                                enableAtomicMultiPathPayment:
+                                                                    enableMultiPathPayment
+                                                                        ? false
+                                                                        : true
+                                                            });
+                                                        }}
+                                                    />
+                                                </View>
+                                            </React.Fragment>
                                         )}
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        value={maxParts}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                maxParts: text
-                                            })
-                                        }
-                                    />
-                                    <Text
-                                        style={{
-                                            ...styles.labelSecondary,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.maxPartsDescription'
-                                        )}
-                                    </Text>
-                                </React.Fragment>
-                            )}
 
-                            {ampOrMppEnabled && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.PaymentRequest.maxShardAmt'
-                                        )} (${localeString(
-                                            'general.sats'
-                                        )}) (${localeString(
-                                            'general.optional'
-                                        )})`}
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        value={maxShardAmt}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                maxShardAmt: text
-                                            })
-                                        }
-                                    />
-                                </React.Fragment>
+                                    {!!pay_req && BackendUtils.supportsAMP() && (
+                                        <React.Fragment>
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor('text'),
+                                                    top: 25
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.PaymentRequest.amp'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'flex-end'
+                                                }}
+                                            >
+                                                <Switch
+                                                    value={enableAmp}
+                                                    onValueChange={() => {
+                                                        const enable =
+                                                            !enableAtomicMultiPathPayment;
+                                                        this.setState({
+                                                            enableAtomicMultiPathPayment:
+                                                                enable,
+                                                            enableMultiPathPayment:
+                                                                enable ||
+                                                                enableMultiPathPayment
+                                                        });
+                                                    }}
+                                                    disabled={
+                                                        lockAtomicMultiPathPayment
+                                                    }
+                                                />
+                                            </View>
+                                        </React.Fragment>
+                                    )}
+
+                                    {ampOrMppEnabled && (
+                                        <React.Fragment>
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.PaymentRequest.maxParts'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                value={maxParts}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        maxParts: text
+                                                    })
+                                                }
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.labelSecondary,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.PaymentRequest.maxPartsDescription'
+                                                )}
+                                            </Text>
+                                        </React.Fragment>
+                                    )}
+
+                                    {ampOrMppEnabled && (
+                                        <React.Fragment>
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.PaymentRequest.maxShardAmt'
+                                                )} (${localeString(
+                                                    'general.sats'
+                                                )}) (${localeString(
+                                                    'general.optional'
+                                                )})`}
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                value={maxShardAmt}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        maxShardAmt: text
+                                                    })
+                                                }
+                                            />
+                                        </React.Fragment>
+                                    )}
+                                </>
                             )}
 
                             {!!pay_req && (
                                 <View style={styles.button}>
                                     <Button
-                                        title="Pay this invoice"
+                                        title={localeString(
+                                            'views.PaymentRequest.payInvoice'
+                                        )}
                                         icon={{
                                             name: 'send',
-                                            size: 25,
-                                            color: 'white'
+                                            size: 25
                                         }}
                                         onPress={() => {
                                             this.sendPayment(
@@ -786,7 +855,9 @@ export default class PaymentRequest extends React.Component<
                                                 {
                                                     payment_request:
                                                         paymentRequest,
-                                                    amount: customAmount,
+                                                    amount: satAmount
+                                                        ? satAmount.toString()
+                                                        : undefined,
                                                     max_parts:
                                                         enableMultiPathPayment
                                                             ? maxParts
@@ -816,14 +887,15 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
                 </ScrollView>
-            </View>
+            </Screen>
         );
     }
 }
 
 const styles = StyleSheet.create({
     content: {
-        padding: 20
+        paddingLeft: 20,
+        paddingRight: 20
     },
     label: {
         fontFamily: 'Lato-Regular',
@@ -841,7 +913,7 @@ const styles = StyleSheet.create({
     },
     center: {
         alignItems: 'center',
-        paddingTop: 15,
-        paddingBottom: 15
+        marginTop: 25,
+        marginBottom: 25
     }
 });

@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
+import Header from '../../components/Header';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -108,24 +109,11 @@ export default class SetDuressPassphrase extends React.Component<
             duressPassphraseMismatchError,
             duressPassphraseInvalidError
         } = this.state;
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString(
                             'views.Settings.SetDuressPassword.title'
@@ -135,10 +123,7 @@ export default class SetDuressPassphrase extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <View
                     style={{
@@ -240,7 +225,7 @@ export default class SetDuressPassphrase extends React.Component<
                         </View>
                     )}
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

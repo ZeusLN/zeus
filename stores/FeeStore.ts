@@ -2,10 +2,12 @@ import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
-import BackendUtils from './../utils/BackendUtils';
-import Base64Utils from './../utils/Base64Utils';
-import ForwardEvent from './../models/ForwardEvent';
 import SettingsStore from './SettingsStore';
+import NodeInfoStore from './NodeInfoStore';
+
+import BackendUtils from '../utils/BackendUtils';
+import Base64Utils from '../utils/Base64Utils';
+import ForwardEvent from '../models/ForwardEvent';
 
 export default class FeeStore {
     @observable public fees: any = {};
@@ -29,12 +31,18 @@ export default class FeeStore {
     @observable public lastOffsetIndex: number;
     @observable public forwardingHistoryError = false;
 
+    @observable public bumpFeeSuccess = false;
+    @observable public bumpFeeError = false;
+    @observable public bumpFeeErrorMsg = '';
+
     getOnchainFeesToken: any;
 
     settingsStore: SettingsStore;
+    nodeInfoStore: NodeInfoStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, nodeInfoStore: NodeInfoStore) {
         this.settingsStore = settingsStore;
+        this.nodeInfoStore = nodeInfoStore;
     }
 
     @action
@@ -44,7 +52,9 @@ export default class FeeStore {
         this.recommendedFees = {};
         ReactNativeBlobUtil.fetch(
             'get',
-            'https://mempool.space/api/v1/fees/recommended'
+            `https://mempool.space/${
+                this.nodeInfoStore.nodeInfo.isTestNet ? 'testnet/' : ''
+            }api/v1/fees/recommended`
         )
             .then((response: any) => {
                 const status = response.info().status;
@@ -66,6 +76,8 @@ export default class FeeStore {
     resetFees = () => {
         this.fees = {};
         this.loadingFees = false;
+        this.bumpFeeSuccess = false;
+        this.bumpFeeError = false;
     };
 
     @action
@@ -192,6 +204,81 @@ export default class FeeStore {
             })
             .catch(() => {
                 this.forwardingError();
+            });
+    };
+
+    @action
+    public bumpFee = (params?: any) => {
+        this.loading = true;
+        this.bumpFeeSuccess = false;
+        this.bumpFeeError = false;
+        const [txid_str, output_index] = params.outpoint.split(':');
+        BackendUtils.bumpFee({
+            ...params,
+            outpoint: {
+                txid_str,
+                output_index: Number(output_index) || 0
+            }
+        })
+            .then(() => {
+                this.bumpFeeSuccess = true;
+                this.loading = false;
+            })
+            .catch((err: Error) => {
+                this.bumpFeeError = true;
+                this.bumpFeeErrorMsg = err.toString();
+                this.loading = false;
+            });
+    };
+
+    @action
+    public bumpFeeOpeningChannel = (params?: any) => {
+        this.loading = true;
+        this.bumpFeeSuccess = false;
+        this.bumpFeeError = false;
+        const [txid_str, output_index] = params.outpoint.split(':');
+        BackendUtils.bumpFee({
+            ...params,
+            outpoint: {
+                txid_str,
+                output_index: Number(output_index) || 0
+            }
+        })
+            .then(() => {
+                this.bumpFeeSuccess = true;
+                this.loading = false;
+            })
+            .catch((err: Error) => {
+                // if output isn't correct (it'll be index 0 or 1), try alternate input
+                // NOTE: this will only work for single-party funded channels
+                if (
+                    err.toString() ===
+                    'Error: the passed output does not belong to the wallet'
+                ) {
+                    const newOutputIndex = output_index === '0' ? 1 : 0;
+                    this.bumpFeeErrorMsg = `${err}. Retrying with input ${newOutputIndex}`;
+                    BackendUtils.bumpFee({
+                        ...params,
+                        outpoint: {
+                            txid_str,
+                            output_index: newOutputIndex
+                        }
+                    })
+                        .then(() => {
+                            this.bumpFeeError = false;
+                            this.bumpFeeSuccess = true;
+                            this.loading = false;
+                        })
+                        .catch((err: Error) => {
+                            this.bumpFeeError = true;
+                            this.bumpFeeErrorMsg = err.toString();
+                            this.loading = false;
+                        });
+                } else {
+                    this.bumpFeeError = true;
+                    this.bumpFeeErrorMsg = err.toString();
+                    this.loading = false;
+                }
             });
     };
 }

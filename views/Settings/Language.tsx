@@ -1,10 +1,15 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
+import { Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import SettingsStore, { LOCALE_KEYS } from './../../stores/SettingsStore';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+
+import SettingsStore, { LOCALE_KEYS } from '../../stores/SettingsStore';
+
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LanguageProps {
     navigation: any;
@@ -63,33 +68,16 @@ export default class Language extends React.Component<
         const { locales, selectedLocale, search } = this.state;
         const { updateSettings }: any = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
-                        leftComponent={<BackButton />}
+                        leftComponent="Back"
                         centerComponent={{
                             text: localeString('views.Settings.Language.title'),
                             style: { color: themeColor('text') }
                         }}
-                        backgroundColor={themeColor('background')}
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
+                        navigation={navigation}
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}
@@ -100,7 +88,7 @@ export default class Language extends React.Component<
                         }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
-                            backgroundColor: themeColor('background'),
+                            backgroundColor: 'transparent',
                             borderTopWidth: 0,
                             borderBottomWidth: 0
                         }}
@@ -115,7 +103,7 @@ export default class Language extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
+                                    backgroundColor: 'transparent'
                                 }}
                                 onPress={async () => {
                                     await updateSettings({
@@ -155,7 +143,7 @@ export default class Language extends React.Component<
                         ItemSeparatorComponent={this.renderSeparator}
                     />
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

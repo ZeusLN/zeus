@@ -65,19 +65,9 @@ export function RoutingHeader(props) {
                 ? 200
                 : 120,
             padding: 16,
-            backgroundColor: themeColor('background'),
             borderBottomLeftRadius: 40,
             borderBottomRightRadius: 20,
-            color: themeColor('text'),
-            // TODO: this shadow stuff probably needs tweaking on iOS
-            shadowColor: '#000',
-            shadowOffset: {
-                width: 0,
-                height: 0
-            },
-            shadowOpacity: 0.5,
-            shadowRadius: 40,
-            elevation: 15
+            color: themeColor('text')
         }
     });
 
@@ -86,7 +76,12 @@ export function RoutingHeader(props) {
             <View style={styles.wrapper}>
                 {!fullSize && (
                     <View style={{ alignItems: 'center' }}>
-                        <Amount sats={timeframeEarned} jumboText toggleable />
+                        <Amount
+                            sats={timeframeEarned}
+                            jumboText
+                            toggleable
+                            sensitive
+                        />
                         <Text
                             style={{
                                 color: themeColor('text'),

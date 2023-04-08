@@ -126,6 +126,7 @@ class BackendUtils {
     supportsAddressTypeSelection = () =>
         this.call('supportsAddressTypeSelection');
     supportsTaproot = () => this.call('supportsTaproot');
+    supportsBumpFee = () => this.call('supportsBumpFee');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC

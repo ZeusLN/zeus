@@ -39,17 +39,17 @@ class Stores {
         this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
         this.transactionsStore = new TransactionsStore(this.settingsStore);
         this.balanceStore = new BalanceStore(this.settingsStore);
+        this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
         this.unitsStore = new UnitsStore(this.settingsStore, this.fiatStore);
         this.paymentsStore = new PaymentsStore(
             this.settingsStore,
             this.channelsStore
         );
-        this.feeStore = new FeeStore(this.settingsStore);
         this.lnurlPayStore = new LnurlPayStore(
             this.settingsStore,
             this.nodeInfoStore
         );
-        this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
+        this.feeStore = new FeeStore(this.settingsStore, this.nodeInfoStore);
         this.utxosStore = new UTXOsStore(this.settingsStore);
         this.messageSignStore = new MessageSignStore();
         this.activityStore = new ActivityStore(

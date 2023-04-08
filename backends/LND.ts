@@ -222,7 +222,7 @@ export default class LND {
     getInvoices = (data: any) =>
         this.getRequest(
             `/v1/invoices?reversed=true&num_max_invoices=${
-                (data && data.limit) || 1000
+                (data && data.limit) || 500
             }`
         );
     createInvoice = (data: any) =>
@@ -376,5 +376,6 @@ export default class LND {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
+    supportsBumpFee = () => true;
     isLNDBased = () => true;
 }

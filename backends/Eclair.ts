@@ -493,6 +493,7 @@ export default class Eclair {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    supportsBumpFee = () => false;
     isLNDBased = () => false;
 }
 

@@ -7,7 +7,6 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
@@ -22,15 +21,19 @@ import LanguageIcon from '../../assets/images/SVG/Globe.svg';
 import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
 import NodeOn from '../../assets/images/SVG/Node On.svg';
 import POS from '../../assets/images/SVG/POS.svg';
+import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
 
-import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
-import { themeColor } from './../../utils/ThemeUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import BackendUtils from './../../utils/BackendUtils';
-import { version } from './../../package.json';
-import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
-import UnitsStore from './../../stores/UnitsStore';
+import Header from '../../components/Header';
+import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
+import Screen from '../../components/Screen';
+
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { version } from '../../package.json';
+import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
 
 interface SettingsProps {
     navigation: any;
@@ -64,7 +67,7 @@ export default class Settings extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { showHiddenSettings, easterEggCount } = this.state;
-        const { settings } = SettingsStore;
+        const { implementation, settings } = SettingsStore;
 
         const selectedNode: any =
             (settings &&
@@ -75,29 +78,15 @@ export default class Settings extends React.Component<
         const posEnabled =
             settings && settings.pos && settings.pos.squareEnabled;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet', { refresh: true })}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Settings.title'),
                         style: {
@@ -105,15 +94,11 @@ export default class Settings extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView
                     style={{
-                        flex: 1,
-                        backgroundColor: themeColor('background')
+                        flex: 1
                     }}
                 >
                     <TouchableOpacity
@@ -283,7 +268,6 @@ export default class Settings extends React.Component<
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: 45,
                                 borderRadius: 10,
                                 alignSelf: 'center',
                                 marginBottom: 15
@@ -310,8 +294,74 @@ export default class Settings extends React.Component<
                                     <ForwardIcon />
                                 </View>
                             </TouchableOpacity>
+
+                            <View style={styles.separationLine} />
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('InvoicesSettings')
+                                }
+                            >
+                                <View>
+                                    <ReceiveIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Wallet.Wallet.invoices'
+                                    )}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     )}
+                    {selectedNode &&
+                        !BackendUtils.isLNDBased() &&
+                        implementation !== 'lndhub' && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    height: 45,
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginBottom: 15,
+                                    marginTop: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('InvoicesSettings')
+                                    }
+                                >
+                                    <View>
+                                        <ReceiveIcon
+                                            stroke={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Wallet.Wallet.invoices'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     {selectedNode && BackendUtils.supportsMessageSigning() ? (
                         <View
                             style={{
@@ -651,14 +701,15 @@ export default class Settings extends React.Component<
                                 fontSize: 16,
                                 color: '#A7A9AC',
                                 alignSelf: 'center',
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'Lato-Regular',
+                                marginBottom: 20
                             }}
                         >
                             {`Zeus v${version}`}
                         </Text>
                     </TouchableWithoutFeedback>
                 </ScrollView>
-            </View>
+            </Screen>
         );
     }
 }
@@ -671,7 +722,7 @@ const styles = StyleSheet.create({
     },
     columnText: {
         fontSize: 16,
-        left: '30%',
+        left: 100,
         position: 'absolute',
         marginLeft: -55,
         paddingTop: 5,
@@ -679,7 +730,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Lato-Regular'
     },
     separationLine: {
-        left: '30%',
+        left: 100,
         width: '70%',
         borderColor: '#A7A9AC',
         opacity: 0.2,

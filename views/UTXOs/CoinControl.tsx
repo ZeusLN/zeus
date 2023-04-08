@@ -1,10 +1,12 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Button, Header, Icon, ListItem } from 'react-native-elements';
+import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Amount from './../../components/Amount';
+import Header from '../../components/Header';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import Screen from './../../components/Screen';
 
 import { localeString } from './../../utils/LocaleUtils';
 import BackendUtils from './../../utils/BackendUtils';
@@ -42,25 +44,10 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         const { navigation, UTXOsStore } = this.props;
         const { loading, utxos, getUTXOs } = UTXOsStore;
 
-        const CloseButton = () => (
-            <Icon
-                name="close"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<CloseButton />}
+                    leftComponent="Close"
                     centerComponent={{
                         text:
                             utxos.length > 0
@@ -73,10 +60,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
@@ -93,8 +77,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                themeColor('background')
+                                            backgroundColor: 'transparent'
                                         }}
                                         onPress={() => {
                                             navigation.navigate('Utxo', {
@@ -153,7 +136,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                         }}
                     />
                 )}
-            </View>
+            </Screen>
         );
     }
 }

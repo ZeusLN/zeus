@@ -6,22 +6,24 @@ import {
     View,
     TouchableOpacity
 } from 'react-native';
-import { ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 
-import Amount from './../components/Amount';
-import Button from './../components/Button';
-import KeyValue from './../components/KeyValue';
-import { Spacer } from './../components/layout/Spacer';
-import TextInput from './../components/TextInput';
+import Amount from '../components/Amount';
+import Button from '../components/Button';
+import Header from '../components/Header';
+import KeyValue from '../components/KeyValue';
+import Screen from '../components/Screen';
+import { Spacer } from '../components/layout/Spacer';
+import TextInput from '../components/TextInput';
 
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-import SettingsStore from './../stores/SettingsStore';
-import FiatStore from './../stores/FiatStore';
-import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
+import SettingsStore from '../stores/SettingsStore';
+import FiatStore from '../stores/FiatStore';
+import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 
 interface OrderProps {
     navigation: any;
@@ -298,24 +300,10 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('general.order'),
                         style: {
@@ -323,13 +311,10 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
 
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     {lineItems.map((item: any, index: number) => {
                         const keyValue =
                             item.quantity > 1
@@ -698,8 +683,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             disabled={isNaN(Number(totalSats))}
                         />
                     )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }

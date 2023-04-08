@@ -1,13 +1,16 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
+import { Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import UnitsStore from './../../stores/UnitsStore';
-import SettingsStore, { CURRENCY_KEYS } from './../../stores/SettingsStore';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import UnitsStore from '../../stores/UnitsStore';
+import SettingsStore, { CURRENCY_KEYS } from '../../stores/SettingsStore';
+
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface CurrencyProps {
     navigation: any;
@@ -53,8 +56,10 @@ export default class Currency extends React.Component<
     );
 
     updateSearch = (value: string) => {
-        const result = CURRENCY_KEYS.filter((item: any) =>
-            item.key.includes(value)
+        const result = CURRENCY_KEYS.filter(
+            (item: any) =>
+                item.key.includes(value) ||
+                item.key.toLowerCase().includes(value)
         );
         this.setState({
             search: value,
@@ -67,25 +72,11 @@ export default class Currency extends React.Component<
         const { selectedCurrency, search, currencies } = this.state;
         const { updateSettings, getSettings }: any = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
-                        leftComponent={<BackButton />}
+                        leftComponent="Back"
                         centerComponent={{
                             text: localeString('views.Settings.Currency.title'),
                             style: {
@@ -93,10 +84,7 @@ export default class Currency extends React.Component<
                                 fontFamily: 'Lato-Regular'
                             }
                         }}
-                        backgroundColor={themeColor('background')}
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
+                        navigation={navigation}
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}
@@ -108,7 +96,7 @@ export default class Currency extends React.Component<
                         }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
-                            backgroundColor: themeColor('background'),
+                            backgroundColor: 'transparent',
                             borderTopWidth: 0,
                             borderBottomWidth: 0
                         }}
@@ -123,7 +111,7 @@ export default class Currency extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: themeColor('background')
+                                    backgroundColor: 'transparent'
                                 }}
                                 onPress={async () => {
                                     await updateSettings({
@@ -169,7 +157,7 @@ export default class Currency extends React.Component<
                         ItemSeparatorComponent={this.renderSeparator}
                     />
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

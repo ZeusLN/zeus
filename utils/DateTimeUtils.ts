@@ -5,7 +5,7 @@ class DateTimeUtils {
         new Date(Number(timestamp) * 1000);
     listFormattedDate = (
         timestamp: number | string,
-        format = "ddd, mmm d 'yy, HH:MM:ss Z"
+        format = "ddd, mmm d 'yy, HH:MM Z"
     ) => {
         try {
             const date = this.listDate(timestamp);
@@ -16,7 +16,7 @@ class DateTimeUtils {
     };
 
     listFormattedDateShort = (timestamp: number | string) =>
-        this.listFormattedDate(timestamp, "mmm d 'yy");
+        this.listFormattedDate(timestamp, 'mmm d, HH:MM');
 }
 
 const dateTimeUtils = new DateTimeUtils();

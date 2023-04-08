@@ -2,15 +2,17 @@ import { inject, observer } from 'mobx-react';
 import * as React from 'react';
 import { FlatList, ScrollView, View } from 'react-native';
 import { BiometryType } from 'react-native-biometrics';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from 'react-native-elements';
 
-import Switch from './../../components/Switch';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
 
 import SettingsStore from '../../stores/SettingsStore';
 
-import { verifyBiometry } from './../../utils/BiometricUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { verifyBiometry } from '../../utils/BiometricUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface SecurityProps {
     navigation: any;
@@ -190,7 +192,7 @@ export default class Security extends React.Component<
             <ListItem
                 containerStyle={{
                     borderBottomWidth: 0,
-                    backgroundColor: themeColor('background')
+                    backgroundColor: 'transparent'
                 }}
                 onPress={() => this.navigateSecurity(item)}
             >
@@ -224,24 +226,10 @@ export default class Security extends React.Component<
         } = this.state;
         const { updateSettings, settings } = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Settings.Security.title'),
                         style: {
@@ -249,103 +237,106 @@ export default class Security extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
-                <FlatList
-                    data={displaySecurityItems}
-                    renderItem={this.renderItem}
-                    keyExtractor={(item, index) => `${item.label}-${index}`}
-                    ItemSeparatorComponent={this.renderSeparator}
-                />
-                {settings.supportedBiometryType !== undefined && (
-                    <ListItem
-                        containerStyle={{
-                            backgroundColor: themeColor('background')
-                        }}
-                    >
-                        <ListItem.Content>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
-                                }}
-                            >
-                                {localeString(
-                                    `views.Settings.Security.${this.state.supportedBiometryType}.title`
-                                )}
-                            </ListItem.Title>
-                        </ListItem.Content>
+                <ScrollView>
+                    <FlatList
+                        data={displaySecurityItems}
+                        renderItem={this.renderItem}
+                        keyExtractor={(item, index) => `${item.label}-${index}`}
+                        ItemSeparatorComponent={this.renderSeparator}
+                    />
+                    {settings.supportedBiometryType !== undefined && (
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        `views.Settings.Security.${this.state.supportedBiometryType}.title`
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
 
-                        <Switch
-                            value={isBiometryEnabled}
-                            onValueChange={this.handleBiometricsSwitchChange}
-                        />
-                    </ListItem>
-                )}
-                {pinExists && (
-                    <ListItem
-                        containerStyle={{
-                            backgroundColor: themeColor('background')
-                        }}
-                    >
-                        <ListItem.Content>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.Security.scramblePIN'
-                                )}
-                            </ListItem.Title>
-                        </ListItem.Content>
-                        <Switch
-                            value={scramblePin}
-                            onValueChange={async () => {
-                                this.setState({
-                                    scramblePin: !scramblePin
-                                });
-                                updateSettings({ scramblePin: !scramblePin });
+                            <Switch
+                                value={isBiometryEnabled}
+                                onValueChange={
+                                    this.handleBiometricsSwitchChange
+                                }
+                            />
+                        </ListItem>
+                    )}
+                    {pinExists && (
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
                             }}
-                        />
-                    </ListItem>
-                )}
-                {(pinExists || passphraseExists || isBiometryEnabled) && (
-                    <ListItem
-                        containerStyle={{
-                            backgroundColor: themeColor('background')
-                        }}
-                    >
-                        <ListItem.Content>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Security.scramblePIN'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Switch
+                                value={scramblePin}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        scramblePin: !scramblePin
+                                    });
+                                    updateSettings({
+                                        scramblePin: !scramblePin
+                                    });
                                 }}
-                            >
-                                {localeString(
-                                    'views.Settings.Security.loginBackground'
-                                )}
-                            </ListItem.Title>
-                        </ListItem.Content>
-                        <Switch
-                            value={loginBackground}
-                            onValueChange={async () => {
-                                this.setState({
-                                    loginBackground: !loginBackground
-                                });
-                                updateSettings({
-                                    loginBackground: !loginBackground
-                                });
+                            />
+                        </ListItem>
+                    )}
+                    {(pinExists || passphraseExists || isBiometryEnabled) && (
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
                             }}
-                        />
-                    </ListItem>
-                )}
-            </ScrollView>
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Security.loginBackground'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Switch
+                                value={loginBackground}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        loginBackground: !loginBackground
+                                    });
+                                    updateSettings({
+                                        loginBackground: !loginBackground
+                                    });
+                                }}
+                            />
+                        </ListItem>
+                    )}
+                </ScrollView>
+            </Screen>
         );
     }
 }

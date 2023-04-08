@@ -10,32 +10,35 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Header, Icon } from 'react-native-elements';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 
+import Amount from './../components/Amount';
+import AmountInput from './../components/AmountInput';
 import Button from './../components/Button';
+import Header from '../components/Header';
 import LightningIndicator from './../components/LightningIndicator';
+import Screen from './../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
-} from './../components/SuccessErrorMessage';
-import Switch from './../components/Switch';
-import TextInput from './../components/TextInput';
-import UTXOPicker from './../components/UTXOPicker';
+} from '../components/SuccessErrorMessage';
+import Switch from '../components/Switch';
+import TextInput from '../components/TextInput';
+import UTXOPicker from '../components/UTXOPicker';
 
-import handleAnything from './../utils/handleAnything';
-import NFCUtils from './../utils/NFCUtils';
-import NodeUriUtils from './../utils/NodeUriUtils';
-import BackendUtils from './../utils/BackendUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import handleAnything from '../utils/handleAnything';
+import NFCUtils from '../utils/NFCUtils';
+import NodeUriUtils from '../utils/NodeUriUtils';
+import BackendUtils from '../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
+import BalanceStore from './../stores/BalanceStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
-import BalanceStore from './../stores/BalanceStore';
 import UTXOsStore from './../stores/UTXOsStore';
 
-import Scan from './../assets/images/SVG/Scan.svg';
+import Scan from '../assets/images/SVG/Scan.svg';
 
 interface OpenChannelProps {
     exitSetup: any;
@@ -49,6 +52,7 @@ interface OpenChannelProps {
 interface OpenChannelState {
     node_pubkey_string: string;
     local_funding_amount: string;
+    satAmount: string | number;
     min_confs: number;
     spend_unconfirmed: boolean;
     sat_per_byte: string;
@@ -71,6 +75,7 @@ export default class OpenChannel extends React.Component<
         this.state = {
             node_pubkey_string: '',
             local_funding_amount: '',
+            satAmount: '',
             min_confs: 1,
             spend_unconfirmed: false,
             sat_per_byte: '2',
@@ -84,8 +89,10 @@ export default class OpenChannel extends React.Component<
     }
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
+        const { ChannelsStore, SettingsStore } = this.props;
         const { settings } = SettingsStore;
+
+        ChannelsStore.resetOpenChannel();
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
@@ -215,6 +222,7 @@ export default class OpenChannel extends React.Component<
         const {
             node_pubkey_string,
             local_funding_amount,
+            satAmount,
             min_confs,
             host,
             sat_per_byte,
@@ -238,15 +246,6 @@ export default class OpenChannel extends React.Component<
         } = ChannelsStore;
         const { confirmedBlockchainBalance } = BalanceStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const ScanButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('NodeQRCodeScanner')}
@@ -256,14 +255,9 @@ export default class OpenChannel extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.OpenChannel.openChannel'),
                         style: {
@@ -271,238 +265,218 @@ export default class OpenChannel extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    rightComponent={<ScanButton />}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    rightComponent={ScanButton}
+                    navigation={navigation}
                 />
-
-                {!!suggestImport && (
-                    <View style={styles.clipboardImport}>
-                        <Text style={styles.textWhite}>
-                            {localeString('views.OpenChannel.importText')}
-                        </Text>
-                        <Text style={{ ...styles.textWhite, padding: 15 }}>
-                            {suggestImport}
-                        </Text>
-                        <Text style={styles.textWhite}>
-                            {localeString('views.OpenChannel.importPrompt')}
-                        </Text>
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('views.OpenChannel.import')}
-                                onPress={() => this.importClipboard()}
-                                tertiary
-                            />
+                <ScrollView
+                    style={{
+                        flex: 1
+                    }}
+                >
+                    {!!suggestImport && (
+                        <View style={styles.clipboardImport}>
+                            <Text style={styles.textWhite}>
+                                {localeString('views.OpenChannel.importText')}
+                            </Text>
+                            <Text style={{ ...styles.textWhite, padding: 15 }}>
+                                {suggestImport}
+                            </Text>
+                            <Text style={styles.textWhite}>
+                                {localeString('views.OpenChannel.importPrompt')}
+                            </Text>
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.OpenChannel.import'
+                                    )}
+                                    onPress={() => this.importClipboard()}
+                                    tertiary
+                                />
+                            </View>
+                            <View style={styles.button}>
+                                <Button
+                                    title="Cancel"
+                                    onPress={() => this.clearImportSuggestion()}
+                                    tertiary
+                                />
+                            </View>
                         </View>
-                        <View style={styles.button}>
-                            <Button
-                                title="Cancel"
-                                onPress={() => this.clearImportSuggestion()}
-                                tertiary
-                            />
-                        </View>
-                    </View>
-                )}
-
-                <View style={styles.content}>
-                    {(connectingToPeer || openingChannel) && (
-                        <LightningIndicator />
-                    )}
-                    {peerSuccess && (
-                        <SuccessMessage
-                            message={localeString(
-                                'views.OpenChannel.peerSuccess'
-                            )}
-                        />
-                    )}
-                    {channelSuccess && (
-                        <SuccessMessage
-                            message={localeString(
-                                'views.OpenChannel.channelSuccess'
-                            )}
-                        />
-                    )}
-                    {(errorMsgPeer || errorMsgChannel) && (
-                        <ErrorMessage
-                            message={
-                                errorMsgChannel ||
-                                errorMsgPeer ||
-                                localeString('general.error')
-                            }
-                        />
                     )}
 
-                    <Text
-                        style={{
-                            ...styles.secondaryText,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.OpenChannel.nodePubkey')}
-                    </Text>
-                    <TextInput
-                        placeholder={'0A...'}
-                        value={node_pubkey_string}
-                        onChangeText={(text: string) =>
-                            this.setState({ node_pubkey_string: text })
-                        }
-                        locked={openingChannel}
-                    />
-
-                    <Text
-                        style={{
-                            ...styles.secondaryText,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.OpenChannel.host')}
-                    </Text>
-                    <TextInput
-                        placeholder={localeString('views.OpenChannel.hostPort')}
-                        value={host}
-                        onChangeText={(text: string) =>
-                            this.setState({ host: text })
-                        }
-                        locked={openingChannel}
-                    />
-
-                    <Text
-                        style={{
-                            ...styles.secondaryText,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.OpenChannel.localAmt')}
-                    </Text>
-                    <TextInput
-                        keyboardType="numeric"
-                        placeholder={localeString(
-                            'views.OpenChannel.amtExample'
+                    <View style={styles.content}>
+                        {(connectingToPeer || openingChannel) && (
+                            <LightningIndicator />
                         )}
-                        value={local_funding_amount}
-                        onChangeText={(text: string) =>
-                            this.setState({ local_funding_amount: text })
-                        }
-                        locked={openingChannel}
-                    />
-                    {local_funding_amount === 'all' && (
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {`${
-                                utxoBalance > 0
-                                    ? utxoBalance
-                                    : confirmedBlockchainBalance
-                            } ${localeString('views.Receive.satoshis')}`}
-                        </Text>
-                    )}
+                        {peerSuccess && (
+                            <SuccessMessage
+                                message={localeString(
+                                    'views.OpenChannel.peerSuccess'
+                                )}
+                            />
+                        )}
+                        {channelSuccess && (
+                            <SuccessMessage
+                                message={localeString(
+                                    'views.OpenChannel.channelSuccess'
+                                )}
+                            />
+                        )}
+                        {(errorMsgPeer || errorMsgChannel) && (
+                            <ErrorMessage
+                                message={
+                                    errorMsgChannel ||
+                                    errorMsgPeer ||
+                                    localeString('general.error')
+                                }
+                            />
+                        )}
 
-                    <Text
-                        style={{
-                            ...styles.secondaryText,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.OpenChannel.numConf')}
-                    </Text>
-                    <TextInput
-                        keyboardType="numeric"
-                        placeholder={'1'}
-                        value={min_confs.toString()}
-                        onChangeText={(text: string) => {
-                            const newMinConfs = Number(text);
-                            this.setState({
-                                min_confs: newMinConfs,
-                                spend_unconfirmed: newMinConfs === 0
-                            });
-                        }}
-                        locked={openingChannel}
-                    />
-
-                    <>
                         <Text
                             style={{
                                 ...styles.secondaryText,
                                 color: themeColor('secondaryText')
                             }}
                         >
-                            {localeString('views.OpenChannel.satsPerByte')}
+                            {localeString('views.OpenChannel.nodePubkey')}
                         </Text>
-                        {enableMempoolRates ? (
-                            <TouchableWithoutFeedback
-                                onPress={() =>
-                                    navigation.navigate('EditFee', {
-                                        onNavigateBack:
-                                            this.handleOnNavigateBack
-                                    })
-                                }
-                            >
-                                <View
-                                    style={{
-                                        ...styles.editFeeBox,
+                        <TextInput
+                            placeholder={'0A...'}
+                            value={node_pubkey_string}
+                            onChangeText={(text: string) =>
+                                this.setState({ node_pubkey_string: text })
+                            }
+                            locked={openingChannel}
+                        />
 
-                                        borderColor: 'rgba(255, 217, 63, .6)',
-                                        borderWidth: 3
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            fontSize: 18
-                                        }}
-                                    >
-                                        {sat_per_byte}
-                                    </Text>
-                                </View>
-                            </TouchableWithoutFeedback>
-                        ) : (
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={'2'}
-                                value={sat_per_byte}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        sat_per_byte: text
-                                    })
-                                }
-                            />
-                        )}
-                    </>
-
-                    {BackendUtils.supportsCoinControl() &&
-                        implementation !== 'lnd' && (
-                            <UTXOPicker
-                                onValueChange={this.selectUTXOs}
-                                UTXOsStore={UTXOsStore}
-                            />
-                        )}
-
-                    <>
                         <Text
                             style={{
-                                top: 20,
+                                ...styles.secondaryText,
                                 color: themeColor('secondaryText')
                             }}
                         >
-                            {localeString('views.OpenChannel.announceChannel')}
+                            {localeString('views.OpenChannel.host')}
                         </Text>
-                        <Switch
-                            value={!privateChannel}
-                            onValueChange={() =>
-                                this.setState({
-                                    privateChannel: !privateChannel
-                                })
+                        <TextInput
+                            placeholder={localeString(
+                                'views.OpenChannel.hostPort'
+                            )}
+                            value={host}
+                            onChangeText={(text: string) =>
+                                this.setState({ host: text })
                             }
+                            locked={openingChannel}
                         />
-                    </>
 
-                    {BackendUtils.isLNDBased() && (
+                        <AmountInput
+                            amount={local_funding_amount}
+                            title={localeString('views.OpenChannel.localAmt')}
+                            onAmountChange={(
+                                amount: string,
+                                satAmount: string | number
+                            ) => {
+                                this.setState({
+                                    local_funding_amount: amount,
+                                    satAmount
+                                });
+                            }}
+                            hideConversion={local_funding_amount === 'all'}
+                        />
+
+                        {local_funding_amount === 'all' && (
+                            <View style={{ marginBottom: 20 }}>
+                                <Amount
+                                    sats={
+                                        utxoBalance > 0
+                                            ? utxoBalance
+                                            : confirmedBlockchainBalance
+                                    }
+                                    toggleable
+                                />
+                            </View>
+                        )}
+
+                        <Text
+                            style={{
+                                ...styles.secondaryText,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {localeString('views.OpenChannel.numConf')}
+                        </Text>
+                        <TextInput
+                            keyboardType="numeric"
+                            placeholder={'1'}
+                            value={min_confs.toString()}
+                            onChangeText={(text: string) => {
+                                const newMinConfs = Number(text);
+                                this.setState({
+                                    min_confs: newMinConfs,
+                                    spend_unconfirmed: newMinConfs === 0
+                                });
+                            }}
+                            locked={openingChannel}
+                        />
+
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.OpenChannel.satsPerVbyte')}
+                            </Text>
+                            {enableMempoolRates ? (
+                                <TouchableWithoutFeedback
+                                    onPress={() =>
+                                        navigation.navigate('EditFee', {
+                                            onNavigateBack:
+                                                this.handleOnNavigateBack
+                                        })
+                                    }
+                                >
+                                    <View
+                                        style={{
+                                            ...styles.editFeeBox,
+
+                                            borderColor:
+                                                'rgba(255, 217, 63, .6)',
+                                            borderWidth: 3
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text'),
+                                                fontSize: 18
+                                            }}
+                                        >
+                                            {sat_per_byte}
+                                        </Text>
+                                    </View>
+                                </TouchableWithoutFeedback>
+                            ) : (
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={'2'}
+                                    value={sat_per_byte}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            sat_per_byte: text
+                                        })
+                                    }
+                                />
+                            )}
+                        </>
+
+                        {BackendUtils.supportsCoinControl() &&
+                            implementation !== 'lnd' && (
+                                <UTXOPicker
+                                    onValueChange={this.selectUTXOs}
+                                    UTXOsStore={UTXOsStore}
+                                />
+                            )}
+
                         <>
                             <Text
                                 style={{
@@ -510,48 +484,79 @@ export default class OpenChannel extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString('views.OpenChannel.scidAlias')}
+                                {localeString(
+                                    'views.OpenChannel.announceChannel'
+                                )}
                             </Text>
                             <Switch
-                                value={scidAlias}
+                                value={!privateChannel}
                                 onValueChange={() =>
                                     this.setState({
-                                        scidAlias: !scidAlias
+                                        privateChannel: !privateChannel
                                     })
                                 }
                             />
                         </>
-                    )}
 
-                    <View style={{ ...styles.button, paddingTop: 20 }}>
-                        <Button
-                            title={localeString(
-                                'views.OpenChannel.openChannel'
-                            )}
-                            icon={{
-                                name: 'swap-horiz',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() => connectPeer(this.state)}
-                        />
-                    </View>
+                        {BackendUtils.isLNDBased() && (
+                            <>
+                                <Text
+                                    style={{
+                                        top: 20,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.OpenChannel.scidAlias'
+                                    )}
+                                </Text>
+                                <Switch
+                                    value={scidAlias}
+                                    onValueChange={() =>
+                                        this.setState({
+                                            scidAlias: !scidAlias
+                                        })
+                                    }
+                                />
+                            </>
+                        )}
 
-                    {Platform.OS === 'ios' && (
-                        <View style={styles.button}>
+                        <View style={{ ...styles.button, paddingTop: 20 }}>
                             <Button
-                                title={localeString('general.enableNfc')}
+                                title={localeString(
+                                    'views.OpenChannel.openChannel'
+                                )}
                                 icon={{
-                                    name: 'nfc',
-                                    size: 25
+                                    name: 'swap-horiz',
+                                    size: 25,
+                                    color: 'white'
                                 }}
-                                onPress={() => this.enableNfc()}
-                                secondary
+                                onPress={() =>
+                                    connectPeer({
+                                        ...this.state,
+                                        local_funding_amount:
+                                            satAmount.toString()
+                                    })
+                                }
                             />
                         </View>
-                    )}
-                </View>
-            </ScrollView>
+
+                        {Platform.OS === 'ios' && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString('general.enableNfc')}
+                                    icon={{
+                                        name: 'nfc',
+                                        size: 25
+                                    }}
+                                    onPress={() => this.enableNfc()}
+                                    secondary
+                                />
+                            </View>
+                        )}
+                    </View>
+                </ScrollView>
+            </Screen>
         );
     }
 }

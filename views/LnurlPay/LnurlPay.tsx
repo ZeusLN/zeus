@@ -1,49 +1,40 @@
 import url from 'url';
 import * as React from 'react';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 
-import Amount from './../../components/Amount';
-import Button from './../../components/Button';
-import TextInput from './../../components/TextInput';
-import { Row } from './../..//components/layout/Row';
+import Amount from '../../components/Amount';
+import AmountInput from '../../components/AmountInput';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import TextInput from '../../components/TextInput';
+import { Row } from '../..//components/layout/Row';
 
-import InvoicesStore from './../../stores/InvoicesStore';
-import LnurlPayStore from './../../stores/LnurlPayStore';
-import SettingsStore from './../../stores/SettingsStore';
-import FiatStore from './../../stores/FiatStore';
-import UnitsStore, { SATS_PER_BTC } from './../../stores/UnitsStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import LnurlPayStore from '../../stores/LnurlPayStore';
 
 import LnurlPayMetadata from './Metadata';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPayProps {
     navigation: any;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
-    FiatStore: FiatStore;
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
 }
 
 interface LnurlPayState {
     amount: string;
+    satAmount: string | number;
     domain: string;
     comment: string;
 }
 
-@inject(
-    'FiatStore',
-    'InvoicesStore',
-    'SettingsStore',
-    'LnurlPayStore',
-    'UnitsStore'
-)
+@inject('InvoicesStore', 'LnurlPayStore')
 @observer
 export default class LnurlPay extends React.Component<
     LnurlPayProps,
@@ -57,6 +48,7 @@ export default class LnurlPay extends React.Component<
         } catch (err) {
             this.state = {
                 amount: '',
+                satAmount: '',
                 domain: '',
                 comment: ''
             };
@@ -168,60 +160,15 @@ export default class LnurlPay extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore, UnitsStore, FiatStore } = this.props;
-        const { amount, domain, comment } = this.state;
-        const { settings } = SettingsStore;
-        const { fiat } = settings;
-        const { units, changeUnits } = UnitsStore;
-        const { fiatRates, getSymbol } = FiatStore;
-
-        const fiatEntry =
-            fiat && fiatRates && fiatRates.filter
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
-
-        const rate =
-            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
-                ? fiatEntry.rate
-                : 0;
-
-        let satAmount: string | number;
-        switch (units) {
-            case 'sats':
-                satAmount = amount;
-                break;
-            case 'BTC':
-                satAmount = Number(amount) * SATS_PER_BTC;
-                break;
-            case 'fiat':
-                satAmount = Number(
-                    (Number(amount.replace(/,/g, '.')) / Number(rate)) *
-                        Number(SATS_PER_BTC)
-                ).toFixed(0);
-                break;
-        }
+        const { navigation } = this.props;
+        const { amount, satAmount, domain, comment } = this.state;
 
         const lnurl = navigation.getParam('lnurlParams');
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: 'Send',
                         style: {
@@ -229,10 +176,7 @@ export default class LnurlPay extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <View style={styles.content}>
                     <Text
@@ -294,52 +238,23 @@ export default class LnurlPay extends React.Component<
                             </>
                         )}
                     </Row>
-                    <TextInput
-                        value={amount}
-                        onChangeText={(text: string) => {
-                            this.setState({ amount: text });
-                        }}
+                    <AmountInput
+                        amount={amount}
                         locked={
                             lnurl && lnurl.minSendable === lnurl.maxSendable
                                 ? true
                                 : false
                         }
-                        style={styles.textInput}
-                        prefix={
-                            units !== 'sats' &&
-                            (units === 'BTC'
-                                ? '₿'
-                                : !getSymbol().rtl
-                                ? getSymbol().symbol
-                                : null)
-                        }
-                        suffix={
-                            units === 'sats'
-                                ? units
-                                : getSymbol().rtl &&
-                                  units === 'fiat' &&
-                                  getSymbol().symbol
-                        }
-                        toggleUnits={changeUnits}
+                        onAmountChange={(
+                            amount: string,
+                            satAmount: string | number
+                        ) => {
+                            this.setState({
+                                amount,
+                                satAmount
+                            });
+                        }}
                     />
-                    {units !== 'sats' && (
-                        <Amount sats={satAmount} fixedUnits="sats" toggleable />
-                    )}
-                    {units !== 'BTC' && (
-                        <Amount sats={satAmount} fixedUnits="BTC" toggleable />
-                    )}
-                    {units === 'fiat' && (
-                        <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {FiatStore.getRate()}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
                     {lnurl.commentAllowed > 0 ? (
                         <>
                             <Text
@@ -388,7 +303,7 @@ export default class LnurlPay extends React.Component<
                 <View style={styles.content}>
                     <LnurlPayMetadata metadata={lnurl.metadata} />
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

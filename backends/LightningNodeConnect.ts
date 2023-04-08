@@ -283,7 +283,7 @@ export default class LightningNodeConnect {
             .then((data: walletrpc.ListUnspentResponse) => snakeize(data));
     bumpFee = async (req: walletrpc.BumpFeeRequest) =>
         await this.lnc.lnd.walletKit
-            .bumpFee(req)
+            .bumpFee(snakeize(req))
             .then((data: walletrpc.BumpFeeResponse) => snakeize(data));
     listAccounts = async () =>
         await this.lnc.lnd.walletKit
@@ -345,5 +345,6 @@ export default class LightningNodeConnect {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
+    supportsBumpFee = () => true;
     isLNDBased = () => true;
 }

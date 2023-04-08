@@ -1,4 +1,6 @@
 import { action, observable } from 'mobx';
+import EncryptedStorage from 'react-native-encrypted-storage';
+
 // LN
 import Payment from './../models/Payment';
 import Invoice from './../models/Invoice';
@@ -13,17 +15,30 @@ import TransactionsStore from './TransactionsStore';
 import { localeString } from './../utils/LocaleUtils';
 import BackendUtils from './../utils/BackendUtils';
 
-interface ActivityFilter {
+const STORAGE_KEY = 'zeus-activity-filters';
+
+export interface Filter {
     [index: string]: any;
     lightning: boolean;
     onChain: boolean;
-    channels: boolean;
     sent: boolean;
     received: boolean;
+    unpaid: boolean;
     minimumAmount: number;
     startDate: any;
     endDate: any;
 }
+
+export const DEFAULT_FILTERS = {
+    lightning: true,
+    onChain: true,
+    sent: true,
+    received: true,
+    unpaid: true,
+    minimumAmount: 0,
+    startDate: null,
+    endDate: null
+};
 
 export default class ActivityStore {
     @observable public loading = false;
@@ -32,15 +47,7 @@ export default class ActivityStore {
     @observable public filteredActivity: Array<
         Invoice | Payment | Transaction
     > = [];
-    @observable public filters: ActivityFilter = {
-        lightning: true,
-        onChain: true,
-        channels: true,
-        sent: true,
-        received: true,
-        startDate: null,
-        endDate: null
-    };
+    @observable public filters: Filter = DEFAULT_FILTERS;
     settingsStore: SettingsStore;
     paymentsStore: PaymentsStore;
     invoicesStore: InvoicesStore;
@@ -57,6 +64,15 @@ export default class ActivityStore {
         this.transactionsStore = transactionsStore;
         this.invoicesStore = invoicesStore;
     }
+
+    @action
+    public resetFilters = async () => {
+        this.filters = DEFAULT_FILTERS;
+        await EncryptedStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(this.filters)
+        );
+    };
 
     @action
     public setAmountFilter = (filter: any) => {
@@ -138,36 +154,32 @@ export default class ActivityStore {
     };
 
     @action
-    public resetFilters = async () => {
-        this.filters = {
-            lightning: true,
-            onChain: true,
-            channels: true,
-            sent: true,
-            received: true,
-            minimumAmount: 0,
-            startDate: null,
-            endDate: null
-        };
-    };
+    public async getFilters() {
+        this.loading = true;
+        try {
+            // Retrieve the credentials
+            const filters: any = await EncryptedStorage.getItem(STORAGE_KEY);
+            if (filters) {
+                this.filters = JSON.parse(filters);
+            } else {
+                console.log('No activity filters stored');
+            }
+        } catch (error) {
+            console.log("Keychain couldn't be accessed!", error);
+        } finally {
+            this.loading = false;
+        }
+
+        return this.filters;
+    }
 
     @action
-    public setFilters = async (filters: any) => {
+    public setFilters = async (filters: Filter) => {
         this.loading = true;
 
         this.filters = filters;
 
         let filteredActivity = this.activity;
-        if (filters.channels == false) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(
-                        activity.model ===
-                            localeString('general.transaction') &&
-                        activity.getAmount == 0
-                    )
-            );
-        }
 
         if (filters.lightning == false) {
             filteredActivity = filteredActivity.filter(
@@ -210,7 +222,20 @@ export default class ActivityStore {
                         (activity.model ===
                             localeString('general.transaction') &&
                             activity.getAmount > 0) ||
-                        activity.model === localeString('views.Invoice.title')
+                        (activity.model ===
+                            localeString('views.Invoice.title') &&
+                            activity.isPaid)
+                    )
+            );
+        }
+
+        if (filters.unpaid == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(
+                        activity.model ===
+                            localeString('views.Invoice.title') &&
+                        !activity.isPaid
                     )
             );
         }
@@ -236,11 +261,13 @@ export default class ActivityStore {
 
         this.filteredActivity = filteredActivity;
 
+        await EncryptedStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+
         this.loading = false;
     };
 
     @action
-    public getActivityAndFilter = async (filters: any = this.filters) => {
+    public getActivityAndFilter = async (filters: Filter = this.filters) => {
         await this.getActivity();
         await this.setFilters(filters);
     };
