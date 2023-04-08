@@ -7,7 +7,6 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
@@ -25,15 +24,16 @@ import POS from '../../assets/images/SVG/POS.svg';
 import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
 
+import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 
-import { themeColor } from './../../utils/ThemeUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import BackendUtils from './../../utils/BackendUtils';
-import { version } from './../../package.json';
-import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
-import UnitsStore from './../../stores/UnitsStore';
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { version } from '../../package.json';
+import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
 
 interface SettingsProps {
     navigation: any;
@@ -78,15 +78,6 @@ export default class Settings extends React.Component<
         const posEnabled =
             settings && settings.pos && settings.pos.squareEnabled;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet', { refresh: true })}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
@@ -95,7 +86,7 @@ export default class Settings extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Settings.title'),
                         style: {
@@ -103,10 +94,7 @@ export default class Settings extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView
                     style={{

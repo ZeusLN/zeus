@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
-import { ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
+import Header from '../components/Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import {
@@ -79,15 +80,6 @@ export default class BumpFee extends React.PureComponent<
 
         const isChannel = navigation.getParam('channel', false);
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const feeRateButton = () => (
             <Text
                 style={{
@@ -124,7 +116,7 @@ export default class BumpFee extends React.PureComponent<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: isChannel
                             ? localeString('views.BumpFee.titleAlt')
@@ -134,10 +126,7 @@ export default class BumpFee extends React.PureComponent<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <View
                     style={{

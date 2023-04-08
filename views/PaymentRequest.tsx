@@ -9,11 +9,12 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Header, Icon } from 'react-native-elements';
+import { Icon } from 'react-native-elements';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import Header from '../components/Header';
 import HopPicker from '../components/HopPicker';
 import KeyValue from '../components/KeyValue';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -297,17 +298,13 @@ export default class PaymentRequest extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent={BackButton}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
                         }
-                    }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
                     }}
                 />
 

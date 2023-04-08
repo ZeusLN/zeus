@@ -9,12 +9,13 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 
-import { Divider, Header, Icon } from 'react-native-elements';
+import { Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from '../../models/Channel';
 
 import BalanceSlider from '../../components/BalanceSlider';
 import Button from '../../components/Button';
+import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import FeeBreakdown from '../../components/FeeBreakdown';
@@ -166,15 +167,6 @@ export default class ChannelView extends React.Component<
 
         const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const EditFees = () => (
             <View style={{ top: -3 }}>
                 <Edit
@@ -208,14 +200,11 @@ export default class ChannelView extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={centerComponent}
                     rightComponent={<KeySend />}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
                     placement="right"
+                    navigation={navigation}
                 />
                 <ScrollView style={styles.content}>
                     <View style={styles.center}>

@@ -1,18 +1,18 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, Text } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import CollapsedQR from './../components/CollapsedQR';
-import KeyValue from './../components/KeyValue';
-import Screen from './../components/Screen';
+import CollapsedQR from '../components/CollapsedQR';
+import Header from '../components/Header';
+import KeyValue from '../components/KeyValue';
+import Screen from '../components/Screen';
 
-import { version } from './../package.json';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import { version } from '../package.json';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-import NodeInfoStore from './../stores/NodeInfoStore';
-import SettingsStore from './../stores/SettingsStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
+import SettingsStore from '../stores/SettingsStore';
 
 interface NodeInfoProps {
     navigation: any;
@@ -34,15 +34,6 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
         const { settings } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
-
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         const URIs = (props: { uris: Array<string> }) => {
             const items: any = [];
@@ -130,7 +121,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.NodeInfo.title'),
                         style: {
@@ -138,10 +129,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
 
                 <ScrollView style={styles.content}>

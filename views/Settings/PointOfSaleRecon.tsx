@@ -6,10 +6,11 @@ import {
     TouchableHighlight,
     TouchableOpacity
 } from 'react-native';
-import { ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 
+import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Spacer } from '../../components/layout/Spacer';
@@ -23,7 +24,7 @@ import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import { ReconHeader } from './PointOfSaleReconHeader';
 
@@ -121,15 +122,6 @@ export default class PointOfSaleRecon extends React.PureComponent<
                       orders.length
                   })`
                 : localeString('views.Settings.POS.recon');
-
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         const ExportBadge = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity
@@ -230,16 +222,13 @@ export default class PointOfSaleRecon extends React.PureComponent<
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: headerString,
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={<ExportBadge navigation={navigation} />}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ReconHeader
                     total={reconTotal}

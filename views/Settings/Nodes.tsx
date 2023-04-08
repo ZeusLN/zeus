@@ -1,19 +1,20 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../../components/Button';
-import LoadingIndicator from './../../components/LoadingIndicator';
-import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
-import Screen from './../../components/Screen';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
+import Screen from '../../components/Screen';
 
-import BackendUtils from './../../utils/BackendUtils';
-import BalanceStore from './../../stores/BalanceStore';
+import BackendUtils from '../../utils/BackendUtils';
+import BalanceStore from '../../stores/BalanceStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
 
 interface NodesProps {
@@ -94,15 +95,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             implementationDisplayValue[item.value] = item.key;
         });
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const AddButton = () => (
             <Icon
                 name="add"
@@ -121,7 +113,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Settings.Nodes.title'),
                         style: {
@@ -130,10 +122,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         }
                     }}
                     rightComponent={<AddButton />}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 {!!nodes && nodes.length > 0 && (
                     <FlatList

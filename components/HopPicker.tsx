@@ -6,24 +6,22 @@ import {
     StyleSheet,
     View,
     Text,
-    TouchableOpacity
+    TouchableOpacity,
+    TouchableHighlight
 } from 'react-native';
-import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import { themeColor } from './../utils/ThemeUtils';
-import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
 
-import BalanceSlider from './../components/BalanceSlider';
-import Button from './../components/Button';
+import Button from '../components/Button';
+import { ChannelItem } from './Channels/ChannelItem';
 
-import Channel from './../models/Channel';
+import Channel from '../models/Channel';
 
-import stores from './../stores/Stores';
-import ChannelsStore from './../stores/ChannelsStore';
-import UnitsStore from './../stores/UnitsStore';
-
-import PrivacyUtils from './../utils/PrivacyUtils';
+import stores from '../stores/Stores';
+import ChannelsStore, { ChannelsType } from '../stores/ChannelsStore';
+import UnitsStore from '../stores/UnitsStore';
 
 interface ChannelPickerProps {
     title?: string;
@@ -72,15 +70,46 @@ export default class ChannelPicker extends React.Component<
         this.setState({ channelSelected: item });
     }
 
+    renderItem = ({ item }: any) => {
+        const { ChannelsStore } = this.props;
+        const { channelSelected } = this.state;
+        const { largestChannelSats, channelsType } = ChannelsStore;
+        const displayName = item.alias || item.remotePubkey || item.channelId;
+
+        const selected = channelSelected === item;
+
+        if (channelsType === ChannelsType.Open) {
+            return (
+                <TouchableHighlight onPress={() => this.toggleItem(item)}>
+                    <ChannelItem
+                        title={displayName}
+                        inbound={item.remoteBalance}
+                        outbound={item.localBalance}
+                        largestTotal={largestChannelSats}
+                        selected={selected}
+                    />
+                </TouchableHighlight>
+            );
+        }
+
+        return (
+            <TouchableHighlight onPress={() => this.toggleItem(item)}>
+                <ChannelItem
+                    title={displayName}
+                    inbound={item.remoteBalance}
+                    outbound={item.localBalance}
+                    selected={selected}
+                />
+            </TouchableHighlight>
+        );
+    };
+
     render() {
-        const { title, onValueChange, ChannelsStore, UnitsStore } = this.props;
-        const { channelSelected, showChannelModal, valueSet } = this.state;
-        const SettingsStore = stores.settingsStore;
-        const { channels, nodes, loading, getChannels } = ChannelsStore;
-        const { getAmount, units } = UnitsStore;
-        const { settings } = SettingsStore;
-        const { privacy } = settings;
-        const lurkerMode = (privacy && privacy.lurkerMode) || false;
+        const { title, onValueChange, ChannelsStore } = this.props;
+        const { showChannelModal, valueSet } = this.state;
+        const { filteredChannels, nodes, loading, getChannels } = ChannelsStore;
+
+        const channels = filteredChannels;
 
         return (
             <React.Fragment>
@@ -124,122 +153,8 @@ export default class ChannelPicker extends React.Component<
 
                                     <FlatList
                                         data={channels}
-                                        renderItem={({ item }: any) => {
-                                            const displayName =
-                                                item.alias ||
-                                                (nodes[item.remote_pubkey] &&
-                                                    nodes[item.remote_pubkey]
-                                                        .alias) ||
-                                                item.remote_pubkey ||
-                                                item.channelId;
-
-                                            const channelTitle =
-                                                PrivacyUtils.sensitiveValue(
-                                                    displayName,
-                                                    8
-                                                );
-
-                                            const localBalanceDisplay =
-                                                PrivacyUtils.sensitiveValue(
-                                                    getAmount(
-                                                        item.localBalance || 0
-                                                    ),
-                                                    7,
-                                                    true
-                                                );
-                                            const remoteBalanceDisplay =
-                                                PrivacyUtils.sensitiveValue(
-                                                    getAmount(
-                                                        item.remoteBalance || 0
-                                                    ),
-                                                    7,
-                                                    true
-                                                );
-
-                                            return (
-                                                <>
-                                                    <ListItem
-                                                        containerStyle={{
-                                                            borderBottomWidth: 0,
-                                                            backgroundColor:
-                                                                themeColor(
-                                                                    'background'
-                                                                )
-                                                        }}
-                                                        onPress={() =>
-                                                            this.toggleItem(
-                                                                item
-                                                            )
-                                                        }
-                                                    >
-                                                        <ListItem.Content>
-                                                            <ListItem.Title
-                                                                style={{
-                                                                    color:
-                                                                        channelSelected ===
-                                                                        item
-                                                                            ? 'orange'
-                                                                            : themeColor(
-                                                                                  'text'
-                                                                              )
-                                                                }}
-                                                            >
-                                                                {channelTitle}
-                                                            </ListItem.Title>
-                                                            <ListItem.Subtitle
-                                                                style={{
-                                                                    color:
-                                                                        channelSelected ===
-                                                                        item
-                                                                            ? 'orange'
-                                                                            : themeColor(
-                                                                                  'secondaryText'
-                                                                              )
-                                                                }}
-                                                            >
-                                                                {`${
-                                                                    !item.isActive
-                                                                        ? `${localeString(
-                                                                              'views.Wallet.Channels.inactive'
-                                                                          )} | `
-                                                                        : ''
-                                                                }${
-                                                                    item.private
-                                                                        ? `${localeString(
-                                                                              'views.Wallet.Channels.private'
-                                                                          )} | `
-                                                                        : ''
-                                                                }${localeString(
-                                                                    'views.Wallet.Channels.local'
-                                                                )}: ${
-                                                                    units &&
-                                                                    localBalanceDisplay
-                                                                } | ${localeString(
-                                                                    'views.Wallet.Channels.remote'
-                                                                )}: ${
-                                                                    units &&
-                                                                    remoteBalanceDisplay
-                                                                }`}
-                                                            </ListItem.Subtitle>
-                                                        </ListItem.Content>
-                                                    </ListItem>
-                                                    <BalanceSlider
-                                                        localBalance={
-                                                            lurkerMode
-                                                                ? 50
-                                                                : item.localBalance
-                                                        }
-                                                        remoteBalance={
-                                                            lurkerMode
-                                                                ? 50
-                                                                : item.remoteBalance
-                                                        }
-                                                    />
-                                                </>
-                                            );
-                                        }}
-                                        keyExtractor={(item: any) =>
-                                            item.channelId
+                                        renderItem={(item) =>
+                                            this.renderItem(item)
                                         }
                                         onEndReachedThreshold={50}
                                         refreshing={loading}

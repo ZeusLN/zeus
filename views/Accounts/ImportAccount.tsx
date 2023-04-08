@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Button } from 'react-native-elements';
 
-import TextInput from './../../components/TextInput';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import Header from '../../components/Header';
+import TextInput from '../../components/TextInput';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface ImportAccountProps {
     exitSetup: any;
@@ -64,30 +65,20 @@ export default class ImportAccount extends React.Component<
             address_type
         } = this.state;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <ScrollView
                 style={{
                     flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
+                    backgroundColor: themeColor('background')
                 }}
             >
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.ImportAccount.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor="grey"
+                    navigation={navigation}
                 />
                 <View style={styles.content}>
                     <Text
