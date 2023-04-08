@@ -183,64 +183,60 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
         return (
             <>
                 {cameraStatus === CameraAuthStatus.AUTHORIZED && (
-                    <Camera
-                        style={styles.preview}
-                        scanBarcode={true}
-                        torchMode={isTorchOn ? 'on' : 'off'}
-                        onReadCode={this.onQRCodeScan}
-                        focusMode="off"
+                    <View
+                        style={{
+                            flex: 1
+                        }}
                     >
+                        <Camera
+                            style={styles.preview}
+                            scanBarcode={true}
+                            torchMode={isTorchOn ? 'on' : 'off'}
+                            onReadCode={this.onQRCodeScan}
+                            focusMode="off"
+                        />
+                        <View style={styles.actionOverlay}>
+                            <TouchableOpacity
+                                style={styles.flashButton}
+                                onPress={this.toggleTorch}
+                            >
+                                {isTorchOn ? (
+                                    <FlashOnIcon width={35} height={35} />
+                                ) : (
+                                    <FlashOffIcon width={35} height={35} />
+                                )}
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={this.handleOpenGallery}>
+                                <GalleryIcon width={50} height={50} />
+                            </TouchableOpacity>
+                        </View>
+                        {text !== undefined && (
+                            <Text style={styles.textOverlay}>{text}</Text>
+                        )}
                         <View
                             style={{
-                                flex: 1,
-                                justifyContent: 'center',
-                                alignItems: 'center'
+                                position: 'absolute',
+                                top:
+                                    (Dimensions.get('window').height -
+                                        this.maskLength) /
+                                    2,
+                                alignSelf: 'center',
+                                height: this.maskLength
                             }}
                         >
-                            <View style={styles.actionOverlay}>
-                                <TouchableOpacity
-                                    style={styles.flashButton}
-                                    onPress={this.toggleTorch}
-                                >
-                                    {isTorchOn ? (
-                                        <FlashOnIcon width={35} height={35} />
-                                    ) : (
-                                        <FlashOffIcon width={35} height={35} />
-                                    )}
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={this.handleOpenGallery}
-                                >
-                                    <GalleryIcon width={50} height={50} />
-                                </TouchableOpacity>
-                            </View>
-                            {text !== undefined && (
-                                <Text style={styles.textOverlay}>{text}</Text>
-                            )}
-                            <View
-                                style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    right: 0,
-                                    alignItems: 'center',
-                                    height: this.maskLength,
-                                    alignSelf: 'stretch'
-                                }}
-                            >
-                                <View style={styles.scan}>
-                                    <ScanFrameSvg height="100%" />
-                                </View>
-                            </View>
-                            <View style={styles.cancelOverlay}>
-                                <Button
-                                    title={localeString('general.cancel')}
-                                    onPress={() => goBack()}
-                                    iconOnly
-                                    noUppercase
-                                />
+                            <View style={styles.scan}>
+                                <ScanFrameSvg height="100%" />
                             </View>
                         </View>
-                    </Camera>
+                        <View style={styles.cancelOverlay}>
+                            <Button
+                                title={localeString('general.cancel')}
+                                onPress={() => goBack()}
+                                iconOnly
+                                noUppercase
+                            />
+                        </View>
+                    </View>
                 )}
 
                 {cameraStatus === CameraAuthStatus.NOT_AUTHORIZED && (
@@ -272,7 +268,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
 
 const styles = StyleSheet.create({
     preview: {
-        height: '100%'
+        flex: 1
     },
     flashButton: {
         marginTop: 8,
@@ -284,11 +280,10 @@ const styles = StyleSheet.create({
     actionOverlay: {
         flexDirection: 'row',
         position: 'absolute',
-        marginRight: 10,
-        marginTop: 10,
-        right: 0,
-        top: 0
+        right: 10,
+        top: 44
     },
+
     textOverlay: {
         backgroundColor: 'rgba(0,0,0,0.5)',
         color: 'white',
