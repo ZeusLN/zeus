@@ -182,6 +182,92 @@ export function themeColor(themeString: string): any {
         chain: '#fff'
     };
 
+    const Popsicle: { [key: string]: any } = {
+        gradientBackground: ['#FF5C98', '#FF9C23'],
+        generalStyle: 'dark',
+        background: '#FF9C23',
+        separator: '#141414',
+        highlight: '#fff',
+        bolt: '#fff',
+        chain: '#fff',
+        secondaryText: 'lightgray'
+    };
+
+    const Nostrich: { [key: string]: any } = {
+        gradientBackground: [
+            '#000',
+            '#1B1B1B',
+            '#2A1E36',
+            '#3A2152',
+            '#49236D',
+            '#582688'
+        ],
+        generalStyle: 'dark',
+        background: '#582688',
+        secondary: '#141414',
+        separator: '#141414'
+    };
+
+    const Desert: { [key: string]: any } = {
+        gradientBackground: ['#006BB6', '#BEC0C2', '#F58426', '#000000'],
+        generalStyle: 'dark',
+        background: '#000',
+        secondary: '#141414',
+        separator: '#141414'
+    };
+
+    const OrangeCreamSoda: { [key: string]: any } = {
+        gradientBackground: [
+            '#FDB777',
+            '#FDA766',
+            '#FD9346',
+            '#FD7F2C',
+            '#FF6200'
+        ],
+        generalStyle: 'dark',
+        background: '#FF6200',
+        secondary: '#141414',
+        separator: '#141414',
+        secondaryText: '#FFFFFF'
+    };
+
+    const Mint: { [key: string]: any } = {
+        gradientBackground: [
+            '#ADF0D3',
+            '#98E4C4',
+            '#84D8B6',
+            '#6FCCA7',
+            '#5BC099',
+            '#46B48A'
+        ],
+        generalStyle: 'dark',
+        background: '#46B48A',
+        secondaryText: '#FFFDF2',
+        separator: '#141414',
+        highlight: '#fff',
+        bolt: '#fff',
+        chain: '#fff'
+    };
+
+    const RedMetallic: { [key: string]: any } = {
+        gradientBackground: ['#961E1E', '#A72F2F', '#B94A4A'],
+        generalStyle: 'dark',
+        background: '#B94A4A',
+        secondary: '#141414',
+        separator: '#141414'
+    };
+
+    const Watermelon: { [key: string]: any } = {
+        gradientBackground: ['#FF5C98', 'green'],
+        generalStyle: 'dark',
+        background: 'green',
+        separator: '#141414',
+        highlight: '#fff',
+        bolt: '#fff',
+        chain: '#fff',
+        secondaryText: 'lightgray'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -209,6 +295,20 @@ export function themeColor(themeString: string): any {
             return Green[themeString] || Dark[themeString];
         case 'pub':
             return Pub[themeString] || Dark[themeString];
+        case 'popsicle':
+            return Popsicle[themeString] || Dark[themeString];
+        case 'nostrich':
+            return Nostrich[themeString] || Dark[themeString];
+        case 'desert':
+            return Desert[themeString] || Dark[themeString];
+        case 'orange-cream-soda':
+            return OrangeCreamSoda[themeString] || Dark[themeString];
+        case 'mint':
+            return Mint[themeString] || Dark[themeString];
+        case 'red-metallic':
+            return RedMetallic[themeString] || Dark[themeString];
+        case 'watermelon':
+            return Watermelon[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }

@@ -6,20 +6,22 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, Header, Icon, ListItem } from 'react-native-elements';
+import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Amount from '../../components/Amount';
+import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 
-import { localeString } from './../../utils/LocaleUtils';
-import BackendUtils from './../../utils/BackendUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import ActivityStore from './../../stores/ActivityStore';
-import SettingsStore from './../../stores/SettingsStore';
+import ActivityStore from '../../stores/ActivityStore';
+import SettingsStore from '../../stores/SettingsStore';
 
-import Filter from './../../assets/images/SVG/Filter On.svg';
+import Filter from '../../assets/images/SVG/Filter On.svg';
 
 interface ActivityProps {
     navigation: any;
@@ -35,9 +37,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 
     async UNSAFE_componentWillMount() {
         const { ActivityStore, SettingsStore } = this.props;
-        const { getActivityAndFilter, resetFilters } = ActivityStore;
-        await resetFilters();
-        getActivityAndFilter();
+        const { getActivityAndFilter, getFilters } = ActivityStore;
+        const filters = await getFilters();
+        await getActivityAndFilter(filters);
         if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribeEvents();
         }
@@ -115,15 +117,6 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
 
-        const CloseButton = () => (
-            <Icon
-                name="close"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const FilterButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('ActivityFilter')}
@@ -133,15 +126,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<CloseButton />}
+                    leftComponent="Close"
                     centerComponent={{
                         text: localeString('general.activity'),
                         style: {
@@ -150,10 +137,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         }
                     }}
                     rightComponent={<FilterButton />}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
@@ -174,17 +158,25 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     : localeString(
                                           'views.Activity.requestedPayment'
                                       );
-                                subTitle = item.isPaid
-                                    ? localeString('general.lightning')
-                                    : `${localeString(
-                                          'views.PaymentRequest.title'
-                                      )}: ${
-                                          item.isExpired
-                                              ? localeString(
-                                                    'views.Activity.expired'
-                                                )
-                                              : item.expirationDate
-                                      }`;
+                                subTitle = `${
+                                    item.isPaid
+                                        ? item.isLnurlP
+                                            ? 'LNURLp'
+                                            : localeString('general.lightning')
+                                        : `${
+                                              item.isLnurlP
+                                                  ? 'LNURLp'
+                                                  : localeString(
+                                                        'general.lightning'
+                                                    )
+                                          }: ${
+                                              item.isExpired
+                                                  ? localeString(
+                                                        'views.Activity.expired'
+                                                    )
+                                                  : item.expirationDate
+                                          }`
+                                }${item.getMemo ? `: ${item.getMemo}` : ''}`;
                             }
 
                             if (
@@ -194,7 +186,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                 displayName = localeString(
                                     'views.Activity.youSent'
                                 );
-                                subTitle = localeString('general.lightning');
+                                subTitle = item.getMemo
+                                    ? `${localeString('general.lightning')}: ${
+                                          item.getMemo
+                                      }`
+                                    : localeString('general.lightning');
                             }
 
                             if (
@@ -230,8 +226,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                themeColor('background')
+                                            backgroundColor: 'transparent'
                                         }}
                                         onPress={() => {
                                             if (
@@ -343,7 +338,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         }}
                     />
                 )}
-            </View>
+            </Screen>
         );
     }
 }

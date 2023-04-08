@@ -192,7 +192,7 @@ const handleAnything = async (
     } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
         if (isClipboardValue) return true;
         const [username, domain] = value.split('@');
-        const url = `https://${domain}/.well-known/lnurlp/${username}`;
+        const url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );

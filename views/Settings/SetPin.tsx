@@ -1,12 +1,16 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import Header from '../../components/Header';
+import Pin from '../../components/Pin';
+import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
+
+import SettingsStore from '../../stores/SettingsStore';
+
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import SettingsStore from '../../stores/SettingsStore';
-import Pin from '../../components/Pin';
 
 interface SetPinProps {
     navigation: any;
@@ -100,29 +104,10 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
         const { pin, pinMismatchError, pinInvalidError } = this.state;
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
-                <Header
-                    leftComponent={<BackButton />}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
-                />
+            <Screen>
+                <Header leftComponent="Back" navigation={navigation} />
                 <View
                     style={{
                         paddingTop: 10,
@@ -237,7 +222,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                         </>
                     )}
                 </View>
-            </View>
+            </Screen>
         );
     }
 }

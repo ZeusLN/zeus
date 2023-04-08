@@ -3,6 +3,24 @@ import BaseModel from './BaseModel';
 import DateTimeUtils from './../utils/DateTimeUtils';
 import { localeString } from './../utils/LocaleUtils';
 
+interface OutputDetail {
+    address: string;
+    amount: string;
+    is_our_address: boolean;
+    output_index: string;
+    output_type: string;
+    pk_script: string;
+}
+
+interface PreviousOutpoint {
+    raw_tx_hex: string;
+    is_our_output: boolean;
+    outpoint: string;
+    timestamp: string;
+    total_fees: string;
+    tx_hash: string;
+}
+
 export default class Transaction extends BaseModel {
     public amount: number;
     public block_hash: string;
@@ -12,6 +30,8 @@ export default class Transaction extends BaseModel {
     public time_stamp: string;
     public tx_hash: string;
     public total_fees: string;
+    public output_details: Array<OutputDetail>;
+    public previous_outpoints: Array<PreviousOutpoint>;
     // c-lightning
     public value: number | string;
     public blockheight: number;
@@ -61,5 +81,14 @@ export default class Transaction extends BaseModel {
 
     @computed public get destAddresses(): Array<string> {
         return this.dest_addresses || [this.address];
+    }
+
+    @computed public get getOutpoint(): string {
+        let outpoint = '';
+        this.output_details.map((output: OutputDetail) => {
+            if (output.is_our_address)
+                outpoint = `${this.tx}:${output.output_index}`;
+        });
+        return outpoint;
     }
 }

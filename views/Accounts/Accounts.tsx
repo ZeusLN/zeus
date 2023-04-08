@@ -1,22 +1,21 @@
 import * as React from 'react';
-import { View } from 'react-native';
-
-import { Header, Icon } from 'react-native-elements';
-
+import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../../components/Button';
-import LayerBalances from './../../components/LayerBalances';
-import LoadingIndicator from './../../components/LoadingIndicator';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import LayerBalances from '../../components/LayerBalances';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 
-import BalanceStore from './../../stores/BalanceStore';
-import UnitsStore from './../../stores/UnitsStore';
-import UTXOsStore from './../../stores/UTXOsStore';
-import SettingsStore from './../../stores/SettingsStore';
+import BalanceStore from '../../stores/BalanceStore';
+import UnitsStore from '../../stores/UnitsStore';
+import UTXOsStore from '../../stores/UTXOsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
-import BackendUtils from './../../utils/BackendUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface AccountsProps {
     navigation: any;
@@ -85,19 +84,6 @@ export default class Accounts extends React.Component<
         const { value, amount, lightning } = this.state;
         const { loadingAccounts } = UTXOsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() =>
-                    value
-                        ? navigation.goBack()
-                        : navigation.navigate('Settings', { refresh: true })
-                }
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const AddButton = () => (
             <Icon
                 name="add"
@@ -108,11 +94,9 @@ export default class Accounts extends React.Component<
         );
 
         return (
-            <View
-                style={{ flex: 1, backgroundColor: themeColor('background') }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: amount
                             ? localeString('views.Accounts.select')
@@ -120,10 +104,7 @@ export default class Accounts extends React.Component<
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={value ? null : <AddButton />}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 {loadingAccounts && <LoadingIndicator />}
                 {!loadingAccounts && (
@@ -170,7 +151,7 @@ export default class Accounts extends React.Component<
                         }
                     />
                 )}
-            </View>
+            </Screen>
         );
     }
 }

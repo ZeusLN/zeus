@@ -1,21 +1,23 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
-import { ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../../components/Button';
-import CopyButton from './../../components/CopyButton';
-import LoadingIndicator from './../../components/LoadingIndicator';
+import Button from '../../components/Button';
+import CopyButton from '../../components/CopyButton';
+import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
-} from './../../components/SuccessErrorMessage';
-import TextInput from './../../components/TextInput';
+} from '../../components/SuccessErrorMessage';
+import TextInput from '../../components/TextInput';
 
-import { themeColor } from './../../utils/ThemeUtils';
-import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
 
-import MessageSignStore from './../../stores/MessageSignStore';
+import MessageSignStore from '../../stores/MessageSignStore';
 
 interface SignVerifyMessageProps {
     navigation: any;
@@ -90,17 +92,6 @@ export default class SignVerifyMessage extends React.Component<
             signature
         } = MessageSignStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() =>
-                    navigation.navigate('Settings', { refresh: true })
-                }
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const signButton = () => (
             <React.Fragment>
                 <Text
@@ -134,14 +125,9 @@ export default class SignVerifyMessage extends React.Component<
         const buttons = [{ element: signButton }, { element: verifyButton }];
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Settings.SignMessage.title'),
                         style: {
@@ -149,13 +135,10 @@ export default class SignVerifyMessage extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
 
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
@@ -364,8 +347,8 @@ export default class SignVerifyMessage extends React.Component<
                             />
                         </View>
                     )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </Screen>
         );
     }
 }

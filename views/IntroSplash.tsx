@@ -1,19 +1,20 @@
 import * as React from 'react';
 import { Image, View, SafeAreaView, TouchableOpacity } from 'react-native';
-import { Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Globe from '../assets/images/SVG/Globe.svg';
 import WordLogo from '../assets/images/SVG/Word Logo - no outline.svg';
 
-import Button from './../components/Button';
+import Button from '../components/Button';
+import Header from '../components/Header';
+import Screen from '../components/Screen';
 
-import SettingsStore from './../stores/SettingsStore';
+import SettingsStore from '../stores/SettingsStore';
 
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-const Splash = require('./../assets/images/intro/splash.png');
+const Splash = require('../assets/images/intro/splash.png');
 
 interface IntroSplashProps {
     navigation: any;
@@ -40,18 +41,11 @@ export default class IntroSplash extends React.Component<IntroSplashProps, {}> {
         );
 
         return (
-            <>
-                <Header
-                    rightComponent={<LanguageButton />}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
-                />
+            <Screen>
+                <Header rightComponent={LanguageButton} />
                 <SafeAreaView
                     style={{
                         flex: 1,
-                        backgroundColor: themeColor('background'),
                         paddingTop: 50
                     }}
                 >
@@ -111,7 +105,7 @@ export default class IntroSplash extends React.Component<IntroSplashProps, {}> {
                         />
                     </View>
                 </SafeAreaView>
-            </>
+            </Screen>
         );
     }
 }

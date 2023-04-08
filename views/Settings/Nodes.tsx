@@ -1,18 +1,20 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../../components/Button';
-import LoadingIndicator from './../../components/LoadingIndicator';
-import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
+import Screen from '../../components/Screen';
 
-import BackendUtils from './../../utils/BackendUtils';
-import BalanceStore from './../../stores/BalanceStore';
+import BackendUtils from '../../utils/BackendUtils';
+import BalanceStore from '../../stores/BalanceStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
 
 interface NodesProps {
@@ -93,15 +95,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             implementationDisplayValue[item.value] = item.key;
         });
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const AddButton = () => (
             <Icon
                 name="add"
@@ -118,143 +111,127 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         );
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
-                <View>
-                    <Header
-                        leftComponent={<BackButton />}
-                        centerComponent={{
-                            text: localeString('views.Settings.Nodes.title'),
-                            style: {
-                                color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
-                            }
-                        }}
-                        rightComponent={<AddButton />}
-                        backgroundColor={themeColor('background')}
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
-                    />
-                    {!!nodes && nodes.length > 0 && (
-                        <FlatList
-                            data={nodes}
-                            renderItem={({ item, index }) => (
-                                <ListItem
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor:
-                                            themeColor('background')
-                                    }}
-                                    onPress={async () => {
-                                        const currentImplementation =
-                                            implementation;
-                                        await updateSettings({
-                                            nodes,
-                                            selectedNode: index
-                                        }).then(() => {
-                                            if (
-                                                currentImplementation ===
-                                                'lightning-node-connect'
-                                            ) {
-                                                BackendUtils.disconnect();
-                                            }
-                                            BalanceStore.reset();
-                                            NodeInfoStore.reset();
-                                            ChannelsStore.reset();
-                                            setConnectingStatus(true);
-                                            navigation.navigate('Wallet', {
-                                                refresh: true
-                                            });
-                                        });
-                                    }}
-                                >
-                                    <NodeIdenticon
-                                        selectedNode={item}
-                                        width={35}
-                                        rounded
-                                    />
-                                    <ListItem.Content>
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontFamily: 'Lato-Regular'
-                                            }}
-                                        >
-                                            {NodeTitle(item, 32)}
-                                        </ListItem.Title>
-                                        <ListItem.Subtitle
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontFamily: 'Lato-Regular'
-                                            }}
-                                        >
-                                            {selectedNode === index ||
-                                            (!selectedNode && index === 0)
-                                                ? `Active | ${
-                                                      implementationDisplayValue[
-                                                          item.implementation
-                                                      ]
-                                                  }`
-                                                : `${
-                                                      implementationDisplayValue[
-                                                          item.implementation
-                                                      ]
-                                                  }`}
-                                        </ListItem.Subtitle>
-                                    </ListItem.Content>
-                                    <Button
-                                        title=""
-                                        icon={{
-                                            name: 'settings',
-                                            size: 25,
-                                            color: themeColor('text')
-                                        }}
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                'NodeConfiguration',
-                                                {
-                                                    node: item,
-                                                    index,
-                                                    active:
-                                                        selectedNode === index,
-                                                    saved: true
-                                                }
-                                            )
+            <Screen>
+                <Header
+                    leftComponent="Back"
+                    centerComponent={{
+                        text: localeString('views.Settings.Nodes.title'),
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
+                    }}
+                    rightComponent={<AddButton />}
+                    navigation={navigation}
+                />
+                {!!nodes && nodes.length > 0 && (
+                    <FlatList
+                        data={nodes}
+                        renderItem={({ item, index }) => (
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={async () => {
+                                    const currentImplementation =
+                                        implementation;
+                                    await updateSettings({
+                                        nodes,
+                                        selectedNode: index
+                                    }).then(() => {
+                                        if (
+                                            currentImplementation ===
+                                            'lightning-node-connect'
+                                        ) {
+                                            BackendUtils.disconnect();
                                         }
-                                        iconOnly
-                                        adaptiveWidth
-                                    />
-                                </ListItem>
-                            )}
-                            refreshing={loading}
-                            keyExtractor={(item, index) =>
-                                `${item.host}-${index}`
-                            }
-                            ItemSeparatorComponent={this.renderSeparator}
-                            onEndReachedThreshold={50}
-                        />
-                    )}
-                    {nodes && nodes.length === 0 && !loading && (
-                        <Button
-                            title={localeString('views.Settings.Nodes.noNodes')}
-                            icon={{
-                                name: 'error-outline',
-                                size: 25,
-                                color: themeColor('text')
-                            }}
-                            iconOnly
-                        />
-                    )}
-                    {loading && <LoadingIndicator />}
-                </View>
-            </View>
+                                        BalanceStore.reset();
+                                        NodeInfoStore.reset();
+                                        ChannelsStore.reset();
+                                        setConnectingStatus(true);
+                                        navigation.navigate('Wallet', {
+                                            refresh: true
+                                        });
+                                    });
+                                }}
+                            >
+                                <NodeIdenticon
+                                    selectedNode={item}
+                                    width={35}
+                                    rounded
+                                />
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'Lato-Regular'
+                                        }}
+                                    >
+                                        {NodeTitle(item, 32)}
+                                    </ListItem.Title>
+                                    <ListItem.Subtitle
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'Lato-Regular'
+                                        }}
+                                    >
+                                        {selectedNode === index ||
+                                        (!selectedNode && index === 0)
+                                            ? `Active | ${
+                                                  implementationDisplayValue[
+                                                      item.implementation
+                                                  ]
+                                              }`
+                                            : `${
+                                                  implementationDisplayValue[
+                                                      item.implementation
+                                                  ]
+                                              }`}
+                                    </ListItem.Subtitle>
+                                </ListItem.Content>
+                                <Button
+                                    title=""
+                                    icon={{
+                                        name: 'settings',
+                                        size: 25,
+                                        color: themeColor('text')
+                                    }}
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'NodeConfiguration',
+                                            {
+                                                node: item,
+                                                index,
+                                                active: selectedNode === index,
+                                                saved: true
+                                            }
+                                        )
+                                    }
+                                    iconOnly
+                                    adaptiveWidth
+                                />
+                            </ListItem>
+                        )}
+                        refreshing={loading}
+                        keyExtractor={(item, index) => `${item.host}-${index}`}
+                        ItemSeparatorComponent={this.renderSeparator}
+                        onEndReachedThreshold={50}
+                    />
+                )}
+                {nodes && nodes.length === 0 && !loading && (
+                    <Button
+                        title={localeString('views.Settings.Nodes.noNodes')}
+                        icon={{
+                            name: 'error-outline',
+                            size: 25,
+                            color: themeColor('text')
+                        }}
+                        iconOnly
+                    />
+                )}
+                {loading && <LoadingIndicator />}
+            </Screen>
         );
     }
 }

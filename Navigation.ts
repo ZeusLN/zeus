@@ -18,11 +18,7 @@ import SendingLightning from './views/SendingLightning';
 import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
 import Invoice from './views/Invoice';
-import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
-import CLightningRestQRScanner from './views/CLightningRestQRScanner';
-import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
-import LightningNodeConnectQRScanner from './views/LightningNodeConnectQRScanner';
-import LNDHubQRScanner from './views/LNDHubQRScanner';
+
 import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
 import Lockscreen from './views/Lockscreen';
@@ -52,6 +48,7 @@ import PointOfSale from './views/Settings/PointOfSale';
 import PointOfSaleRecon from './views/Settings/PointOfSaleRecon';
 import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
+import InvoicesSettings from './views/Settings/InvoicesSettings';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -66,6 +63,7 @@ import Utxo from './views/UTXOs/UTXO';
 import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
+import BumpFee from './views/BumpFee';
 
 // POS
 import Order from './views/Order';
@@ -226,21 +224,6 @@ const AppScenes = {
     NodeQRCodeScanner: {
         screen: NodeQRScanner
     },
-    BTCPayConfigQRScanner: {
-        screen: BTCPayConfigQRScanner
-    },
-    LNDConnectConfigQRScanner: {
-        screen: LNDConnectConfigQRScanner
-    },
-    LightningNodeConnectQRScanner: {
-        screen: LightningNodeConnectQRScanner
-    },
-    CLightningRestQRScanner: {
-        screen: CLightningRestQRScanner
-    },
-    LNDHubQRScanner: {
-        screen: LNDHubQRScanner
-    },
     ImportAccountQRScanner: {
         screen: ImportAccountQRScanner
     },
@@ -261,6 +244,12 @@ const AppScenes = {
     },
     PaymentsSettings: {
         screen: PaymentsSettings
+    },
+    InvoicesSettings: {
+        screen: InvoicesSettings
+    },
+    BumpFee: {
+        screen: BumpFee
     }
 };
 

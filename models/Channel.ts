@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
 import { localeString } from './../utils/LocaleUtils';
@@ -30,6 +31,8 @@ export default class Channel extends BaseModel {
     private: boolean;
     initiator?: boolean;
     alias_scids?: Array<number>; // array uint64
+    local_chan_reserve_sat?: string;
+    remote_chan_reserve_sat?: string;
     // c-lightning
     @observable
     state: string;
@@ -40,9 +43,26 @@ export default class Channel extends BaseModel {
     // pending
     remote_node_pub: string;
 
+    // enrichments
+    displayName?: string;
+
     @computed
     public get isActive(): boolean {
         return this.active || this.state === 'CHANNELD_NORMAL';
+    }
+
+    @computed
+    public get channelCapacity(): string {
+        return new BigNumber(this.localBalance)
+            .plus(this.remoteBalance)
+            .toString();
+    }
+
+    @computed
+    public get localBalance(): string {
+        return this.msatoshi_to_us
+            ? (Number(this.msatoshi_to_us) / 1000).toString()
+            : this.local_balance || '0';
     }
 
     @computed
@@ -53,13 +73,6 @@ export default class Channel extends BaseModel {
                   1000
               ).toString()
             : this.remote_balance || '0';
-    }
-
-    @computed
-    public get localBalance(): string {
-        return this.msatoshi_to_us
-            ? (Number(this.msatoshi_to_us) / 1000).toString()
-            : this.local_balance || '0';
     }
 
     @computed

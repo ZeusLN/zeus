@@ -32,7 +32,7 @@ function TotalRow({
                 {/* TODO: localize */}
                 <Body secondary>Total {kind}</Body>
             </Row>
-            <Amount sats={amount} sensitive />
+            <Amount sats={amount} sensitive toggleable />
         </Row>
     );
 }
@@ -43,24 +43,22 @@ export function ChannelsHeader(props) {
     return (
         <View
             style={{
-                ...styles.wrapper,
-                backgroundColor: themeColor('background'),
-                color: themeColor('text')
+                ...styles.wrapper
             }}
         >
             <TotalRow
                 kind="outbound"
-                amount={totalOutbound}
+                amount={totalOutbound.toFixed(3)}
                 color={themeColor('outbound')}
             />
             <TotalRow
                 kind="inbound"
-                amount={totalInbound}
+                amount={totalInbound.toFixed(3)}
                 color={themeColor('inbound')}
             />
             <TotalRow
                 kind="offline"
-                amount={totalOffline}
+                amount={totalOffline.toFixed(3)}
                 color={themeColor('secondaryText')}
             />
         </View>
@@ -74,15 +72,6 @@ const styles = StyleSheet.create({
         height: 100,
         padding: 16,
         borderBottomLeftRadius: 20,
-        borderBottomRightRadius: 20,
-        // TODO: this shadow stuff probably needs tweaking on iOS
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 0
-        },
-        shadowOpacity: 0.5,
-        shadowRadius: 40,
-        elevation: 15
+        borderBottomRightRadius: 20
     }
 });

@@ -104,6 +104,7 @@ export default class handleAnythingQRScanner extends React.Component<
             <QRCodeScanner
                 handleQRScanned={this.handleAnythingScanned}
                 goBack={() => navigation.goBack()}
+                navigation={navigation}
             />
         );
     }

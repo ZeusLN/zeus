@@ -1,18 +1,19 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Amount from './../components/Amount';
-import KeyValue from './../components/KeyValue';
+import Amount from '../components/Amount';
+import Header from '../components/Header';
+import KeyValue from '../components/KeyValue';
+import Screen from '../components/Screen';
 
-import Payment from './../models/Payment';
-import PrivacyUtils from './../utils/PrivacyUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import Payment from '../models/Payment';
+import PrivacyUtils from '../utils/PrivacyUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-import SettingsStore from './../stores/SettingsStore';
-import LnurlPayStore from './../stores/LnurlPayStore';
+import SettingsStore from '../stores/SettingsStore';
+import LnurlPayStore from '../stores/LnurlPayStore';
 import LnurlPayHistorical from './LnurlPay/Historical';
 
 interface PaymentProps {
@@ -54,26 +55,12 @@ export default class PaymentView extends React.Component<PaymentProps> {
         } = payment;
         const date = getDisplayTime;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const lnurlpaytx = this.state.lnurlpaytx;
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Payment.title'),
                         style: {
@@ -81,90 +68,99 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
-                <View style={styles.center}>
-                    <Amount
-                        sats={payment.getAmount}
-                        debit
-                        jumboText
-                        sensitive
-                        toggleable
-                    />
-                </View>
-
-                {lnurlpaytx && (
-                    <View style={styles.content}>
-                        <LnurlPayHistorical
-                            navigation={navigation}
-                            lnurlpaytx={lnurlpaytx}
-                            preimage={getPreimage}
-                        />
-                    </View>
-                )}
-
-                <View style={styles.content}>
-                    {getFee && (
-                        <KeyValue
-                            keyValue={localeString('views.Payment.fee')}
-                            value={
-                                <Amount
-                                    sats={getFee}
-                                    debit
-                                    sensitive
-                                    toggleable
-                                />
-                            }
+                <ScrollView>
+                    <View style={styles.center}>
+                        <Amount
+                            sats={payment.getAmount}
+                            debit
+                            jumboText
+                            sensitive
                             toggleable
                         />
+                    </View>
+
+                    {lnurlpaytx && (
+                        <View style={styles.content}>
+                            <LnurlPayHistorical
+                                navigation={navigation}
+                                lnurlpaytx={lnurlpaytx}
+                                preimage={getPreimage}
+                            />
+                        </View>
                     )}
 
-                    {getMemo && (
-                        <KeyValue
-                            keyValue={localeString('views.Receive.memo')}
-                            value={getMemo}
-                            sensitive
-                        />
-                    )}
+                    <View style={styles.content}>
+                        {getFee && (
+                            <KeyValue
+                                keyValue={localeString('views.Payment.fee')}
+                                value={
+                                    <Amount
+                                        sats={getFee}
+                                        debit
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                                toggleable
+                            />
+                        )}
 
-                    {typeof payment_hash === 'string' && (
-                        <KeyValue
-                            keyValue={localeString('views.Payment.paymentHash')}
-                            value={payment_hash}
-                            sensitive
-                        />
-                    )}
+                        {getMemo && (
+                            <KeyValue
+                                keyValue={localeString('views.Receive.memo')}
+                                value={getMemo}
+                                sensitive
+                            />
+                        )}
 
-                    <KeyValue
-                        keyValue={localeString('views.Payment.paymentPreimage')}
-                        value={getPreimage}
-                        sensitive
-                    />
+                        {typeof payment_hash === 'string' && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.paymentHash'
+                                )}
+                                value={payment_hash}
+                                sensitive
+                            />
+                        )}
 
-                    <KeyValue
-                        keyValue={localeString('views.Payment.creationDate')}
-                        value={date}
-                        sensitive
-                    />
+                        {getPreimage && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.paymentPreimage'
+                                )}
+                                value={getPreimage}
+                                sensitive
+                            />
+                        )}
 
-                    {enhancedPath.length > 0 && (
-                        <KeyValue
-                            keyValue={localeString('views.Payment.path')}
-                            value={
-                                lurkerMode
-                                    ? PrivacyUtils.sensitiveValue(
-                                          enhancedPath.join(', ')
-                                      )
-                                    : `${enhancedPath}`
-                            }
-                            sensitive
-                        />
-                    )}
-                </View>
-            </ScrollView>
+                        {date && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.creationDate'
+                                )}
+                                value={date}
+                                sensitive
+                            />
+                        )}
+
+                        {enhancedPath.length > 0 && (
+                            <KeyValue
+                                keyValue={localeString('views.Payment.path')}
+                                value={
+                                    lurkerMode
+                                        ? PrivacyUtils.sensitiveValue(
+                                              enhancedPath.join(', ')
+                                          )
+                                        : `${enhancedPath}`
+                                }
+                                sensitive
+                            />
+                        )}
+                    </View>
+                </ScrollView>
+            </Screen>
         );
     }
 }

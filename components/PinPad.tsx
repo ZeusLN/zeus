@@ -3,8 +3,9 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, Pressable, View } from 'react-native';
 import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
-import Success from './../assets/images/SVG/Success.svg';
+import Success from '../assets/images/SVG/Success.svg';
 import Touchable from './Touchable';
+import Stores from '../stores/Stores';
 
 interface PinPadProps {
     appendValue: (newValue: string) => void;
@@ -34,6 +35,11 @@ export default function PinPad({
     // PinPad state only depends on pin value length, not the actual pin/amount value
     // Parent component to PinPad can store pin/amount value
     const [pinValueLength, setPinValueLength] = useState(0);
+
+    const bigKeypadButtons =
+        Stores.settingsStore.settings &&
+        Stores.settingsStore.settings.display &&
+        Stores.settingsStore.settings.display.bigKeypadButtons;
 
     // Sets pinNumbers before first render, and doesn't reset them on state change
     const pinNumbers = useMemo(() => {
@@ -80,7 +86,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[1]}
@@ -97,7 +104,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[2]}
@@ -114,7 +122,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[3]}
@@ -133,7 +142,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[4]}
@@ -150,7 +160,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[5]}
@@ -167,7 +178,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[6]}
@@ -186,7 +198,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[7]}
@@ -203,7 +216,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[8]}
@@ -220,7 +234,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[9]}
@@ -239,7 +254,8 @@ export default function PinPad({
                         <Text
                             style={{
                                 ...styles.pinPadNumber,
-                                color: themeColor('text')
+                                color: themeColor('text'),
+                                fontSize: bigKeypadButtons ? 50 : 20
                             }}
                         >
                             {'.'}
@@ -257,7 +273,8 @@ export default function PinPad({
                         <Text
                             style={{
                                 ...styles.pinPadNumber,
-                                color: themeColor('text')
+                                color: themeColor('text'),
+                                fontSize: bigKeypadButtons ? 50 : 20
                             }}
                         >
                             {'<'}
@@ -275,7 +292,8 @@ export default function PinPad({
                     <Text
                         style={{
                             ...styles.pinPadNumber,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontSize: bigKeypadButtons ? 50 : 20
                         }}
                     >
                         {pinNumbers[0]}
@@ -294,7 +312,8 @@ export default function PinPad({
                             <Text
                                 style={{
                                     ...styles.pinPadNumber,
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontSize: bigKeypadButtons ? 50 : 20
                                 }}
                             >
                                 {'<'}
@@ -312,7 +331,8 @@ export default function PinPad({
                             <Text
                                 style={{
                                     ...styles.pinPadNumber,
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontSize: bigKeypadButtons ? 50 : 20
                                 }}
                             >
                                 C
@@ -346,8 +366,6 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     pinPadNumber: {
-        color: themeColor('text'),
-        fontSize: 20,
         fontFamily: 'Lato-Bold'
     },
     pad: {

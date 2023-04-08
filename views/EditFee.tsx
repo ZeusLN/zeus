@@ -8,11 +8,12 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
-import { Icon, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
+import Header from '../components/Header';
 import LightningIndicator from '../components/LightningIndicator';
+import Screen from '../components/Screen';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -61,46 +62,28 @@ export default class EditFee extends React.Component<
         const displayOnly = navigation.getParam('displayOnly', null);
         const { recommendedFees, loading, error, getOnchainFeesviaMempool } =
             FeeStore;
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
+
         const ReloadButton = () => (
             <TouchableOpacity onPress={() => getOnchainFeesviaMempool()}>
                 <Refresh stroke={themeColor('text')} />
             </TouchableOpacity>
         );
+
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
+                    leftComponent="Back"
                     centerComponent={{
                         text: displayOnly
                             ? localeString('views.EditFee.titleDisplayOnly')
                             : localeString('views.EditFee.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('background')}
-                    leftComponent={<BackButton />}
-                    rightComponent={<ReloadButton />}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    rightComponent={ReloadButton}
+                    navigation={navigation}
                 />
                 <View
                     style={{
-                        backgroundColor:
-                            themeColor('generalStyle') === 'light'
-                                ? '#1d1f31'
-                                : themeColor('background'),
                         alignItems: 'center',
                         width: '100%',
                         paddingTop: 15,
@@ -118,7 +101,6 @@ export default class EditFee extends React.Component<
                     {recommendedFees['fastestFee'] && !loading && (
                         <View
                             style={{
-                                backgroundColor: themeColor('background'),
                                 justifyContent: 'space-around'
                             }}
                         >
@@ -364,7 +346,7 @@ export default class EditFee extends React.Component<
                         </View>
                     )}
                 </ScrollView>
-            </View>
+            </Screen>
         );
     }
 }

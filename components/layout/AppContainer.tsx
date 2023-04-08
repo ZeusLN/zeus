@@ -1,29 +1,13 @@
 import React from 'react';
-import { SafeAreaView } from 'react-native';
 import { Observer } from 'mobx-react';
-import { themeColor } from '../../utils/ThemeUtils';
 
-export function AppContainer({
-    style = {},
-    children
-}: {
-    style?: any;
-    children?: React.ReactNode;
-}) {
+import Screen from '../../components/Screen';
+
+export function AppContainer({ children }: { children?: React.ReactNode }) {
     return (
         <Observer>
             {() => {
-                return (
-                    <SafeAreaView
-                        style={{
-                            flex: 1,
-                            backgroundColor: themeColor('background'),
-                            ...style
-                        }}
-                    >
-                        {children}
-                    </SafeAreaView>
-                );
+                return <Screen>{children}</Screen>;
             }}
         </Observer>
     );

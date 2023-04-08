@@ -1,4 +1,5 @@
 import { observable, computed } from 'mobx';
+
 import BaseModel from './BaseModel';
 import Base64Utils from './../utils/Base64Utils';
 import DateTimeUtils from './../utils/DateTimeUtils';
@@ -81,6 +82,15 @@ export default class Invoice extends BaseModel {
             : '';
     }
 
+    @computed public get getDescriptionHash(): string {
+        const hash = this.description_hash;
+        return typeof hash === 'string'
+            ? hash.includes('=')
+                ? Base64Utils.base64ToHex(hash)
+                : hash
+            : '';
+    }
+
     @computed public get getTimestamp(): string | number {
         return (
             this.paid_at ||
@@ -92,11 +102,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getMemo(): string {
-        return (
-            this.memo ||
-            this.description ||
-            localeString('models.Invoice.noMemo')
-        );
+        return this.memo || this.description;
     }
 
     @computed public get isPaid(): boolean {
@@ -177,9 +183,9 @@ export default class Invoice extends BaseModel {
 
     @computed public get expirationDate(): Date | string {
         if (this.expiry || this.expire_time) {
-            return `${this.expiry || this.expire_time} ${localeString(
-                'models.Invoice.seconds'
-            )}`;
+            const expiration = this.expiry || this.expire_time;
+            if (expiration == '0') return localeString('models.Invoice.never');
+            return `${expiration} ${localeString('models.Invoice.seconds')}`;
         }
 
         return this.expires_at

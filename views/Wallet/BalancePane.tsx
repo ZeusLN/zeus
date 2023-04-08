@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Image, Text, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Button from '../../components/Button';
 import WalletHeader from '../../components/WalletHeader';
@@ -13,8 +13,6 @@ import NodeInfoStore from './../../stores/NodeInfoStore';
 import SettingsStore from './../../stores/SettingsStore';
 
 import { version, playStore } from './../../package.json';
-
-const TorIcon = require('./../../assets/images/tor.png');
 
 interface BalancePaneProps {
     navigation: any;
@@ -39,7 +37,6 @@ export default class BalancePane extends React.PureComponent<
             pendingOpenBalance
         } = BalanceStore;
         const { implementation } = SettingsStore;
-        const nodeAddress = SettingsStore.host || SettingsStore.url;
 
         const pendingUnconfirmedBalance =
             Number(pendingOpenBalance) + Number(unconfirmedBlockchainBalance);
@@ -113,21 +110,6 @@ export default class BalancePane extends React.PureComponent<
             </View>
         );
 
-        const NetworkBadge = () => (
-            <>
-                {nodeAddress && nodeAddress.includes('.onion') ? (
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('NodeInfo')}
-                    >
-                        <Image
-                            style={{ width: 25, height: 25 }}
-                            source={TorIcon}
-                        />
-                    </TouchableOpacity>
-                ) : null}
-            </>
-        );
-
         let balancePane;
         const error = NodeInfoStore.error || SettingsStore.error;
 
@@ -136,28 +118,24 @@ export default class BalancePane extends React.PureComponent<
                 <View
                     style={{
                         alignItems: 'center',
-                        height: 240,
-                        backgroundColor: themeColor('background')
+                        minHeight: 200
                     }}
                 >
                     <WalletHeader
                         navigation={navigation}
                         SettingsStore={SettingsStore}
                     />
-                    <View style={{ marginTop: 40 }}>
+                    <View
+                        style={{
+                            marginTop: 40,
+                            marginBottom: 20
+                        }}
+                    >
                         {implementation === 'lndhub' ? (
                             <LightningBalance />
                         ) : (
                             <BalanceViewCombined />
                         )}
-                        <View
-                            style={{
-                                marginTop: 5,
-                                alignItems: 'center'
-                            }}
-                        >
-                            <NetworkBadge />
-                        </View>
                     </View>
                 </View>
             );

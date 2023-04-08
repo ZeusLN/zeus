@@ -1,12 +1,15 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import Header from '../../components/Header';
+import Pin from '../../components/Pin';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
+
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+
 import SettingsStore from '../../stores/SettingsStore';
-import Pin from '../../components/Pin';
 
 interface SetDuressPinProps {
     navigation: any;
@@ -103,14 +106,6 @@ export default class SetDuressPin extends React.Component<
         const { settings } = SettingsStore;
         const { duressPin, duressPinMismatchError, duressPinInvalidError } =
             this.state;
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         return (
             <View
@@ -119,13 +114,7 @@ export default class SetDuressPin extends React.Component<
                     backgroundColor: themeColor('background')
                 }}
             >
-                <Header
-                    leftComponent={<BackButton />}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
-                />
+                <Header leftComponent="Back" navigation={navigation} />
                 <View
                     style={{
                         paddingTop: 10,
