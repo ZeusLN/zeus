@@ -30,16 +30,16 @@ import TransactionsStore from '../stores/TransactionsStore';
 import UnitsStore from '../stores/UnitsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
-import Amount from './../components/Amount';
+import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
-import Button from './../components/Button';
-import LoadingIndicator from './../components/LoadingIndicator';
-import { ErrorMessage } from './../components/SuccessErrorMessage';
+import Button from '../components/Button';
+import LoadingIndicator from '../components/LoadingIndicator';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
 import Header from '../components/Header';
 import Screen from '../components/Screen';
-import Switch from './../components/Switch';
-import TextInput from './../components/TextInput';
-import UTXOPicker from './../components/UTXOPicker';
+import Switch from '../components/Switch';
+import TextInput from '../components/TextInput';
+import UTXOPicker from '../components/UTXOPicker';
 
 import BackendUtils from '../utils/BackendUtils';
 import NFCUtils from '../utils/NFCUtils';
