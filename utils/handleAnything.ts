@@ -276,58 +276,81 @@ const handleAnything = async (
             });
     } else if (!!findlnurl(value) || !!lnurl) {
         const raw: string = findlnurl(value) || lnurl || '';
-        return getlnurlParams(raw).then((params: any) => {
-            if (params.status === 'ERROR' && params.domain.endsWith('.onion')) {
-                // TODO handle fetching of params with internal Tor
-                throw new Error(`${params.domain} says: ${params.reason}`);
-            }
+        return getlnurlParams(raw)
+            .then((params: any) => {
+                if (
+                    params.status === 'ERROR' &&
+                    params.domain.endsWith('.onion')
+                ) {
+                    // TODO handle fetching of params with internal Tor
+                    throw new Error(`${params.domain} says: ${params.reason}`);
+                }
 
-            switch (params.tag) {
-                case 'withdrawRequest':
-                    if (isClipboardValue) return true;
-                    return [
-                        'Receive',
-                        {
-                            lnurlParams: params
-                        }
-                    ];
-                    break;
-                case 'payRequest':
-                    if (isClipboardValue) return true;
-                    params.lnurlText = raw;
-                    return [
-                        'LnurlPay',
-                        {
-                            lnurlParams: params,
-                            amount: setAmount
-                        }
-                    ];
-                    break;
-                case 'channelRequest':
-                    if (isClipboardValue) return true;
-                    return [
-                        'LnurlChannel',
-                        {
-                            lnurlParams: params
-                        }
-                    ];
-                    break;
-                case 'login':
-                    if (BackendUtils.supportsLnurlAuth()) {
+                switch (params.tag) {
+                    case 'withdrawRequest':
                         if (isClipboardValue) return true;
                         return [
-                            'LnurlAuth',
+                            'Receive',
                             {
                                 lnurlParams: params
                             }
                         ];
-                    } else {
+                        break;
+                    case 'payRequest':
+                        if (isClipboardValue) return true;
+                        params.lnurlText = raw;
+                        return [
+                            'LnurlPay',
+                            {
+                                lnurlParams: params,
+                                amount: setAmount
+                            }
+                        ];
+                        break;
+                    case 'channelRequest':
+                        if (isClipboardValue) return true;
+                        return [
+                            'LnurlChannel',
+                            {
+                                lnurlParams: params
+                            }
+                        ];
+                        break;
+                    case 'login':
+                        if (BackendUtils.supportsLnurlAuth()) {
+                            if (isClipboardValue) return true;
+                            return [
+                                'LnurlAuth',
+                                {
+                                    lnurlParams: params
+                                }
+                            ];
+                        } else {
+                            if (isClipboardValue) return false;
+                            Alert.alert(
+                                localeString('general.error'),
+                                localeString(
+                                    'utils.handleAnything.lnurlAuthNotSupported'
+                                ),
+                                [
+                                    {
+                                        text: localeString('general.ok'),
+                                        onPress: () => void 0
+                                    }
+                                ],
+                                { cancelable: false }
+                            );
+                        }
+                        break;
+                    default:
                         if (isClipboardValue) return false;
                         Alert.alert(
                             localeString('general.error'),
-                            localeString(
-                                'utils.handleAnything.lnurlAuthNotSupported'
-                            ),
+                            params.status === 'ERROR'
+                                ? `${params.domain} says: ${params.reason}`
+                                : `${localeString(
+                                      'utils.handleAnything.unsupportedLnurlType'
+                                  )}: ${params.tag}`,
                             [
                                 {
                                     text: localeString('general.ok'),
@@ -336,27 +359,13 @@ const handleAnything = async (
                             ],
                             { cancelable: false }
                         );
-                    }
-                    break;
-                default:
-                    if (isClipboardValue) return false;
-                    Alert.alert(
-                        localeString('general.error'),
-                        params.status === 'ERROR'
-                            ? `${params.domain} says: ${params.reason}`
-                            : `${localeString(
-                                  'utils.handleAnything.unsupportedLnurlType'
-                              )}: ${params.tag}`,
-                        [
-                            {
-                                text: localeString('general.ok'),
-                                onPress: () => void 0
-                            }
-                        ],
-                        { cancelable: false }
-                    );
-            }
-        });
+                }
+            })
+            .catch(() => {
+                throw new Error(
+                    localeString('utils.handleAnything.invalidLnurlParams')
+                );
+            });
     } else {
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));

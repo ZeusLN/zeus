@@ -29,7 +29,7 @@ export default class SparkQRScanner extends React.Component<SparkQRProps, {}> {
                 { cancelable: false }
             );
 
-            navigation.navigate('Settings');
+            navigation.goBack();
         }
     };
 
