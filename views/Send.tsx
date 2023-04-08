@@ -265,8 +265,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         handleAnything(text, this.state.amount)
             .then((response) => {
                 try {
-                    if (response)
-                        navigation.navigate(response.route, response.props);
+                    if (response) {
+                        const [route, props] = response;
+                        navigation.navigate(route, props);
+                    }
                 } catch {
                     this.setState({
                         loading: false,
