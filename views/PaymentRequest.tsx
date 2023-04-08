@@ -309,6 +309,7 @@ export default class PaymentRequest extends React.Component<
                         }
                     }}
                     rightComponent={<QRButton />}
+                    navigation={navigation}
                 />
 
                 {(loading || loadingFeeEstimate) && (
