@@ -34,6 +34,7 @@ function NodeQRScanner(props: NodeQRProps) {
         <QRCodeScanner
             handleQRScanned={handleNodeScanned}
             goBack={() => navigation.navigate('OpenChannel')}
+            navigation={navigation}
         />
     );
 }
