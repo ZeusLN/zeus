@@ -68,23 +68,16 @@ export default class SendingLightning extends React.Component<
                                 {localeString('views.SendingLightning.sending')}
                             </Text>
                         )}
-                        {!!inTransit && !error && (
-                            <View style={{ marginTop: 10, marginBottom: 10 }}>
-                                <Clock
-                                    color={themeColor('bitcoin')}
-                                    width={180}
-                                    height={180}
-                                />
-                            </View>
+                        {(!!success || !!inTransit) && !error && (
+                            <WordLogo
+                                height={150}
+                                style={{
+                                    alignSelf: 'center'
+                                }}
+                            />
                         )}
                         {!!success && !error && (
                             <>
-                                <WordLogo
-                                    height={150}
-                                    style={{
-                                        alignSelf: 'center'
-                                    }}
-                                />
                                 <Image
                                     source={Success}
                                     style={{
@@ -96,6 +89,34 @@ export default class SendingLightning extends React.Component<
                                 />
                                 <PaidIndicator />
                             </>
+                        )}
+                        {!!inTransit && !error && (
+                            <View
+                                style={{
+                                    padding: 20,
+                                    marginTop: 10,
+                                    marginBottom: 10,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <Clock
+                                    color={themeColor('bitcoin')}
+                                    width={180}
+                                    height={180}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular',
+                                        fontSize: 22,
+                                        marginTop: 25
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.SendingLightning.inTransit'
+                                    )}
+                                </Text>
+                            </View>
                         )}
                         {(!!error || !!payment_error) && (
                             <>
@@ -111,7 +132,7 @@ export default class SendingLightning extends React.Component<
                                 </Text>
                                 <Text
                                     style={{
-                                        color: 'white',
+                                        color: themeColor('text'),
                                         fontFamily: 'Lato-Regular',
                                         padding: 20,
                                         marginBottom: 60,
@@ -218,7 +239,10 @@ export default class SendingLightning extends React.Component<
                                 </>
                             )}
 
-                            {(!!error || !!payment_error || !!success) && (
+                            {(!!error ||
+                                !!payment_error ||
+                                !!success ||
+                                !!inTransit) && (
                                 <Button
                                     title={localeString(
                                         'views.SendingLightning.goToWallet'
