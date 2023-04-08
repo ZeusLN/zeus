@@ -1,17 +1,18 @@
 import * as React from 'react';
 import { Dimensions, FlatList, Text } from 'react-native';
-import { Avatar, Header, Icon, ListItem } from 'react-native-elements';
+import { Avatar, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../../components/Button';
-import LoadingIndicator from './../../components/LoadingIndicator';
-import Screen from './../../components/Screen';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
-import UrlUtils from './../../utils/UrlUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
-import SettingsStore from './../../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 interface GodsProps {
     navigation: any;
@@ -29,19 +30,10 @@ export default class Gods extends React.Component<GodsProps, {}> {
         const { navigation, SettingsStore } = this.props;
         const { sponsorsError, gods, loading } = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Gods.title'),
                         style: {
@@ -49,10 +41,7 @@ export default class Gods extends React.Component<GodsProps, {}> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 {loading && <LoadingIndicator />}
                 {!loading && !sponsorsError && (

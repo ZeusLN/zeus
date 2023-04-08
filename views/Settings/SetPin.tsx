@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import Header from '../../components/Header';
 import Pin from '../../components/Pin';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
@@ -104,24 +104,10 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
         const { pin, pinMismatchError, pinInvalidError } = this.state;
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
 
         return (
             <Screen>
-                <Header
-                    leftComponent={<BackButton />}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
-                />
+                <Header leftComponent="Back" navigation={navigation} />
                 <View
                     style={{
                         paddingTop: 10,

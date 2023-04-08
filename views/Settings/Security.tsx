@@ -2,16 +2,17 @@ import { inject, observer } from 'mobx-react';
 import * as React from 'react';
 import { FlatList, ScrollView, View } from 'react-native';
 import { BiometryType } from 'react-native-biometrics';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from 'react-native-elements';
 
-import Screen from './../../components/Screen';
-import Switch from './../../components/Switch';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
 
 import SettingsStore from '../../stores/SettingsStore';
 
-import { verifyBiometry } from './../../utils/BiometricUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { verifyBiometry } from '../../utils/BiometricUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface SecurityProps {
     navigation: any;
@@ -225,19 +226,10 @@ export default class Security extends React.Component<
         } = this.state;
         const { updateSettings, settings } = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Settings.Security.title'),
                         style: {
@@ -245,10 +237,7 @@ export default class Security extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView>
                     <FlatList

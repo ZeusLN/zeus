@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Header, Icon } from 'react-native-elements';
 
 import NfcManager, {
     NfcEvents,
@@ -22,19 +21,20 @@ import NfcManager, {
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
+import BalanceStore from '../stores/BalanceStore';
+import FiatStore from '../stores/FiatStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
-import TransactionsStore from '../stores/TransactionsStore';
-import BalanceStore from '../stores/BalanceStore';
-import UTXOsStore from '../stores/UTXOsStore';
 import SettingsStore from '../stores/SettingsStore';
+import TransactionsStore from '../stores/TransactionsStore';
 import UnitsStore from '../stores/UnitsStore';
-import FiatStore from '../stores/FiatStore';
+import UTXOsStore from '../stores/UTXOsStore';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
+import Header from '../components/Header';
 import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
@@ -385,15 +385,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { units, changeUnits } = UnitsStore;
         const { getSymbol } = FiatStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
         if (BackendUtils.supportsOnchainSends()) {
@@ -406,7 +397,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Send.title'),
                         style: {
@@ -423,10 +414,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Scan fill={themeColor('text')} />
                         </TouchableOpacity>
                     }
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView style={styles.content}>
                     <Text

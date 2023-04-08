@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Text, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -62,23 +62,10 @@ export default class PaymentsSettings extends React.Component<
         const { SettingsStore } = this.props;
         const { updateSettings } = SettingsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.navigate('Settings', {
-                        refresh: true
-                    });
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.Settings.Payments.title'),
                         style: {
@@ -86,10 +73,7 @@ export default class PaymentsSettings extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    backgroundColor="transparent"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <View
                     style={{

@@ -41,5 +41,33 @@ describe('FeeUtils', () => {
                 '-0.005'
             );
         });
+
+        it('Properly handles decimals in Bitcoin unit format - with showAllDecimalPlaces enabled', () => {
+            expect(FeeUtils.toFixed(100 / satoshisPerBTC, true)).toEqual(
+                '0.00000100'
+            );
+            expect(FeeUtils.toFixed(1000 / satoshisPerBTC, true)).toEqual(
+                '0.00001000'
+            );
+            expect(FeeUtils.toFixed(10000 / satoshisPerBTC, true)).toEqual(
+                '0.00010000'
+            );
+            // was returning "0.00000009999999999999999" in original version
+            expect(
+                FeeUtils.toFixed(Number('10') / satoshisPerBTC, true).toString()
+            ).toBe('0.00000010');
+            expect(FeeUtils.toFixed(1 / satoshisPerBTC, true)).toEqual(
+                '0.00000001'
+            );
+            expect(FeeUtils.toFixed(283190 / satoshisPerBTC, true)).toEqual(
+                '0.00283190'
+            );
+            expect(FeeUtils.toFixed(500000 / satoshisPerBTC, true)).toEqual(
+                '0.00500000'
+            );
+            expect(FeeUtils.toFixed(-500000 / satoshisPerBTC, true)).toEqual(
+                '-0.00500000'
+            );
+        });
     });
 });
