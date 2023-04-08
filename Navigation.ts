@@ -17,6 +17,7 @@ import SendingOnChain from './views/SendingOnChain';
 import SendingLightning from './views/SendingLightning';
 import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
+import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
 
 import SparkQRScanner from './views/SparkQRScanner';
@@ -163,6 +164,9 @@ const AppScenes = {
     },
     Payment: {
         screen: Payment
+    },
+    PaymentPaths: {
+        screen: PaymentPaths
     },
     Invoice: {
         screen: Invoice
