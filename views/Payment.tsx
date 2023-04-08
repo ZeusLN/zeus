@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
+import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Amount from '../components/Amount';
@@ -152,6 +152,33 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 sensitive
                             />
                         )}
+
+                        <ListItem
+                            containerStyle={{
+                                borderBottomWidth: 0,
+                                backgroundColor: 'transparent',
+                                marginLeft: -16,
+                                marginRight: -16
+                            }}
+                            onPress={() => console.log('a')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {enhancedPath.length > 1
+                                        ? 'Paths'
+                                        : localeString('views.Payment.path')}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
 
                         {enhancedPath.length > 0 && (
                             <>
