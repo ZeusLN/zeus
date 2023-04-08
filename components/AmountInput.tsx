@@ -80,8 +80,11 @@ export default class AmountInput extends React.Component<
     constructor(props: any) {
         super(props);
 
+        const { amount } = props;
+        let satAmount = '0';
+        if (amount) satAmount = getSatAmount(amount).toString();
         this.state = {
-            satAmount: '0'
+            satAmount
         };
     }
 
