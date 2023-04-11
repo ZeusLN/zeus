@@ -123,13 +123,13 @@ export default class Payment extends BaseModel {
                             const alias =
                                 this.nodes[pubKey] && this.nodes[pubKey].alias;
                             const nodeLabel = alias ? alias : pubKey;
-                            const enhancedHop = `${nodeLabel} [${localeString(
-                                'models.Payment.forwarded'
-                            )}: ${hop.amt_to_forward}, ${localeString(
-                                'models.Payment.fee'
-                            )}: ${
-                                hop.fee_msat ? Number(hop.fee_msat) / 1000 : 0
-                            }]`;
+                            const enhancedHop = {
+                                node: nodeLabel,
+                                forwarded: hop.amt_to_forward,
+                                fee: hop.fee_msat
+                                    ? Number(hop.fee_msat) / 1000
+                                    : 0
+                            };
                             route.push(enhancedHop);
                         });
                 }
