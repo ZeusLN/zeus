@@ -20,6 +20,7 @@ import BrushIcon from '../../assets/images/SVG/Brush.svg';
 import LanguageIcon from '../../assets/images/SVG/Globe.svg';
 import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
 import NodeOn from '../../assets/images/SVG/Node On.svg';
+import Olympus from '../../assets/images/SVG/Olympus.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
@@ -28,12 +29,15 @@ import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 
-import { themeColor } from '../../utils/ThemeUtils';
-import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
-import { version } from '../../package.json';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
+
 import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
+
+import { version } from '../../package.json';
 
 interface SettingsProps {
     navigation: any;
@@ -83,6 +87,16 @@ export default class Settings extends React.Component<
             implementationDisplayValue[item.value] = item.key;
         });
 
+        const OlympusButton = () => (
+            <TouchableOpacity
+                onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
+            >
+                <View style={{ top: -7 }}>
+                    <Olympus width="35" height="35" fill={themeColor('text')} />
+                </View>
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <Header
@@ -94,6 +108,7 @@ export default class Settings extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={OlympusButton}
                     navigation={navigation}
                 />
                 <ScrollView
