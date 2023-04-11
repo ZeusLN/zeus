@@ -42,6 +42,13 @@ const goToBlockExplorerBlockHash = (hash: string, testnet: boolean) =>
     goToBlockExplorer('block', hash, testnet);
 
 const goToUrl = (url: string) => {
+    stores.modalStore.setUrl(url);
+    stores.modalStore.setClipboardValue(url);
+    stores.modalStore.toggleModal(true);
+    stores.modalStore.setAction(() => leaveZeus(url));
+};
+
+const leaveZeus = (url: string) => {
     Linking.canOpenURL(url).then((supported: boolean) => {
         if (supported) {
             Linking.openURL(url);
