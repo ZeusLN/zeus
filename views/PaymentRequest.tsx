@@ -283,12 +283,11 @@ export default class PaymentRequest extends React.Component<
         const isNoAmountInvoice: boolean =
             !requestAmount || requestAmount === 0;
 
-        const BackButton = () => (
+        const QRButton = () => (
             <Icon
-                name="arrow-back"
+                name="qr-code"
                 onPress={() => {
-                    clearPayReq();
-                    navigation.goBack();
+                    navigation.navigate('QR', { value: paymentRequest });
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
@@ -298,7 +297,10 @@ export default class PaymentRequest extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent={BackButton}
+                    leftComponent="Back"
+                    onBack={() => {
+                        clearPayReq();
+                    }}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: {
@@ -306,6 +308,8 @@ export default class PaymentRequest extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={<QRButton />}
+                    navigation={navigation}
                 />
 
                 {(loading || loadingFeeEstimate) && (
