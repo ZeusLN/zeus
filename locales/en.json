@@ -444,6 +444,7 @@
     "views.SendingLightning.lowFeeLimitMessage": "This payment may have failed due to a low fee limit. Try again with a higher fee limit",
     "views.SendingLightning.tryAgain": "Try Again",
     "views.SendingLightning.copyPaymentHash": "Copy Hash to Clipboard",
+    "views.SendingLightning.inTransit": "Payment is in transit. It may complete momentarily or it may go on to fail. Please check back later.",
     "views.SendingOnChain.broadcasting": "Broadcasting Transaction",
     "views.SendingOnChain.success": "Transaction successfully sent",
     "views.SendingOnChain.txid": "TXID",
