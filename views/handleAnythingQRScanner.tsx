@@ -1,34 +1,52 @@
 import * as React from 'react';
-import { Alert } from 'react-native';
+import { Alert, View } from 'react-native';
+import { Header } from 'react-native-elements';
 import { observer } from 'mobx-react';
 
 import QRCodeScanner from './../components/QRCodeScanner';
 
 import handleAnything from './../utils/handleAnything';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
+import LoadingIndicator from './../components/LoadingIndicator';
 
 interface handleAnythingQRProps {
     navigation: any;
 }
 
+interface handleAnythingQRState {
+    loading: boolean;
+}
+
 @observer
 export default class handleAnythingQRScanner extends React.Component<
     handleAnythingQRProps,
-    {}
+    handleAnythingQRState
 > {
     constructor(props: any) {
         super(props);
 
         this.state = {
-            useInternalScanner: false
+            loading: false
         };
     }
 
-    handleAnythingScanned = (data: string) => {
+    handleAnythingScanned = async (data: string) => {
         const { navigation } = this.props;
+        this.setState({
+            loading: true
+        });
         handleAnything(data)
-            .then(([route, props]) => {
-                navigation.navigate(route, props);
+            .then((response) => {
+                this.setState({
+                    loading: false
+                });
+                const [route, props] = response;
+                if (route) {
+                    navigation.navigate(route, props);
+                } else {
+                    navigation.goBack();
+                }
             })
             .catch((err) => {
                 Alert.alert(
@@ -43,12 +61,45 @@ export default class handleAnythingQRScanner extends React.Component<
                     { cancelable: false }
                 );
 
-                navigation.navigate('Send');
+                this.setState({
+                    loading: false
+                });
+
+                navigation.goBack();
             });
     };
 
     render() {
         const { navigation } = this.props;
+        const { loading } = this.state;
+
+        if (loading) {
+            return (
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: themeColor('background')
+                    }}
+                >
+                    <Header
+                        centerComponent={{
+                            text: localeString('general.loading'),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }
+                        }}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
+                    />
+                    <View style={{ top: 40 }}>
+                        <LoadingIndicator />
+                    </View>
+                </View>
+            );
+        }
 
         return (
             <QRCodeScanner
