@@ -86,21 +86,23 @@ export default class EditFee extends React.Component<
                     rightComponent={ReloadButton}
                     navigation={navigation}
                 />
+                <View
+                    style={{
+                        alignItems: 'center',
+                        width: '100%',
+                        paddingTop: 15,
+                        paddingBottom: 15,
+                        backgroundColor: themeColor('background'),
+                        zIndex: 1
+                    }}
+                >
+                    <MempoolSpace width={140} height={55} />
+                </View>
                 <KeyboardAvoidingView
                     behavior="position"
                     keyboardVerticalOffset={keyboardVerticalOffset}
                 >
                     <ScrollView style={{ paddingTop: 10, alignSelf: 'center' }}>
-                        <View
-                            style={{
-                                alignItems: 'center',
-                                width: '100%',
-                                paddingTop: 15,
-                                paddingBottom: 15
-                            }}
-                        >
-                            <MempoolSpace width={140} height={55} />
-                        </View>
                         {loading && !error && (
                             <View style={{ flex: 1, justifyContent: 'center' }}>
                                 <LightningIndicator />
