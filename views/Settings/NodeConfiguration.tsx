@@ -1,6 +1,8 @@
 import * as React from 'react';
 import {
     Modal,
+    Platform,
+    KeyboardAvoidingView,
     StyleSheet,
     Text,
     View,
@@ -516,6 +518,8 @@ export default class NodeConfiguration extends React.Component<
             );
         };
 
+        const keyboardVerticalOffset = Platform.OS === 'ios' ? 40 : 0;
+
         return (
             <Screen>
                 <Header
@@ -746,79 +750,6 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     </View>
                 </Modal>
-
-                {false && (
-                    <View style={{ height: 200 }}>
-                        <View style={{ alignItems: 'center', top: 40 }}></View>
-                        <Text
-                            style={{
-                                alignSelf: 'center',
-                                top: 50,
-                                fontSize: 23,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {nickname
-                                ? nickname
-                                : host
-                                ? `${host}:${port}`
-                                : ''}
-                        </Text>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'center',
-                                top: 60
-                            }}
-                        >
-                            {false && (
-                                <View
-                                    style={{
-                                        backgroundColor: '#FFB040',
-                                        height: 26,
-                                        width: 70,
-                                        borderRadius: 8,
-                                        right: 5
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            alignSelf: 'center',
-                                            padding: 2
-                                        }}
-                                    >
-                                        Mainnet
-                                    </Text>
-                                </View>
-                            )}
-                            {enableTor && (
-                                <View
-                                    style={{
-                                        backgroundColor: '#8A3ABD',
-                                        height: 26,
-                                        width: 70,
-                                        borderRadius: 8,
-                                        left: 5
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            alignSelf: 'center',
-                                            padding: 2
-                                        }}
-                                    >
-                                        Tor
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-                    </View>
-                )}
 
                 <ScrollView
                     ref="_scrollView"
@@ -1107,26 +1038,33 @@ export default class NodeConfiguration extends React.Component<
                                     locked={loading}
                                 />
 
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.macaroon'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'0A...'}
-                                    value={macaroonHex}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            macaroonHex: text.trim(),
-                                            saved: false
-                                        })
+                                <KeyboardAvoidingView
+                                    behavior="position"
+                                    keyboardVerticalOffset={
+                                        keyboardVerticalOffset
                                     }
-                                    locked={loading}
-                                />
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.macaroon'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={'0A...'}
+                                        value={macaroonHex}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                macaroonHex: text.trim(),
+                                                saved: false
+                                            })
+                                        }
+                                        locked={loading}
+                                    />
+                                </KeyboardAvoidingView>
                             </>
                         )}
 

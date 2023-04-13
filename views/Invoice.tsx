@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
-import Invoice from '../models/Invoice';
+import { Icon } from 'react-native-elements';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
-import CollapsedQR from '../components/CollapsedQR';
 import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
+
+import Invoice from '../models/Invoice';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -35,6 +36,17 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         } = invoice;
         const privateInvoice = invoice.private;
 
+        const QRButton = () => (
+            <Icon
+                name="qr-code"
+                onPress={() => {
+                    navigation.navigate('QR', { value: getPaymentRequest });
+                }}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
         return (
             <Screen>
                 <Header
@@ -46,6 +58,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={!!getPaymentRequest && <QRButton />}
                     navigation={navigation}
                 />
                 <ScrollView>
@@ -168,26 +181,6 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 )}
                                 value={payment_hash}
                                 sensitive
-                            />
-                        )}
-
-                        {!!getPaymentRequest && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Invoice.paymentRequest'
-                                )}
-                                value={getPaymentRequest}
-                                sensitive
-                            />
-                        )}
-
-                        {!!getPaymentRequest && (
-                            <CollapsedQR
-                                value={getPaymentRequest}
-                                copyText={localeString(
-                                    'views.Invoice.copyPaymentRequest'
-                                )}
-                                hideText
                             />
                         )}
                     </View>

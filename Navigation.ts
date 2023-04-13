@@ -17,6 +17,7 @@ import SendingOnChain from './views/SendingOnChain';
 import SendingLightning from './views/SendingLightning';
 import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
+import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
 
 import SparkQRScanner from './views/SparkQRScanner';
@@ -64,6 +65,7 @@ import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 import BumpFee from './views/BumpFee';
+import QR from './views/QR';
 
 // POS
 import Order from './views/Order';
@@ -164,6 +166,9 @@ const AppScenes = {
     Payment: {
         screen: Payment
     },
+    PaymentPaths: {
+        screen: PaymentPaths
+    },
     Invoice: {
         screen: Invoice
     },
@@ -250,6 +255,9 @@ const AppScenes = {
     },
     BumpFee: {
         screen: BumpFee
+    },
+    QR: {
+        screen: QR
     }
 };
 

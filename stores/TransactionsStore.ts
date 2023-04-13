@@ -301,6 +301,7 @@ export default class TransactionsStore {
         if (
             result.status !== 'complete' &&
             result.status !== 'SUCCEEDED' &&
+            result.status !== 'IN_FLIGHT' &&
             result.payment_error !== ''
         ) {
             this.error = true;
