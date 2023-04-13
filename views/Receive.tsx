@@ -168,13 +168,15 @@ export default class Receive extends React.Component<
             this.props.UnitsStore.resetUnits();
             this.setState({
                 memo: lnurl.defaultDescription,
-                value: (lnurl.maxWithdrawable / 1000).toString()
+                value: (lnurl.maxWithdrawable / 1000).toString(),
+                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000)
             });
         }
 
         if (amount) {
             this.setState({
-                value: amount
+                value: amount,
+                satAmount: getSatAmount(amount)
             });
         }
 
@@ -204,13 +206,22 @@ export default class Receive extends React.Component<
         const { reset } = InvoicesStore;
 
         reset();
+        const amount: string = navigation.getParam('amount');
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
+
+        if (amount) {
+            this.setState({
+                value: amount,
+                satAmount: getSatAmount(amount)
+            });
+        }
 
         if (lnurl) {
             this.setState({
                 memo: lnurl.defaultDescription,
-                value: (lnurl.maxWithdrawable / 1000).toString()
+                value: (lnurl.maxWithdrawable / 1000).toString(),
+                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000)
             });
         }
     }
