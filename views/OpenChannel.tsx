@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 
 import Amount from './../components/Amount';
 import AmountInput from './../components/AmountInput';
@@ -35,6 +35,7 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import BalanceStore from './../stores/BalanceStore';
 import ChannelsStore from './../stores/ChannelsStore';
+import ModalStore from './../stores/ModalStore';
 import SettingsStore from './../stores/SettingsStore';
 import UTXOsStore from './../stores/UTXOsStore';
 
@@ -43,8 +44,9 @@ import Scan from '../assets/images/SVG/Scan.svg';
 interface OpenChannelProps {
     exitSetup: any;
     navigation: any;
-    ChannelsStore: ChannelsStore;
     BalanceStore: BalanceStore;
+    ChannelsStore: ChannelsStore;
+    ModalStore: ModalStore;
     SettingsStore: SettingsStore;
     UTXOsStore: UTXOsStore;
 }
@@ -64,7 +66,13 @@ interface OpenChannelState {
     utxoBalance: number;
 }
 
-@inject('ChannelsStore', 'SettingsStore', 'BalanceStore', 'UTXOsStore')
+@inject(
+    'BalanceStore',
+    'ChannelsStore',
+    'ModalStore',
+    'SettingsStore',
+    'UTXOsStore'
+)
 @observer
 export default class OpenChannel extends React.Component<
     OpenChannelProps,
@@ -107,10 +115,6 @@ export default class OpenChannel extends React.Component<
 
     async componentDidMount() {
         this.initFromProps(this.props);
-
-        if (Platform.OS === 'android') {
-            await this.enableNfc();
-        }
     }
 
     disableNfc = () => {
@@ -119,21 +123,40 @@ export default class OpenChannel extends React.Component<
     };
 
     enableNfc = async () => {
+        const { ModalStore } = this.props;
         this.disableNfc();
         await NfcManager.start();
 
         return new Promise((resolve: any) => {
-            let tagFound = null;
+            let tagFound: TagEvent | null = null;
 
-            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
-                tagFound = tag;
-                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
-                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
-                resolve(this.validateNodeUri(str));
-                NfcManager.unregisterTagEvent().catch(() => 0);
-            });
+            // enable NFC
+            if (Platform.OS === 'android')
+                ModalStore.toggleAndroidNfcModal(true);
+
+            NfcManager.setEventListener(
+                NfcEvents.DiscoverTag,
+                (tag: TagEvent) => {
+                    tagFound = tag;
+                    const bytes = new Uint8Array(
+                        tagFound.ndefMessage[0].payload
+                    );
+                    const str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
+
+                    // close NFC
+                    if (Platform.OS === 'android')
+                        ModalStore.toggleAndroidNfcModal(false);
+
+                    resolve(this.validateNodeUri(str));
+                    NfcManager.unregisterTagEvent().catch(() => 0);
+                }
+            );
 
             NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                // close NFC
+                if (Platform.OS === 'android')
+                    ModalStore.toggleAndroidNfcModal(false);
+
                 if (!tagFound) {
                     resolve();
                 }
@@ -541,19 +564,17 @@ export default class OpenChannel extends React.Component<
                             />
                         </View>
 
-                        {Platform.OS === 'ios' && (
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString('general.enableNfc')}
-                                    icon={{
-                                        name: 'nfc',
-                                        size: 25
-                                    }}
-                                    onPress={() => this.enableNfc()}
-                                    secondary
-                                />
-                            </View>
-                        )}
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.enableNfc')}
+                                icon={{
+                                    name: 'nfc',
+                                    size: 25
+                                }}
+                                onPress={() => this.enableNfc()}
+                                secondary
+                            />
+                        </View>
                     </View>
                 </ScrollView>
             </Screen>
