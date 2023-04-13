@@ -27,8 +27,13 @@ export default class handleAnythingQRScanner extends React.Component<
     handleAnythingScanned = (data: string) => {
         const { navigation } = this.props;
         handleAnything(data)
-            .then(([route, props]) => {
-                navigation.navigate(route, props);
+            .then((response) => {
+                if (response) {
+                    const [route, props] = response;
+                    navigation.navigate(route, props);
+                } else {
+                    navigation.goBack();
+                }
             })
             .catch((err) => {
                 Alert.alert(
@@ -43,7 +48,7 @@ export default class handleAnythingQRScanner extends React.Component<
                     { cancelable: false }
                 );
 
-                navigation.navigate('Send');
+                navigation.goBack();
             });
     };
 
