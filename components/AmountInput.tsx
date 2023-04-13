@@ -124,7 +124,9 @@ export default class AmountInput extends React.Component<
         return (
             <React.Fragment>
                 {title && (
-                    <TouchableOpacity onPress={() => this.onChangeUnits()}>
+                    <TouchableOpacity
+                        onPress={() => !locked && this.onChangeUnits()}
+                    >
                         <Text
                             style={{
                                 fontFamily: 'Lato-Regular',
@@ -160,10 +162,12 @@ export default class AmountInput extends React.Component<
                               units === 'fiat' &&
                               getSymbol().symbol
                     }
-                    toggleUnits={this.onChangeUnits}
+                    toggleUnits={() => !locked && this.onChangeUnits()}
                 />
                 {!hideConversion && (
-                    <TouchableOpacity onPress={() => this.onChangeUnits()}>
+                    <TouchableOpacity
+                        onPress={() => !locked && this.onChangeUnits()}
+                    >
                         <View style={{ marginBottom: 10 }}>
                             {fiat !== 'Disabled' && units !== 'fiat' && (
                                 <Amount sats={satAmount} fixedUnits="fiat" />
