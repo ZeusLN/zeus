@@ -41,8 +41,8 @@ export default class handleAnythingQRScanner extends React.Component<
                 this.setState({
                     loading: false
                 });
-                const [route, props] = response;
-                if (route) {
+                if (response) {
+                    const [route, props] = response;
                     navigation.navigate(route, props);
                 } else {
                     navigation.goBack();
