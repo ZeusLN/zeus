@@ -1,8 +1,8 @@
 import * as React from 'react';
 import {
+    Platform,
     NativeModules,
     NativeEventEmitter,
-    Platform,
     StyleSheet,
     Text,
     View,
@@ -24,6 +24,7 @@ import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 import BalanceStore from '../stores/BalanceStore';
 import FiatStore from '../stores/FiatStore';
 import InvoicesStore from '../stores/InvoicesStore';
+import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
@@ -53,6 +54,7 @@ interface SendProps {
     navigation: any;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
+    ModalStore: ModalStore;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
@@ -83,6 +85,7 @@ interface SendState {
 
 @inject(
     'InvoicesStore',
+    'ModalStore',
     'NodeInfoStore',
     'TransactionsStore',
     'BalanceStore',
@@ -170,10 +173,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
         }
-
-        if (Platform.OS === 'android') {
-            await this.enableNfc();
-        }
     }
 
     subscribePayment = (streamingCall: string) => {
@@ -206,11 +205,16 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     enableNfc = async () => {
+        const { ModalStore } = this.props;
         this.disableNfc();
         await NfcManager.start().catch((e) => console.warn(e.message));
 
         return new Promise((resolve: any) => {
             let tagFound: TagEvent | null = null;
+
+            // enable NFC
+            if (Platform.OS === 'android')
+                ModalStore.toggleAndroidNfcModal(true);
 
             NfcManager.setEventListener(
                 NfcEvents.DiscoverTag,
@@ -227,12 +231,21 @@ export default class Send extends React.Component<SendProps, SendState> {
                     } else {
                         str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
                     }
+
+                    // close NFC
+                    if (Platform.OS === 'android')
+                        ModalStore.toggleAndroidNfcModal(false);
+
                     resolve(this.validateAddress(str));
                     NfcManager.unregisterTagEvent().catch(() => 0);
                 }
             );
 
             NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                // close NFC
+                if (Platform.OS === 'android')
+                    ModalStore.toggleAndroidNfcModal(false);
+
                 if (!tagFound) {
                     resolve();
                 }
@@ -923,19 +936,17 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {Platform.OS === 'ios' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('general.enableNfc')}
-                                icon={{
-                                    name: 'nfc',
-                                    size: 25
-                                }}
-                                onPress={() => this.enableNfc()}
-                                secondary
-                            />
-                        </View>
-                    )}
+                    <View style={styles.button}>
+                        <Button
+                            title={localeString('general.enableNfc')}
+                            icon={{
+                                name: 'nfc',
+                                size: 25
+                            }}
+                            onPress={() => this.enableNfc()}
+                            secondary
+                        />
+                    </View>
 
                     {transactionType === 'On-chain' &&
                         implementation === 'eclair' && (

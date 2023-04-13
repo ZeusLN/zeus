@@ -78,7 +78,9 @@ export default class ExternalLinkModal extends React.Component<
                                 color: 'black'
                             }}
                         >
-                            {localeString('components.Modal.externalLink')}
+                            {localeString(
+                                'components.ExternalLinkModal.externalLink'
+                            )}
                         </Text>
                         <Text
                             style={{
@@ -87,7 +89,9 @@ export default class ExternalLinkModal extends React.Component<
                                 textAlign: 'center'
                             }}
                         >
-                            {localeString('components.Modal.proceed')}
+                            {localeString(
+                                'components.ExternalLinkModal.proceed'
+                            )}
                         </Text>
                         <TouchableOpacity
                             style={{
@@ -109,7 +113,9 @@ export default class ExternalLinkModal extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString('components.Modal.copyLink')}
+                                {localeString(
+                                    'components.ExternalLinkModal.copyLink'
+                                )}
                             </Text>
                             <Text
                                 style={{
@@ -145,7 +151,9 @@ export default class ExternalLinkModal extends React.Component<
                             <View style={styles.button}>
                                 <Button
                                     title={localeString('general.cancel')}
-                                    onPress={toggleExternalLinkModal(false)}
+                                    onPress={() =>
+                                        toggleExternalLinkModal(false)
+                                    }
                                 ></Button>
                             </View>
                         </View>

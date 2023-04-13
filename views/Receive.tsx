@@ -43,11 +43,12 @@ import {
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 
+import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import InvoicesStore from '../stores/InvoicesStore';
+import PosStore from '../stores/PosStore';
 import SettingsStore from '../stores/SettingsStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
-import PosStore from '../stores/PosStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
@@ -58,10 +59,11 @@ interface ReceiveProps {
     exitSetup: any;
     navigation: any;
     InvoicesStore: InvoicesStore;
+    PosStore: PosStore;
+    ModalStore: ModalStore;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
-    PosStore: PosStore;
-    NodeInfoStore: NodeInfoStore;
 }
 
 interface ReceiveState {
@@ -192,10 +194,6 @@ export default class Receive extends React.Component<
                 ampInvoice,
                 addressType
             );
-
-        if (Platform.OS === 'android') {
-            await this.enableNfc();
-        }
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -276,11 +274,16 @@ export default class Receive extends React.Component<
     };
 
     enableNfc = async () => {
+        const { ModalStore } = this.props;
         this.disableNfc();
         await NfcManager.start().catch((e) => console.warn(e.message));
 
         return new Promise((resolve: any) => {
             let tagFound: TagEvent | null = null;
+
+            // enable NFC
+            if (Platform.OS === 'android')
+                ModalStore.toggleAndroidNfcModal(true);
 
             NfcManager.setEventListener(
                 NfcEvents.DiscoverTag,
@@ -297,12 +300,21 @@ export default class Receive extends React.Component<
                     } else {
                         str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
                     }
+
+                    // close NFC
+                    if (Platform.OS === 'android')
+                        ModalStore.toggleAndroidNfcModal(false);
+
                     resolve(this.validateAddress(str));
                     NfcManager.unregisterTagEvent().catch(() => 0);
                 }
             );
 
             NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                // close NFC
+                if (Platform.OS === 'android')
+                    ModalStore.toggleAndroidNfcModal(false);
+
                 if (!tagFound) {
                     resolve();
                 }
@@ -933,32 +945,30 @@ export default class Receive extends React.Component<
                                             textBottom
                                         />
                                     )}
-                                    {Platform.OS === 'ios' && (
-                                        <View
-                                            style={[
-                                                styles.button,
-                                                { paddingTop: 0 }
-                                            ]}
-                                        >
-                                            <Button
-                                                title={
-                                                    posStatus === 'active'
-                                                        ? localeString(
-                                                              'general.payNfc'
-                                                          )
-                                                        : localeString(
-                                                              'general.receiveNfc'
-                                                          )
-                                                }
-                                                icon={{
-                                                    name: 'nfc',
-                                                    size: 25
-                                                }}
-                                                onPress={() => this.enableNfc()}
-                                                secondary
-                                            />
-                                        </View>
-                                    )}
+                                    <View
+                                        style={[
+                                            styles.button,
+                                            { paddingTop: 0 }
+                                        ]}
+                                    >
+                                        <Button
+                                            title={
+                                                posStatus === 'active'
+                                                    ? localeString(
+                                                          'general.payNfc'
+                                                      )
+                                                    : localeString(
+                                                          'general.receiveNfc'
+                                                      )
+                                            }
+                                            icon={{
+                                                name: 'nfc',
+                                                size: 25
+                                            }}
+                                            onPress={() => this.enableNfc()}
+                                            secondary
+                                        />
+                                    </View>
                                     {!belowDustLimit &&
                                         haveUnifiedInvoice &&
                                         !lnOnly && (
