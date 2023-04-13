@@ -50,6 +50,7 @@ import PointOfSaleRecon from './views/Settings/PointOfSaleRecon';
 import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
+import Satscard from './views/Settings/Satscard';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -246,6 +247,9 @@ const AppScenes = {
     },
     PointOfSaleReconExport: {
         screen: PointOfSaleReconExport
+    },
+    Satscard: {
+        screen: Satscard
     },
     PaymentsSettings: {
         screen: PaymentsSettings
