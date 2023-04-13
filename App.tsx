@@ -3,7 +3,8 @@ import { Provider } from 'mobx-react';
 import Stores from './stores/Stores';
 import Navigation from './Navigation';
 import { AppContainer } from './components/layout/AppContainer';
-import Modal from './components/Modal';
+import ExternalLinkModal from './components/Modals/ExternalLinkModal';
+import AndroidNfcModal from './components/Modals/AndroidNfcModal';
 
 export default class App extends React.PureComponent {
     render() {
@@ -28,7 +29,8 @@ export default class App extends React.PureComponent {
             >
                 <AppContainer>
                     <Navigation />
-                    <Modal />
+                    <ExternalLinkModal />
+                    <AndroidNfcModal />
                 </AppContainer>
             </Provider>
         );

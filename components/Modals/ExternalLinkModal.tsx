@@ -2,33 +2,41 @@ import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
-import Button from './Button';
-import ModalBox from './ModalBox';
+import Button from '../Button';
+import ModalBox from '../ModalBox';
 
-import ModalStore from '../stores/ModalStore';
+import ModalStore from '../../stores/ModalStore';
 
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import Copy from '../assets/images/SVG/Copy.svg';
-import Leaving from '../assets/images/SVG/Leaving.svg';
+import Copy from '../../assets/images/SVG/Copy.svg';
+import Leaving from '../../assets/images/SVG/Leaving.svg';
 
 import Clipboard from '@react-native-clipboard/clipboard';
 
-interface ModalProps {
+interface ExternalLinkModalProps {
     ModalStore: ModalStore;
 }
 
 @inject('ModalStore')
 @observer
-export default class ZeusModal extends React.Component<ModalProps, {}> {
+export default class ExternalLinkModal extends React.Component<
+    ExternalLinkModalProps,
+    {}
+> {
     render() {
         const { ModalStore } = this.props;
-        const { showModal, modalUrl, closeModal, onPress } = ModalStore;
+        const {
+            showExternalLinkModal,
+            modalUrl,
+            toggleExternalLinkModal,
+            onPress
+        } = ModalStore;
 
         return (
             <ModalBox
-                isOpen={showModal}
+                isOpen={showExternalLinkModal}
                 style={{
                     backgroundColor: 'transparent',
                     paddingLeft: 24,
@@ -70,7 +78,9 @@ export default class ZeusModal extends React.Component<ModalProps, {}> {
                                 color: 'black'
                             }}
                         >
-                            {localeString('components.Modal.externalLink')}
+                            {localeString(
+                                'components.ExternalLinkModal.externalLink'
+                            )}
                         </Text>
                         <Text
                             style={{
@@ -79,7 +89,9 @@ export default class ZeusModal extends React.Component<ModalProps, {}> {
                                 textAlign: 'center'
                             }}
                         >
-                            {localeString('components.Modal.proceed')}
+                            {localeString(
+                                'components.ExternalLinkModal.proceed'
+                            )}
                         </Text>
                         <TouchableOpacity
                             style={{
@@ -101,7 +113,9 @@ export default class ZeusModal extends React.Component<ModalProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString('components.Modal.copyLink')}
+                                {localeString(
+                                    'components.ExternalLinkModal.copyLink'
+                                )}
                             </Text>
                             <Text
                                 style={{
@@ -137,7 +151,9 @@ export default class ZeusModal extends React.Component<ModalProps, {}> {
                             <View style={styles.button}>
                                 <Button
                                     title={localeString('general.cancel')}
-                                    onPress={closeModal}
+                                    onPress={() =>
+                                        toggleExternalLinkModal(false)
+                                    }
                                 ></Button>
                             </View>
                         </View>

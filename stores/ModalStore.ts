@@ -1,24 +1,21 @@
 import { action, observable } from 'mobx';
 
 export default class ModalStore {
-    @observable public showModal: boolean = false;
+    @observable public showExternalLinkModal: boolean = false;
+    @observable public showAndroidNfcModal: boolean = false;
     @observable public modalUrl: string;
     @observable public clipboardValue: string;
     @observable public onPress: () => void;
 
+    /* External Link Modal */
     @action
-    public toggleModal = (status: boolean) => {
-        this.showModal = status;
+    public toggleExternalLinkModal = (status: boolean) => {
+        this.showExternalLinkModal = status;
     };
 
     @action
     public setUrl = (text: string) => {
         this.modalUrl = text;
-    };
-
-    @action
-    public closeModal = () => {
-        this.showModal = false;
     };
 
     @action
@@ -29,5 +26,11 @@ export default class ModalStore {
     @action
     public setClipboardValue = (value: string) => {
         this.clipboardValue = value;
+    };
+
+    /* Android NFC Modal */
+    @action
+    public toggleAndroidNfcModal = (status: boolean) => {
+        this.showAndroidNfcModal = status;
     };
 }
