@@ -122,11 +122,11 @@ export default class Receive extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            addressType: settings.invoices.addressType || '1',
-            memo: settings.invoices.memo || '',
-            expiry: settings.invoices.expiry || '3600',
-            routeHints: settings.invoices.routeHints || false,
-            ampInvoice: settings.invoices.ampInvoice || false
+            addressType: settings?.invoices?.addressType || '1',
+            memo: settings?.invoices?.memo || '',
+            expiry: settings?.invoices?.expiry || '3600',
+            routeHints: settings?.invoices?.routeHints || false,
+            ampInvoice: settings?.invoices?.ampInvoice || false
         });
 
         const lnOnly =
@@ -165,15 +165,18 @@ export default class Receive extends React.Component<
         }
 
         if (lnurl) {
+            this.props.UnitsStore.resetUnits();
             this.setState({
                 memo: lnurl.defaultDescription,
-                value: (lnurl.maxWithdrawable / 1000).toString()
+                value: (lnurl.maxWithdrawable / 1000).toString(),
+                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000)
             });
         }
 
         if (amount) {
             this.setState({
-                value: amount
+                value: amount,
+                satAmount: getSatAmount(amount)
             });
         }
 
@@ -203,13 +206,22 @@ export default class Receive extends React.Component<
         const { reset } = InvoicesStore;
 
         reset();
+        const amount: string = navigation.getParam('amount');
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
+
+        if (amount) {
+            this.setState({
+                value: amount,
+                satAmount: getSatAmount(amount)
+            });
+        }
 
         if (lnurl) {
             this.setState({
                 memo: lnurl.defaultDescription,
-                value: (lnurl.maxWithdrawable / 1000).toString()
+                value: (lnurl.maxWithdrawable / 1000).toString(),
+                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000)
             });
         }
     }
