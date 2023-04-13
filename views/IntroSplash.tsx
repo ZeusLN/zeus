@@ -3,7 +3,7 @@ import { Image, View, SafeAreaView, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Globe from '../assets/images/SVG/Globe.svg';
-import WordLogo from '../assets/images/SVG/Word Logo - no outline.svg';
+import WordLogo from '../assets/images/SVG/Word Logo.svg';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
