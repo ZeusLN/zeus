@@ -44,7 +44,7 @@ const goToBlockExplorerBlockHash = (hash: string, testnet: boolean) =>
 const goToUrl = (url: string) => {
     stores.modalStore.setUrl(url);
     stores.modalStore.setClipboardValue(url);
-    stores.modalStore.toggleModal(true);
+    stores.modalStore.toggleExternalLinkModal(true);
     stores.modalStore.setAction(() => leaveZeus(url));
 };
 
