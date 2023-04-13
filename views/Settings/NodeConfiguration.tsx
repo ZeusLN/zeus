@@ -1,8 +1,6 @@
 import * as React from 'react';
 import {
     Modal,
-    Platform,
-    KeyboardAvoidingView,
     StyleSheet,
     Text,
     View,
@@ -518,8 +516,6 @@ export default class NodeConfiguration extends React.Component<
             );
         };
 
-        const keyboardVerticalOffset = Platform.OS === 'ios' ? 40 : 0;
-
         return (
             <Screen>
                 <Header
@@ -1022,6 +1018,27 @@ export default class NodeConfiguration extends React.Component<
                                     }}
                                 >
                                     {localeString(
+                                        'views.Settings.AddEditNode.macaroon'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'0A...'}
+                                    value={macaroonHex}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            macaroonHex: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                />
+
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
                                         'views.Settings.AddEditNode.restPort'
                                     )}
                                 </Text>
@@ -1037,34 +1054,6 @@ export default class NodeConfiguration extends React.Component<
                                     }
                                     locked={loading}
                                 />
-
-                                <KeyboardAvoidingView
-                                    behavior="position"
-                                    keyboardVerticalOffset={
-                                        keyboardVerticalOffset
-                                    }
-                                >
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.AddEditNode.macaroon'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        placeholder={'0A...'}
-                                        value={macaroonHex}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                macaroonHex: text.trim(),
-                                                saved: false
-                                            })
-                                        }
-                                        locked={loading}
-                                    />
-                                </KeyboardAvoidingView>
                             </>
                         )}
 
