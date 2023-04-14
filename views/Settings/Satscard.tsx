@@ -7,7 +7,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import { localeString } from './../../utils/LocaleUtils';
@@ -17,7 +17,9 @@ import TextInput from '../../components/TextInput';
 
 import Button from '../../components/Button';
 import CollapsedQR from '../../components/CollapsedQR';
+import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
+import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import { CKTapCard } from 'cktap-protocol-react-native';
@@ -44,6 +46,7 @@ interface SatscardState {
     selectedSlot: number;
     selectedSlotIndex: number;
     selectedSlotStatus: string;
+    rateLimited: boolean;
 }
 
 interface CardStatus {
@@ -65,7 +68,7 @@ export default class Satscard extends React.Component<
         super(props);
         const card = new CKTapCard();
         this.state = {
-            cvv: '',
+            cvv: '126321',
             selectedIndex: 0,
             selectedSlot: 0,
             card,
@@ -74,7 +77,8 @@ export default class Satscard extends React.Component<
             privkey: '',
             slotStatus: '',
             tapsignerError: false,
-            error: ''
+            error: '',
+            rateLimited: false
         };
     }
 
@@ -86,6 +90,46 @@ export default class Satscard extends React.Component<
             }}
         />
     );
+
+    awaitNfc = () => {
+        // enable NFC
+        if (Platform.OS === 'android') {
+            this.props.ModalStore.toggleAndroidNfcModal(true);
+        }
+
+        this.setState({
+            error: ''
+        });
+    };
+
+    nfcWrapper = async (wrapperFunc: any) => {
+        const { card } = this.state;
+        const { ModalStore } = this.props;
+        try {
+            this.awaitNfc();
+            await card.nfcWrapper(async () => {
+                if (wrapperFunc) await wrapperFunc();
+            });
+
+            this.setState({
+                rateLimited: false
+            });
+
+            if (Platform.OS === 'android') {
+                ModalStore.toggleAndroidNfcModal(false);
+            }
+        } catch (err) {
+            this.setState({
+                error: err.error || err.message || err.toString(),
+                rateLimited:
+                    err.toString() === 'Error: 429 on dump: rate limited'
+            });
+
+            if (Platform.OS === 'android') {
+                ModalStore.toggleAndroidNfcModal(false);
+            }
+        }
+    };
 
     render() {
         const { navigation, ModalStore } = this.props;
@@ -101,7 +145,8 @@ export default class Satscard extends React.Component<
             error,
             selectedSlot,
             selectedSlotIndex,
-            selectedSlotStatus
+            selectedSlotStatus,
+            rateLimited
         } = this.state;
 
         const BackButton = () => (
@@ -162,13 +207,14 @@ export default class Satscard extends React.Component<
         const ClearButton = () => (
             <Icon
                 name="cancel"
-                onPress={() =>
+                onPress={async () => {
+                    await card.endNfcSession();
                     this.setState({
                         pubkey: '',
                         cardStatus: null,
                         error: ''
-                    })
-                }
+                    });
+                }}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -182,24 +228,8 @@ export default class Satscard extends React.Component<
                   })
                 : null;
 
-        const awaitNfc = () => {
-            // enable NFC
-            if (Platform.OS === 'android') {
-                ModalStore.toggleAndroidNfcModal(true);
-            }
-
-            this.setState({
-                error: ''
-            });
-        };
-
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -210,10 +240,7 @@ export default class Satscard extends React.Component<
                         }
                     }}
                     rightComponent={cardStatus ? <ClearButton /> : null}
-                    backgroundColor={themeColor('background')}
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
+                    navigation={navigation}
                 />
                 <ScrollView style={{ flex: 1, padding: 15 }}>
                     {tapsignerError && (
@@ -309,38 +336,15 @@ export default class Satscard extends React.Component<
                             <Button
                                 title={localeString('views.Satscard.unseal')}
                                 onPress={async () => {
-                                    try {
-                                        awaitNfc();
+                                    this.nfcWrapper(async () => {
+                                        const cardStatus =
+                                            await card.first_look();
+                                        // await card.setup(cvv, undefined, true);
+                                        // interact with the card here
+                                        console.log('cvv', cvv);
                                         const { pk, target } =
-                                            await card.nfcWrapper(async () => {
-                                                // interact with the card here
-                                                const res =
-                                                    await card.unseal_slot(cvv); // scans the card for basic details and initialises with it
-                                                if (Platform.OS === 'android') {
-                                                    ModalStore.toggleAndroidNfcModal(
-                                                        false
-                                                    );
-                                                }
-                                                // return {
-                                                //     pk,
-                                                //     target
-                                                // };
-                                            });
-                                    } catch (err) {
-                                        // close NFC
-
-                                        this.setState({
-                                            error:
-                                                err.error ||
-                                                err.message ||
-                                                err.toString()
-                                        });
-                                    }
-
-                                    if (Platform.OS === 'android') {
-                                        await card.endNfcSession();
-                                        ModalStore.toggleAndroidNfcModal(false);
-                                    }
+                                            await card.unseal_slot(cvv); // scans the card for basic details and initialises with it
+                                    });
                                 }}
                             />
                         </>
@@ -353,51 +357,31 @@ export default class Satscard extends React.Component<
                                         this.setState({
                                             selectedSlot: index
                                         });
-                                        try {
-                                            awaitNfc();
+                                        this.nfcWrapper(async () => {
                                             const { address, status, resp } =
-                                                await card.nfcWrapper(
-                                                    async () => {
-                                                        const {
-                                                            address,
-                                                            status,
-                                                            resp
-                                                        } = await card.get_slot_usage(
-                                                            index
-                                                        );
-                                                        return {
-                                                            address,
-                                                            status,
-                                                            resp
-                                                        };
-                                                    }
+                                                await card.get_slot_usage(
+                                                    index
                                                 );
-                                            this.setState({
-                                                selectedSlotIndex: resp.slot,
-                                                pubkey: address,
-                                                selectedSlotStatus: status
-                                            });
-                                            if (Platform.OS === 'android') {
-                                                ModalStore.toggleAndroidNfcModal(
-                                                    false
-                                                );
-                                            }
-                                        } catch (err) {
-                                            this.setState({
-                                                error:
-                                                    err.error ||
-                                                    err.message ||
-                                                    err.toString()
-                                            });
-                                            if (Platform.OS === 'android') {
-                                                ModalStore.toggleAndroidNfcModal(
-                                                    false
-                                                );
-                                            }
-                                        }
 
-                                        if (Platform.OS === 'android')
-                                            await card.endNfcSession();
+                                            console.log('1@@status', status);
+
+                                            let privkey = '';
+                                            if (status === 'UNSEALED') {
+                                                const pk =
+                                                    await card.get_privkey(
+                                                        cvv,
+                                                        Number(index)
+                                                    );
+                                                console.log('!!pk', pk);
+                                            }
+
+                                            return {
+                                                address,
+                                                privkey,
+                                                status,
+                                                resp
+                                            };
+                                        });
                                     }}
                                     selectedIndex={selectedSlot}
                                     buttons={slotButtons}
@@ -442,52 +426,23 @@ export default class Satscard extends React.Component<
                                                         'views.Satscard.generateAddress'
                                                     )}
                                                     onPress={async () => {
-                                                        try {
-                                                            awaitNfc();
-                                                            const address =
-                                                                await card.nfcWrapper(
-                                                                    async () => {
-                                                                        const address =
-                                                                            await card.setup(
-                                                                                cvv
-                                                                            );
-                                                                        return address;
-                                                                    }
-                                                                );
-                                                            if (address) {
-                                                                this.setState({
-                                                                    pubkey: address,
-                                                                    selectedSlotStatus:
-                                                                        'SEALED'
-                                                                });
+                                                        this.nfcWrapper(
+                                                            async () => {
+                                                                const address =
+                                                                    await card.setup(
+                                                                        cvv
+                                                                    );
+                                                                if (address) {
+                                                                    this.setState(
+                                                                        {
+                                                                            pubkey: address,
+                                                                            selectedSlotStatus:
+                                                                                'SEALED'
+                                                                        }
+                                                                    );
+                                                                }
                                                             }
-                                                        } catch (err) {
-                                                            this.setState({
-                                                                error:
-                                                                    err.error ||
-                                                                    err.message ||
-                                                                    err.toString()
-                                                            });
-                                                            if (
-                                                                Platform.OS ===
-                                                                'android'
-                                                            ) {
-                                                                ModalStore.toggleAndroidNfcModal(
-                                                                    false
-                                                                );
-                                                            }
-                                                        }
-
-                                                        await card.endNfcSession();
-                                                        if (
-                                                            Platform.OS ===
-                                                            'android'
-                                                        ) {
-                                                            await card.endNfcSession();
-                                                            ModalStore.toggleAndroidNfcModal(
-                                                                false
-                                                            );
-                                                        }
+                                                        );
                                                     }}
                                                 />
                                             </View>
@@ -501,45 +456,41 @@ export default class Satscard extends React.Component<
                             <Button
                                 title={localeString('views.Satscard.load')}
                                 onPress={async () => {
-                                    try {
-                                        awaitNfc();
-                                        const {
-                                            cardStatus,
-                                            pubkey,
-                                            slotStatus
-                                        }: {
-                                            cardStatus: CardStatus;
-                                            pubkey: string;
-                                            slotStatus: string;
-                                        } = await card.nfcWrapper(async () => {
-                                            // scans the card for basic details and initialises with it
-                                            const cardStatus =
-                                                await card.first_look();
-                                            const { address, status } =
-                                                await card.get_slot_usage(
-                                                    cardStatus.active_slot
-                                                );
+                                    this.nfcWrapper(async () => {
+                                        // scans the card for basic details and initialises with it
+                                        const cardStatus =
+                                            await card.first_look();
+                                        const { address, status } =
+                                            await card.get_slot_usage(
+                                                cardStatus.active_slot
+                                            );
+
+                                        console.log('!!status', status);
+
+                                        let privkey = '';
+                                        if (status === 'UNSEALED') {
+                                            const pk = await card.get_privkey(
+                                                cvv,
+                                                cardStatus.active_slot
+                                            );
+                                            console.log('!!pk', pk);
+                                        }
+
+                                        if (cardStatus.is_tapsigner) {
+                                            this.setState({
+                                                tapsignerError: true
+                                            });
 
                                             if (Platform.OS === 'android') {
                                                 ModalStore.toggleAndroidNfcModal(
                                                     false
                                                 );
                                             }
-
-                                            return {
-                                                cardStatus,
-                                                pubkey: address,
-                                                slotStatus: status
-                                            };
-                                        });
-                                        if (cardStatus.is_tapsigner) {
-                                            this.setState({
-                                                tapsignerError: true
-                                            });
                                         } else {
                                             this.setState({
                                                 cardStatus,
                                                 pubkey,
+                                                privkey,
                                                 slotStatus,
                                                 tapsignerError: false,
                                                 error: '',
@@ -549,32 +500,35 @@ export default class Satscard extends React.Component<
                                                     cardStatus.active_slot,
                                                 selectedSlotStatus: slotStatus
                                             });
-
-                                            if (Platform.OS === 'android') {
-                                                ModalStore.toggleAndroidNfcModal(
-                                                    false
-                                                );
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    )}
+                    {!cardStatus && rateLimited && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('views.Satscard.wait')}
+                                onPress={async () => {
+                                    this.nfcWrapper(async () => {
+                                        const status = await card.first_look();
+                                        if (status.auth_delay) {
+                                            for (
+                                                let i = 0;
+                                                i < status.auth_delay;
+                                                i++
+                                            ) {
+                                                await card.wait();
                                             }
                                         }
-                                    } catch (err) {
-                                        this.setState({
-                                            error:
-                                                err.error ||
-                                                err.message ||
-                                                err.toString()
-                                        });
-                                    }
-
-                                    if (Platform.OS === 'android') {
-                                        await card.endNfcSession();
-                                        ModalStore.toggleAndroidNfcModal(false);
-                                    }
+                                    });
                                 }}
                             />
                         </View>
                     )}
                 </ScrollView>
-            </View>
+            </Screen>
         );
     }
 }
