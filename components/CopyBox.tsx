@@ -83,7 +83,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 5,
         marginBottom: 25,
-        backgroundColor: themeColor('background'),
         marginLeft: -25,
         marginRight: -25
     },

@@ -84,6 +84,7 @@
     "components.ExternalLinkModal.externalLink": "You're about to leave Zeus",
     "components.ExternalLinkModal.proceed": "Proceed to the following URL?",
     "components.ExternalLinkModal.copyLink": "Copy Link",
+    "components.ExternalLinkModal.copied": "Copied!",
     "components.AndroidNfcModal.ready": "Ready to scan",
     "components.AndroidNfcModal.hold": "Hold your Android phone near an NFC tag to read it",
     "models.Channel.unknownId": "Unknown Channel ID",
