@@ -211,7 +211,8 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             showSearch
         } = ChannelsStore;
 
-        const lurkerMode = SettingsStore.settings.privacy.lurkerMode;
+        const lurkerMode: boolean =
+            SettingsStore?.settings?.privacy?.lurkerMode || false;
 
         let headerString;
         let channelsData;
