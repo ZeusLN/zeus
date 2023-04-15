@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { ButtonGroup, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import wif from 'wif';
 
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -344,6 +345,12 @@ export default class Satscard extends React.Component<
                                         console.log('cvv', cvv);
                                         const { pk, target } =
                                             await card.unseal_slot(cvv); // scans the card for basic details and initialises with it
+
+                                        const walletImportFormat = wif.encode(128, pk, false);
+
+                                        this.setState({
+                                            privkey: walletImportFormat
+                                        });
                                     });
                                 }}
                             />
