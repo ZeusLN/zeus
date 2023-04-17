@@ -97,9 +97,9 @@ export default class PaymentRequest extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            feeOption: settings.payments.defaultFeeMethod || 'fixed',
-            feeLimitSat: settings.payments.defaultFeeFixed || '100',
-            maxFeePercent: settings.payments.defaultFeePercentage || '0.5'
+            feeOption: settings?.payments?.defaultFeeMethod || 'fixed',
+            feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
+            maxFeePercent: settings?.payments?.defaultFeePercentage || '0.5'
         });
     }
 
