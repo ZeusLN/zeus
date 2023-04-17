@@ -4,7 +4,6 @@ import { inject, observer } from 'mobx-react';
 import LnurlPaySuccess from './LnurlPay/Success';
 
 import Button from '../components/Button';
-import CopyButton from '../components/CopyButton';
 import LightningIndicator from '../components/LightningIndicator';
 import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
@@ -19,6 +18,7 @@ import Clock from '../assets/images/SVG/Clock.svg';
 import Error from '../assets/images/SVG/Error.svg';
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
+import CopyBox from '../components/CopyBox';
 
 interface SendingLightningProps {
     navigation: any;
@@ -170,18 +170,26 @@ export default class SendingLightning extends React.Component<
                                 />
                             )}
                         {!!payment_hash && !(!!error || !!payment_error) && (
-                            <Text
+                            <View
                                 style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
                                     paddingTop: 20,
                                     paddingLeft: 50,
-                                    paddingRight: 50,
-                                    fontSize: 15
+                                    paddingRight: 50
                                 }}
-                            >{`${localeString(
-                                'views.SendingLightning.paymentHash'
-                            )}: ${payment_hash}`}</Text>
+                            >
+                                <CopyBox
+                                    heading={localeString(
+                                        'views.SendingLightning.paymentHash'
+                                    )}
+                                    headingCopied={`${localeString(
+                                        'views.SendingLightning.paymentHash'
+                                    )} ${localeString(
+                                        'components.ExternalLinkModal.copied'
+                                    )}`}
+                                    theme="dark"
+                                    URL={payment_hash}
+                                />
+                            </View>
                         )}
 
                         <View style={styles.buttons}>
@@ -192,14 +200,7 @@ export default class SendingLightning extends React.Component<
                                         marginBottom: 10,
                                         width: '100%'
                                     }}
-                                >
-                                    <CopyButton
-                                        title={localeString(
-                                            'views.SendingLightning.copyPaymentHash'
-                                        )}
-                                        copyValue={payment_hash}
-                                    />
-                                </View>
+                                ></View>
                             )}
 
                             {payment_error == `FAILURE_REASON_NO_ROUTE` && (
