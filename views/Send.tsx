@@ -22,13 +22,11 @@ import NfcManager, {
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
 import BalanceStore from '../stores/BalanceStore';
-import FiatStore from '../stores/FiatStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
-import UnitsStore from '../stores/UnitsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
 import Amount from '../components/Amount';
@@ -58,8 +56,6 @@ interface SendProps {
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
-    FiatStore: FiatStore;
-    UnitsStore: UnitsStore;
     UTXOsStore: UTXOsStore;
 }
 
@@ -90,8 +86,6 @@ interface SendState {
     'TransactionsStore',
     'BalanceStore',
     'SettingsStore',
-    'UnitsStore',
-    'FiatStore',
     'UTXOsStore'
 )
 @observer
@@ -278,6 +272,9 @@ export default class Send extends React.Component<SendProps, SendState> {
         handleAnything(text, this.state.amount)
             .then((response) => {
                 try {
+                    this.setState({
+                        loading: false
+                    });
                     if (response) {
                         const [route, props] = response;
                         navigation.navigate(route, props);
@@ -376,14 +373,8 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     render() {
-        const {
-            SettingsStore,
-            UnitsStore,
-            FiatStore,
-            BalanceStore,
-            UTXOsStore,
-            navigation
-        } = this.props;
+        const { SettingsStore, BalanceStore, UTXOsStore, navigation } =
+            this.props;
         const {
             isValid,
             transactionType,
@@ -404,10 +395,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
-        const { fiat, privacy } = settings;
+        const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
-        const { units, changeUnits } = UnitsStore;
-        const { getSymbol } = FiatStore;
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
@@ -643,78 +632,19 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'Keysend' &&
                         BackendUtils.supportsKeysend() && (
                             <React.Fragment>
-                                <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text
-                                        style={{
-                                            ...styles.secondaryText,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString('views.Send.amount')}
-                                    </Text>
-                                </TouchableOpacity>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    value={amount}
-                                    onChangeText={(text: string) =>
-                                        this.setState({ amount: text })
-                                    }
-                                    style={styles.textInput}
-                                    prefix={
-                                        units !== 'sats' &&
-                                        (units === 'BTC'
-                                            ? '₿'
-                                            : !getSymbol().rtl
-                                            ? getSymbol().symbol
-                                            : null)
-                                    }
-                                    suffix={
-                                        units === 'sats'
-                                            ? units
-                                            : getSymbol().rtl &&
-                                              units === 'fiat' &&
-                                              getSymbol().symbol
-                                    }
-                                    toggleUnits={changeUnits}
+                                <AmountInput
+                                    amount={amount}
+                                    title={localeString('views.Send.amount')}
+                                    onAmountChange={(
+                                        amount: string,
+                                        satAmount: string | number
+                                    ) => {
+                                        this.setState({
+                                            amount,
+                                            satAmount
+                                        });
+                                    }}
                                 />
-
-                                {fiat !== 'Disabled' && units !== 'fiat' && (
-                                    <Amount
-                                        sats={satAmount}
-                                        fixedUnits="fiat"
-                                        toggleable
-                                    />
-                                )}
-                                {fiat !== 'Disabled' && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {FiatStore.getRate(
-                                                units === 'sats'
-                                            )}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                                {units !== 'sats' && (
-                                    <Amount
-                                        sats={satAmount}
-                                        fixedUnits="sats"
-                                        toggleable
-                                    />
-                                )}
-                                {units !== 'BTC' && (
-                                    <Amount
-                                        sats={satAmount}
-                                        fixedUnits="BTC"
-                                        toggleable
-                                    />
-                                )}
 
                                 {BackendUtils.supportsAMP() && (
                                     <React.Fragment>
