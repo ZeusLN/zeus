@@ -172,9 +172,7 @@ export default class SendingLightning extends React.Component<
                         {!!payment_hash && !(!!error || !!payment_error) && (
                             <View
                                 style={{
-                                    paddingTop: 20,
-                                    paddingLeft: 50,
-                                    paddingRight: 50
+                                    padding: 20
                                 }}
                             >
                                 <CopyBox
