@@ -453,6 +453,7 @@
     "views.SendingOnChain.success": "Transaction successfully sent",
     "views.SendingOnChain.txid": "TXID",
     "views.SendingOnChain.copyTxid": "Copy TXID to Clipboard",
+    "views.SendingOnChain.goToBlockExplorer": "Go to block explorer",
     "views.SendingOnChain.goToWallet": "Go to Wallet",
     "views.Settings.title": "Settings",
     "views.Settings.locale": "Locale",
