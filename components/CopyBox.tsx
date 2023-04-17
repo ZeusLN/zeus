@@ -15,35 +15,41 @@ interface CopyBoxProps {
 function CopyBox(props: CopyBoxProps) {
     const { heading, URL, headingCopied, theme } = props;
     const [copied, setCopied] = useState(false);
+    const [currentTheme, setCurrentTheme] = useState(theme);
     return (
         <TouchableOpacity
             style={{
                 ...styles.container,
                 borderColor:
-                    theme === 'dark'
+                    currentTheme === 'dark'
                         ? themeColor('text')
-                        : theme === 'light'
+                        : currentTheme === 'light'
                         ? themeColor('background')
                         : themeColor('text'),
                 backgroundColor:
-                    theme === 'dark'
-                        ? themeColor('background')
-                        : theme === 'light'
+                    currentTheme === 'dark'
+                        ? themeColor('secondary')
+                        : currentTheme === 'light'
                         ? themeColor('text')
                         : themeColor('background')
             }}
             onPress={() => {
                 Clipboard.setString(URL);
                 setCopied(true);
+                setCurrentTheme('light');
+                setTimeout(function () {
+                    setCopied(false);
+                    setCurrentTheme('dark');
+                }, 3000);
             }}
         >
             <Text
                 style={{
                     ...styles.headingText,
                     color:
-                        theme === 'dark'
+                        currentTheme === 'dark'
                             ? themeColor('text')
-                            : theme === 'light'
+                            : currentTheme === 'light'
                             ? themeColor('background')
                             : themeColor('text')
                 }}
@@ -54,9 +60,9 @@ function CopyBox(props: CopyBoxProps) {
                 style={{
                     ...styles.URL,
                     color:
-                        theme === 'dark'
+                        currentTheme === 'dark'
                             ? themeColor('text')
-                            : theme === 'light'
+                            : currentTheme === 'light'
                             ? themeColor('background')
                             : themeColor('text')
                 }}
@@ -68,7 +74,7 @@ function CopyBox(props: CopyBoxProps) {
                     height="30px"
                     width="30px"
                     stroke={
-                        theme === 'dark'
+                        currentTheme === 'dark'
                             ? themeColor('text')
                             : themeColor('background')
                     }
@@ -83,8 +89,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 5,
         marginBottom: 25,
-        marginLeft: -25,
-        marginRight: -25
+        minWidth: '100%'
     },
     headingText: {
         padding: 20,
