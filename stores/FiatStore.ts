@@ -344,10 +344,10 @@ export default class FiatStore {
     // BTC_USD = coingecko(BTC_USD);
     // BTC_BZD = 2 * coingecko(BTC_USD);
     // BTC_AUD = coingecko(BTC_AUD);
-    // BTC_BRL = coingecko(BTC_BRL);
+    // BTC_BRL = yadio(BTC_BRL);
     // BTC_CAD = coingecko(BTC_CAD);
     // BTC_CHF = coingecko(BTC_CHF);
-    // BTC_CLP = coingecko(BTC_CLP);
+    // BTC_CLP = yadio(BTC_CLP);
     // BTC_CNY = coingecko(BTC_CNY);
     // BTC_CZK = coingecko(BTC_CZK);
     // BTC_DKK = coingecko(BTC_DKK);
@@ -369,7 +369,7 @@ export default class FiatStore {
     // BTC_TRY = coingecko(BTC_TRY);
     // BTC_TWD = coingecko(BTC_TWD);
     // BTC_ILS = coingecko(BTC_ILS);
-    // BTC_ARS = coingecko(BTC_ARS);
+    // BTC_ARS = yadio(BTC_ARS);
     // BTC_NGN = coingecko(BTC_NGN);
     // BTC_LBP = yadio(BTC_LBP);
     // BTC_MYR = yadio(BTC_MYR);
