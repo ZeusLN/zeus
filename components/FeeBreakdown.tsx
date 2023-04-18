@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 
@@ -11,6 +11,7 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import UrlUtils from '../utils/UrlUtils';
 
 import { Divider } from 'react-native-elements';
 
@@ -58,7 +59,7 @@ export default class FeeBreakdown extends React.Component<
             privateChannel
         } = this.props;
         const { loading, chanInfo } = ChannelsStore;
-        const { nodeInfo } = NodeInfoStore;
+        const { nodeInfo, testnet } = NodeInfoStore;
         const { nodeId } = nodeInfo;
 
         let localPolicy, remotePolicy;
@@ -364,15 +365,43 @@ export default class FeeBreakdown extends React.Component<
                             />
                         )}
 
+                        {channelId && (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    UrlUtils.goToBlockExplorerChannelId(
+                                        channelId,
+                                        testnet
+                                    )
+                                }
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.channelId'
+                                    )}
+                                    value={channelId}
+                                    color={themeColor('chain')}
+                                    sensitive
+                                />
+                            </TouchableOpacity>
+                        )}
                         {channelPoint && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Channel.channelPoint'
-                                )}
-                                value={channelPoint}
-                                color={themeColor('chain')}
-                                sensitive
-                            />
+                            <TouchableOpacity
+                                onPress={() =>
+                                    UrlUtils.goToBlockExplorerTXID(
+                                        channelPoint,
+                                        testnet
+                                    )
+                                }
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.channelPoint'
+                                    )}
+                                    value={channelPoint}
+                                    color={themeColor('chain')}
+                                    sensitive
+                                />
+                            </TouchableOpacity>
                         )}
                     </React.Fragment>
                 )}
