@@ -31,7 +31,7 @@ interface ActivityProps {
 
 @inject('ActivityStore', 'SettingsStore')
 @observer
-export default class Activity extends React.Component<ActivityProps, {}> {
+export default class Activity extends React.PureComponent<ActivityProps, {}> {
     transactionListener: any;
     invoicesListener: any;
 
@@ -318,6 +318,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         onEndReachedThreshold={50}
                         refreshing={loading}
                         onRefresh={() => getActivityAndFilter()}
+                        initialNumToRender={10}
+                        maxToRenderPerBatch={5}
+                        windowSize={10}
                     />
                 ) : (
                     <Button
