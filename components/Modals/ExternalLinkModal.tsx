@@ -1,19 +1,16 @@
 import React from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../Button';
 import ModalBox from '../ModalBox';
+import CopyBox from '../../components/CopyBox';
 
 import ModalStore from '../../stores/ModalStore';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
 
-import Copy from '../../assets/images/SVG/Copy.svg';
 import Leaving from '../../assets/images/SVG/Leaving.svg';
-
-import Clipboard from '@react-native-clipboard/clipboard';
 
 interface ExternalLinkModalProps {
     ModalStore: ModalStore;
@@ -93,53 +90,16 @@ export default class ExternalLinkModal extends React.Component<
                                 'components.ExternalLinkModal.proceed'
                             )}
                         </Text>
-                        <TouchableOpacity
-                            style={{
-                                borderWidth: 1,
-                                borderRadius: 5,
-                                marginBottom: 25,
-                                backgroundColor: themeColor('background'),
-                                marginLeft: -25,
-                                marginRight: -25
-                            }}
-                            onPress={() => Clipboard.setString(modalUrl)}
-                        >
-                            <Text
-                                style={{
-                                    padding: 20,
-                                    paddingRight: 45,
-                                    paddingBottom: 5,
-                                    fontWeight: 'bold',
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'components.ExternalLinkModal.copyLink'
-                                )}
-                            </Text>
-                            <Text
-                                style={{
-                                    padding: 20,
-                                    paddingRight: 45,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {modalUrl}
-                            </Text>
-                            <View
-                                style={{
-                                    position: 'absolute',
-                                    right: 10,
-                                    top: 10
-                                }}
-                            >
-                                <Copy
-                                    height="30px"
-                                    width="30px"
-                                    stroke={themeColor('text')}
-                                />
-                            </View>
-                        </TouchableOpacity>
+                        <CopyBox
+                            heading={localeString(
+                                'components.ExternalLinkModal.copyLink'
+                            )}
+                            URL={modalUrl}
+                            headingCopied={localeString(
+                                'components.ExternalLinkModal.copied'
+                            )}
+                            theme="dark"
+                        />
                         <View style={styles.buttons}>
                             <View style={styles.button}>
                                 <Button
