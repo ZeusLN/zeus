@@ -49,6 +49,12 @@ export default class FiatStore {
             },
             ARS: { symbol: '$', space: true, rtl: false, separatorSwap: true },
             AUD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            BOB: {
+                symbol: 'Bs',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             BRL: {
                 symbol: 'R$',
                 space: true,
@@ -77,6 +83,12 @@ export default class FiatStore {
             CLP: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             CNY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
             COP: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            CRC: {
+                symbol: '₡',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             CUP: {
                 symbol: '$',
                 space: false,
@@ -109,6 +121,12 @@ export default class FiatStore {
             },
             GBP: {
                 symbol: '£',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            GTQ: {
+                symbol: 'Q',
                 space: false,
                 rtl: false,
                 separatorSwap: false
@@ -167,6 +185,12 @@ export default class FiatStore {
                 rtl: false,
                 separatorSwap: false
             },
+            NIO: {
+                symbol: 'C$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             NOK: {
                 symbol: 'kr',
                 space: true,
@@ -176,6 +200,12 @@ export default class FiatStore {
             NZD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             PHP: { symbol: '₱', space: true, rtl: false, separatorSwap: false },
             PLN: { symbol: 'zł', space: true, rtl: true, separatorSwap: false },
+            PYG: {
+                symbol: '₲',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             RON: {
                 symbol: 'lei',
                 space: true,
@@ -243,6 +273,12 @@ export default class FiatStore {
             QAR: {
                 symbol: 'QR',
                 space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            UYU: {
+                symbol: 'U$',
+                space: false,
                 rtl: false,
                 separatorSwap: false
             },
