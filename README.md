@@ -51,7 +51,7 @@ and
 - [x] SegWit support 
 - [x] Sign & verify messages
 - [x] Fiat currency integrations
-- [x] [Various language support](https://www.transifex.com/ZeusLN/zeus/)
+- [x] [Various language support](https://app.transifex.com/ZeusLN/zeus/)
 - [x] Multi-theme
 - [x] On-chain coin control 
 - [ ] External signer support
@@ -156,7 +156,7 @@ If you want to install the APK built this way onto your own smartphone, you'll n
 
 ## Translations
 
-Do not directly modify the files in `/locales` unless you are adding new copy to the app in English. Instead, translators and reviewers should visit out [Transifex page](https://www.transifex.com/ZeusLN/zeus/) and request a role on the language you'd like to contribute to.
+Do not directly modify the files in `/locales` unless you are adding new copy to the app in English. Instead, translators and reviewers should visit out [Transifex page](https://app.transifex.com/ZeusLN/zeus/) and request a role on the language you'd like to contribute to.
 
 ## Release + Commit Verification
 
