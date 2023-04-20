@@ -117,7 +117,7 @@ export default function PaymentPath(props: PaymentPathProps) {
                             borderLeftWidth: 3,
                             borderColor:
                                 path.length == key + 1
-                                    ? themeColor('background')
+                                    ? 'transparent'
                                     : themeColor('secondaryText')
                         }}
                     >
