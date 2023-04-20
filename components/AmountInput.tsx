@@ -89,7 +89,9 @@ export default class AmountInput extends React.Component<
         };
     }
 
-    componentWillReceiveProps(nextProps: Readonly<AmountInputProps>): void {
+    UNSAFE_componentWillReceiveProps(
+        nextProps: Readonly<AmountInputProps>
+    ): void {
         const { amount } = nextProps;
         if (amount) {
             const satAmount = getSatAmount(amount);
