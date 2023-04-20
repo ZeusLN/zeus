@@ -199,7 +199,13 @@ export const CURRENCY_KEYS = [
     { key: '🇿🇦 South African Rand (ZAR)', value: 'ZAR' },
     { key: '🇨🇺 Cuban Peso (CUP)', value: 'CUP' },
     { key: '🇩🇴 Dominican Peso (DOP)', value: 'DOP' },
-    { key: '🇧🇿 Belize Dollar (BZD)', value: 'BZD' }
+    { key: '🇧🇿 Belize Dollar (BZD)', value: 'BZD' },
+    { key: '🇧🇴 Bolivian Boliviano (BOB)', value: 'BOB' },
+    { key: '🇨🇷 Costa Rican Colón (CRC)', value: 'CRC' },
+    { key: '🇬🇹 Guatemalan Quetzal (GTQ)', value: 'GTQ' },
+    { key: '🇳🇮 Nicaraguan Córdoba (NIO)', value: 'NIO' },
+    { key: '🇵🇾 Paraguayan Guaraní (PYG)', value: 'PYG' },
+    { key: '🇺🇾 Uruguayan Peso (UYU)', value: 'UYU' }
 ];
 
 export const THEME_KEYS = [
