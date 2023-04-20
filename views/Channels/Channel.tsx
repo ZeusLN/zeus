@@ -292,6 +292,7 @@ export default class ChannelView extends React.Component<
                                         'views.Channel.closeHeight'
                                     )}
                                     value={closeHeight}
+                                    color={themeColor('chain')}
                                     sensitive
                                 />
                             </TouchableOpacity>
@@ -338,6 +339,7 @@ export default class ChannelView extends React.Component<
                                     )}
                                     value={closing_txid}
                                     sensitive
+                                    color={themeColor('chain')}
                                 />
                             </TouchableOpacity>
                         )}
@@ -356,6 +358,7 @@ export default class ChannelView extends React.Component<
                                     )}
                                     value={closing_tx_hash}
                                     sensitive
+                                    color={themeColor('chain')}
                                 />
                             </TouchableOpacity>
                         )}
