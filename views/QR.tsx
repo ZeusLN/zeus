@@ -1,10 +1,9 @@
 import * as React from 'react';
 import { View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
 
 import CollapsedQR from '../components/CollapsedQR';
-
-import { themeColor } from '../utils/ThemeUtils';
+import Header from '../components/Header';
+import Screen from '../components/Screen';
 
 interface QRProps {
     navigation: any;
@@ -27,25 +26,15 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
         const { navigation } = this.props;
         const { value } = this.state;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.goBack()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
-        );
-
         return (
-            <View
-                style={{ flex: 1, backgroundColor: themeColor('background') }}
-            >
+            <Screen>
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent="Back"
                     backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
+                    navigation={navigation}
                 />
                 <View
                     style={{
@@ -55,7 +44,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                 >
                     <CollapsedQR value={value} expanded textBottom />
                 </View>
-            </View>
+            </Screen>
         );
     }
 }
