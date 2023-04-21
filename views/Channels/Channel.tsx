@@ -176,6 +176,7 @@ export default class ChannelView extends React.Component<
             <View style={{ top: -3 }}>
                 <Edit
                     onPress={() => navigation.navigate('SetFees', { channel })}
+                    fill={themeColor('text')}
                 />
             </View>
         );
@@ -189,6 +190,7 @@ export default class ChannelView extends React.Component<
                         isValid: true
                     })
                 }
+                fill={themeColor('text')}
             />
         );
 
