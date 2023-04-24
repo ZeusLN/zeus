@@ -406,35 +406,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (BackendUtils.supportsKeysend()) {
             paymentOptions.push(localeString('views.Send.keysendAddress'));
         }
-
-        if (loading) {
-            return (
-                <View
-                    style={{
-                        flex: 1,
-                        backgroundColor: themeColor('background')
-                    }}
-                >
-                    <Header
-                        centerComponent={{
-                            text: localeString('general.loading'),
-                            style: {
-                                color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
-                            }
-                        }}
-                        backgroundColor={themeColor('background')}
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
-                    />
-                    <View style={{ top: 40 }}>
-                        <LoadingIndicator />
-                    </View>
-                </View>
-            );
-        }
-
         return (
             <Screen>
                 <Header
@@ -447,13 +418,24 @@ export default class Send extends React.Component<SendProps, SendState> {
                         }
                     }}
                     rightComponent={
-                        <TouchableOpacity
-                            onPress={() =>
-                                navigation.navigate('HandleAnythingQRScanner')
-                            }
-                        >
-                            <Scan fill={themeColor('text')} />
-                        </TouchableOpacity>
+                        <View style={{ flex: 1, flexDirection: 'row' }}>
+                            {loading && (
+                                <View style={{ paddingRight: 15 }}>
+                                    <LoadingIndicator size={30} />
+                                </View>
+                            )}
+                            <View style={{ marginTop: 3 }}>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'HandleAnythingQRScanner'
+                                        )
+                                    }
+                                >
+                                    <Scan fill={themeColor('text')} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     }
                     navigation={navigation}
                 />
