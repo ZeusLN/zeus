@@ -189,7 +189,14 @@ export default class SendingLightning extends React.Component<
                                 />
                             </View>
                         )}
-
+                        {!loading && !(!!error || !!payment_error) && (
+                            <Button
+                                title="Add a note"
+                                onPress={() => navigation.navigate('AddNotes')}
+                                secondary
+                                buttonStyle={{ padding: 15 }}
+                            />
+                        )}
                         <View style={styles.buttons}>
                             {payment_hash && !(!!error || !!payment_error) && (
                                 <View

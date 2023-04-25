@@ -1,4 +1,5 @@
 import * as React from 'react';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import { StyleSheet, ScrollView, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
@@ -25,7 +26,8 @@ interface PaymentProps {
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     state = {
-        lnurlpaytx: null
+        lnurlpaytx: null,
+        storedNotes: ''
     };
 
     async componentDidMount() {
@@ -35,10 +37,19 @@ export default class PaymentView extends React.Component<PaymentProps> {
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
+        EncryptedStorage.getItem(payment.payment_hash)
+            .then((storedNotes) => {
+                console.log('Stored notes:', storedNotes);
+                this.setState({ storedNotes });
+            })
+            .catch((error) => {
+                console.error('Error retrieving notes:', error);
+            });
     }
 
     render() {
         const { navigation } = this.props;
+        const { storedNotes } = this.state;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
@@ -176,6 +187,13 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     color={themeColor('secondaryText')}
                                 />
                             </ListItem>
+                        )}
+                        {storedNotes && (
+                            <KeyValue
+                                keyValue="Notes"
+                                value={storedNotes}
+                                sensitive
+                            />
                         )}
                     </View>
                 </ScrollView>
