@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import Screen from '../components/Screen';
 import Button from '../components/Button';
 
+import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface AddNotesProps {
@@ -36,7 +37,7 @@ export default class AddNotes extends React.Component<
         };
     }
     async componentDidMount() {
-        const key: any = this.state.txid || this.state.payment_hash;
+        const key: any = 'note-' + (this.state.txid || this.state.payment_hash);
         const storedNotes = await EncryptedStorage.getItem(key);
         if (storedNotes) {
             this.setState({ notes: storedNotes });
@@ -52,7 +53,7 @@ export default class AddNotes extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Add a note',
+                        text: localeString('views.AddNotes.AddNote'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular',
@@ -73,14 +74,14 @@ export default class AddNotes extends React.Component<
                     />
                 </View>
                 <Button
+                    title={localeString('views.AddNotes.AddNote')}
                     onPress={async () => {
                         navigation.navigate('Wallet');
-                        const key: any = payment_hash || txid;
+                        const key: any = 'note-' + (payment_hash || txid);
                         await EncryptedStorage.setItem(key, notes);
                     }}
                     containerStyle={{ position: 'absolute', bottom: 40 }}
                     buttonStyle={{ padding: 15 }}
-                    title="add note"
                 />
             </Screen>
         );
