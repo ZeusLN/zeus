@@ -135,27 +135,41 @@ export default class SendingOnChain extends React.Component<
 
                         <View style={styles.buttons}>
                             {txid && (
-                                <Button
-                                    title={localeString(
-                                        'views.SendingOnChain.goToBlockExplorer'
-                                    )}
-                                    onPress={() =>
-                                        UrlUtils.goToBlockExplorerTXID(
-                                            txid,
-                                            testnet
-                                        )
-                                    }
-                                    containerStyle={{
-                                        width: '100%',
-                                        margin: 20
-                                    }}
-                                    secondary
-                                    icon={{
-                                        name: 'exit-to-app',
-                                        size: 25
-                                    }}
-                                    buttonStyle={{ padding: 10 }}
-                                />
+                                <>
+                                    <Button
+                                        title={localeString(
+                                            'views.SendingOnChain.AddANote'
+                                        )}
+                                        onPress={() =>
+                                            navigation.navigate('AddNotes', {
+                                                txid
+                                            })
+                                        }
+                                        secondary
+                                        buttonStyle={{ padding: 14 }}
+                                    />
+                                    <Button
+                                        title={localeString(
+                                            'views.SendingOnChain.goToBlockExplorer'
+                                        )}
+                                        onPress={() =>
+                                            UrlUtils.goToBlockExplorerTXID(
+                                                txid,
+                                                testnet
+                                            )
+                                        }
+                                        containerStyle={{
+                                            width: '100%',
+                                            margin: 20
+                                        }}
+                                        secondary
+                                        icon={{
+                                            name: 'exit-to-app',
+                                            size: 25
+                                        }}
+                                        buttonStyle={{ padding: 10 }}
+                                    />
+                                </>
                             )}
 
                             {error && (

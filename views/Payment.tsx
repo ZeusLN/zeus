@@ -1,6 +1,6 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { StyleSheet, ScrollView, View } from 'react-native';
+import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -16,6 +16,8 @@ import { themeColor } from '../utils/ThemeUtils';
 import LnurlPayStore from '../stores/LnurlPayStore';
 
 import LnurlPayHistorical from './LnurlPay/Historical';
+
+import EditNotes from '../assets/images/SVG/Pen.svg';
 
 interface PaymentProps {
     navigation: any;
@@ -39,7 +41,6 @@ export default class PaymentView extends React.Component<PaymentProps> {
         }
         EncryptedStorage.getItem(payment.payment_hash)
             .then((storedNotes) => {
-                console.log('Stored notes:', storedNotes);
                 this.setState({ storedNotes });
             })
             .catch((error) => {
@@ -64,6 +65,17 @@ export default class PaymentView extends React.Component<PaymentProps> {
 
         const lnurlpaytx = this.state.lnurlpaytx;
 
+        const EditNotesButton = () => (
+            <TouchableOpacity
+                onPress={() =>
+                    navigation.navigate('AddNotes', { payment_hash })
+                }
+                style={{ marginTop: -12 }}
+            >
+                <EditNotes height={40} width={40} />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <Header
@@ -75,6 +87,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={<EditNotesButton />}
                     navigation={navigation}
                 />
                 <ScrollView>
@@ -190,7 +203,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         )}
                         {storedNotes && (
                             <KeyValue
-                                keyValue="Notes"
+                                keyValue={localeString('views.Payment.notes')}
                                 value={storedNotes}
                                 sensitive
                             />
