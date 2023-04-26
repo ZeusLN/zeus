@@ -586,6 +586,7 @@
     "views.Gods.title": "Gods",
     "views.Mortals.title": "Mortals",
     "views.Splash.scanConfig": "Scan node config",
+    "views.AddNotes.AddNote": "Add note",
     "views.BumpFee.title": "Speed up transaction",
     "views.BumpFee.titleAlt": "Speed up channel open",
     "views.BumpFee.targetConfs": "Target confirmations",

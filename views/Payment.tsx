@@ -39,7 +39,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
-        EncryptedStorage.getItem(payment.payment_hash)
+        EncryptedStorage.getItem('note-' + payment.payment_hash)
             .then((storedNotes) => {
                 this.setState({ storedNotes });
             })

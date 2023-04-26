@@ -45,7 +45,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
             'transaction',
             null
         );
-        EncryptedStorage.getItem(transaction.tx)
+        EncryptedStorage.getItem('note-' + transaction.tx)
             .then((storedNotes) => {
                 this.setState({ storedNotes });
             })
