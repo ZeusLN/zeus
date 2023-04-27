@@ -53,7 +53,9 @@ export default class AddNotes extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.AddNotes.AddNote'),
+                        text: notes
+                            ? localeString('views.SendingLightning.UpdateNote')
+                            : localeString('views.SendingLightning.AddANote'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular',
@@ -69,14 +71,18 @@ export default class AddNotes extends React.Component<
                         }}
                         multiline
                         numberOfLines={0}
-                        style={{ fontSize: 20 }}
+                        style={{ fontSize: 20, color: themeColor('text') }}
                         value={notes}
                     />
                 </View>
                 <Button
-                    title={localeString('views.AddNotes.AddNote')}
+                    title={
+                        notes
+                            ? localeString('views.SendingLightning.UpdateNote')
+                            : localeString('views.SendingLightning.AddANote')
+                    }
                     onPress={async () => {
-                        navigation.navigate('Wallet');
+                        navigation.goBack();
                         const key: any = 'note-' + (payment_hash || txid);
                         await EncryptedStorage.setItem(key, notes);
                     }}

@@ -39,13 +39,15 @@ export default class PaymentView extends React.Component<PaymentProps> {
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
-        EncryptedStorage.getItem('note-' + payment.payment_hash)
-            .then((storedNotes) => {
-                this.setState({ storedNotes });
-            })
-            .catch((error) => {
-                console.error('Error retrieving notes:', error);
-            });
+        navigation.addListener('didFocus', () => {
+            EncryptedStorage.getItem('note-' + payment.payment_hash)
+                .then((storedNotes) => {
+                    this.setState({ storedNotes });
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        });
     }
 
     render() {
@@ -202,11 +204,21 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             </ListItem>
                         )}
                         {storedNotes && (
-                            <KeyValue
-                                keyValue={localeString('views.Payment.notes')}
-                                value={storedNotes}
-                                sensitive
-                            />
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        payment_hash
+                                    })
+                                }
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Payment.notes'
+                                    )}
+                                    value={storedNotes}
+                                    sensitive
+                                />
+                            </TouchableOpacity>
                         )}
                     </View>
                 </ScrollView>

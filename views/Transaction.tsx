@@ -45,13 +45,15 @@ export default class TransactionView extends React.Component<TransactionProps> {
             'transaction',
             null
         );
-        EncryptedStorage.getItem('note-' + transaction.tx)
-            .then((storedNotes) => {
-                this.setState({ storedNotes });
-            })
-            .catch((error) => {
-                console.error('Error retrieving notes:', error);
-            });
+        navigation.addListener('didFocus', () => {
+            EncryptedStorage.getItem('note-' + transaction.tx)
+                .then((storedNotes) => {
+                    this.setState({ storedNotes });
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        });
     }
     render() {
         const { NodeInfoStore, navigation } = this.props;
@@ -279,11 +281,17 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         <React.Fragment>{addresses}</React.Fragment>
                     )}
                     {storedNotes && (
-                        <KeyValue
-                            keyValue={localeString('views.Transaction.notes')}
-                            value={storedNotes}
-                            sensitive
-                        />
+                        <TouchableOpacity
+                            onPress={() =>
+                                navigation.navigate('AddNotes', { txid: tx })
+                            }
+                        >
+                            <KeyValue
+                                keyValue={localeString('views.Payment.notes')}
+                                value={storedNotes}
+                                sensitive
+                            />
+                        </TouchableOpacity>
                     )}
 
                     {!isConfirmed && BackendUtils.supportsBumpFee() && (
