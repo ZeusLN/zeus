@@ -98,7 +98,7 @@ export default class BalanceStore {
     };
 
     @action
-    public getLightningBalance = (set: boolean, reset: boolean) => {
+    public getLightningBalance = (set: boolean, reset?: boolean) => {
         this.loadingLightningBalance = true;
         if (reset) this.resetLightningBalance();
         return BackendUtils.getLightningBalance()
