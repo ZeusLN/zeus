@@ -16,6 +16,7 @@ interface AddNotesState {
     notes?: string;
     payment_hash?: string;
     txid?: string;
+    RPreimage?: string;
 }
 
 export default class AddNotes extends React.Component<
@@ -29,15 +30,24 @@ export default class AddNotes extends React.Component<
             null
         );
         const txid: string = this.props.navigation.getParam('txid', null);
+        const RPreimage: string = this.props.navigation.getParam(
+            'getRPreimage',
+            null
+        );
 
         this.state = {
             notes: '',
             payment_hash,
-            txid
+            txid,
+            RPreimage
         };
     }
     async componentDidMount() {
-        const key: any = 'note-' + (this.state.txid || this.state.payment_hash);
+        const key: any =
+            'note-' +
+            (this.state.txid ||
+                this.state.payment_hash ||
+                this.state.RPreimage);
         const storedNotes = await EncryptedStorage.getItem(key);
         if (storedNotes) {
             this.setState({ notes: storedNotes });
@@ -46,7 +56,7 @@ export default class AddNotes extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { payment_hash, txid } = this.state;
+        const { payment_hash, txid, RPreimage } = this.state;
         const { notes } = this.state;
         return (
             <Screen>
@@ -83,7 +93,8 @@ export default class AddNotes extends React.Component<
                     }
                     onPress={async () => {
                         navigation.goBack();
-                        const key: any = 'note-' + (payment_hash || txid);
+                        const key: any =
+                            'note-' + (payment_hash || txid || RPreimage);
                         await EncryptedStorage.setItem(key, notes);
                     }}
                     containerStyle={{ position: 'absolute', bottom: 40 }}
