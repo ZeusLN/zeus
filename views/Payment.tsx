@@ -18,6 +18,7 @@ import LnurlPayStore from '../stores/LnurlPayStore';
 import LnurlPayHistorical from './LnurlPay/Historical';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
+import Button from '../components/Button';
 
 interface PaymentProps {
     navigation: any;
@@ -219,6 +220,25 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     sensitive
                                 />
                             </TouchableOpacity>
+                        )}
+                        {payment_hash && (
+                            <Button
+                                title={
+                                    storedNotes
+                                        ? localeString(
+                                              'views.SendingLightning.UpdateNote'
+                                          )
+                                        : localeString(
+                                              'views.SendingLightning.AddANote'
+                                          )
+                                }
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        payment_hash
+                                    })
+                                }
+                                containerStyle={{ marginTop: 15 }}
+                            />
                         )}
                     </View>
                 </ScrollView>
