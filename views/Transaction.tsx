@@ -307,6 +307,25 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             />
                         </View>
                     )}
+                    {tx && (
+                        <Button
+                            title={
+                                storedNotes
+                                    ? localeString(
+                                          'views.SendingLightning.UpdateNote'
+                                      )
+                                    : localeString(
+                                          'views.SendingLightning.AddANote'
+                                      )
+                            }
+                            onPress={() =>
+                                navigation.navigate('AddNotes', { txid: tx })
+                            }
+                            containerStyle={{ marginTop: 15 }}
+                            secondary
+                            noUppercase
+                        />
+                    )}
                 </ScrollView>
             </Screen>
         );
