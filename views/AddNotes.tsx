@@ -18,6 +18,7 @@ interface AddNotesState {
     txid?: string;
     RPreimage?: string;
 }
+const noteKeys: string[] = [];
 
 export default class AddNotes extends React.Component<
     AddNotesProps,
@@ -78,6 +79,15 @@ export default class AddNotes extends React.Component<
                     <TextInput
                         onChangeText={(text: string) => {
                             this.setState({ notes: text });
+                            if (!text) {
+                                const key: any =
+                                    'note-' +
+                                    (payment_hash || txid || RPreimage);
+                                const index = noteKeys.indexOf(key);
+                                if (index !== -1) {
+                                    noteKeys.splice(index, 1);
+                                }
+                            }
                         }}
                         multiline
                         numberOfLines={0}
@@ -96,6 +106,13 @@ export default class AddNotes extends React.Component<
                         const key: any =
                             'note-' + (payment_hash || txid || RPreimage);
                         await EncryptedStorage.setItem(key, notes);
+                        if (!noteKeys.includes(key)) {
+                            noteKeys.push(key);
+                            await EncryptedStorage.setItem(
+                                'note-Keys',
+                                JSON.stringify(noteKeys)
+                            );
+                        }
                     }}
                     containerStyle={{ position: 'absolute', bottom: 40 }}
                     buttonStyle={{ padding: 15 }}
