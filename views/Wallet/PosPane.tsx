@@ -85,7 +85,6 @@ export default class PosPane extends React.PureComponent<
         let prevOpenedRow;
 
         const closeRow = (index) => {
-            console.log('closerow');
             if (prevOpenedRow && prevOpenedRow !== row[index]) {
                 prevOpenedRow.close();
             }
