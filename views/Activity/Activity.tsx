@@ -19,6 +19,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import ActivityStore from '../../stores/ActivityStore';
+import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
@@ -26,14 +27,26 @@ import Filter from '../../assets/images/SVG/Filter On.svg';
 interface ActivityProps {
     navigation: any;
     ActivityStore: ActivityStore;
+    PosStore: PosStore;
     SettingsStore: SettingsStore;
 }
 
-@inject('ActivityStore', 'SettingsStore')
+interface ActivityState {
+    selectedPaymentForOrder: any;
+}
+
+@inject('ActivityStore', 'PosStore', 'SettingsStore')
 @observer
-export default class Activity extends React.PureComponent<ActivityProps, {}> {
+export default class Activity extends React.PureComponent<
+    ActivityProps,
+    ActivityState
+> {
     transactionListener: any;
     invoicesListener: any;
+
+    state = {
+        selectedPaymentForOrder: null
+    };
 
     async UNSAFE_componentWillMount() {
         const { ActivityStore, SettingsStore } = this.props;
@@ -113,9 +126,47 @@ export default class Activity extends React.PureComponent<ActivityProps, {}> {
     };
 
     render() {
-        const { navigation, ActivityStore } = this.props;
+        const { navigation, ActivityStore, PosStore } = this.props;
+        const { selectedPaymentForOrder } = this.state;
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
+        const { recordPayment } = PosStore;
+
+        const order = navigation.getParam('order', null);
+
+        const MarkPaymentButton = () => (
+            <Button
+                onPress={() => {
+                    if (!order || !selectedPaymentForOrder) return;
+                    const payment: any = selectedPaymentForOrder;
+                    /*
+                    missing fields for recovered payment
+                        orderTip,
+                        exchangeRate,
+                        rate,
+                    */
+                    recordPayment({
+                        orderId: order.item.id,
+                        type: payment.payment_request ? 'ln' : 'onchain',
+                        tx: payment.tx_hash || payment.payment_request,
+                        orderTotal: payment.payment_request
+                            ? payment.amt_paid_sat.toString()
+                            : payment.amount,
+                        orderTip: '0',
+                        exchangeRate: '0',
+                        rate: 0
+                    }).then(() => {
+                        navigation.goBack();
+                    });
+                }}
+                icon={{
+                    name: 'payments',
+                    size: 25
+                }}
+                buttonStyle={{ backgroundColor: themeColor('highlight') }}
+                iconOnly
+            ></Button>
+        );
 
         const FilterButton = () => (
             <TouchableOpacity
@@ -136,7 +187,15 @@ export default class Activity extends React.PureComponent<ActivityProps, {}> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    rightComponent={<FilterButton />}
+                    rightComponent={
+                        order ? (
+                            selectedPaymentForOrder ? (
+                                <MarkPaymentButton />
+                            ) : null
+                        ) : (
+                            <FilterButton />
+                        )
+                    }
                     navigation={navigation}
                 />
                 {loading ? (
@@ -223,6 +282,13 @@ export default class Activity extends React.PureComponent<ActivityProps, {}> {
                                             backgroundColor: 'transparent'
                                         }}
                                         onPress={() => {
+                                            if (order) {
+                                                this.setState({
+                                                    selectedPaymentForOrder:
+                                                        item
+                                                });
+                                                return;
+                                            }
                                             if (
                                                 item.model ===
                                                 localeString(
@@ -265,7 +331,15 @@ export default class Activity extends React.PureComponent<ActivityProps, {}> {
                                                 right
                                                 style={{
                                                     fontWeight: '600',
-                                                    color: themeColor('text'),
+                                                    color:
+                                                        item ===
+                                                        selectedPaymentForOrder
+                                                            ? themeColor(
+                                                                  'highlight'
+                                                              )
+                                                            : themeColor(
+                                                                  'text'
+                                                              ),
                                                     fontFamily: 'Lato-Regular'
                                                 }}
                                             >
@@ -274,9 +348,15 @@ export default class Activity extends React.PureComponent<ActivityProps, {}> {
                                             <ListItem.Subtitle
                                                 right
                                                 style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
+                                                    color:
+                                                        item ===
+                                                        selectedPaymentForOrder
+                                                            ? themeColor(
+                                                                  'highlight'
+                                                              )
+                                                            : themeColor(
+                                                                  'secondaryText'
+                                                              ),
                                                     fontFamily: 'Lato-Regular'
                                                 }}
                                             >

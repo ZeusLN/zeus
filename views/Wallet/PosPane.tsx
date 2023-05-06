@@ -15,10 +15,12 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
+import { Row } from '../../components/layout/Row';
 
 import { Spacer } from '../../components/layout/Spacer';
 import OrderItem from './OrderItem';
 
+import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
@@ -32,6 +34,7 @@ import { version } from './../../package.json';
 
 interface PosPaneProps {
     navigation: any;
+    ActivityStore: ActivityStore;
     FiatStore: FiatStore;
     NodeInfoStore: NodeInfoStore;
     PosStore: PosStore;
@@ -45,7 +48,14 @@ interface PosPaneState {
     fadeAnimation: any;
 }
 
-@inject('FiatStore', 'NodeInfoStore', 'PosStore', 'UnitsStore', 'SettingsStore')
+@inject(
+    'ActivityStore',
+    'FiatStore',
+    'NodeInfoStore',
+    'PosStore',
+    'UnitsStore',
+    'SettingsStore'
+)
 @observer
 export default class PosPane extends React.PureComponent<
     PosPaneProps,
@@ -76,7 +86,7 @@ export default class PosPane extends React.PureComponent<
         ).start();
     }
 
-    renderItem = ({ item, index }, onClick) => {
+    renderItem = ({ item, index }, onClickPaid, onClickHide) => {
         const { navigation, FiatStore } = this.props;
         const { getRate, getSymbol } = FiatStore;
         const isPaid: boolean = item && item.payment;
@@ -91,25 +101,45 @@ export default class PosPane extends React.PureComponent<
             prevOpenedRow = row[index];
         };
 
-        const renderRightActions = (progress, dragX, onClick) => {
+        const renderRightActions = (
+            progress,
+            dragX,
+            onClickPaid,
+            onClickHide
+        ) => {
             return (
                 <View
                     style={{
                         margin: 0,
                         alignContent: 'center',
                         justifyContent: 'center',
-                        width: 140
+                        width: 280
                     }}
                 >
-                    <Button
-                        onPress={onClick}
-                        icon={{
-                            name: 'delete',
-                            size: 25
-                        }}
-                        containerStyle={{ backgroundColor: 'red' }}
-                        iconOnly
-                    ></Button>
+                    <Row>
+                        <View style={{ width: 140 }}>
+                            <Button
+                                onPress={onClickPaid}
+                                icon={{
+                                    name: 'payments',
+                                    size: 25
+                                }}
+                                containerStyle={{ backgroundColor: 'green' }}
+                                iconOnly
+                            ></Button>
+                        </View>
+                        <View style={{ width: 140 }}>
+                            <Button
+                                onPress={onClickHide}
+                                icon={{
+                                    name: 'delete',
+                                    size: 25
+                                }}
+                                containerStyle={{ backgroundColor: 'red' }}
+                                iconOnly
+                            ></Button>
+                        </View>
+                    </Row>
                 </View>
             );
         };
@@ -126,7 +156,12 @@ export default class PosPane extends React.PureComponent<
         return (
             <Swipeable
                 renderRightActions={(progress, dragX) =>
-                    renderRightActions(progress, dragX, onClick)
+                    renderRightActions(
+                        progress,
+                        dragX,
+                        onClickPaid,
+                        onClickHide
+                    )
                 }
                 onSwipeableOpen={() => closeRow(index)}
                 ref={(ref) => (row[index] = ref)}
@@ -157,6 +192,7 @@ export default class PosPane extends React.PureComponent<
 
     render() {
         const {
+            ActivityStore,
             SettingsStore,
             PosStore,
             FiatStore,
@@ -164,6 +200,7 @@ export default class PosPane extends React.PureComponent<
             navigation
         } = this.props;
         const { search, selectedIndex } = this.state;
+        const { setFiltersPos } = ActivityStore;
         const {
             loading,
             getOrders,
@@ -392,9 +429,21 @@ export default class PosPane extends React.PureComponent<
                     <FlatList
                         data={orders}
                         renderItem={(v: any) =>
-                            this.renderItem(v, () => {
-                                hideOrder(v.item.id).then(() => getOrders());
-                            })
+                            this.renderItem(
+                                v,
+                                () => {
+                                    setFiltersPos().then(() => {
+                                        navigation.navigate('Activity', {
+                                            order: v
+                                        });
+                                    });
+                                },
+                                () => {
+                                    hideOrder(v.item.id).then(() =>
+                                        getOrders()
+                                    );
+                                }
+                            )
                         }
                         ListFooterComponent={<Spacer height={100} />}
                         onRefresh={() => getOrders()}
