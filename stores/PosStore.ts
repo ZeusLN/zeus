@@ -17,6 +17,8 @@ export interface orderPaymentInfo {
     tx: string; // txid OR payment request
 }
 
+const POS_HIDDEN_KEY = 'pos-hidden';
+
 export default class PosStore {
     @observable public openOrders: Array<Order> = [];
     @observable public paidOrders: Array<Order> = [];
@@ -37,6 +39,17 @@ export default class PosStore {
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
     }
+
+    @action
+    public hideOrder = async (orderId: string) => {
+        const hiddenOrdersItem = await EncryptedStorage.getItem(POS_HIDDEN_KEY);
+        const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
+        hiddenOrders.push(orderId);
+        await EncryptedStorage.setItem(
+            POS_HIDDEN_KEY,
+            JSON.stringify(hiddenOrders)
+        );
+    };
 
     @action
     public updateSearch = (value: string) => {
@@ -122,18 +135,28 @@ export default class PosStore {
                             );
                         });
 
+                    // fetch hidden orders - orders customers couldn't pay
+                    const hiddenOrdersItem = await EncryptedStorage.getItem(
+                        POS_HIDDEN_KEY
+                    );
+                    const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
+
                     const enrichedOrders = await Promise.all(
                         orders.map(async (order: any) => {
                             const payment = await EncryptedStorage.getItem(
                                 `pos-${order.id}`
                             );
+                            // mark order if hidden
+                            if (hiddenOrders.includes(order.id)) {
+                                order.hidden = true;
+                            }
                             if (payment) order.payment = JSON.parse(payment);
                             return order;
                         })
                     );
 
                     const openOrders = enrichedOrders.filter((order: any) => {
-                        return !order.payment;
+                        return !order.payment && !order.hidden;
                     });
                     const paidOrders = enrichedOrders.filter((order: any) => {
                         return order.payment;
@@ -230,12 +253,23 @@ export default class PosStore {
                     let tips = 0;
                     let exportString =
                         'orderId, totalSats, tipSats, rateFull, rateNumerical, type, tx\n';
+
+                    // fetch hidden orders - orders customers couldn't pay
+                    const hiddenOrdersItem = await EncryptedStorage.getItem(
+                        POS_HIDDEN_KEY
+                    );
+                    const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
+
                     const enrichedOrders = await Promise.all(
                         orders.map(async (order: any) => {
                             const payment = await EncryptedStorage.getItem(
                                 `pos-${order.id}`
                             );
                             let tip;
+                            // mark order if hidden
+                            if (hiddenOrders.includes(order.id)) {
+                                order.hidden = true;
+                            }
                             if (payment) {
                                 order.payment = JSON.parse(payment);
                                 const {

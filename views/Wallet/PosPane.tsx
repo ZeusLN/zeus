@@ -10,6 +10,7 @@ import {
 import BigNumber from 'bignumber.js';
 import { ButtonGroup, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -75,11 +76,44 @@ export default class PosPane extends React.PureComponent<
         ).start();
     }
 
-    renderItem = (order) => {
+    renderItem = ({ item, index }, onClick) => {
         const { navigation, FiatStore } = this.props;
         const { getRate, getSymbol } = FiatStore;
-        const { item } = order;
         const isPaid: boolean = item && item.payment;
+
+        let row: Array<any> = [];
+        let prevOpenedRow;
+
+        const closeRow = (index) => {
+            console.log('closerow');
+            if (prevOpenedRow && prevOpenedRow !== row[index]) {
+                prevOpenedRow.close();
+            }
+            prevOpenedRow = row[index];
+        };
+
+        const renderRightActions = (progress, dragX, onClick) => {
+            return (
+                <View
+                    style={{
+                        margin: 0,
+                        alignContent: 'center',
+                        justifyContent: 'center',
+                        width: 140
+                    }}
+                >
+                    <Button
+                        onPress={onClick}
+                        icon={{
+                            name: 'delete',
+                            size: 25
+                        }}
+                        containerStyle={{ backgroundColor: 'red' }}
+                        iconOnly
+                    ></Button>
+                </View>
+            );
+        };
 
         let tip = '';
         if (isPaid) {
@@ -91,26 +125,34 @@ export default class PosPane extends React.PureComponent<
         }
 
         return (
-            <TouchableHighlight
-                onPress={() => {
-                    if (getRate() === '$N/A') return;
-                    navigation.navigate('Order', {
-                        order: item
-                    });
-                }}
+            <Swipeable
+                renderRightActions={(progress, dragX) =>
+                    renderRightActions(progress, dragX, onClick)
+                }
+                onSwipeableOpen={() => closeRow(index)}
+                ref={(ref) => (row[index] = ref)}
             >
-                <OrderItem
-                    title={item.getItemsList}
-                    money={
-                        isPaid
-                            ? `${item.getTotalMoneyDisplay} + ${
-                                  getSymbol().symbol
-                              }${tip}`
-                            : item.getTotalMoneyDisplay
-                    }
-                    date={item.getDisplayTime}
-                />
-            </TouchableHighlight>
+                <TouchableHighlight
+                    onPress={() => {
+                        if (getRate() === '$N/A') return;
+                        navigation.navigate('Order', {
+                            order: item
+                        });
+                    }}
+                >
+                    <OrderItem
+                        title={item.getItemsList}
+                        money={
+                            isPaid
+                                ? `${item.getTotalMoneyDisplay} + ${
+                                      getSymbol().symbol
+                                  }${tip}`
+                                : item.getTotalMoneyDisplay
+                        }
+                        date={item.getDisplayTime}
+                    />
+                </TouchableHighlight>
+            </Swipeable>
         );
     };
 
@@ -128,7 +170,8 @@ export default class PosPane extends React.PureComponent<
             getOrders,
             filteredOpenOrders,
             filteredPaidOrders,
-            updateSearch
+            updateSearch,
+            hideOrder
         } = PosStore;
         const { getRate, getFiatRates } = FiatStore;
         const orders =
@@ -335,7 +378,7 @@ export default class PosPane extends React.PureComponent<
                         }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
-                            backgroundColor: themeColor('background'),
+                            backgroundColor: 'transparent',
                             borderTopWidth: 0,
                             borderBottomWidth: 0
                         }}
@@ -349,11 +392,15 @@ export default class PosPane extends React.PureComponent<
                 {!loading && orders && orders.length > 0 && (
                     <FlatList
                         data={orders}
-                        renderItem={this.renderItem}
+                        renderItem={(v: any) =>
+                            this.renderItem(v, () => {
+                                hideOrder(v.item.id).then(() => getOrders());
+                            })
+                        }
                         ListFooterComponent={<Spacer height={100} />}
                         onRefresh={() => getOrders()}
                         refreshing={loading}
-                        keyExtractor={(item, index) => `${index}`}
+                        keyExtractor={(_, index) => `${index}`}
                     />
                 )}
 
