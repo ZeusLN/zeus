@@ -494,6 +494,7 @@
     "views.Settings.SignMessage.error": "Verification failed. Please double check message and signature.",
     "views.Settings.Language.title": "Language",
     "views.Settings.Currency.title": "Currency",
+    "views.Settings.Currency.source": "Source",
     "views.Settings.Theme.title": "Theme",
     "views.Settings.Display.title": "Display",
     "views.Settings.Display.defaultView": "Default view",

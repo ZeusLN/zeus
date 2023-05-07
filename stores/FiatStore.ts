@@ -11,9 +11,19 @@ interface CurrencyDisplayRules {
     rtl: boolean;
 }
 export default class FiatStore {
-    @observable public fiatRates: any = {};
+    @observable public fiatRates:
+        | {
+              name?: string;
+              cryptoCode: string;
+              currencyPair: string;
+              code: string;
+              rate: number;
+          }[]
+        | undefined;
     @observable public loading = false;
     @observable public error = false;
+
+    private sourceOfCurrentFiatRates: string | undefined;
 
     getFiatRatesToken: any;
 
@@ -311,11 +321,8 @@ export default class FiatStore {
     @action getSymbol = () => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
-        if (fiat && this.fiatRates.filter) {
-            const fiatEntry = this.fiatRates.filter(
-                (entry: any) => entry.code === fiat
-            )[0];
-            return this.symbolLookup(fiatEntry && fiatEntry.code);
+        if (fiat) {
+            return this.symbolLookup(fiat);
         } else {
             return {
                 symbol: fiat,
@@ -331,9 +338,9 @@ export default class FiatStore {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
 
-        if (fiat && this.fiatRates.filter) {
+        if (fiat && this.fiatRates) {
             const fiatEntry = this.fiatRates.filter(
-                (entry: any) => entry.code === fiat
+                (entry) => entry.code === fiat
             )[0];
             const rate = sats
                 ? (fiatEntry &&
@@ -435,26 +442,79 @@ export default class FiatStore {
     // BTC_PYG = yadio(BTC_PYG);
     // BTC_UYU = yadio(BTC_UYU);
     @action
-    public getFiatRates = () => {
+    public getFiatRates = async () => {
         // try not to slam endpoint
         if (this.loading) return;
         this.loading = true;
-        ReactNativeBlobUtil.fetch(
-            'GET',
-            'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
-        )
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
-                    this.fiatRates = data;
-                    this.loading = false;
-                } else {
-                    this.loading = false;
+
+        try {
+            const settings = await this.settingsStore.getSettings();
+
+            if (
+                this.fiatRates != null &&
+                this.sourceOfCurrentFiatRates != settings.fiatRatesSource
+            ) {
+                // clear rates to display loading indicator after rates source switch
+                this.fiatRates = undefined;
+            }
+
+            if (settings.fiatRatesSource === 'Zeus') {
+                this.fiatRates = await this.getFiatRatesFromZeus();
+            } else if (settings.fiat != null) {
+                const rate = await this.getSelectedFiatRateFromYadio(
+                    settings.fiat
+                );
+
+                if (this.fiatRates) {
+                    this.fiatRates = this.fiatRates.filter(
+                        (r) => r.code !== settings.fiat
+                    );
+                    if (rate != null) {
+                        this.fiatRates = this.fiatRates.concat([rate]);
+                    }
+                } else if (rate) {
+                    this.fiatRates = [rate];
                 }
-            })
-            .catch(() => {
-                this.loading = false;
-            });
+            }
+
+            this.sourceOfCurrentFiatRates = settings.fiatRatesSource;
+        } finally {
+            this.loading = false;
+        }
+    };
+
+    private getSelectedFiatRateFromYadio = async (code: string) => {
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `https://api.yadio.io/rate/${code}/BTC`
+            );
+            const status = response.info().status;
+            if (status == 200) {
+                return {
+                    cryptoCode: 'BTC',
+                    code,
+                    rate: response.json().rate,
+                    currencyPair: `BTC_${code}`
+                };
+            }
+        } catch {}
+
+        return undefined;
+    };
+
+    private getFiatRatesFromZeus = async () => {
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
+            );
+            const status = response.info().status;
+            if (status == 200) {
+                return response.json();
+            }
+        } catch {}
+
+        return undefined;
     };
 }

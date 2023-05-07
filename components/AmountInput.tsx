@@ -38,7 +38,7 @@ const getSatAmount = (amount: string | number) => {
     const value = amount || '0';
 
     const fiatEntry =
-        fiat && fiatRates && fiatRates.filter
+        fiat && fiatRates
             ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
             : null;
 

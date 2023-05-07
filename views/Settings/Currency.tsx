@@ -7,10 +7,16 @@ import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 
 import UnitsStore from '../../stores/UnitsStore';
-import SettingsStore, { CURRENCY_KEYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    CURRENCY_KEYS,
+    DEFAULT_FIAT,
+    DEFAULT_FIAT_RATES_SOURCE,
+    FIAT_RATES_SOURCE_KEYS
+} from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import DropdownSetting from '../../components/DropdownSetting';
 
 interface CurrencyProps {
     navigation: any;
@@ -22,6 +28,7 @@ interface CurrencyState {
     selectCurrency: string;
     search: string;
     currencies: any;
+    fiatRatesSource: string;
 }
 
 @inject('SettingsStore', 'UnitsStore')
@@ -33,7 +40,8 @@ export default class Currency extends React.Component<
     state = {
         selectedCurrency: '',
         search: '',
-        currencies: CURRENCY_KEYS
+        currencies: CURRENCY_KEYS,
+        fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE
     };
 
     async UNSAFE_componentWillMount() {
@@ -42,7 +50,8 @@ export default class Currency extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            selectedCurrency: settings.fiat
+            selectedCurrency: settings.fiat,
+            fiatRatesSource: settings.fiatRatesSource
         });
     }
 
@@ -69,7 +78,8 @@ export default class Currency extends React.Component<
 
     render() {
         const { navigation, SettingsStore, UnitsStore } = this.props;
-        const { selectedCurrency, search, currencies } = this.state;
+        const { selectedCurrency, search, currencies, fiatRatesSource } =
+            this.state;
         const { updateSettings, getSettings }: any = SettingsStore;
 
         return (
@@ -86,6 +96,36 @@ export default class Currency extends React.Component<
                         }}
                         navigation={navigation}
                     />
+                    <View style={{ marginHorizontal: 8 }}>
+                        <DropdownSetting
+                            title={
+                                localeString('views.Settings.Currency.source') +
+                                ':'
+                            }
+                            selectedValue={fiatRatesSource}
+                            onValueChange={async (value: string) => {
+                                this.setState({ fiatRatesSource: value });
+                                const newSettings: any = {
+                                    fiatRatesSource: value
+                                };
+                                if (
+                                    !currencies
+                                        .find(
+                                            (c) => c.value === selectedCurrency
+                                        )
+                                        ?.supportedSources.includes(value)
+                                ) {
+                                    newSettings.fiat = DEFAULT_FIAT;
+                                    this.setState({
+                                        selectedCurrency: DEFAULT_FIAT
+                                    });
+                                }
+                                await updateSettings(newSettings);
+                            }}
+                            values={FIAT_RATES_SOURCE_KEYS}
+                            titlePosition="left"
+                        />
+                    </View>
                     <SearchBar
                         placeholder={localeString('general.search')}
                         onChangeText={this.updateSearch}
@@ -106,7 +146,9 @@ export default class Currency extends React.Component<
                         }}
                     />
                     <FlatList
-                        data={currencies}
+                        data={currencies.filter((c) =>
+                            c.supportedSources?.includes(fiatRatesSource)
+                        )}
                         renderItem={({ item }) => (
                             <ListItem
                                 containerStyle={{

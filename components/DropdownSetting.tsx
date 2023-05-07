@@ -5,7 +5,9 @@ import {
     View,
     StyleSheet,
     Text,
-    TouchableOpacity
+    TouchableOpacity,
+    StyleProp,
+    ViewStyle
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { themeColor } from './../utils/ThemeUtils';
@@ -16,6 +18,7 @@ interface DropdownSettingProps {
     selectedValue: string | boolean;
     onValueChange: (value: any) => void;
     values: Array<any>;
+    titlePosition?: 'above' | 'left';
 }
 
 export default class DropdownSetting extends React.Component<
@@ -23,7 +26,8 @@ export default class DropdownSetting extends React.Component<
     {}
 > {
     render() {
-        const { title, selectedValue, onValueChange, values } = this.props;
+        const { title, selectedValue, onValueChange, values, titlePosition } =
+            this.props;
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
@@ -43,15 +47,20 @@ export default class DropdownSetting extends React.Component<
         )[0];
 
         const display = displayItem ? displayItem.key : null;
+        const viewStyle: StyleProp<ViewStyle> =
+            titlePosition === 'left' ? styles.titlePositionLeftViewStyle : {};
+        const textStyle: StyleProp<ViewStyle> =
+            titlePosition === 'left' ? styles.titlePositionLeftTextStyle : {};
 
         return (
             <React.Fragment>
                 {Platform.OS === 'android' && (
-                    <View>
+                    <View style={viewStyle}>
                         <Text
                             style={{
                                 ...styles.secondaryText,
-                                color: themeColor('secondaryText')
+                                color: themeColor('secondaryText'),
+                                ...textStyle
                             }}
                         >
                             {title}
@@ -74,11 +83,12 @@ export default class DropdownSetting extends React.Component<
                 )}
 
                 {Platform.OS === 'ios' && (
-                    <View>
+                    <View style={viewStyle}>
                         <Text
                             style={{
                                 ...styles.secondaryText,
-                                color: themeColor('secondaryText')
+                                color: themeColor('secondaryText'),
+                                ...styles.field
                             }}
                         >
                             {title}
@@ -135,7 +145,7 @@ const styles = StyleSheet.create({
     },
     field: {
         fontSize: 20,
-        width: '100%',
+        flexGrow: 1,
         height: 55,
         top: 10,
         paddingTop: 15,
@@ -145,5 +155,12 @@ const styles = StyleSheet.create({
         paddingLeft: 10,
         overflow: 'hidden',
         fontFamily: 'Lato-Regular'
+    },
+    titlePositionLeftViewStyle: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    titlePositionLeftTextStyle: {
+        marginRight: 10
     }
 });
