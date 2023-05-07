@@ -447,8 +447,8 @@ export default class FiatStore {
                 const status = response.info().status;
                 if (status == 200) {
                     const data = response.json();
-                    this.loading = false;
                     this.fiatRates = data;
+                    this.loading = false;
                 } else {
                     this.loading = false;
                 }
