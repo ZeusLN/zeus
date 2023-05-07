@@ -38,14 +38,11 @@ const getSatAmount = (amount: string | number) => {
     const value = amount || '0';
 
     const fiatEntry =
-        fiat && fiatRates && fiatRates.filter
+        fiat && fiatRates
             ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
             : null;
 
-    const rate =
-        fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
-            ? fiatEntry.rate
-            : 0;
+    const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
     let satAmount: string | number;
     switch (units) {
@@ -122,7 +119,7 @@ export default class AmountInput extends React.Component<
         const { units }: any = UnitsStore;
         const { getRate, getSymbol }: any = FiatStore;
         const { settings }: any = SettingsStore;
-        const { fiat } = settings;
+        const { fiatEnabled } = settings;
 
         return (
             <React.Fragment>
@@ -172,10 +169,10 @@ export default class AmountInput extends React.Component<
                         onPress={() => !locked && this.onChangeUnits()}
                     >
                         <View style={{ marginBottom: 10 }}>
-                            {fiat !== 'Disabled' && units !== 'fiat' && (
+                            {fiatEnabled && units !== 'fiat' && (
                                 <Amount sats={satAmount} fixedUnits="fiat" />
                             )}
-                            {fiat !== 'Disabled' && (
+                            {fiatEnabled && (
                                 <Text
                                     style={{
                                         fontFamily: 'Lato-Regular',

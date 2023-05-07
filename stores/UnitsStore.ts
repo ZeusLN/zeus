@@ -31,9 +31,9 @@ export default class UnitsStore {
     @action
     public changeUnits = () => {
         const { settings } = this.settingsStore;
-        const { fiat } = settings;
+        const { fiatEnabled } = settings;
 
-        if (!fiat || fiat === 'Disabled') {
+        if (!fiatEnabled) {
             this.units = this.units == 'sats' ? 'BTC' : 'sats';
         } else {
             switch (this.units) {
@@ -90,7 +90,7 @@ export default class UnitsStore {
             const currency = fiat;
 
             // TODO: is this the right place to catch this?
-            if (!currency || currency === 'Disabled') {
+            if (!currency) {
                 return {
                     amount: 'Disabled',
                     unit: 'fiat',
@@ -98,10 +98,17 @@ export default class UnitsStore {
                 };
             }
 
-            if (this.fiatStore.fiatRates && this.fiatStore.fiatRates.filter) {
+            if (this.fiatStore.fiatRates) {
                 const fiatEntry = this.fiatStore.fiatRates.filter(
                     (entry: any) => entry.code === fiat
                 )[0];
+
+                if (!fiatEntry?.rate) {
+                    return {
+                        error: 'Rate for selected currency not available'
+                    };
+                }
+
                 const rate = (fiatEntry && fiatEntry.rate) || 0;
                 const { symbol, space, rtl, separatorSwap } =
                     this.fiatStore.getSymbol();
@@ -153,7 +160,7 @@ export default class UnitsStore {
             }`;
             return sats;
         } else if (units === 'fiat' && fiat) {
-            if (this.fiatStore.fiatRates && this.fiatStore.fiatRates.filter) {
+            if (this.fiatStore.fiatRates) {
                 const fiatEntry = this.fiatStore.fiatRates.filter(
                     (entry: any) => entry.code === fiat
                 )[0];

@@ -9,7 +9,7 @@ import { getSatAmount } from '../components/AmountInput';
 
 import FiatStore from '../stores/FiatStore';
 import UnitsStore from '../stores/UnitsStore';
-import SettingsStore, { DEFAULT_FIAT } from '../stores/SettingsStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -58,7 +58,7 @@ export default class Conversion extends React.Component<
         const { showRate } = this.state;
         const { units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { fiat } = settings;
+        const { fiatEnabled } = settings;
 
         const { getRate }: any = FiatStore;
 
@@ -69,7 +69,7 @@ export default class Conversion extends React.Component<
             satAmount = getSatAmount(amount);
         }
 
-        if (!fiat || fiat === DEFAULT_FIAT || (!amount && !sats)) return;
+        if (!fiatEnabled || (!amount && !sats)) return;
 
         const ConversionDisplay = ({
             units = 'sats',
