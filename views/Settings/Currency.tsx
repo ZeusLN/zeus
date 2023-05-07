@@ -1,16 +1,24 @@
 import * as React from 'react';
-import { FlatList, View } from 'react-native';
-import { Icon, ListItem, SearchBar } from 'react-native-elements';
+import { View } from 'react-native';
+import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 
+import SettingsStore, {
+    CURRENCY_KEYS,
+    DEFAULT_FIAT,
+    DEFAULT_FIAT_RATES_SOURCE,
+    FIAT_RATES_SOURCE_KEYS
+} from '../../stores/SettingsStore';
+
 import UnitsStore from '../../stores/UnitsStore';
-import SettingsStore, { CURRENCY_KEYS } from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import DropdownSetting from '../../components/DropdownSetting';
+import Switch from '../../components/Switch';
 
 interface CurrencyProps {
     navigation: any;
@@ -19,9 +27,9 @@ interface CurrencyProps {
 }
 
 interface CurrencyState {
-    selectCurrency: string;
-    search: string;
-    currencies: any;
+    fiatEnabled: boolean | undefined;
+    selectedCurrency: string | undefined;
+    fiatRatesSource: string;
 }
 
 @inject('SettingsStore', 'UnitsStore')
@@ -31,46 +39,45 @@ export default class Currency extends React.Component<
     CurrencyState
 > {
     state = {
+        fiatEnabled: false,
         selectedCurrency: '',
-        search: '',
-        currencies: CURRENCY_KEYS
+        fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE
     };
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        const { settings } = SettingsStore;
 
         this.setState({
-            selectedCurrency: settings.fiat
+            fiatEnabled: settings.fiatEnabled,
+            selectedCurrency: settings.fiat,
+            fiatRatesSource: settings.fiatRatesSource
         });
     }
 
-    renderSeparator = () => (
-        <View
-            style={{
-                height: 1,
-                backgroundColor: themeColor('separator')
-            }}
-        />
-    );
+    async componentDidUpdate(
+        _prevProps: Readonly<CurrencyProps>,
+        prevState: Readonly<CurrencyState>,
+        _snapshot?: any
+    ): Promise<void> {
+        const { SettingsStore } = this.props;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
+        if (prevState.selectedCurrency !== settings.fiat) {
+            this.setState({
+                selectedCurrency: settings.fiat
+            });
+        }
+    }
 
-    updateSearch = (value: string) => {
-        const result = CURRENCY_KEYS.filter(
-            (item: any) =>
-                item.key.includes(value) ||
-                item.key.toLowerCase().includes(value)
-        );
-        this.setState({
-            search: value,
-            currencies: result
-        });
+    navigateToSelectCurrency = () => {
+        this.props.navigation.navigate('SelectCurrency');
     };
 
     render() {
         const { navigation, SettingsStore, UnitsStore } = this.props;
-        const { selectedCurrency, search, currencies } = this.state;
-        const { updateSettings, getSettings }: any = SettingsStore;
+        const { fiatEnabled, selectedCurrency, fiatRatesSource } = this.state;
+        const { updateSettings }: any = SettingsStore;
 
         return (
             <Screen>
@@ -86,76 +93,96 @@ export default class Currency extends React.Component<
                         }}
                         navigation={navigation}
                     />
-                    <SearchBar
-                        placeholder={localeString('general.search')}
-                        onChangeText={this.updateSearch}
-                        value={search}
-                        inputStyle={{
-                            color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
-                        }}
-                        placeholderTextColor={themeColor('secondaryText')}
+                    <ListItem
                         containerStyle={{
-                            backgroundColor: 'transparent',
-                            borderTopWidth: 0,
-                            borderBottomWidth: 0
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
                         }}
-                        inputContainerStyle={{
-                            borderRadius: 15,
-                            backgroundColor: themeColor('secondary')
-                        }}
-                    />
-                    <FlatList
-                        data={currencies}
-                        renderItem={({ item }) => (
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                                onPress={async () => {
-                                    await updateSettings({
-                                        fiat: item.value
-                                    }).then(() => {
-                                        UnitsStore.resetUnits();
-                                        getSettings();
-                                        navigation.navigate('Settings', {
-                                            refresh: true
-                                        });
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular'
+                            }}
+                        >
+                            {localeString('views.Settings.Currency.enabled')}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={fiatEnabled}
+                                onValueChange={async () => {
+                                    const newFiatEnabled = !fiatEnabled;
+                                    this.setState({
+                                        fiatEnabled: newFiatEnabled
                                     });
+                                    await updateSettings({
+                                        fiatEnabled: newFiatEnabled
+                                    });
+                                    if (!newFiatEnabled) {
+                                        if (UnitsStore.units === 'fiat') {
+                                            UnitsStore.resetUnits();
+                                        }
+                                    }
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+                    <View style={{ marginHorizontal: 16 }}>
+                        <DropdownSetting
+                            title={
+                                localeString('views.Settings.Currency.source') +
+                                ':'
+                            }
+                            selectedValue={fiatRatesSource}
+                            onValueChange={async (value: string) => {
+                                this.setState({ fiatRatesSource: value });
+                                const newSettings: any = {
+                                    fiatRatesSource: value
+                                };
+                                if (
+                                    !CURRENCY_KEYS.find(
+                                        (c) => c.value === selectedCurrency
+                                    )?.supportedSources.includes(value)
+                                ) {
+                                    newSettings.fiat = DEFAULT_FIAT;
+                                    this.setState({
+                                        selectedCurrency: DEFAULT_FIAT
+                                    });
+                                }
+                                await updateSettings(newSettings);
+                            }}
+                            values={FIAT_RATES_SOURCE_KEYS}
+                        />
+                    </View>
+                    <ListItem
+                        containerStyle={{
+                            backgroundColor: 'transparent'
+                        }}
+                        onPress={() => this.navigateToSelectCurrency()}
+                    >
+                        <ListItem.Content>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
                                 }}
                             >
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color:
-                                                selectedCurrency ===
-                                                    item.value ||
-                                                (!selectedCurrency &&
-                                                    item.value === 'Disabled')
-                                                    ? themeColor('highlight')
-                                                    : themeColor('text'),
-                                            fontFamily: 'Lato-Regular'
-                                        }}
-                                    >
-                                        {item.key}
-                                    </ListItem.Title>
-                                </ListItem.Content>
-                                {(selectedCurrency === item.value ||
-                                    (!selectedCurrency &&
-                                        item.value === 'Disabled')) && (
-                                    <View style={{ textAlign: 'right' }}>
-                                        <Icon
-                                            name="check"
-                                            color={themeColor('highlight')}
-                                        />
-                                    </View>
-                                )}
-                            </ListItem>
-                        )}
-                        keyExtractor={(item, index) => `${item.host}-${index}`}
-                        ItemSeparatorComponent={this.renderSeparator}
-                    />
+                                {localeString(
+                                    'views.Settings.Currency.selectCurrency'
+                                ) + ` (${selectedCurrency})`}
+                            </ListItem.Title>
+                        </ListItem.Content>
+                        <Icon
+                            name="keyboard-arrow-right"
+                            color={themeColor('secondaryText')}
+                        />
+                    </ListItem>
                 </View>
             </Screen>
         );

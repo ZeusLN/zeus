@@ -230,12 +230,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             connect,
             posStatus
         } = SettingsStore;
-        const { fiat, pos } = settings;
+        const { fiatEnabled, pos } = settings;
 
         if (pos && pos.squareEnabled && posStatus === 'active')
             PosStore.getOrders();
 
-        if (!!fiat && fiat !== 'Disabled') {
+        if (fiatEnabled) {
             FiatStore.getFiatRates();
         }
 

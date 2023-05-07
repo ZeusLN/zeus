@@ -17,10 +17,7 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
-import SettingsStore, {
-    DEFAULT_FIAT,
-    POS_CONF_PREF_KEYS
-} from '../../stores/SettingsStore';
+import SettingsStore, { POS_CONF_PREF_KEYS } from '../../stores/SettingsStore';
 
 interface PointOfSaleProps {
     navigation: any;
@@ -95,7 +92,7 @@ export default class PointOfSale extends React.Component<
             squareDevMode
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
-        const { passphrase, pin, fiat } = settings;
+        const { passphrase, pin, fiatEnabled } = settings;
 
         const LIST_ITEMS = [
             {
@@ -117,7 +114,7 @@ export default class PointOfSale extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                {fiat === DEFAULT_FIAT ? (
+                {!fiatEnabled ? (
                     <View style={{ flex: 1, padding: 15 }}>
                         <ErrorMessage
                             message={localeString(
