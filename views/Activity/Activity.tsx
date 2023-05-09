@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -19,14 +20,17 @@ import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import ActivityStore from '../../stores/ActivityStore';
+import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
+import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 
 interface ActivityProps {
     navigation: any;
     ActivityStore: ActivityStore;
+    FiatStore: FiatStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
 }
@@ -35,7 +39,7 @@ interface ActivityState {
     selectedPaymentForOrder: any;
 }
 
-@inject('ActivityStore', 'PosStore', 'SettingsStore')
+@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore')
 @observer
 export default class Activity extends React.PureComponent<
     ActivityProps,
@@ -126,11 +130,19 @@ export default class Activity extends React.PureComponent<
     };
 
     render() {
-        const { navigation, ActivityStore, PosStore } = this.props;
+        const {
+            navigation,
+            ActivityStore,
+            FiatStore,
+            PosStore,
+            SettingsStore
+        } = this.props;
         const { selectedPaymentForOrder } = this.state;
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
         const { recordPayment } = PosStore;
+        const { settings } = SettingsStore;
+        const { fiat } = settings;
 
         const order = navigation.getParam('order', null);
 
@@ -142,19 +154,49 @@ export default class Activity extends React.PureComponent<
                     /*
                     missing fields for recovered payment
                         orderTip,
-                        exchangeRate,
-                        rate,
                     */
+
+                    const orderTotal = payment.payment_request
+                        ? payment.amt_paid_sat.toString()
+                        : payment.amount;
+
+                    const orderItem = order.item;
+                    const fiatAmount = new BigNumber(
+                        orderItem.total_money.amount
+                    ).div(100);
+
+                    const rate = fiatAmount
+                        .div(orderTotal)
+                        .multipliedBy(SATS_PER_BTC)
+                        .toFixed(3);
+
+                    const fiatEntry = FiatStore.fiatRates.filter(
+                        (entry: any) => entry.code === fiat
+                    )[0];
+
+                    const { symbol, space, rtl, separatorSwap } =
+                        FiatStore.symbolLookup(fiatEntry && fiatEntry.code);
+
+                    const formattedRate = separatorSwap
+                        ? FiatStore.numberWithDecimals(rate)
+                        : FiatStore.numberWithCommas(rate);
+
+                    const exchangeRate = rtl
+                        ? `${formattedRate}${
+                              space ? ' ' : ''
+                          }${symbol} BTC/${fiat}`
+                        : `${symbol}${
+                              space ? ' ' : ''
+                          }${formattedRate} BTC/${fiat}`;
+
                     recordPayment({
                         orderId: order.item.id,
                         type: payment.payment_request ? 'ln' : 'onchain',
                         tx: payment.tx_hash || payment.payment_request,
-                        orderTotal: payment.payment_request
-                            ? payment.amt_paid_sat.toString()
-                            : payment.amount,
+                        orderTotal,
                         orderTip: '0',
-                        exchangeRate: '0',
-                        rate: 0
+                        exchangeRate,
+                        rate: Number(rate)
                     }).then(() => {
                         navigation.goBack();
                     });

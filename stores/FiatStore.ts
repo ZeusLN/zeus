@@ -33,7 +33,7 @@ export default class FiatStore {
 
     // Resource below may be helpful for formatting
     // https://fastspring.com/blog/how-to-format-30-currencies-from-countries-all-over-the-world/
-    private symbolLookup = (symbol: string): CurrencyDisplayRules => {
+    symbolLookup = (symbol: string): CurrencyDisplayRules => {
         const symbolPairs: any = {
             USD: {
                 symbol: '$',
