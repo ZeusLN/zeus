@@ -6,7 +6,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, ListItem } from 'react-native-elements';
+import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 
@@ -147,7 +147,8 @@ export default class Activity extends React.PureComponent<
         const order = navigation.getParam('order', null);
 
         const MarkPaymentButton = () => (
-            <Button
+            <Icon
+                name="payments"
                 onPress={() => {
                     if (!order || !selectedPaymentForOrder) return;
                     const payment: any = selectedPaymentForOrder;
@@ -201,13 +202,9 @@ export default class Activity extends React.PureComponent<
                         navigation.goBack();
                     });
                 }}
-                icon={{
-                    name: 'payments',
-                    size: 25
-                }}
-                buttonStyle={{ backgroundColor: themeColor('highlight') }}
-                iconOnly
-            ></Button>
+                color={themeColor('highlight')}
+                underlayColor="transparent"
+            />
         );
 
         const FilterButton = () => (
@@ -325,10 +322,20 @@ export default class Activity extends React.PureComponent<
                                         }}
                                         onPress={() => {
                                             if (order) {
-                                                this.setState({
-                                                    selectedPaymentForOrder:
-                                                        item
-                                                });
+                                                if (
+                                                    selectedPaymentForOrder ===
+                                                    item
+                                                ) {
+                                                    this.setState({
+                                                        selectedPaymentForOrder:
+                                                            null
+                                                    });
+                                                } else {
+                                                    this.setState({
+                                                        selectedPaymentForOrder:
+                                                            item
+                                                    });
+                                                }
                                                 return;
                                             }
                                             if (
