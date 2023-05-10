@@ -242,7 +242,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             )
                             .toFixed(0);
                     } else if (customType === CustomType.Amount) {
-                        if (units === 'fiat') {
+                        if (units === Units.fiat) {
                             const customSats = new BigNumber(customAmount)
                                 .div(rate)
                                 .multipliedBy(SATS_PER_BTC)
@@ -263,7 +263,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     : '0';
                         } else {
                             const customSats =
-                                units === 'sats'
+                                units === Units.sats
                                     ? new BigNumber(customAmount)
                                     : new BigNumber(customAmount).multipliedBy(
                                           SATS_PER_BTC

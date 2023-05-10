@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { Body } from '../../components/text/Body';
 import { BalanceBar } from '../../components/Channels/BalanceBar';
 import { Row } from '../../components/layout/Row';
-import { Status } from '../../views/Channels/ChannelsPane';
+import { Status } from '../../enums/index';
 import Amount from '../Amount';
 import { Tag } from './Tag';
 
