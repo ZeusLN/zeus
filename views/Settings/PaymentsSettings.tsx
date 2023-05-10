@@ -42,9 +42,10 @@ export default class PaymentsSettings extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            feeLimitMethod: settings.payments.defaultFeeMethod || FeeMethod.fixed,
-            feeLimit: settings.payments.defaultFeeFixed || '100',
-            feePercentage: settings.payments.defaultFeePercentage || '0.5'
+            feeLimitMethod:
+                settings?.payments?.defaultFeeMethod || FeeMethod.fixed,
+            feeLimit: settings?.payments?.defaultFeeFixed || '100',
+            feePercentage: settings?.payments?.defaultFeePercentage || '0.5'
         });
     }
 

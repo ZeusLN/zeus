@@ -365,6 +365,26 @@ export default class ChannelView extends React.Component<
                                 />
                             </TouchableOpacity>
                         )}
+                        {(pendingOpen || pendingClose || closing) &&
+                            channel_point && (
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        UrlUtils.goToBlockExplorerTXID(
+                                            channel_point,
+                                            testnet
+                                        )
+                                    }
+                                >
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.channelPoint'
+                                        )}
+                                        value={channel_point}
+                                        sensitive
+                                        color={themeColor('chain')}
+                                    />
+                                </TouchableOpacity>
+                            )}
                         <KeyValue
                             keyValue={localeString(
                                 'views.Channel.channelBalance'

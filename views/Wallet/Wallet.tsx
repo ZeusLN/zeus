@@ -245,6 +245,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 await login({ login: username, password }).then(async () => {
                     BalanceStore.getLightningBalance(true);
                 });
+            } else {
+                BalanceStore.getLightningBalance(true);
             }
         } else if (implementation === Implementation.LightningNodeConnect) {
             let error;

@@ -27,7 +27,7 @@ import handleAnything from '../utils/handleAnything';
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
 
-import Amount from '../components/Amount';
+import AmountInput, { getSatAmount } from '../components/AmountInput';
 import Button from '../components/Button';
 import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
@@ -43,12 +43,12 @@ import {
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 
-import FiatStore from '../stores/FiatStore';
+import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import InvoicesStore from '../stores/InvoicesStore';
+import PosStore from '../stores/PosStore';
 import SettingsStore from '../stores/SettingsStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
-import PosStore from '../stores/PosStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
@@ -60,11 +60,11 @@ interface ReceiveProps {
     exitSetup: any;
     navigation: any;
     InvoicesStore: InvoicesStore;
+    PosStore: PosStore;
+    ModalStore: ModalStore;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
-    FiatStore: FiatStore;
-    PosStore: PosStore;
-    NodeInfoStore: NodeInfoStore;
 }
 
 interface ReceiveState {
@@ -72,6 +72,7 @@ interface ReceiveState {
     addressType: string;
     memo: string;
     value: string;
+    satAmount: string | number;
     expiry: string;
     ampInvoice: boolean;
     routeHints: boolean;
@@ -87,7 +88,6 @@ interface ReceiveState {
     'InvoicesStore',
     'SettingsStore',
     'UnitsStore',
-    'FiatStore',
     'PosStore',
     'NodeInfoStore'
 )
@@ -105,6 +105,7 @@ export default class Receive extends React.Component<
         addressType: '0',
         memo: '',
         value: '',
+        satAmount: '',
         expiry: '3600',
         ampInvoice: false,
         routeHints: false,
@@ -124,11 +125,11 @@ export default class Receive extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            addressType: settings.invoices.addressType || '1',
-            memo: settings.invoices.memo || '',
-            expiry: settings.invoices.expiry || '3600',
-            routeHints: settings.invoices.routeHints || false,
-            ampInvoice: settings.invoices.ampInvoice || false
+            addressType: settings?.invoices?.addressType || '1',
+            memo: settings?.invoices?.memo || '',
+            expiry: settings?.invoices?.expiry || '3600',
+            routeHints: settings?.invoices?.routeHints || false,
+            ampInvoice: settings?.invoices?.ampInvoice || false
         });
 
         const lnOnly =
@@ -167,15 +168,18 @@ export default class Receive extends React.Component<
         }
 
         if (lnurl) {
+            this.props.UnitsStore.resetUnits();
             this.setState({
                 memo: lnurl.defaultDescription,
-                value: (lnurl.maxWithdrawable / 1000).toString()
+                value: (lnurl.maxWithdrawable / 1000).toString(),
+                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000)
             });
         }
 
         if (amount) {
             this.setState({
-                value: amount
+                value: amount,
+                satAmount: getSatAmount(amount)
             });
         }
 
@@ -187,17 +191,13 @@ export default class Receive extends React.Component<
 
         if (autoGenerate)
             this.autoGenerateInvoice(
-                this.getSatAmount(amount),
+                getSatAmount(amount),
                 memo,
                 expiry,
                 routeHints,
                 ampInvoice,
                 addressType
             );
-
-        if (Platform.OS === 'android') {
-            await this.enableNfc();
-        }
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -205,13 +205,22 @@ export default class Receive extends React.Component<
         const { reset } = InvoicesStore;
 
         reset();
+        const amount: string = navigation.getParam('amount');
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
+
+        if (amount) {
+            this.setState({
+                value: amount,
+                satAmount: getSatAmount(amount)
+            });
+        }
 
         if (lnurl) {
             this.setState({
                 memo: lnurl.defaultDescription,
-                value: (lnurl.maxWithdrawable / 1000).toString()
+                value: (lnurl.maxWithdrawable / 1000).toString(),
+                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000)
             });
         }
     }
@@ -278,11 +287,16 @@ export default class Receive extends React.Component<
     };
 
     enableNfc = async () => {
+        const { ModalStore } = this.props;
         this.disableNfc();
         await NfcManager.start().catch((e) => console.warn(e.message));
 
         return new Promise((resolve: any) => {
             let tagFound: TagEvent | null = null;
+
+            // enable NFC
+            if (Platform.OS === 'android')
+                ModalStore.toggleAndroidNfcModal(true);
 
             NfcManager.setEventListener(
                 NfcEvents.DiscoverTag,
@@ -299,12 +313,21 @@ export default class Receive extends React.Component<
                     } else {
                         str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
                     }
+
+                    // close NFC
+                    if (Platform.OS === 'android')
+                        ModalStore.toggleAndroidNfcModal(false);
+
                     resolve(this.validateAddress(str));
                     NfcManager.unregisterTagEvent().catch(() => 0);
                 }
             );
 
             NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                // close NFC
+                if (Platform.OS === 'android')
+                    ModalStore.toggleAndroidNfcModal(false);
+
                 if (!tagFound) {
                     resolve();
                 }
@@ -317,7 +340,7 @@ export default class Receive extends React.Component<
     validateAddress = (text: string) => {
         const { navigation, InvoicesStore } = this.props;
         const { createUnifiedInvoice } = InvoicesStore;
-        const amount = this.getSatAmount(navigation.getParam('amount'));
+        const amount = getSatAmount(navigation.getParam('amount'));
 
         handleAnything(text, amount.toString())
             .then((response) => {
@@ -552,66 +575,20 @@ export default class Receive extends React.Component<
         });
     };
 
-    getSatAmount = (amount?: string) => {
-        const { FiatStore, SettingsStore, UnitsStore } = this.props;
-        const { fiatRates } = FiatStore;
-        const { settings } = SettingsStore;
-        const { fiat } = settings;
-        const { units } = UnitsStore;
-
-        const value = amount || this.state.value;
-
-        const fiatEntry =
-            fiat && fiatRates && fiatRates.filter
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
-
-        const rate =
-            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
-                ? fiatEntry.rate
-                : 0;
-
-        let satAmount: string | number;
-        switch (units) {
-            case Units.sats:
-                satAmount = value;
-                break;
-            case Units.BTC:
-                satAmount = Number(
-                    new BigNumber(value).multipliedBy(SATS_PER_BTC)
-                );
-                break;
-            case Units.fiat:
-                satAmount = Number(
-                    new BigNumber(value.replace(/,/g, '.'))
-                        .dividedBy(rate)
-                        .multipliedBy(SATS_PER_BTC)
-                ).toFixed(0);
-                break;
-        }
-
-        return satAmount;
-    };
-
     render() {
-        const {
-            InvoicesStore,
-            SettingsStore,
-            UnitsStore,
-            FiatStore,
-            navigation
-        } = this.props;
+        const { InvoicesStore, SettingsStore, UnitsStore, navigation } =
+            this.props;
         const {
             selectedIndex,
             addressType,
             memo,
             value,
+            satAmount,
             expiry,
             ampInvoice,
             routeHints
         } = this.state;
-        const { units, changeUnits, getAmount } = UnitsStore;
-        const { getSymbol }: any = FiatStore;
+        const { getAmount } = UnitsStore;
 
         const {
             createUnifiedInvoice,
@@ -636,8 +613,6 @@ export default class Receive extends React.Component<
             settings.pos &&
             settings.pos.confirmationPreference &&
             settings.pos.confirmationPreference === 'lnOnly';
-
-        const satAmount = this.getSatAmount();
 
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
@@ -983,32 +958,30 @@ export default class Receive extends React.Component<
                                             textBottom
                                         />
                                     )}
-                                    {Platform.OS === 'ios' && (
-                                        <View
-                                            style={[
-                                                styles.button,
-                                                { paddingTop: 0 }
-                                            ]}
-                                        >
-                                            <Button
-                                                title={
-                                                    posStatus === 'active'
-                                                        ? localeString(
-                                                              'general.payNfc'
-                                                          )
-                                                        : localeString(
-                                                              'general.receiveNfc'
-                                                          )
-                                                }
-                                                icon={{
-                                                    name: 'nfc',
-                                                    size: 25
-                                                }}
-                                                onPress={() => this.enableNfc()}
-                                                secondary
-                                            />
-                                        </View>
-                                    )}
+                                    <View
+                                        style={[
+                                            styles.button,
+                                            { paddingTop: 0 }
+                                        ]}
+                                    >
+                                        <Button
+                                            title={
+                                                posStatus === 'active'
+                                                    ? localeString(
+                                                          'general.payNfc'
+                                                      )
+                                                    : localeString(
+                                                          'general.receiveNfc'
+                                                      )
+                                            }
+                                            icon={{
+                                                name: 'nfc',
+                                                size: 25
+                                            }}
+                                            onPress={() => this.enableNfc()}
+                                            secondary
+                                        />
+                                    </View>
                                     {!belowDustLimit &&
                                         haveUnifiedInvoice &&
                                         !lnOnly && (
@@ -1058,21 +1031,12 @@ export default class Receive extends React.Component<
                                         }}
                                     />
 
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.secondaryText,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Receive.amount'
-                                            )}
-                                            {lnurl &&
+                                    <AmountInput
+                                        amount={value}
+                                        title={`${localeString(
+                                            'views.Receive.amount'
+                                        )} ${
+                                            lnurl &&
                                             lnurl.minWithdrawable !==
                                                 lnurl.maxWithdrawable
                                                 ? ` (${Math.ceil(
@@ -1082,16 +1046,8 @@ export default class Receive extends React.Component<
                                                       lnurl.maxWithdrawable /
                                                           1000
                                                   )})`
-                                                : ''}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={'0'}
-                                        value={value}
-                                        onChangeText={(text: string) => {
-                                            this.setState({ value: text });
-                                        }}
+                                                : ''
+                                        }`}
                                         locked={
                                             lnurl &&
                                             lnurl.minWithdrawable ===
@@ -1099,51 +1055,16 @@ export default class Receive extends React.Component<
                                                 ? true
                                                 : false
                                         }
-                                        prefix={
-                                            units !== Units.sats &&
-                                            (units === Units.BTC
-                                                ? '₿'
-                                                : !getSymbol().rtl
-                                                ? getSymbol().symbol
-                                                : null)
-                                        }
-                                        suffix={
-                                            units === Units.sats
-                                                ? units
-                                                : getSymbol().rtl &&
-                                                  units === Units.fiat &&
-                                                  getSymbol().symbol
-                                        }
-                                        toggleUnits={changeUnits}
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                value: amount,
+                                                satAmount
+                                            });
+                                        }}
                                     />
-                                    {units !== Units.sats && (
-                                        <Amount
-                                            sats={satAmount}
-                                            fixedUnits={Units.sats}
-                                            toggleable
-                                        />
-                                    )}
-                                    {units !== Units.BTC && (
-                                        <Amount
-                                            sats={satAmount}
-                                            fixedUnits={Units.BTC}
-                                            toggleable
-                                        />
-                                    )}
-                                    {units === Units.fiat && (
-                                        <TouchableOpacity
-                                            onPress={() => changeUnits()}
-                                        >
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {FiatStore.getRate()}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    )}
 
                                     {implementation !==
                                         Implementation.lndhub && (
@@ -1153,8 +1074,7 @@ export default class Receive extends React.Component<
                                                     ...styles.secondaryText,
                                                     color: themeColor(
                                                         'secondaryText'
-                                                    ),
-                                                    paddingTop: 10
+                                                    )
                                                 }}
                                             >
                                                 {localeString(
