@@ -1,4 +1,5 @@
 import { computed } from 'mobx';
+
 import BaseModel from './BaseModel';
 import DateTimeUtils from './../utils/DateTimeUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -56,6 +57,12 @@ export default class Transaction extends BaseModel {
         return this.getTimestamp === 0
             ? this.getBlockHeight
             : DateTimeUtils.listFormattedDateShort(this.getTimestamp);
+    }
+
+    @computed public get getDisplayTimeOrder(): string {
+        return DateTimeUtils.listFormattedDateOrder(
+            new Date(Number(this.getTimestamp) * 1000)
+        );
     }
 
     @computed public get getDate(): string | Date {
