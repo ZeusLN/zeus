@@ -20,7 +20,6 @@ import LnurlPayMetadata from './Metadata';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { Units } from '../../enums';
 
 interface LnurlPayProps {
     navigation: any;

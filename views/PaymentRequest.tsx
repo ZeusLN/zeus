@@ -37,7 +37,7 @@ import { Row } from '../components/layout/Row';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
-import { FeeMethod, Implementation, Units } from '../enums';
+import { FeeMethod, Implementation } from '../enums';
 
 interface InvoiceProps {
     exitSetup: any;

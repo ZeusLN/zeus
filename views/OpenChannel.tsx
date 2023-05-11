@@ -40,7 +40,7 @@ import SettingsStore from './../stores/SettingsStore';
 import UTXOsStore from './../stores/UTXOsStore';
 
 import Scan from '../assets/images/SVG/Scan.svg';
-import { Implementation, Units } from '../enums';
+import { Implementation } from '../enums';
 
 interface OpenChannelProps {
     exitSetup: any;
