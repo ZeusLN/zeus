@@ -54,7 +54,7 @@ import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import NFCUtils from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { AddressType, Implementation, Units } from '../enums';
+import { AddressType, Implementation } from '../enums';
 
 interface ReceiveProps {
     exitSetup: any;

@@ -17,7 +17,8 @@ export const NodeTitle = (
     const displayName =
         selectedNode && selectedNode.nickname
             ? selectedNode.nickname
-            : selectedNode && selectedNode.implementation === Implementation.lndhub
+            : selectedNode &&
+              selectedNode.implementation === Implementation.lndhub
             ? selectedNode.lndhubUrl
                   .replace('https://', '')
                   .replace('http://', '')
@@ -48,7 +49,8 @@ export default function NodeIdenticon({
 
     const data = new Identicon(
         hash.sha1(
-            selectedNode && selectedNode.implementation === Implementation.lndhub
+            selectedNode &&
+                selectedNode.implementation === Implementation.lndhub
                 ? `${title}-${selectedNode.username}`
                 : title
         ),

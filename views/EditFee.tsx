@@ -264,7 +264,8 @@ export default class EditFee extends React.Component<
                                             ...styles.feeBox,
                                             borderColor:
                                                 !displayOnly &&
-                                                selectedFee === FeeType.MinimumFee
+                                                selectedFee ===
+                                                    FeeType.MinimumFee
                                                     ? themeColor('highlight')
                                                     : '#A7A9AC',
                                             borderWidth: 3
@@ -286,7 +287,11 @@ export default class EditFee extends React.Component<
                                                 color: themeColor('text')
                                             }}
                                         >
-                                            {recommendedFees[FeeType.MinimumFee]}
+                                            {
+                                                recommendedFees[
+                                                    FeeType.MinimumFee
+                                                ]
+                                            }
                                         </Text>
                                     </View>
                                 </TouchableWithoutFeedback>

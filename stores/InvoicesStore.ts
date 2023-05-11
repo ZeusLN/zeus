@@ -45,7 +45,8 @@ export default class InvoicesStore {
                     this.pay_req &&
                     this.pay_req.destination &&
                     (BackendUtils.isLNDBased() ||
-                        this.settingsStore.implementation === Implementation.spark)
+                        this.settingsStore.implementation ===
+                            Implementation.spark)
                 ) {
                     this.getRoutes(
                         this.pay_req.destination,

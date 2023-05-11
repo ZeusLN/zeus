@@ -153,7 +153,8 @@ export default class SetFeesForm extends React.Component<
                     <TextInput
                         keyboardType="numeric"
                         placeholder={
-                            feeRate || implementation === Implementation.clightningREST
+                            feeRate ||
+                            implementation === Implementation.clightningREST
                                 ? '1'
                                 : '0.001'
                         }
