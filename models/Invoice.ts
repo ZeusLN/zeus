@@ -153,6 +153,16 @@ export default class Invoice extends BaseModel {
               );
     }
 
+    @computed public get getDisplayTimeOrder(): string {
+        return DateTimeUtils.listFormattedDateOrder(
+            new Date(
+                Number(
+                    this.settle_date || this.paid_at || this.timestamp || 0
+                ) * 1000
+            )
+        );
+    }
+
     @computed public get getDisplayTimeShort(): string {
         return this.isPaid
             ? DateTimeUtils.listFormattedDateShort(

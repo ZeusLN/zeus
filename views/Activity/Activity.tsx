@@ -429,7 +429,9 @@ export default class Activity extends React.PureComponent<
                                                     fontFamily: 'Lato-Regular'
                                                 }}
                                             >
-                                                {item.getDisplayTimeShort}
+                                                {order
+                                                    ? item.getDisplayTimeOrder
+                                                    : item.getDisplayTimeShort}
                                             </ListItem.Subtitle>
                                         </ListItem.Content>
                                     </ListItem>
