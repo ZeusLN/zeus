@@ -120,7 +120,9 @@ export default class LndHub extends LND {
     supportsOnchainReceiving = () =>
         !(
             stores.settingsStore.lndhubUrl.includes('lnbank/api/lndhub') ||
-            stores.settingsStore.lndhubUrl.includes('lntxbot')
+            stores.settingsStore.lndhubUrl.includes('lntxbot') ||
+            // LNBits
+            stores.settingsStore.lndhubUrl.includes('/lndhub/ext/')
         );
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
