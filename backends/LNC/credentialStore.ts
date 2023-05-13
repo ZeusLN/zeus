@@ -125,7 +125,6 @@ export default class LncCredentialStore implements CredentialStore {
         } catch (error) {
             const msg = (error as Error).message;
             throw new Error(`Failed to load secure data: ${msg}`);
-            return;
         }
     }
 
