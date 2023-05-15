@@ -75,6 +75,24 @@ export default class ActivityStore {
     };
 
     @action
+    public setFiltersPos = async () => {
+        this.filters = {
+            lightning: true,
+            onChain: true,
+            sent: false,
+            received: true,
+            unpaid: false,
+            minimumAmount: 0,
+            startDate: null,
+            endDate: null
+        };
+        await EncryptedStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(this.filters)
+        );
+    };
+
+    @action
     public setAmountFilter = (filter: any) => {
         this.filters.minimumAmount = filter;
         this.setFilters(this.filters);

@@ -869,7 +869,7 @@ export default class Receive extends React.Component<
                                     name: 'list',
                                     size: 25
                                 }}
-                                onPress={() => this.navBack()}
+                                onPress={() => navigation.navigate('Wallet')}
                                 containerStyle={{ width: '100%' }}
                             />
                         </View>
