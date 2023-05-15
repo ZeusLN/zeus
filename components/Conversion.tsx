@@ -7,7 +7,7 @@ import Amount from '../components/Amount';
 import { Row } from '../components/layout/Row';
 import { getSatAmount } from '../components/AmountInput';
 
-import FiatStore from '../stores/UnitsStore';
+import FiatStore from '../stores/FiatStore';
 import UnitsStore from '../stores/UnitsStore';
 import SettingsStore, { DEFAULT_FIAT } from '../stores/SettingsStore';
 

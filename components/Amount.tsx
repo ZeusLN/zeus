@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import FiatStore from '../stores/FiatStore';
 import UnitsStore from '../stores/UnitsStore';
 import SettingsStore from '../stores/SettingsStore';
 import PrivacyUtils from '../utils/PrivacyUtils';
@@ -24,6 +25,7 @@ interface AmountDisplayProps {
     jumboText?: boolean;
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
     pending?: boolean;
+    fiatRatesLoading?: boolean;
 }
 
 function AmountDisplay({
@@ -36,7 +38,8 @@ function AmountDisplay({
     space = false,
     jumboText = false,
     color = undefined,
-    pending = false
+    pending = false,
+    fiatRatesLoading = false
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
         console.error('Must include a symbol when rendering fiat');
@@ -95,7 +98,7 @@ function AmountDisplay({
                     <Row align="flex-end">
                         <Body jumbo={jumboText} color={color}>
                             {negative ? '-' : ''}
-                            {amount === 'N/A' ? (
+                            {amount === 'N/A' && fiatRatesLoading ? (
                                 <LoadingIndicator size={20} />
                             ) : (
                                 amount.toString()
@@ -114,7 +117,7 @@ function AmountDisplay({
                         {space ? <TextSpace /> : <Spacer width={1} />}
                         <Body jumbo={jumboText} color={color}>
                             {negative ? '-' : ''}
-                            {amount === 'N/A' ? (
+                            {amount === 'N/A' && fiatRatesLoading ? (
                                 <LoadingIndicator size={20} />
                             ) : (
                                 amount.toString()
@@ -127,6 +130,7 @@ function AmountDisplay({
 }
 
 interface AmountProps {
+    FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     SettingsStore?: SettingsStore;
     sats: number | string;
@@ -142,7 +146,7 @@ interface AmountProps {
     pending?: boolean;
 }
 
-@inject('UnitsStore', 'SettingsStore')
+@inject('FiatStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class Amount extends React.Component<AmountProps, {}> {
     render() {
@@ -158,6 +162,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
             color = undefined,
             pending = false
         } = this.props;
+        const FiatStore = this.props.FiatStore!;
         const UnitsStore = this.props.UnitsStore!;
         const SettingsStore = this.props.SettingsStore!;
         const lurkerMode =
@@ -193,6 +198,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                             negative={false}
                             jumboText={jumboText}
                             pending={pending}
+                            fiatRatesLoading={FiatStore.loading}
                         />
                     </TouchableOpacity>
                 );
@@ -206,6 +212,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     negative={false}
                     jumboText={jumboText}
                     pending={pending}
+                    fiatRatesLoading={FiatStore.loading}
                 />
             );
         }
@@ -246,6 +253,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         jumboText={jumboText}
                         color={textColor}
                         pending={pending}
+                        fiatRatesLoading={FiatStore.loading}
                     />
                 </TouchableOpacity>
             );
@@ -260,6 +268,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 jumboText={jumboText}
                 color={textColor}
                 pending={pending}
+                fiatRatesLoading={FiatStore.loading}
             />
         );
     }
