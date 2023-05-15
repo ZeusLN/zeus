@@ -295,7 +295,6 @@ const handleAnything = async (
                                 lnurlParams: params
                             }
                         ];
-                        break;
                     case 'payRequest':
                         if (isClipboardValue) return true;
                         params.lnurlText = raw;
@@ -306,7 +305,6 @@ const handleAnything = async (
                                 amount: setAmount
                             }
                         ];
-                        break;
                     case 'channelRequest':
                         if (isClipboardValue) return true;
                         return [
@@ -315,7 +313,6 @@ const handleAnything = async (
                                 lnurlParams: params
                             }
                         ];
-                        break;
                     case 'login':
                         if (BackendUtils.supportsLnurlAuth()) {
                             if (isClipboardValue) return true;

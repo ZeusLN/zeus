@@ -47,7 +47,6 @@ module.exports = {
     'no-const-assign': 'off',
     'no-div-regex': 'off',
     'no-lone-blocks': 'off',
-    'no-unreachable': 'off',
     'no-void': 'off',
     'radix': 'off',
     'react/no-unstable-nested-components': 'off',
