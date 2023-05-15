@@ -84,7 +84,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         );
 
         const InteractiveKeyValueRow = () =>
-            !!lurkerMode && isCopyable ? (
+            !lurkerMode && isCopyable ? (
                 <TouchableOpacity onLongPress={() => copyText()}>
                     <KeyValueRow />
                 </TouchableOpacity>
