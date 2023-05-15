@@ -54,6 +54,20 @@ const protectedNavigation = async (
     }
 };
 
+const ActivityButton = ({ navigation }: { navigation: any }) => (
+    <View style={{ width: 80 }}>
+        <Button
+            icon={{
+                name: 'list',
+                size: 40
+            }}
+            containerStyle={{ top: -7 }}
+            iconOnly
+            onPress={() => navigation.navigate('Activity')}
+        ></Button>
+    </View>
+);
+
 const TempleButton = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
         onPress={() => protectedNavigation(navigation, 'Wallet', true)}
@@ -300,7 +314,10 @@ export default class WalletHeader extends React.Component<
                 }
                 rightComponent={
                     posStatus === 'active' ? (
-                        <TempleButton navigation={navigation} />
+                        <Row>
+                            <ActivityButton navigation={navigation} />
+                            <TempleButton navigation={navigation} />
+                        </Row>
                     ) : channels ? (
                         <Row>
                             <SearchButton />

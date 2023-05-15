@@ -17,6 +17,12 @@ class DateTimeUtils {
 
     listFormattedDateShort = (timestamp: number | string) =>
         this.listFormattedDate(timestamp, 'mmm d, HH:MM');
+
+    listFormattedDateOrder = (timestamp: Date) => {
+        const updated = dateFormat(timestamp, 'hh:mm tt');
+        const day = dateFormat(timestamp, 'ddd, mmm dd');
+        return `${updated} | ${day}`;
+    };
 }
 
 const dateTimeUtils = new DateTimeUtils();

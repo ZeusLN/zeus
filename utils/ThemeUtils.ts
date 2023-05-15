@@ -177,7 +177,7 @@ export function themeColor(themeString: string): any {
         background: '#4C09F4',
         secondary: '#141414',
         separator: '#141414',
-        highlight: '#fff',
+        highlight: '#ffd24b',
         bolt: '#fff',
         chain: '#fff'
     };
