@@ -26,6 +26,7 @@ export default class App extends React.PureComponent {
                 ActivityStore={Stores.activityStore}
                 PosStore={Stores.posStore}
                 ModalStore={Stores.modalStore}
+                NotesStore={Stores.NotesStore}
             >
                 <AppContainer>
                     <Navigation />
