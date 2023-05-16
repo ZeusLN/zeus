@@ -46,6 +46,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Scan from '../assets/images/SVG/Scan.svg';
+import { Implementation, TransactionType, Units } from '../enums';
 
 interface SendProps {
     exitSetup: any;
@@ -99,7 +100,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const transactionType = navigation.getParam('transactionType', null);
         const isValid = navigation.getParam('isValid', false);
 
-        if (transactionType === 'Lightning') {
+        if (transactionType === TransactionType.Lightning) {
             this.props.InvoicesStore.getPayReq(destination);
         }
 
@@ -146,7 +147,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
 
-        if (transactionType === 'Lightning') {
+        if (transactionType === TransactionType.Lightning) {
             this.props.InvoicesStore.getPayReq(destination);
         }
 
@@ -257,7 +258,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 utxos,
                 utxoBalance,
                 amount:
-                    implementation === 'c-lightning-REST'
+                    implementation === Implementation.clightningREST
                         ? 'all'
                         : prevState.amount
             });
@@ -355,7 +356,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             });
         }
 
-        if (implementation === 'lightning-node-connect') {
+        if (implementation === Implementation.LightningNodeConnect) {
             this.subscribePayment(streamingCall);
         }
 
@@ -488,7 +489,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                         >{`${transactionType} Transaction`}</Text>
                     )}
-                    {transactionType === 'On-chain' &&
+                    {transactionType === TransactionType.OnChain &&
                         !BackendUtils.supportsOnchainSends() && (
                             <Text
                                 style={{
@@ -500,7 +501,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 {implementation}
                             </Text>
                         )}
-                    {transactionType === 'On-chain' &&
+                    {transactionType === TransactionType.OnChain &&
                         BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
                                 <AmountInput
@@ -527,7 +528,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                         ? utxoBalance
                                                         : confirmedBlockchainBalance
                                                 }
-                                                fixedUnits="BTC"
+                                                fixedUnits={Units.BTC}
                                             />
                                             <Amount
                                                 sats={
@@ -535,7 +536,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                         ? utxoBalance
                                                         : confirmedBlockchainBalance
                                                 }
-                                                fixedUnits="sats"
+                                                fixedUnits={Units.sats}
                                             />
                                         </>
                                     )}
@@ -611,7 +612,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 </View>
                             </React.Fragment>
                         )}
-                    {transactionType === 'Keysend' &&
+                    {transactionType === TransactionType.Keysend &&
                         BackendUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <AmountInput
@@ -806,7 +807,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 </View>
                             </React.Fragment>
                         )}
-                    {transactionType === 'Keysend' &&
+                    {transactionType === TransactionType.Keysend &&
                         !BackendUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <Text
@@ -823,7 +824,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 </Text>
                             </React.Fragment>
                         )}
-                    {transactionType === 'Lightning' && (
+                    {transactionType === TransactionType.Lightning && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('views.Send.lookup')}
@@ -860,8 +861,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                         />
                     </View>
 
-                    {transactionType === 'On-chain' &&
-                        implementation === 'eclair' && (
+                    {transactionType === TransactionType.OnChain &&
+                        implementation === Implementation.eclair && (
                             <View style={styles.feeTableButton}>
                                 <TextInput
                                     keyboardType="numeric"

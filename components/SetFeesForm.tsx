@@ -17,6 +17,7 @@ import { themeColor } from './../utils/ThemeUtils';
 import ChannelsStore from './../stores/ChannelsStore';
 import FeeStore from './../stores/FeeStore';
 import SettingsStore from './../stores/SettingsStore';
+import { Implementation } from '../enums';
 
 interface SetFeesFormProps {
     FeeStore: FeeStore;
@@ -142,7 +143,7 @@ export default class SetFeesForm extends React.Component<
                         }}
                     >
                         {`${localeString('components.SetFeesForm.feeRate')} (${
-                            implementation === 'c-lightning-REST'
+                            implementation === Implementation.clightningREST
                                 ? localeString(
                                       'components.SetFeesForm.ppmMilliMsat'
                                   )
@@ -152,7 +153,8 @@ export default class SetFeesForm extends React.Component<
                     <TextInput
                         keyboardType="numeric"
                         placeholder={
-                            feeRate || implementation === 'c-lightning-REST'
+                            feeRate ||
+                            implementation === Implementation.clightningREST
                                 ? '1'
                                 : '0.001'
                         }

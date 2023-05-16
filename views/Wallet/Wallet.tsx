@@ -49,6 +49,7 @@ import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import POS from './../../assets/images/SVG/POS.svg';
 import Temple from './../../assets/images/SVG/Temple.svg';
 import WordLogo from './../../assets/images/SVG/Word Logo.svg';
+import { Implementation } from '../../enums';
 
 interface WalletProps {
     enterSetup: any;
@@ -140,7 +141,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 settings.isBiometryEnabled);
 
         if (nextAppState === 'background' && loginRequired && loginBackground) {
-            if (implementation === 'lightning-node-connect') {
+            if (implementation === Implementation.LightningNodeConnect) {
                 BackendUtils.disconnect();
             }
 
@@ -239,7 +240,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             FiatStore.getFiatRates();
         }
 
-        if (implementation === 'lndhub') {
+        if (implementation === Implementation.lndhub) {
             if (connecting) {
                 await login({ login: username, password }).then(async () => {
                     BalanceStore.getLightningBalance(true);
@@ -247,7 +248,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             } else {
                 BalanceStore.getLightningBalance(true);
             }
-        } else if (implementation === 'lightning-node-connect') {
+        } else if (implementation === Implementation.LightningNodeConnect) {
             let error;
             if (connecting) {
                 error = await connect();
@@ -313,7 +314,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const squareEnabled: boolean =
             (settings && settings.pos && settings.pos.squareEnabled) || false;
 
-        const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
+        const dataAvailable =
+            implementation === Implementation.lndhub || nodeInfo.version;
 
         const BalanceScreen = () => {
             return (

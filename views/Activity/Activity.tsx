@@ -26,6 +26,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
+import { Implementation } from '../../enums';
 
 interface ActivityProps {
     navigation: any;
@@ -57,7 +58,9 @@ export default class Activity extends React.PureComponent<
         const { getActivityAndFilter, getFilters } = ActivityStore;
         const filters = await getFilters();
         await getActivityAndFilter(filters);
-        if (SettingsStore.implementation === 'lightning-node-connect') {
+        if (
+            SettingsStore.implementation === Implementation.LightningNodeConnect
+        ) {
             this.subscribeEvents();
         }
     }

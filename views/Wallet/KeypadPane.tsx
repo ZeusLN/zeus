@@ -15,6 +15,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
+import { Units } from '../../enums';
 
 interface KeypadPaneProps {
     navigation: any;
@@ -51,15 +52,15 @@ export default class KeypadPane extends React.PureComponent<
         if (amount.includes('.') && value === '.') return this.startShake();
 
         // limit decimal places depending on units
-        if (units === 'fiat') {
+        if (units === Units.fiat) {
             if (amount.split('.')[1] && amount.split('.')[1].length == 2)
                 return this.startShake();
         }
-        if (units === 'sats') {
+        if (units === Units.sats) {
             if (amount.split('.')[1] && amount.split('.')[1].length == 3)
                 return this.startShake();
         }
-        if (units === 'BTC') {
+        if (units === Units.BTC) {
             if (amount.split('.')[1] && amount.split('.')[1].length == 8)
                 return this.startShake();
         }

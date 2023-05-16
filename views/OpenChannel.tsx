@@ -40,6 +40,7 @@ import SettingsStore from './../stores/SettingsStore';
 import UTXOsStore from './../stores/UTXOsStore';
 
 import Scan from '../assets/images/SVG/Scan.svg';
+import { Implementation } from '../enums';
 
 interface OpenChannelProps {
     exitSetup: any;
@@ -198,7 +199,7 @@ export default class OpenChannel extends React.Component<
         const newState: any = {};
         newState.utxos = utxos;
         newState.utxoBalance = utxoBalance;
-        if (implementation === 'c-lightning-REST') {
+        if (implementation === Implementation.clightningREST) {
             newState.local_funding_amount = 'all';
         }
         this.setState(newState);
@@ -493,7 +494,7 @@ export default class OpenChannel extends React.Component<
                         </>
 
                         {BackendUtils.supportsCoinControl() &&
-                            implementation !== 'lnd' && (
+                            implementation !== Implementation.lnd && (
                                 <UTXOPicker
                                     onValueChange={this.selectUTXOs}
                                     UTXOsStore={UTXOsStore}

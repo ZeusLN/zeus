@@ -36,6 +36,9 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
+import { Implementation } from '../../enums';
+
+import { version } from '../../package.json';
 
 import { version } from '../../package.json';
 
@@ -183,7 +186,7 @@ export default class Settings extends React.Component<
                                     }}
                                 >
                                     {selectedNode.implementation ===
-                                    'lightning-node-connect'
+                                    Implementation.LightningNodeConnect
                                         ? `${
                                               implementationDisplayValue[
                                                   selectedNode.implementation
@@ -338,7 +341,7 @@ export default class Settings extends React.Component<
                     )}
                     {selectedNode &&
                         !BackendUtils.isLNDBased() &&
-                        implementation !== 'lndhub' && (
+                        implementation !== Implementation.lndhub && (
                             <View
                                 style={{
                                     backgroundColor: themeColor('secondary'),

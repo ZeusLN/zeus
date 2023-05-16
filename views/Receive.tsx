@@ -54,6 +54,7 @@ import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import NFCUtils from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { AddressType, Implementation } from '../enums';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -401,7 +402,7 @@ export default class Receive extends React.Component<
                 ? 1
                 : 0;
 
-        if (implementation === 'lightning-node-connect') {
+        if (implementation === Implementation.LightningNodeConnect) {
             const { LncModule } = NativeModules;
             const eventName = BackendUtils.subscribeInvoice(rHash);
             const eventEmitter = new NativeEventEmitter(LncModule);
@@ -471,7 +472,7 @@ export default class Receive extends React.Component<
             }
         }
 
-        if (implementation === 'lnd') {
+        if (implementation === Implementation.lnd) {
             this.lnInterval = setInterval(() => {
                 // only fetch the last 10 invoices
                 BackendUtils.getInvoices({ limit: 10 }).then(
@@ -638,35 +639,35 @@ export default class Receive extends React.Component<
             ? [
                   {
                       key: localeString('views.Receive.np2wkhKey'),
-                      value: '1',
+                      value: AddressType.np2wkh,
                       description: localeString(
                           'views.Receive.np2wkhDescription'
                       )
                   },
                   {
                       key: localeString('views.Receive.p2wkhKey'),
-                      value: '0',
+                      value: AddressType.p2wk,
                       description: localeString(
                           'views.Receive.p2wkhDescription'
                       )
                   },
                   {
                       key: localeString('views.Receive.p2trKey'),
-                      value: '4',
+                      value: AddressType.p2tr,
                       description: localeString('views.Receive.p2trDescription')
                   }
               ]
             : [
                   {
                       key: localeString('views.Receive.np2wkhKey'),
-                      value: '1',
+                      value: AddressType.np2wkh,
                       description: localeString(
                           'views.Receive.np2wkhDescriptionAlt'
                       )
                   },
                   {
                       key: localeString('views.Receive.p2wkhKey'),
-                      value: '0',
+                      value: AddressType.p2wk,
                       description: localeString(
                           'views.Receive.p2wkhDescription'
                       )
@@ -877,7 +878,7 @@ export default class Receive extends React.Component<
                         <View>
                             {!!payment_request && (
                                 <>
-                                    {implementation === 'lndhub' &&
+                                    {implementation === Implementation.lndhub &&
                                         !!address &&
                                         !belowDustLimit && (
                                             <WarningMessage
@@ -1065,7 +1066,8 @@ export default class Receive extends React.Component<
                                         }}
                                     />
 
-                                    {implementation !== 'lndhub' && (
+                                    {implementation !==
+                                        Implementation.lndhub && (
                                         <>
                                             <Text
                                                 style={{

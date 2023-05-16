@@ -9,6 +9,7 @@ import ConnectionFormatUtils from './../utils/ConnectionFormatUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import { localeString } from './../utils/LocaleUtils';
 import BackendUtils from './../utils/BackendUtils';
+import { Implementation, TransactionType } from '../enums';
 
 const { nodeInfoStore, invoicesStore, settingsStore } = stores;
 
@@ -61,7 +62,7 @@ const handleAnything = async (
             {
                 destination: value,
                 amount,
-                transactionType: 'On-chain',
+                transactionType: TransactionType.OnChain,
                 isValid: true
             }
         ];
@@ -71,7 +72,7 @@ const handleAnything = async (
             'Send',
             {
                 destination: value,
-                transactionType: 'Keysend',
+                transactionType: TransactionType.Keysend,
                 isValid: true
             }
         ];
@@ -121,7 +122,7 @@ const handleAnything = async (
                         pairingPhrase,
                         mailboxServer,
                         customMailboxServer,
-                        implementation: 'lightning-node-connect'
+                        implementation: Implementation.LightningNodeConnect
                     },
                     isValid: true
                 }
@@ -155,7 +156,7 @@ const handleAnything = async (
         let node;
         if (host) {
             node = {
-                implementation: 'lndhub',
+                implementation: Implementation.lndhub,
                 username,
                 password,
                 lndhubUrl: host,
@@ -165,7 +166,7 @@ const handleAnything = async (
             };
         } else {
             node = {
-                implementation: 'lndhub',
+                implementation: Implementation.lndhub,
                 username,
                 password,
                 certVerification: true,

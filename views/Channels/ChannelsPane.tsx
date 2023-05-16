@@ -13,12 +13,13 @@ import WalletHeader from '../../components/WalletHeader';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 
-import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { ChannelsType, Status } from '../../enums';
 
 const CHANNELS_SORT_KEYS = [
     {
@@ -90,14 +91,6 @@ const CHANNELS_SORT_KEYS = [
 ];
 
 // TODO: does this belong in the model? Or can it be computed from the model?
-export enum Status {
-    Good = 'Good',
-    Stable = 'Stable',
-    Unstable = 'Unstable',
-    Offline = 'Offline',
-    Opening = 'Opening',
-    Closing = 'Closing'
-}
 
 interface ChannelsProps {
     navigation: any;
