@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { View, TextInput } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { inject, observer } from 'mobx-react';
 
 import Header from '../components/Header';
 import Screen from '../components/Screen';
@@ -9,8 +10,11 @@ import Button from '../components/Button';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import NotesStore from '../stores/NotesStore';
+
 interface AddNotesProps {
     navigation: any;
+    NotesStore: NotesStore;
 }
 interface AddNotesState {
     notes?: string;
@@ -18,8 +22,9 @@ interface AddNotesState {
     txid?: string;
     RPreimage?: string;
 }
-const noteKeys: string[] = [];
 
+@inject('NotesStore')
+@observer
 export default class AddNotes extends React.Component<
     AddNotesProps,
     AddNotesState
@@ -44,7 +49,7 @@ export default class AddNotes extends React.Component<
         };
     }
     async componentDidMount() {
-        const key: any =
+        const key: string =
             'note-' +
             (this.state.txid ||
                 this.state.payment_hash ||
@@ -56,7 +61,8 @@ export default class AddNotes extends React.Component<
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, NotesStore } = this.props;
+        const { storingNoteKeys, removeNoteKeys } = NotesStore;
         const { payment_hash, txid, RPreimage } = this.state;
         const { notes } = this.state;
         return (
@@ -80,13 +86,10 @@ export default class AddNotes extends React.Component<
                         onChangeText={(text: string) => {
                             this.setState({ notes: text });
                             if (!text) {
-                                const key: any =
+                                const key: string =
                                     'note-' +
                                     (payment_hash || txid || RPreimage);
-                                const index = noteKeys.indexOf(key);
-                                if (index !== -1) {
-                                    noteKeys.splice(index, 1);
-                                }
+                                removeNoteKeys(key);
                             }
                         }}
                         multiline
@@ -102,17 +105,11 @@ export default class AddNotes extends React.Component<
                             : localeString('views.SendingLightning.AddANote')
                     }
                     onPress={async () => {
-                        navigation.goBack();
-                        const key: any =
+                        const key: string =
                             'note-' + (payment_hash || txid || RPreimage);
                         await EncryptedStorage.setItem(key, notes);
-                        if (!noteKeys.includes(key)) {
-                            noteKeys.push(key);
-                            await EncryptedStorage.setItem(
-                                'note-Keys',
-                                JSON.stringify(noteKeys)
-                            );
-                        }
+                        await storingNoteKeys(key, notes);
+                        navigation.goBack();
                     }}
                     containerStyle={{ position: 'absolute', bottom: 40 }}
                     buttonStyle={{ padding: 15 }}
