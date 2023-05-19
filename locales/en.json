@@ -497,6 +497,7 @@
     "views.Settings.Currency.enabled": "Enabled",
     "views.Settings.Currency.source": "Source",
     "views.Settings.Currency.selectCurrency": "Select Currency",
+    "views.Settings.SelectCurrency.title": "Select Currency",
     "views.Settings.Theme.title": "Theme",
     "views.Settings.Display.title": "Display",
     "views.Settings.Display.defaultView": "Default view",
