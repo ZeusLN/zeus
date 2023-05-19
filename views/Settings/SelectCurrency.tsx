@@ -84,7 +84,7 @@ export default class SelectCurrency extends React.Component<
                     <Header
                         leftComponent="Back"
                         centerComponent={{
-                            text: localeString('views.Settings.Currency.title'),
+                            text: localeString('views.Settings.SelectCurrency.title'),
                             style: {
                                 color: themeColor('text'),
                                 fontFamily: 'Lato-Regular'
