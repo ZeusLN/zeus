@@ -21,6 +21,7 @@ interface AddNotesState {
     payment_hash?: string;
     txid?: string;
     RPreimage?: string;
+    isNoteStored?: boolean;
 }
 
 @inject('NotesStore')
@@ -45,7 +46,8 @@ export default class AddNotes extends React.Component<
             notes: '',
             payment_hash,
             txid,
-            RPreimage
+            RPreimage,
+            isNoteStored: false
         };
     }
     async componentDidMount() {
@@ -56,21 +58,21 @@ export default class AddNotes extends React.Component<
                 this.state.RPreimage);
         const storedNotes = await EncryptedStorage.getItem(key);
         if (storedNotes) {
-            this.setState({ notes: storedNotes });
+            this.setState({ notes: storedNotes, isNoteStored: true });
         }
     }
 
     render() {
         const { navigation, NotesStore } = this.props;
-        const { storingNoteKeys, removeNoteKeys } = NotesStore;
-        const { payment_hash, txid, RPreimage } = this.state;
+        const { storeNoteKeys, removeNoteKeys } = NotesStore;
+        const { payment_hash, txid, RPreimage, isNoteStored } = this.state;
         const { notes } = this.state;
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: notes
+                        text: isNoteStored
                             ? localeString('views.SendingLightning.UpdateNote')
                             : localeString('views.SendingLightning.AddANote'),
                         style: {
@@ -100,7 +102,7 @@ export default class AddNotes extends React.Component<
                 </View>
                 <Button
                     title={
-                        notes
+                        isNoteStored
                             ? localeString('views.SendingLightning.UpdateNote')
                             : localeString('views.SendingLightning.AddANote')
                     }
@@ -108,7 +110,7 @@ export default class AddNotes extends React.Component<
                         const key: string =
                             'note-' + (payment_hash || txid || RPreimage);
                         await EncryptedStorage.setItem(key, notes);
-                        await storingNoteKeys(key, notes);
+                        await storeNoteKeys(key, notes);
                         navigation.goBack();
                     }}
                     containerStyle={{ position: 'absolute', bottom: 40 }}
