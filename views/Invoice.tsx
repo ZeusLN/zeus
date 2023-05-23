@@ -203,42 +203,6 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 sensitive
                             />
                         )}
-                        {storedNotes && (
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('AddNotes', {
-                                        getRPreimage
-                                    })
-                                }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Payment.notes'
-                                    )}
-                                    value={storedNotes}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
-                        )}
-                        {getRPreimage && (
-                            <Button
-                                title={
-                                    storedNotes
-                                        ? localeString(
-                                              'views.SendingLightning.UpdateNote'
-                                          )
-                                        : localeString(
-                                              'views.SendingLightning.AddANote'
-                                          )
-                                }
-                                onPress={() =>
-                                    navigation.navigate('AddNotes', {
-                                        getRPreimage
-                                    })
-                                }
-                                containerStyle={{ marginTop: 15 }}
-                            />
-                        )}
 
                         {!!getDescriptionHash && (
                             <KeyValue
@@ -257,6 +221,44 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 )}
                                 value={payment_hash}
                                 sensitive
+                            />
+                        )}
+
+                        {storedNotes && (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        getRPreimage
+                                    })
+                                }
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Payment.notes'
+                                    )}
+                                    value={storedNotes}
+                                    sensitive
+                                />
+                            </TouchableOpacity>
+                        )}
+
+                        {getRPreimage && (
+                            <Button
+                                title={
+                                    storedNotes
+                                        ? localeString(
+                                              'views.SendingLightning.UpdateNote'
+                                          )
+                                        : localeString(
+                                              'views.SendingLightning.AddANote'
+                                          )
+                                }
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        getRPreimage
+                                    })
+                                }
+                                containerStyle={{ marginTop: 15 }}
                             />
                         )}
                     </View>
