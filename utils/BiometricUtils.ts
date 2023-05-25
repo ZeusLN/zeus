@@ -1,5 +1,4 @@
 import ReactNativeBiometrics, { BiometryType } from 'react-native-biometrics';
-import { Settings } from '../stores/SettingsStore';
 
 const rnBiometrics = new ReactNativeBiometrics({
     allowDeviceCredentials: false
@@ -41,10 +40,5 @@ export const verifyBiometry = async (
 
     return false;
 };
-
-export const getIsBiometryRequired = (settings?: Settings): boolean =>
-    settings != null &&
-    settings.isBiometryEnabled &&
-    settings.supportedBiometryType !== undefined;
 
 export default rnBiometrics;

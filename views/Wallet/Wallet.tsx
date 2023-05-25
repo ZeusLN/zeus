@@ -44,10 +44,7 @@ import UnitsStore from './../../stores/UnitsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 import ModalStore from './../../stores/ModalStore';
 
-import {
-    getIsBiometryRequired,
-    getSupportedBiometryType
-} from '../../utils/BiometricUtils';
+import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
@@ -130,6 +127,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             return true;
         }
 
+        if (this.props.SettingsStore.loginRequired()) {
+            // pop to close lock screen and return false to close the app
+            this.props.navigation.pop();
+            return false;
+        }
+
         if (this.props.navigation.pop()) {
             return true;
         }
@@ -181,7 +184,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     handleAppStateChange = (nextAppState: any) => {
         const { SettingsStore } = this.props;
-        const { settings, implementation } = SettingsStore;
+        const { settings } = SettingsStore;
         const { loginBackground } = settings;
         const loginRequired =
             settings &&
@@ -190,11 +193,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 settings.isBiometryEnabled);
 
         if (nextAppState === 'background' && loginRequired && loginBackground) {
-            if (implementation === 'lightning-node-connect') {
-                BackendUtils.disconnect();
-            }
-
-            RNRestart.Restart();
+            // In case the lock screen is visible and a valid PIN is entered and home button is pressed,
+            // unauthorized access would be possible because the PIN is not cleared on next launch.
+            // By calling pop, the lock screen is closed to clear the PIN.
+            this.props.navigation.pop();
+            SettingsStore.setLoginStatus(false);
+        } else if (nextAppState === 'active' && loginRequired) {
+            this.props.navigation.navigate('Lockscreen');
         }
     };
 
@@ -208,12 +213,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
-            const isBiometryRequired = getIsBiometryRequired(settings);
-
-            const loginRequired =
-                settings &&
-                (settings.passphrase || settings.pin || isBiometryRequired) &&
-                !SettingsStore.loggedIn;
+            const loginRequired = SettingsStore.loginRequired();
             const posEnabled =
                 settings && settings.pos && settings.pos.squareEnabled;
 
