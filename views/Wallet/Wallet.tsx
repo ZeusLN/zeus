@@ -11,7 +11,11 @@ import {
 } from 'react-native';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { DefaultTheme, NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import {
+    DefaultTheme,
+    NavigationContainer,
+    NavigationContainerRef
+} from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 
@@ -120,7 +124,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     private handleBackButton() {
-        const dialogHasBeenClosed = this.props.ModalStore.closeVisibleModalDialog();
+        const dialogHasBeenClosed =
+            this.props.ModalStore.closeVisibleModalDialog();
         if (dialogHasBeenClosed) {
             return true;
         }
@@ -137,8 +142,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (!tabNavigatorState) {
             return false;
         }
-        const currentTabName = tabNavigatorState.routeNames[tabNavigatorState.index];
-        const defaultView = this.props.SettingsStore.settings.display.defaultView;
+        const currentTabName =
+            tabNavigatorState.routeNames[tabNavigatorState.index];
+        const defaultView =
+            this.props.SettingsStore.settings.display.defaultView;
         if (defaultView === currentTabName) {
             return false;
         } else if (defaultView) {
@@ -154,7 +161,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         });
 
         AppState.addEventListener('change', this.handleAppStateChange);
-        BackHandler.addEventListener('hardwareBackPress', this.handleBackButton.bind(this));
+        BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.handleBackButton.bind(this)
+        );
     }
 
     componentWillUnmount() {
@@ -162,7 +172,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.props.navigation.removeListener('didFocus');
         AppState.removeEventListener &&
             AppState.removeEventListener('change', this.handleAppStateChange);
-        BackHandler.removeEventListener('hardwareBackPress', this.handleBackButton);
+        BackHandler.removeEventListener(
+            'hardwareBackPress',
+            this.handleBackButton
+        );
     }
 
     handleAppStateChange = (nextAppState: any) => {
@@ -454,7 +467,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         return (
             <View style={{ flex: 1 }}>
                 {!connecting && (!loginRequired || squareEnabled) && (
-                    <NavigationContainer theme={Theme} ref={this.tabNavigationRef}>
+                    <NavigationContainer
+                        theme={Theme}
+                        ref={this.tabNavigationRef}
+                    >
                         <Tab.Navigator
                             initialRouteName={
                                 squareEnabled && posStatus === 'active'
@@ -463,7 +479,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                           settings.display.defaultView) ||
                                       'Keypad'
                             }
-                            backBehavior='none'
+                            backBehavior="none"
                             screenOptions={({ route }) => ({
                                 tabBarIcon: ({ color }) => {
                                     if (route.name === 'Keypad') {
