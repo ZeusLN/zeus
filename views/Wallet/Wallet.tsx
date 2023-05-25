@@ -150,6 +150,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             return false;
         } else if (defaultView) {
             tabNavigator.navigate(defaultView);
+            return true;
         }
         return false;
     }
