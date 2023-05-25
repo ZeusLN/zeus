@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     Animated,
     AppState,
+    BackHandler,
     Linking,
     PanResponder,
     Text,
@@ -10,7 +11,7 @@ import {
 } from 'react-native';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 
@@ -31,13 +32,13 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
-
 import FiatStore from './../../stores/FiatStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import PosStore from './../../stores/PosStore';
 import SettingsStore, { Settings } from './../../stores/SettingsStore';
 import UnitsStore from './../../stores/UnitsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
+import ModalStore from './../../stores/ModalStore';
 
 import {
     getIsBiometryRequired,
@@ -62,6 +63,7 @@ interface WalletProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     UTXOsStore: UTXOsStore;
+    ModalStore: ModalStore;
 }
 
 interface WalletState {
@@ -77,10 +79,13 @@ interface WalletState {
     'UnitsStore',
     'FiatStore',
     'PosStore',
-    'UTXOsStore'
+    'UTXOsStore',
+    'ModalStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
+    private tabNavigationRef = React.createRef<NavigationContainerRef<any>>();
+
     constructor(props) {
         super(props);
         this.state = {
@@ -103,6 +108,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         });
     }
+
     async UNSAFE_componentWillMount(): Promise<void> {
         const {
             SettingsStore: { updateSettings }
@@ -113,6 +119,34 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         await updateSettings({ supportedBiometryType });
     }
 
+    private handleBackButton() {
+        const dialogHasBeenClosed = this.props.ModalStore.closeVisibleModalDialog();
+        if (dialogHasBeenClosed) {
+            return true;
+        }
+
+        if (this.props.navigation.pop()) {
+            return true;
+        }
+
+        const tabNavigator = this.tabNavigationRef.current;
+        if (!tabNavigator) {
+            return false;
+        }
+        const tabNavigatorState = tabNavigator.getState();
+        if (!tabNavigatorState) {
+            return false;
+        }
+        const currentTabName = tabNavigatorState.routeNames[tabNavigatorState.index];
+        const defaultView = this.props.SettingsStore.settings.display.defaultView;
+        if (defaultView === currentTabName) {
+            return false;
+        } else if (defaultView) {
+            tabNavigator.navigate(defaultView);
+        }
+        return false;
+    }
+
     async componentDidMount() {
         // triggers when loaded from navigation or back action
         this.props.navigation.addListener('didFocus', () => {
@@ -120,6 +154,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         });
 
         AppState.addEventListener('change', this.handleAppStateChange);
+        BackHandler.addEventListener('hardwareBackPress', this.handleBackButton.bind(this));
     }
 
     componentWillUnmount() {
@@ -127,6 +162,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.props.navigation.removeListener('didFocus');
         AppState.removeEventListener &&
             AppState.removeEventListener('change', this.handleAppStateChange);
+        BackHandler.removeEventListener('hardwareBackPress', this.handleBackButton);
     }
 
     handleAppStateChange = (nextAppState: any) => {
@@ -418,7 +454,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         return (
             <View style={{ flex: 1 }}>
                 {!connecting && (!loginRequired || squareEnabled) && (
-                    <NavigationContainer theme={Theme}>
+                    <NavigationContainer theme={Theme} ref={this.tabNavigationRef}>
                         <Tab.Navigator
                             initialRouteName={
                                 squareEnabled && posStatus === 'active'
@@ -427,6 +463,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                           settings.display.defaultView) ||
                                       'Keypad'
                             }
+                            backBehavior='none'
                             screenOptions={({ route }) => ({
                                 tabBarIcon: ({ color }) => {
                                     if (route.name === 'Keypad') {
