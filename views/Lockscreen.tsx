@@ -11,7 +11,7 @@ import TextInput from '../components/TextInput';
 
 import SettingsStore from '../stores/SettingsStore';
 
-import { getIsBiometryRequired, verifyBiometry } from '../utils/BiometricUtils';
+import { verifyBiometry } from '../utils/BiometricUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -76,7 +76,7 @@ export default class Lockscreen extends React.Component<
         const posEnabled: boolean =
             (settings && settings.pos && settings.pos.squareEnabled) || false;
 
-        const isBiometryRequired = getIsBiometryRequired(settings);
+        const isBiometryRequired = SettingsStore.isBiometryRequired();
 
         if (
             isBiometryRequired &&

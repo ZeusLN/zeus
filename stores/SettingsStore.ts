@@ -673,6 +673,18 @@ export default class SettingsStore {
         });
     };
 
+    public loginRequired = () =>
+        this.settings &&
+        (this.settings.passphrase ||
+            this.settings.pin ||
+            this.isBiometryRequired()) &&
+        !this.loggedIn;
+
+    public isBiometryRequired = () =>
+        this.settings != null &&
+        this.settings.isBiometryEnabled &&
+        this.settings.supportedBiometryType !== undefined;
+
     @action
     public setLoginStatus = (status = false) => {
         this.loggedIn = status;
