@@ -31,27 +31,27 @@ interface SecurityState {
 
 const possibleSecurityItems = [
     {
-        label: localeString('views.Settings.SetPassword.title'),
+        translateKey: 'views.Settings.SetPassword.title',
         screen: 'SetPassword'
     },
     {
-        label: localeString('views.Settings.SetDuressPassword.title'),
+        translateKey: 'views.Settings.SetDuressPassword.title',
         screen: 'SetDuressPassword'
     },
     {
-        label: localeString('views.Settings.SetPin.title'),
+        translateKey: 'views.Settings.SetPin.title',
         screen: 'SetPin'
     },
     {
-        label: localeString('views.Settings.Security.deletePIN'),
+        translateKey: 'views.Settings.Security.deletePIN',
         action: 'DeletePin'
     },
     {
-        label: localeString('views.Settings.SetDuressPin.title'),
+        translateKey: 'views.Settings.SetDuressPin.title',
         screen: 'SetDuressPin'
     },
     {
-        label: localeString('views.Settings.Security.deleteDuressPIN'),
+        translateKey: 'views.Settings.Security.deleteDuressPIN',
         action: 'DeleteDuressPin'
     }
 ];
@@ -203,7 +203,7 @@ export default class Security extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }}
                     >
-                        {item.label}
+                        {localeString(item.translateKey)}
                     </ListItem.Title>
                 </ListItem.Content>
                 <Icon
@@ -243,7 +243,9 @@ export default class Security extends React.Component<
                     <FlatList
                         data={displaySecurityItems}
                         renderItem={this.renderItem}
-                        keyExtractor={(item, index) => `${item.label}-${index}`}
+                        keyExtractor={(item, index) =>
+                            `${item.translateKey}-${index}`
+                        }
                         ItemSeparatorComponent={this.renderSeparator}
                     />
                     {settings.supportedBiometryType !== undefined && (
