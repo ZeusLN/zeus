@@ -10,6 +10,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { themeColor } from './../utils/ThemeUtils';
 import CaretDown from './../assets/images/SVG/Caret Down.svg';
+import { localeString } from './../utils/LocaleUtils';
 
 interface DropdownSettingProps {
     title: string;
@@ -27,16 +28,21 @@ export default class DropdownSetting extends React.Component<
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
-        values.forEach((value: { key: string; value: string }) => {
-            pickerValuesAndroid.push(
-                <Picker.Item
-                    key={value.key}
-                    label={value.key}
-                    value={value.value}
-                />
-            );
-            pickerValuesIOS.push(value.key);
-        });
+        values.forEach(
+            (value: { key: string; translateKey: string; value: string }) => {
+                const translatedKey = value.translateKey
+                    ? localeString(value.translateKey)
+                    : undefined;
+                pickerValuesAndroid.push(
+                    <Picker.Item
+                        key={value.key}
+                        label={translatedKey ?? value.key}
+                        value={value.value}
+                    />
+                );
+                pickerValuesIOS.push(value.key);
+            }
+        );
 
         const displayItem = values.filter(
             (value: any) => value.value === selectedValue
