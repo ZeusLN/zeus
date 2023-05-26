@@ -33,4 +33,17 @@ export default class ModalStore {
     public toggleAndroidNfcModal = (status: boolean) => {
         this.showAndroidNfcModal = status;
     };
+
+    @action
+    public closeVisibleModalDialog = () => {
+        if (this.showExternalLinkModal) {
+            this.showExternalLinkModal = false;
+            return true;
+        }
+        if (this.showAndroidNfcModal) {
+            this.showAndroidNfcModal = false;
+            return true;
+        }
+        return false;
+    };
 }
