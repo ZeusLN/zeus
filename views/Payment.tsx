@@ -238,6 +238,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     })
                                 }
                                 containerStyle={{ marginTop: 15 }}
+                                secondary
+                                noUppercase
                             />
                         )}
                     </View>

@@ -259,6 +259,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                     })
                                 }
                                 containerStyle={{ marginTop: 15 }}
+                                secondary
+                                noUppercase
                             />
                         )}
                     </View>

@@ -321,7 +321,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             onPress={() =>
                                 navigation.navigate('AddNotes', { txid: tx })
                             }
-                            containerStyle={{ marginTop: 15 }}
+                            containerStyle={{ marginTop: 20 }}
                             secondary
                             noUppercase
                         />
