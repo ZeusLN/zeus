@@ -79,7 +79,7 @@ export default class Payment extends BaseModel {
 
     @computed public get getAmount(): number | string {
         return this.amount_msat
-            ? Number(this.amount_msat.replace('msat', '')) / 1000
+            ? Number(this.amount_msat.toString().replace('msat', '')) / 1000
             : this.value || Number(this.msatoshi_sent) / 1000 || 0;
     }
 
@@ -92,9 +92,11 @@ export default class Payment extends BaseModel {
         // c-lightning-REST
         if (this.amount_msat && this.amount_sent_msat) {
             const msatoshi_sent: any = Number(
-                this.amount_sent_msat.replace('msat', '')
+                this.amount_sent_msat.toString().replace('msat', '')
             );
-            const msatoshi: any = Number(this.amount_msat.replace('msat', ''));
+            const msatoshi: any = Number(
+                this.amount_msat.toString().replace('msat', '')
+            );
             const fee = Number(msatoshi_sent - msatoshi) / 1000;
             return fee.toString();
         }

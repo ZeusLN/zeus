@@ -127,6 +127,10 @@ export default class Invoice extends BaseModel {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
         }
+        if (this.amount_received_msat) {
+            const msatoshi = this.amount_received_msat.toString();
+            return Number(msatoshi.replace('msat', '')) / 1000;
+        }
         return this.settled
             ? Number(this.amt_paid_sat)
             : Number(this.value) || Number(this.amt) || 0;
@@ -136,6 +140,10 @@ export default class Invoice extends BaseModel {
     @computed public get getRequestAmount(): number {
         if (this.msatoshi) {
             const msatoshi = this.msatoshi.toString();
+            return Number(msatoshi.replace('msat', '')) / 1000;
+        }
+        if (this.amount_msat) {
+            const msatoshi = this.amount_msat.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
         }
         if (this.millisatoshis) {
