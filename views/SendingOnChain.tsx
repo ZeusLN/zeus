@@ -1,4 +1,5 @@
 import * as React from 'react';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
@@ -30,11 +31,27 @@ export default class SendingOnChain extends React.Component<
     SendingOnChainProps,
     {}
 > {
+    state = {
+        storedNotes: ''
+    };
+    async componentDidMount() {
+        const { TransactionsStore, navigation } = this.props;
+        navigation.addListener('didFocus', () => {
+            EncryptedStorage.getItem('note-' + TransactionsStore.txid)
+                .then((storedNotes) => {
+                    this.setState({ storedNotes });
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        });
+    }
     render() {
         const { NodeInfoStore, TransactionsStore, navigation } = this.props;
         const { loading, publishSuccess, error, error_msg, txid } =
             TransactionsStore;
         const { testnet } = NodeInfoStore;
+        const { storedNotes } = this.state;
 
         return (
             <Screen>
@@ -135,27 +152,47 @@ export default class SendingOnChain extends React.Component<
 
                         <View style={styles.buttons}>
                             {txid && (
-                                <Button
-                                    title={localeString(
-                                        'views.SendingOnChain.goToBlockExplorer'
-                                    )}
-                                    onPress={() =>
-                                        UrlUtils.goToBlockExplorerTXID(
-                                            txid,
-                                            testnet
-                                        )
-                                    }
-                                    containerStyle={{
-                                        width: '100%',
-                                        margin: 20
-                                    }}
-                                    secondary
-                                    icon={{
-                                        name: 'exit-to-app',
-                                        size: 25
-                                    }}
-                                    buttonStyle={{ padding: 10 }}
-                                />
+                                <>
+                                    <Button
+                                        title={
+                                            storedNotes
+                                                ? localeString(
+                                                      'views.SendingLightning.UpdateNote'
+                                                  )
+                                                : localeString(
+                                                      'views.SendingLightning.AddANote'
+                                                  )
+                                        }
+                                        onPress={() =>
+                                            navigation.navigate('AddNotes', {
+                                                txid
+                                            })
+                                        }
+                                        secondary
+                                        buttonStyle={{ padding: 14 }}
+                                    />
+                                    <Button
+                                        title={localeString(
+                                            'views.SendingOnChain.goToBlockExplorer'
+                                        )}
+                                        onPress={() =>
+                                            UrlUtils.goToBlockExplorerTXID(
+                                                txid,
+                                                testnet
+                                            )
+                                        }
+                                        containerStyle={{
+                                            width: '100%',
+                                            margin: 20
+                                        }}
+                                        secondary
+                                        icon={{
+                                            name: 'exit-to-app',
+                                            size: 25
+                                        }}
+                                        buttonStyle={{ padding: 10 }}
+                                    />
+                                </>
                             )}
 
                             {error && (

@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, View } from 'react-native';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -16,6 +17,9 @@ import LnurlPayStore from '../stores/LnurlPayStore';
 
 import LnurlPayHistorical from './LnurlPay/Historical';
 
+import EditNotes from '../assets/images/SVG/Pen.svg';
+import Button from '../components/Button';
+
 interface PaymentProps {
     navigation: any;
     LnurlPayStore: LnurlPayStore;
@@ -25,7 +29,8 @@ interface PaymentProps {
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     state = {
-        lnurlpaytx: null
+        lnurlpaytx: null,
+        storedNotes: ''
     };
 
     async componentDidMount() {
@@ -35,10 +40,20 @@ export default class PaymentView extends React.Component<PaymentProps> {
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
+        navigation.addListener('didFocus', () => {
+            EncryptedStorage.getItem('note-' + payment.payment_hash)
+                .then((storedNotes) => {
+                    this.setState({ storedNotes });
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        });
     }
 
     render() {
         const { navigation } = this.props;
+        const { storedNotes } = this.state;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
@@ -53,6 +68,17 @@ export default class PaymentView extends React.Component<PaymentProps> {
 
         const lnurlpaytx = this.state.lnurlpaytx;
 
+        const EditNotesButton = () => (
+            <TouchableOpacity
+                onPress={() =>
+                    navigation.navigate('AddNotes', { payment_hash })
+                }
+                style={{ marginTop: -12 }}
+            >
+                <EditNotes height={40} width={40} />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <Header
@@ -64,6 +90,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={<EditNotesButton />}
                     navigation={navigation}
                 />
                 <ScrollView>
@@ -176,6 +203,44 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     color={themeColor('secondaryText')}
                                 />
                             </ListItem>
+                        )}
+                        {storedNotes && (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        payment_hash
+                                    })
+                                }
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Payment.notes'
+                                    )}
+                                    value={storedNotes}
+                                    sensitive
+                                />
+                            </TouchableOpacity>
+                        )}
+                        {payment_hash && (
+                            <Button
+                                title={
+                                    storedNotes
+                                        ? localeString(
+                                              'views.SendingLightning.UpdateNote'
+                                          )
+                                        : localeString(
+                                              'views.SendingLightning.AddANote'
+                                          )
+                                }
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        payment_hash
+                                    })
+                                }
+                                containerStyle={{ marginTop: 15 }}
+                                secondary
+                                noUppercase
+                            />
                         )}
                     </View>
                 </ScrollView>

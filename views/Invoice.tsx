@@ -1,24 +1,47 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, View } from 'react-native';
+import EncryptedStorage from 'react-native-encrypted-storage';
+
+import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { Icon } from 'react-native-elements';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
+import Button from '../components/Button';
+import { Row } from '../components/layout/Row';
 
 import Invoice from '../models/Invoice';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import EditNotes from '../assets/images/SVG/Pen.svg';
+
 interface InvoiceProps {
     navigation: any;
 }
 
 export default class InvoiceView extends React.Component<InvoiceProps> {
+    state = {
+        storedNotes: ''
+    };
+    async componentDidMount() {
+        const { navigation } = this.props;
+        const invoice: Invoice = navigation.getParam('invoice', null);
+        navigation.addListener('didFocus', () => {
+            EncryptedStorage.getItem('note-' + invoice.getRPreimage)
+                .then((storedNotes) => {
+                    this.setState({ storedNotes });
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        });
+    }
     render() {
         const { navigation } = this.props;
+        const { storedNotes } = this.state;
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
             fallback_addr,
@@ -37,14 +60,26 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const privateInvoice = invoice.private;
 
         const QRButton = () => (
-            <Icon
-                name="qr-code"
-                onPress={() => {
-                    navigation.navigate('QR', { value: getPaymentRequest });
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
+            <View style={{ marginTop: -12 }}>
+                <Icon
+                    name="qr-code"
+                    onPress={() => {
+                        navigation.navigate('QR', { value: getPaymentRequest });
+                    }}
+                    color={themeColor('text')}
+                    underlayColor="transparent"
+                />
+            </View>
+        );
+        const EditNotesButton = () => (
+            <TouchableOpacity
+                onPress={() =>
+                    navigation.navigate('AddNotes', { getRPreimage })
+                }
+                style={{ marginTop: -12, alignSelf: 'center', marginRight: 6 }}
+            >
+                <EditNotes height={40} width={40} />
+            </TouchableOpacity>
         );
 
         return (
@@ -58,7 +93,12 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    rightComponent={!!getPaymentRequest && <QRButton />}
+                    rightComponent={
+                        <Row>
+                            <EditNotesButton />
+                            {!!getPaymentRequest && <QRButton />}
+                        </Row>
+                    }
                     navigation={navigation}
                 />
                 <ScrollView>
@@ -181,6 +221,46 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 )}
                                 value={payment_hash}
                                 sensitive
+                            />
+                        )}
+
+                        {storedNotes && (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        getRPreimage
+                                    })
+                                }
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Payment.notes'
+                                    )}
+                                    value={storedNotes}
+                                    sensitive
+                                />
+                            </TouchableOpacity>
+                        )}
+
+                        {getRPreimage && (
+                            <Button
+                                title={
+                                    storedNotes
+                                        ? localeString(
+                                              'views.SendingLightning.UpdateNote'
+                                          )
+                                        : localeString(
+                                              'views.SendingLightning.AddANote'
+                                          )
+                                }
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        getRPreimage
+                                    })
+                                }
+                                containerStyle={{ marginTop: 15 }}
+                                secondary
+                                noUppercase
                             />
                         )}
                     </View>
