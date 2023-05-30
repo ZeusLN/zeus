@@ -1,4 +1,6 @@
 import * as React from 'react';
+import EncryptedStorage from 'react-native-encrypted-storage';
+
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import LnurlPaySuccess from './LnurlPay/Success';
@@ -32,6 +34,21 @@ export default class SendingLightning extends React.Component<
     SendingLightningProps,
     {}
 > {
+    state = {
+        storedNotes: ''
+    };
+    async componentDidMount() {
+        const { TransactionsStore, navigation } = this.props;
+        navigation.addListener('didFocus', () => {
+            EncryptedStorage.getItem('note-' + TransactionsStore.payment_hash)
+                .then((storedNotes) => {
+                    this.setState({ storedNotes });
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        });
+    }
     render() {
         const { TransactionsStore, LnurlPayStore, navigation } = this.props;
         const {
@@ -44,6 +61,7 @@ export default class SendingLightning extends React.Component<
             payment_error,
             status
         } = TransactionsStore;
+        const { storedNotes } = this.state;
         const success =
             payment_route || status === 'complete' || status === 'SUCCEEDED';
 
@@ -189,7 +207,26 @@ export default class SendingLightning extends React.Component<
                                 />
                             </View>
                         )}
-
+                        {!loading && !(!!error || !!payment_error) && (
+                            <Button
+                                title={
+                                    storedNotes
+                                        ? localeString(
+                                              'views.SendingLightning.UpdateNote'
+                                          )
+                                        : localeString(
+                                              'views.SendingLightning.AddANote'
+                                          )
+                                }
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        payment_hash
+                                    })
+                                }
+                                secondary
+                                buttonStyle={{ padding: 15 }}
+                            />
+                        )}
                         <View style={styles.buttons}>
                             {payment_hash && !(!!error || !!payment_error) && (
                                 <View

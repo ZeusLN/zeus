@@ -67,6 +67,7 @@ import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 import BumpFee from './views/BumpFee';
 import QR from './views/QR';
+import AddNotes from './views/AddNotes';
 
 // POS
 import Order from './views/Order';
@@ -262,6 +263,9 @@ const AppScenes = {
     },
     QR: {
         screen: QR
+    },
+    AddNotes: {
+        screen: AddNotes
     }
 };
 
