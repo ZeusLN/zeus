@@ -82,7 +82,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             settings && settings.pos && settings.pos.merchantName;
 
         const fiatEntry =
-            fiat && fiatRates && fiatRates.filter
+            fiat && fiatRates
                 ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
                 : null;
 

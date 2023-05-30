@@ -36,6 +36,7 @@ import SetPin from './views/Settings/SetPin';
 import SetDuressPin from './views/Settings/SetDuressPin';
 import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
+import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import SignVerifyMessage from './views/Settings/SignVerifyMessage';
@@ -129,6 +130,9 @@ const AppScenes = {
     },
     Currency: {
         screen: Currency
+    },
+    SelectCurrency: {
+        screen: SelectCurrency
     },
     Display: {
         screen: Display
