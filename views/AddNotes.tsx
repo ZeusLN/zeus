@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, TextInput } from 'react-native';
+import { Keyboard, View, TextInput } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { inject, observer } from 'mobx-react';
 
@@ -98,6 +98,8 @@ export default class AddNotes extends React.Component<
                         numberOfLines={0}
                         style={{ fontSize: 20, color: themeColor('text') }}
                         value={notes}
+                        placeholder={localeString('views.Payment.writeNote')}
+                        onSubmitEditing={() => Keyboard.dismiss()}
                     />
                 </View>
                 <Button
