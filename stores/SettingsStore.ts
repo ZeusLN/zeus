@@ -91,7 +91,11 @@ export interface Settings {
 export const BLOCK_EXPLORER_KEYS = [
     { key: 'mempool.space', value: 'mempool.space' },
     { key: 'blockstream.info', value: 'blockstream.info' },
-    { key: 'Custom', value: 'Custom' }
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom'
+    }
 ];
 
 export const INTERFACE_KEYS = [
@@ -209,32 +213,108 @@ export const CURRENCY_KEYS = [
 ];
 
 export const THEME_KEYS = [
-    { key: 'Dark', value: 'dark' },
-    { key: 'Light', value: 'light' },
-    { key: 'Junkie', value: 'junkie' },
-    { key: 'BPM', value: 'bpm' },
-    { key: 'Orange', value: 'orange' },
-    { key: 'Blacked Out', value: 'blacked-out' },
-    { key: 'Scarlet', value: 'scarlet' },
-    { key: 'Memberberry', value: 'purple' },
-    { key: 'Blueberry', value: 'blueberry' },
-    { key: 'Deep Purple', value: 'deep-purple' },
-    { key: 'Deadpool', value: 'deadpool' },
-    { key: 'Mighty', value: 'mighty' },
-    { key: 'Green', value: 'green' },
-    { key: 'Pub', value: 'pub' },
-    { key: 'Popsicle', value: 'popsicle' },
-    { key: 'Nostrich', value: 'nostrich' },
-    { key: 'Desert', value: 'desert' },
-    { key: 'Orange Cream Soda', value: 'orange-cream-soda' },
-    { key: 'Mint', value: 'mint' },
-    { key: 'Red Metallic', value: 'red-metallic' },
-    { key: 'Watermelon', value: 'watermelon' }
+    { key: 'Dark', translateKey: 'views.Settings.Theme.dark', value: 'dark' },
+    {
+        key: 'Light',
+        translateKey: 'views.Settings.Theme.light',
+        value: 'light'
+    },
+    {
+        key: 'Junkie',
+        translateKey: 'views.Settings.Theme.junkie',
+        value: 'junkie'
+    },
+    { key: 'BPM', translateKey: 'views.Settings.Theme.bpm', value: 'bpm' },
+    {
+        key: 'Orange',
+        translateKey: 'views.Settings.Theme.orange',
+        value: 'orange'
+    },
+    {
+        key: 'Blacked Out',
+        translateKey: 'views.Settings.Theme.blacked-out',
+        value: 'blacked-out'
+    },
+    {
+        key: 'Scarlet',
+        translateKey: 'views.Settings.Theme.scarlet',
+        value: 'scarlet'
+    },
+    {
+        key: 'Memberberry',
+        translateKey: 'views.Settings.Theme.purple',
+        value: 'purple'
+    },
+    {
+        key: 'Blueberry',
+        translateKey: 'views.Settings.Theme.blueberry',
+        value: 'blueberry'
+    },
+    {
+        key: 'Deep Purple',
+        translateKey: 'views.Settings.Theme.deep-purple',
+        value: 'deep-purple'
+    },
+    {
+        key: 'Deadpool',
+        translateKey: 'views.Settings.Theme.deadpool',
+        value: 'deadpool'
+    },
+    {
+        key: 'Mighty',
+        translateKey: 'views.Settings.Theme.mighty',
+        value: 'mighty'
+    },
+    {
+        key: 'Green',
+        translateKey: 'views.Settings.Theme.green',
+        value: 'green'
+    },
+    { key: 'Pub', translateKey: 'views.Settings.Theme.pub', value: 'pub' },
+    {
+        key: 'Popsicle',
+        translateKey: 'views.Settings.Theme.popsicle',
+        value: 'popsicle'
+    },
+    {
+        key: 'Nostrich',
+        translateKey: 'views.Settings.Theme.nostrich',
+        value: 'nostrich'
+    },
+    {
+        key: 'Desert',
+        translateKey: 'views.Settings.Theme.desert',
+        value: 'desert'
+    },
+    {
+        key: 'Orange Cream Soda',
+        translateKey: 'views.Settings.Theme.orange-cream-soda',
+        value: 'orange-cream-soda'
+    },
+    { key: 'Mint', translateKey: 'views.Settings.Theme.mint', value: 'mint' },
+    {
+        key: 'Red Metallic',
+        translateKey: 'views.Settings.Theme.red-metallic',
+        value: 'red-metallic'
+    },
+    {
+        key: 'Watermelon',
+        translateKey: 'views.Settings.Theme.watermelon',
+        value: 'watermelon'
+    }
 ];
 
 export const DEFAULT_VIEW_KEYS = [
-    { key: 'Balance', value: 'Balance' },
-    { key: 'Keypad', value: 'Keypad' }
+    {
+        key: 'Balance',
+        translateKey: 'views.Settings.Display.DefaultView.balance',
+        value: 'Balance'
+    },
+    {
+        key: 'Keypad',
+        translateKey: 'views.Settings.Display.DefaultView.keypad',
+        value: 'Keypad'
+    }
 ];
 
 export const DEFAULT_THEME = 'dark';

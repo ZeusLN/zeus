@@ -7,6 +7,7 @@ import { Body } from '../text/Body';
 import { Row } from '../layout/Row';
 import { Spacer } from '../layout/Spacer';
 import Amount from '../Amount';
+import { localeString } from '../../utils/LocaleUtils';
 
 function TotalRow({
     kind,
@@ -29,8 +30,9 @@ function TotalRow({
                     }}
                 />
                 <Spacer width={8} />
-                {/* TODO: localize */}
-                <Body secondary>Total {kind}</Body>
+                <Body secondary>
+                    {localeString('views.Channel.Total.' + kind)}
+                </Body>
             </Row>
             <Amount sats={amount} sensitive toggleable />
         </Row>
