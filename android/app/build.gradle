@@ -131,8 +131,8 @@ android {
         applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 70
-        versionName "0.7.5"
+        versionCode 71
+        versionName "0.7.6-beta1"
         multiDexEnabled true
         missingDimensionStrategy 'react-native-camera', 'general'
     }
