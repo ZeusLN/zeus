@@ -36,51 +36,8 @@ export default class CLightningREST extends LND {
             transactions: data.outputs
         }));
     getChannels = () =>
-        this.getRequest('/v1/peer/listPeers').then((data: any) => ({
+        this.getRequest('/v1/channel/listChannels').then((data: any) => ({
             channels: data
-                .filter((peer: any) => peer.channels.length)
-                .map((peer: any) => {
-                    const channel =
-                        peer.channels.find(
-                            (c: any) =>
-                                c.state !== 'ONCHAIN' && c.state !== 'CLOSED'
-                        ) || peer.channels[0];
-
-                    return {
-                        active: peer.connected,
-                        remote_pubkey: peer.id,
-                        channel_point: channel.funding_txid,
-                        chan_id: channel.channel_id,
-                        alias: peer.alias,
-                        capacity: Number(
-                            channel.msatoshi_total / 1000
-                        ).toString(),
-                        local_balance: Number(
-                            channel.msatoshi_to_us / 1000
-                        ).toString(),
-                        remote_balance: Number(
-                            (channel.msatoshi_total - channel.msatoshi_to_us) /
-                                1000
-                        ).toString(),
-                        total_satoshis_sent: Number(
-                            channel.out_msatoshi_fulfilled / 1000
-                        ).toString(),
-                        total_satoshis_received: Number(
-                            channel.in_msatoshi_fulfilled / 1000
-                        ).toString(),
-                        num_updates: (
-                            channel.in_payments_offered +
-                            channel.out_payments_offered
-                        ).toString(),
-                        csv_delay: channel.our_to_self_delay,
-                        private: channel.private,
-                        local_chan_reserve_sat:
-                            channel.our_channel_reserve_satoshis.toString(),
-                        remote_chan_reserve_sat:
-                            channel.their_channel_reserve_satoshis.toString(),
-                        close_address: channel.close_to_addr
-                    };
-                })
         }));
     getBlockchainBalance = () =>
         this.getRequest('/v1/getBalance').then(

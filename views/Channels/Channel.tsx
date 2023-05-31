@@ -126,6 +126,7 @@ export default class ChannelView extends React.Component<
         const { testnet } = NodeInfoStore;
 
         const {
+            alias,
             channel_point,
             commit_weight,
             localBalance,
@@ -170,7 +171,10 @@ export default class ChannelView extends React.Component<
         );
         const bumpable: boolean = pendingOpen;
 
-        const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
+        const peerDisplay = PrivacyUtils.sensitiveValue(
+            displayName || alias || remotePubkey || channelId,
+            8
+        );
 
         const EditFees = () => (
             <View style={{ top: -3 }}>
