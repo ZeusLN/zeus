@@ -16,6 +16,12 @@ Payout: 1,500,000 sats (0.015 BTC)
 
 Currently, the Zeus point of sale only works in tandem with the Square terminal API. We would like to expand support to Clover terminals. Check out the docs for the [Clover REST API](https://docs.clover.com/docs/making-rest-api-calls).
 
+## Accessibility fixes
+
+Payout: 1,000,000 sats (0.01 BTC)
+
+The fine folks over at the Bitcoin Design Community have detailed [an issue](https://github.com/ZeusLN/zeus/issues/1442) with our accessibility problems in Zeus.
+
 # Claimed Bounties
 
 ## Eclair support
