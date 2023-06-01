@@ -111,18 +111,18 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             DATA = [
                 {
                     layer: 'Lightning',
-                    balance: lightningBalance
+                    balance: Number(lightningBalance).toFixed(3)
                 }
             ];
         } else {
             DATA = [
                 {
                     layer: 'Lightning',
-                    balance: lightningBalance
+                    balance: Number(lightningBalance).toFixed(3)
                 },
                 {
                     layer: 'On-chain',
-                    balance: totalBlockchainBalance
+                    balance: Number(totalBlockchainBalance).toFixed(3)
                 }
             ];
         }
