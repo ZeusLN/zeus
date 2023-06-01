@@ -186,11 +186,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
         const { loginBackground } = settings;
-        const loginRequired =
-            settings &&
-            (!!settings.passphrase ||
-                !!settings.pin ||
-                settings.isBiometryEnabled);
+
+        const loginRequired = SettingsStore.loginRequired();
 
         if (nextAppState === 'background' && loginRequired && loginBackground) {
             // In case the lock screen is visible and a valid PIN is entered and home button is pressed,
@@ -353,12 +350,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const error = NodeInfoStore.error || SettingsStore.error;
         const { implementation, settings, loggedIn, connecting, posStatus } =
             SettingsStore;
-        const loginRequired =
-            !settings ||
-            (settings &&
-                (settings.passphrase || settings.pin) &&
-                !loggedIn &&
-                settings.pos);
+        const loginRequired = SettingsStore.loginRequired();
 
         const squareEnabled: boolean =
             (settings && settings.pos && settings.pos.squareEnabled) || false;
