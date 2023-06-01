@@ -29,7 +29,7 @@
     "@react-native-picker/picker": "2.4.8",
     "@react-navigation/bottom-tabs": "5.11.11",
     "@react-navigation/native": "6.0.16",
-    "@remobile/react-native-qrcode-local-image": "github:BlueWallet/react-native-qrcode-local-image#b8baa79",
+    "@remobile/react-native-qrcode-local-image": "github:BlueWallet/react-native-qrcode-local-image#master",
     "@tradle/react-native-http": "2.0.1",
     "@types/react-native-snap-carousel": "3.8.5",
     "assert": "1.5.0",
@@ -42,6 +42,7 @@
     "browserify-zlib": "0.1.4",
     "bs58check": "2.1.2",
     "buffer": "5.6.0",
+    "cktap-protocol-react-native": "git+https://github.com/bithyve/cktap-protocol-react-native.git#main",
     "console-browserify": "1.2.0",
     "constants-browserify": "1.0.0",
     "create-hash": "1.2.0",
@@ -49,6 +50,7 @@
     "dns.js": "1.0.1",
     "domain-browser": "1.2.0",
     "elliptic": "6.5.4",
+    "eslint-plugin-ft-flow": "2.0.3",
     "events": "1.1.1",
     "fast-sha256": "1.3.0",
     "hash.js": "1.1.7",
@@ -109,7 +111,8 @@
     "url": "0.10.3",
     "utf8": "3.0.0",
     "util": "0.10.4",
-    "vm-browserify": "0.0.4"
+    "vm-browserify": "0.0.4",
+    "wif": "2.0.6"
   },
   "devDependencies": {
     "@babel/core": "7.16.12",

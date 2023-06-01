@@ -23,6 +23,7 @@ import NodeOn from '../../assets/images/SVG/Node On.svg';
 import Olympus from '../../assets/images/SVG/Olympus.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
+import Satscard from '../../assets/images/SVG/Satscard.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
 
 import Header from '../../components/Header';
@@ -630,6 +631,39 @@ export default class Settings extends React.Component<
                                 }}
                             >
                                 {localeString('views.Settings.Display.title')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginBottom: 15
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Satscard')}
+                        >
+                            <View style={{ marginLeft: 7, marginTop: -5 }}>
+                                <Satscard
+                                    fill={themeColor('text')}
+                                    width={18}
+                                    heigh={18}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Satscard
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
