@@ -36,8 +36,15 @@ export default class Channel extends BaseModel {
     // c-lightning
     @observable
     state: string;
+    // CLN v23.05 msat deprecations
     msatoshi_total: string;
     msatoshi_to_us: string;
+    total_msat: string;
+    to_us_msat: string;
+    // CLN v23.05 msat new
+    total: string;
+    to_us: string;
+
     channel_id?: string;
     alias?: string;
     // pending
@@ -60,14 +67,25 @@ export default class Channel extends BaseModel {
 
     @computed
     public get localBalance(): string {
-        return this.msatoshi_to_us
+        return this.to_us
+            ? (Number(this.to_us) / 1000).toString()
+            : this.to_us_msat
+            ? (Number(this.to_us_msat) / 1000).toString()
+            : this.msatoshi_to_us
             ? (Number(this.msatoshi_to_us) / 1000).toString()
             : this.local_balance || '0';
     }
 
     @computed
     public get remoteBalance(): string {
-        return this.msatoshi_total
+        return this.total
+            ? ((Number(this.total) - Number(this.to_us)) / 1000).toString()
+            : this.total_msat
+            ? (
+                  (Number(this.total_msat) - Number(this.to_us_msat)) /
+                  1000
+              ).toString()
+            : this.msatoshi_total
             ? (
                   (Number(this.msatoshi_total) - Number(this.msatoshi_to_us)) /
                   1000

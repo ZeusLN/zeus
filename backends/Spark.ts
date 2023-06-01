@@ -75,23 +75,34 @@ export default class Spark {
                         )
                             return;
 
+                        // CLN v23.05 msat deprecations
                         const to_us_msat =
-                            channel.to_us_msat || channel.msatoshi_to_us || 0;
+                            channel.to_us ||
+                            channel.to_us_msat ||
+                            channel.msatoshi_to_us ||
+                            0;
                         const total_msat =
-                            channel.total_msat || channel.msatoshi_total || 0;
+                            channel.total ||
+                            channel.total_msat ||
+                            channel.msatoshi_total ||
+                            0;
                         const out_fulfilled_msat =
+                            channel.out_fulfilled ||
                             channel.out_fulfilled_msat ||
                             channel.out_msatoshi_fulfilled ||
                             0;
                         const in_fulfilled_msat =
+                            channel.in_fulfilled ||
                             channel.in_fulfilled_msat ||
                             channel.in_msatoshi_fulfilled ||
                             0;
                         const our_reserve_msat =
+                            channel.our_reserve ||
                             channel.our_reserve_msat ||
                             channel.our_channel_reserve_satoshis ||
                             0;
                         const their_reserve_msat =
+                            channel.their_reserve ||
                             channel.their_reserve_msat ||
                             channel.their_channel_reserve_satoshi ||
                             0;
