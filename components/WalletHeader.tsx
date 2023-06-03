@@ -49,7 +49,7 @@ const protectedNavigation = async (
             attemptAdminLogin: true
         });
     } else {
-        if (disactivatePOS) await setPosStatus('inactive');
+        if (disactivatePOS) setPosStatus('inactive');
         navigation.navigate(route);
     }
 };
@@ -113,7 +113,7 @@ const POSBadge = ({
     <TouchableOpacity
         onPress={async () => {
             getOrders();
-            await setPosStatus('active');
+            setPosStatus('active');
         }}
     >
         <POS stroke={themeColor('text')} width="34" height="34" />
