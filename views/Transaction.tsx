@@ -153,7 +153,10 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     />
                 </View>
 
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     {total_fees ? (
                         <KeyValue
                             keyValue={localeString(
