@@ -101,7 +101,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     }
                     navigation={navigation}
                 />
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     <View style={styles.center}>
                         <Amount
                             sats={invoice.getAmount}

@@ -750,6 +750,7 @@ export default class NodeConfiguration extends React.Component<
                 <ScrollView
                     ref="_scrollView"
                     style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.form}>
                         {!!createAccountError &&

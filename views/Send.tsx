@@ -439,7 +439,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                     }
                     navigation={navigation}
                 />
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <Text
                         style={{
                             ...styles.secondaryText,

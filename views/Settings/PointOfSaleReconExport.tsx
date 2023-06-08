@@ -43,6 +43,7 @@ export default class PointOfSaleReconExport extends React.PureComponent<
                     flex: 1,
                     backgroundColor: themeColor('background')
                 }}
+                keyboardShouldPersistTaps="handled"
             >
                 <Header
                     leftComponent="Back"

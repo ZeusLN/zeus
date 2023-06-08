@@ -98,7 +98,10 @@ export default class Privacy extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                <ScrollView style={{ flex: 1, padding: 15 }}>
+                <ScrollView
+                    style={{ flex: 1, padding: 15 }}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <DropdownSetting
                         title={localeString(
                             'views.Settings.Privacy.blockExplorer'

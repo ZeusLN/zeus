@@ -314,7 +314,10 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     navigation={navigation}
                 />
 
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     {lineItems.map((item: any, index: number) => {
                         const keyValue =
                             item.quantity > 1
