@@ -288,7 +288,7 @@ export default class LnurlAuth extends React.Component<
                 <View style={styles.content}>
                     <View style={styles.button}>
                         <Button
-                            title="Login"
+                            title={localeString('views.LnurlAuth.login')}
                             icon={{
                                 name: 'vpn-key',
                                 size: 25,

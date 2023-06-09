@@ -280,7 +280,9 @@ export default class LnurlPay extends React.Component<
                     ) : null}
                     <View style={styles.button}>
                         <Button
-                            title="Confirm"
+                            title={localeString(
+                                'views.LnurlPay.LnurlPay.confirm'
+                            )}
                             titleStyle={{
                                 color: themeColor('text')
                             }}
