@@ -153,7 +153,6 @@
     "views.Settings.AddEditNode.scanLndhub": "Σάρωση LNDHub QR",
     "views.Settings.AddEditNode.scanSpark": "Σάρωση Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Διαγραφή Διαμόρφωσης Κόμβου",
-    "views.Settings.AddEditNode.copyNode": "Αντιγραφή Διαμόρφωσης Κόμβου",
     "views.Settings.AddEditNode.nodeInterface": "Node interface",
     "views.Settings.AddEditNode.useTor": "Χρήση Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Pairing Phrase",

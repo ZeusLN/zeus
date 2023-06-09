@@ -153,7 +153,6 @@
     "views.Settings.AddEditNode.scanLndhub": "Skannaa LNDHub QR",
     "views.Settings.AddEditNode.scanSpark": "Skannaa Spark QR-koodi",
     "views.Settings.AddEditNode.deleteNode": "Poista solmun konfiguraatio",
-    "views.Settings.AddEditNode.copyNode": "Kopioi solmun konfiguraatio",
     "views.Settings.AddEditNode.nodeInterface": "Solmun käyttöliittymä",
     "views.Settings.AddEditNode.useTor": "Käytä Toria",
     "views.Settings.AddEditNode.pairingPhrase": "Parilause",

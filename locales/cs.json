@@ -153,7 +153,6 @@
     "views.Settings.AddEditNode.scanLndhub": "Skenovat QR LNDHub",
     "views.Settings.AddEditNode.scanSpark": "Skenovat Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Odstranit konfiguraci uzlu",
-    "views.Settings.AddEditNode.copyNode": "Kopírovat konfiguraci uzlu",
     "views.Settings.AddEditNode.nodeInterface": "Rozhraní uzlu",
     "views.Settings.AddEditNode.useTor": "Použít Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Fráze pro párování",
