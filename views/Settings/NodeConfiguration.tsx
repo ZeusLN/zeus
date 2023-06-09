@@ -1295,7 +1295,7 @@ export default class NodeConfiguration extends React.Component<
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.AddEditNode.copyNode'
+                                    'views.Settings.AddEditNode.duplicateNode'
                                 )}
                                 onPress={() => {
                                     /**

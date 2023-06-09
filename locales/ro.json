@@ -153,7 +153,6 @@
     "views.Settings.AddEditNode.scanLndhub": "Scanează cod QR pentru LNDHub",
     "views.Settings.AddEditNode.scanSpark": "Scanează QR Spark",
     "views.Settings.AddEditNode.deleteNode": "Șterge configurația nodului",
-    "views.Settings.AddEditNode.copyNode": "Copiază configurația nodului",
     "views.Settings.AddEditNode.nodeInterface": "Interfața nodului",
     "views.Settings.AddEditNode.useTor": "Folosește Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Fraza de potrivire",

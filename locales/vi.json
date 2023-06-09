@@ -153,7 +153,6 @@
     "views.Settings.AddEditNode.scanLndhub": "Quét mã QR LNDHub",
     "views.Settings.AddEditNode.scanSpark": "Quét Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Xoá thiết lập Nút",
-    "views.Settings.AddEditNode.copyNode": "Sao chép thiết lập Nút",
     "views.Settings.AddEditNode.nodeInterface": "Giao diện Nút",
     "views.Settings.AddEditNode.useTor": "Dùng Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Pairing Phrase",

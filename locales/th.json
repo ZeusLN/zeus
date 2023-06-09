@@ -153,7 +153,6 @@
     "views.Settings.AddEditNode.scanLndhub": "สแกน QR ของ LNDHub",
     "views.Settings.AddEditNode.scanSpark": "Scan Spark QR",
     "views.Settings.AddEditNode.deleteNode": "ลบการตั้งค่าโหนด",
-    "views.Settings.AddEditNode.copyNode": "Copy Node config",
     "views.Settings.AddEditNode.nodeInterface": "อินเตอร์เฟสของโหนด",
     "views.Settings.AddEditNode.useTor": "Use Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Pairing Phrase",
