@@ -256,7 +256,7 @@ export default class LnurlChannel extends React.Component<
                     </View>
                     <View style={styles.button}>
                         <Button
-                            title="Connect"
+                            title={localeString('views.LnurlChannel.connect')}
                             icon={{
                                 name: 'send',
                                 size: 25,
