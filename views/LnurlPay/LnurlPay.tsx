@@ -170,7 +170,7 @@ export default class LnurlPay extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Send',
+                        text: localeString('general.send'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
