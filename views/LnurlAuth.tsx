@@ -257,7 +257,7 @@ export default class LnurlAuth extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Authentication Request',
+                        text: localeString('views.LnurlAuth.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'

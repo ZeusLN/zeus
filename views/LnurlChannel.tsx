@@ -187,7 +187,7 @@ export default class LnurlChannel extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Incoming Channel',
+                        text: localeString('views.LnurlChannel.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
