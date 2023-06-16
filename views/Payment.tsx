@@ -53,7 +53,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
 
     render() {
         const { navigation } = this.props;
-        const { storedNotes } = this.state;
+        const { storedNotes, lnurlpaytx } = this.state;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
@@ -65,8 +65,6 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getMemo
         } = payment;
         const date = getDisplayTime;
-
-        const lnurlpaytx = this.state.lnurlpaytx;
 
         const EditNotesButton = () => (
             <TouchableOpacity
@@ -105,7 +103,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     </View>
 
                     {lnurlpaytx && (
-                        <View style={styles.content}>
+                        <View style={styles.historical}>
                             <LnurlPayHistorical
                                 navigation={navigation}
                                 lnurlpaytx={lnurlpaytx}
@@ -253,6 +251,9 @@ const styles = StyleSheet.create({
     content: {
         paddingLeft: 20,
         paddingRight: 20
+    },
+    historical: {
+        padding: 20
     },
     center: {
         alignItems: 'center',
