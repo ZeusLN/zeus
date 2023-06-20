@@ -417,12 +417,12 @@ export default class Settings extends React.Component<
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: 90,
-                                borderRadius: 10,
+                                height: 45,
+                                // borderRadius: 10,
                                 alignSelf: 'center'
                             }}
                         >
-                            <View style={styles.columnField}>
+                            {/* <View style={styles.columnField}>
                                 <View>
                                     <AccountIcon stroke={themeColor('text')} />
                                 </View>
@@ -437,25 +437,32 @@ export default class Settings extends React.Component<
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon />
                                 </View>
-                            </View>
-
-                            <View style={styles.separationLine} />
-                            <View style={styles.columnField}>
-                                <View>
-                                    <ContactIcon stroke={themeColor('text')} />
+                            </View> */}
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('ContactsSettings')
+                                }
+                            >
+                                <View style={styles.columnField}>
+                                    <View>
+                                        <ContactIcon
+                                            stroke={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        Contacts
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
                                 </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    Contacts
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
-                                </View>
-                            </View>
+                                <View style={styles.separationLine} />
+                            </TouchableOpacity>
                         </View>
                     )}
                     {selectedNode && BackendUtils.isLNDBased() && (
@@ -469,6 +476,33 @@ export default class Settings extends React.Component<
                                 marginBottom: 5
                             }}
                         >
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('ContactsSettings')
+                                }
+                            >
+                                <View style={styles.columnField}>
+                                    <View>
+                                        <ContactIcon
+                                            stroke={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        Contacts
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </View>
+                                <View style={styles.separationLine} />
+                            </TouchableOpacity>
+                            <View style={styles.separationLine} />
+
                             <TouchableOpacity
                                 style={styles.columnField}
                                 onPress={() =>
