@@ -102,7 +102,10 @@ export default class EditFee extends React.Component<
                     behavior="position"
                     keyboardVerticalOffset={keyboardVerticalOffset}
                 >
-                    <ScrollView style={{ paddingTop: 10, alignSelf: 'center' }}>
+                    <ScrollView
+                        style={{ paddingTop: 10, alignSelf: 'center' }}
+                        keyboardShouldPersistTaps="handled"
+                    >
                         {loading && !error && (
                             <View style={{ flex: 1, justifyContent: 'center' }}>
                                 <LightningIndicator />

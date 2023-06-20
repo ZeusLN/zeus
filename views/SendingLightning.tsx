@@ -69,7 +69,7 @@ export default class SendingLightning extends React.Component<
 
         return (
             <Screen>
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     <View
                         style={{
                             ...styles.content
