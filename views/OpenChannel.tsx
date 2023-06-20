@@ -318,7 +318,7 @@ export default class OpenChannel extends React.Component<
                             </View>
                             <View style={styles.button}>
                                 <Button
-                                    title="Cancel"
+                                    title={localeString('general.cancel')}
                                     onPress={() => this.clearImportSuggestion()}
                                     tertiary
                                 />
