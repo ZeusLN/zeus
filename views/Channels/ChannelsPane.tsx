@@ -20,75 +20,6 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-const CHANNELS_SORT_KEYS = [
-    {
-        key: `${localeString('views.Channel.capacity')} (${localeString(
-            'views.Channel.SortButton.largestFirst'
-        )})`,
-        value: {
-            param: 'channelCapacity',
-            dir: 'DESC',
-            type: 'numeric'
-        }
-    },
-    {
-        key: `${localeString('views.Channel.capacity')} (${localeString(
-            'views.Channel.SortButton.smallestFirst'
-        )})`,
-        value: { param: 'channelCapacity', dir: 'ASC', type: 'numeric' }
-    },
-
-    {
-        key: `${localeString('views.Channel.inbound')} ${localeString(
-            'views.Channel.capacity'
-        )} (${localeString('views.Channel.SortButton.largestFirst')})`,
-        value: { param: 'remoteBalance', dir: 'DESC', type: 'numeric' }
-    },
-    {
-        key: `${localeString('views.Channel.inbound')} ${localeString(
-            'views.Channel.capacity'
-        )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
-        value: { param: 'remoteBalance', dir: 'ASC', type: 'numeric' }
-    },
-
-    {
-        key: `${localeString('views.Channel.outbound')} ${localeString(
-            'views.Channel.capacity'
-        )} (${localeString('views.Channel.SortButton.largestFirst')})`,
-        value: { param: 'localBalance', dir: 'DESC', type: 'numeric' }
-    },
-    {
-        key: `${localeString('views.Channel.outbound')} ${localeString(
-            'views.Channel.capacity'
-        )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
-        value: { param: 'localBalance', dir: 'ASC', type: 'numeric' }
-    },
-    {
-        key: `${localeString('views.Channel.displayName')} (${localeString(
-            'views.Channel.SortButton.ascending'
-        )})`,
-        value: { param: 'displayName', dir: 'ASC', type: 'alphanumeric' }
-    },
-    {
-        key: `${localeString('views.Channel.displayName')} (${localeString(
-            'views.Channel.SortButton.descending'
-        )})`,
-        value: { param: 'displayName', dir: 'DESC', type: 'alphanumeric' }
-    }
-    // {
-    //     key: `${localeString('views.Channel.channelId')} (${localeString(
-    //         'views.Channel.SortButton.ascending'
-    //     )})`,
-    //     value: { param: 'channelId', dir: 'ASC', type: 'alphanumeric' }
-    // },
-    // {
-    //     key: `${localeString('views.Channel.channelId')} (${localeString(
-    //         'views.Channel.SortButton.descending'
-    //     )})`,
-    //     value: { param: 'channelId', dir: 'DESC', type: 'alphanumeric' }
-    // }
-];
-
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
     Good = 'Good',
@@ -108,6 +39,73 @@ interface ChannelsProps {
 @inject('ChannelsStore', 'SettingsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
+    private getChannelsSortKeys = () => [
+        {
+            key: `${localeString('views.Channel.capacity')} (${localeString(
+                'views.Channel.SortButton.largestFirst'
+            )})`,
+            value: {
+                param: 'channelCapacity',
+                dir: 'DESC',
+                type: 'numeric'
+            }
+        },
+        {
+            key: `${localeString('views.Channel.capacity')} (${localeString(
+                'views.Channel.SortButton.smallestFirst'
+            )})`,
+            value: { param: 'channelCapacity', dir: 'ASC', type: 'numeric' }
+        },
+        {
+            key: `${localeString(
+                'views.Channel.inboundCapacity'
+            )} (${localeString('views.Channel.SortButton.largestFirst')})`,
+            value: { param: 'remoteBalance', dir: 'DESC', type: 'numeric' }
+        },
+        {
+            key: `${localeString(
+                'views.Channel.inboundCapacity'
+            )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
+            value: { param: 'remoteBalance', dir: 'ASC', type: 'numeric' }
+        },
+        {
+            key: `${localeString(
+                'views.Channel.outboundCapacity'
+            )} (${localeString('views.Channel.SortButton.largestFirst')})`,
+            value: { param: 'localBalance', dir: 'DESC', type: 'numeric' }
+        },
+        {
+            key: `${localeString(
+                'views.Channel.outboundCapacity'
+            )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
+            value: { param: 'localBalance', dir: 'ASC', type: 'numeric' }
+        },
+        {
+            key: `${localeString('views.Channel.displayName')} (${localeString(
+                'views.Channel.SortButton.ascending'
+            )})`,
+            value: { param: 'displayName', dir: 'ASC', type: 'alphanumeric' }
+        },
+        {
+            key: `${localeString('views.Channel.displayName')} (${localeString(
+                'views.Channel.SortButton.descending'
+            )})`,
+            value: { param: 'displayName', dir: 'DESC', type: 'alphanumeric' }
+        }
+        // {
+        //     key: `${localeString('views.Channel.channelId')} (${localeString(
+        //         'views.Channel.SortButton.ascending'
+        //     )})`,
+        //     value: { param: 'channelId', dir: 'ASC', type: 'alphanumeric' }
+        // },
+        // {
+        //     key: `${localeString('views.Channel.channelId')} (${localeString(
+        //         'views.Channel.SortButton.descending'
+        //     )})`,
+        //     value: { param: 'channelId', dir: 'DESC', type: 'alphanumeric' }
+        // }
+    ];
+
     renderItem = ({ item }) => {
         const { ChannelsStore, navigation } = this.props;
         const { largestChannelSats, channelsType } = ChannelsStore;
@@ -285,7 +283,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                             onValueChange={(value: any) => {
                                 setSort(value);
                             }}
-                            values={CHANNELS_SORT_KEYS}
+                            values={this.getChannelsSortKeys()}
                         />
                     </Row>
                 )}
