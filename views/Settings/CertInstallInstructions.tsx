@@ -25,6 +25,7 @@ export default class CertInstallInstructions extends React.Component<
                         flex: 1,
                         backgroundColor: themeColor('background')
                     }}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <Header
                         leftComponent="Back"

@@ -331,7 +331,10 @@ export default class Lockscreen extends React.Component<
                     <Header leftComponent="Back" navigation={navigation} />
                 )}
                 {!!passphrase && (
-                    <ScrollView style={styles.container}>
+                    <ScrollView
+                        style={styles.container}
+                        keyboardShouldPersistTaps="handled"
+                    >
                         <View style={styles.content}>
                             {error && (
                                 <ErrorMessage

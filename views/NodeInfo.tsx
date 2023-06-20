@@ -132,7 +132,10 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     navigation={navigation}
                 />
 
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <NodeInfoView />
                 </ScrollView>
             </Screen>

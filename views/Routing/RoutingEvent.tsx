@@ -84,7 +84,10 @@ export default class RoutingEvent extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <View style={styles.amount}>
                         <Amount
                             sats={fee}
