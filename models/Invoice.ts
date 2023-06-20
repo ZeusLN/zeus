@@ -61,7 +61,7 @@ export default class Invoice extends BaseModel {
     public pay_req?: string;
 
     @computed public get model(): string {
-        return 'Invoice';
+        return localeString('views.Invoice.title');
     }
 
     @computed public get getRPreimage(): string {
