@@ -811,7 +811,10 @@ export default class Receive extends React.Component<
                     navigation={navigation}
                 />
 
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     {creatingInvoiceError && (
                         <ErrorMessage
                             message={localeString('views.Receive.errorCreate')}

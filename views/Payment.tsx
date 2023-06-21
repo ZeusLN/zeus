@@ -93,7 +93,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     rightComponent={<EditNotesButton />}
                     navigation={navigation}
                 />
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     <View style={styles.center}>
                         <Amount
                             sats={payment.getAmount}

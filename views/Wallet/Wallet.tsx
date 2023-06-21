@@ -149,7 +149,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             tabNavigatorState.routeNames[tabNavigatorState.index];
         const defaultView =
             this.props.SettingsStore.settings.display.defaultView;
-        if (defaultView === currentTabName) {
+
+        if (defaultView === currentTabName || currentTabName === 'POS') {
             return false;
         } else if (defaultView) {
             tabNavigator.navigate(defaultView);
@@ -187,15 +188,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { settings } = SettingsStore;
         const { loginBackground } = settings;
 
-        const loginRequired = SettingsStore.loginRequired();
-
-        if (nextAppState === 'background' && loginRequired && loginBackground) {
+        if (
+            nextAppState === 'background' &&
+            SettingsStore.loginMethodConfigured() &&
+            loginBackground
+        ) {
             // In case the lock screen is visible and a valid PIN is entered and home button is pressed,
             // unauthorized access would be possible because the PIN is not cleared on next launch.
             // By calling pop, the lock screen is closed to clear the PIN.
             this.props.navigation.pop();
             SettingsStore.setLoginStatus(false);
-        } else if (nextAppState === 'active' && loginRequired) {
+        } else if (nextAppState === 'active' && SettingsStore.loginRequired()) {
             this.props.navigation.navigate('Lockscreen');
         }
     };
@@ -219,7 +222,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (posEnabled && posStatus === 'inactive' && loginRequired) {
                 navigation.navigate('Lockscreen');
             } else if (posEnabled && posStatus === 'unselected') {
-                await setPosStatus('active');
+                setPosStatus('active');
                 if (!this.state.unlocked) {
                     this.startListeners();
                     this.setState({ unlocked: true });
@@ -350,7 +353,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const error = NodeInfoStore.error || SettingsStore.error;
         const { implementation, settings, loggedIn, connecting, posStatus } =
             SettingsStore;
-        const loginRequired = SettingsStore.loginRequired();
+        const loginRequired = !settings || SettingsStore.loginRequired();
 
         const squareEnabled: boolean =
             (settings && settings.pos && settings.pos.squareEnabled) || false;

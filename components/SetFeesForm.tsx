@@ -91,7 +91,10 @@ export default class SetFeesForm extends React.Component<
 
         return (
             <React.Fragment>
-                <ScrollView style={{ paddingTop: 15 }}>
+                <ScrollView
+                    style={{ paddingTop: 15 }}
+                    keyboardShouldPersistTaps="handled"
+                >
                     {loading && <LightningIndicator />}
                     {feesSubmitted && setFeesSuccess && (
                         <SuccessMessage

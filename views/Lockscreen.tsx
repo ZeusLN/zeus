@@ -76,10 +76,10 @@ export default class Lockscreen extends React.Component<
         const posEnabled: boolean =
             (settings && settings.pos && settings.pos.squareEnabled) || false;
 
-        const isBiometryRequired = SettingsStore.isBiometryRequired();
+        const isBiometryConfigured = SettingsStore.isBiometryConfigured();
 
         if (
-            isBiometryRequired &&
+            isBiometryConfigured &&
             !attemptAdminLogin &&
             !deletePin &&
             !deleteDuressPin &&
@@ -184,7 +184,7 @@ export default class Lockscreen extends React.Component<
             } else if (deleteDuressPin) {
                 this.deleteDuressPin();
             } else {
-                await setPosStatus('inactive');
+                setPosStatus('inactive');
                 this.resetAuthenticationAttempts();
                 navigation.navigate('Wallet');
             }
@@ -331,7 +331,10 @@ export default class Lockscreen extends React.Component<
                     <Header leftComponent="Back" navigation={navigation} />
                 )}
                 {!!passphrase && (
-                    <ScrollView style={styles.container}>
+                    <ScrollView
+                        style={styles.container}
+                        keyboardShouldPersistTaps="handled"
+                    >
                         <View style={styles.content}>
                             {error && (
                                 <ErrorMessage
