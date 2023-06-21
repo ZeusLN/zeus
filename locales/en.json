@@ -159,7 +159,7 @@
     "views.Settings.AddEditNode.scanSpark": "Scan Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Delete Node config",
     "views.Settings.AddEditNode.tapToConfirm": "Tap to confirm",
-    "views.Settings.AddEditNode.copyNode": "Copy Node config",
+    "views.Settings.AddEditNode.duplicateNode": "Duplicate Node Config",
     "views.Settings.AddEditNode.nodeInterface": "Node interface",
     "views.Settings.AddEditNode.useTor": "Use Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Pairing Phrase",
