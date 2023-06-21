@@ -63,7 +63,6 @@ export default class AddContacts extends React.Component<
         };
     }
     saveContact = async () => {
-        // await EncryptedStorage.clear();
         const {
             lnAddress,
             onchainAddress,
@@ -102,8 +101,6 @@ export default class AddContacts extends React.Component<
                 JSON.stringify(updatedContacts)
             );
 
-            // Show a success message or navigate to a different screen
-            console.log('Updated contact--->', updatedContacts);
             console.log('Contact saved successfully!');
             this.props.navigation.goBack();
 
@@ -124,8 +121,6 @@ export default class AddContacts extends React.Component<
     };
 
     selectPhoto = () => {
-        console.log('photo');
-
         launchImageLibrary(
             {
                 title: 'Select Photo',
@@ -234,13 +229,19 @@ export default class AddContacts extends React.Component<
                             )}
                         </View>
                     </View>
-                    <View style={{ alignSelf: 'center', marginTop: 22 }}>
+                    <View
+                        style={{
+                            alignSelf: 'center',
+                            marginTop: 22
+                        }}
+                    >
                         <TextInput
                             onChangeText={(text: string) => {
                                 this.setState({ name: text });
                             }}
                             value={name}
                             placeholder="Name*"
+                            style={{ fontSize: 60 }}
                         />
                     </View>
                     <Divider
@@ -341,8 +342,7 @@ export default class AddContacts extends React.Component<
                             this.saveContact();
                         }}
                         containerStyle={{
-                            position: 'absolute',
-                            bottom: 20
+                            bottom: -110
                         }}
                     />
                 </ScrollView>
