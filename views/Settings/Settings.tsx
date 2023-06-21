@@ -115,6 +115,7 @@ export default class Settings extends React.Component<
                     style={{
                         flex: 1
                     }}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <TouchableOpacity
                         onPress={() => navigation.navigate('Nodes')}

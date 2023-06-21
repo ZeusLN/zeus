@@ -295,6 +295,7 @@ export default class OpenChannel extends React.Component<
                     style={{
                         flex: 1
                     }}
+                    keyboardShouldPersistTaps="handled"
                 >
                     {!!suggestImport && (
                         <View style={styles.clipboardImport}>
@@ -318,7 +319,7 @@ export default class OpenChannel extends React.Component<
                             </View>
                             <View style={styles.button}>
                                 <Button
-                                    title="Cancel"
+                                    title={localeString('general.cancel')}
                                     onPress={() => this.clearImportSuggestion()}
                                     tertiary
                                 />

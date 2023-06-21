@@ -170,7 +170,7 @@ export default class LnurlPay extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Send',
+                        text: localeString('general.send'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
@@ -280,7 +280,9 @@ export default class LnurlPay extends React.Component<
                     ) : null}
                     <View style={styles.button}>
                         <Button
-                            title="Confirm"
+                            title={localeString(
+                                'views.LnurlPay.LnurlPay.confirm'
+                            )}
                             titleStyle={{
                                 color: themeColor('text')
                             }}

@@ -1002,14 +1002,15 @@ export default class SettingsStore {
         });
     };
 
-    public loginRequired = () =>
+    public loginRequired = () => this.loginMethodConfigured() && !this.loggedIn;
+
+    public loginMethodConfigured = () =>
         this.settings &&
         (this.settings.passphrase ||
             this.settings.pin ||
-            this.isBiometryRequired()) &&
-        !this.loggedIn;
+            this.isBiometryConfigured());
 
-    public isBiometryRequired = () =>
+    public isBiometryConfigured = () =>
         this.settings != null &&
         this.settings.isBiometryEnabled &&
         this.settings.supportedBiometryType !== undefined;

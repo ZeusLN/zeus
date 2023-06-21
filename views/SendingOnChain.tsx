@@ -55,7 +55,7 @@ export default class SendingOnChain extends React.Component<
 
         return (
             <Screen>
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     <View
                         style={{
                             ...styles.content

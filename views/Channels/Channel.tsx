@@ -212,7 +212,10 @@ export default class ChannelView extends React.Component<
                     placement="right"
                     navigation={navigation}
                 />
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <KeyboardAvoidingView
                         behavior="position"
                         keyboardVerticalOffset={keyboardVerticalOffset}

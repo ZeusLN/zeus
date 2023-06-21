@@ -52,7 +52,10 @@ export default class UTXO extends React.Component<UTXOProps> {
                     }}
                     navigation={navigation}
                 />
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <View style={styles.center}>
                         <Amount sats={amount} jumboText toggleable sensitive />
                     </View>

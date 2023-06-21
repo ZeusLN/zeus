@@ -35,7 +35,7 @@ export default class PaymentPathsView extends React.Component<PaymentPathsViewPr
                     }}
                     navigation={navigation}
                 />
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     <View style={styles.content}>
                         {enhancedPath.length > 0 && (
                             <PaymentPath value={enhancedPath} />
