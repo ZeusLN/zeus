@@ -70,6 +70,7 @@ interface NodeConfigurationState {
     customMailboxServer: string;
     localKey: string;
     remoteKey: string;
+    deletionAwaitingConfirmation: boolean;
 }
 
 const ScanBadge = ({ onPress }: { onPress: () => void }) => (
@@ -110,7 +111,8 @@ export default class NodeConfiguration extends React.Component<
         mailboxServer: 'mailbox.terminal.lightning.today:443',
         customMailboxServer: '',
         localKey: '',
-        remoteKey: ''
+        remoteKey: '',
+        deletionAwaitingConfirmation: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -457,7 +459,8 @@ export default class NodeConfiguration extends React.Component<
             mailboxServer,
             customMailboxServer,
             localKey,
-            remoteKey
+            remoteKey,
+            deletionAwaitingConfirmation
         } = this.state;
         const {
             loading,
@@ -750,6 +753,7 @@ export default class NodeConfiguration extends React.Component<
                 <ScrollView
                     ref="_scrollView"
                     style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.form}>
                         {!!createAccountError &&
@@ -1318,10 +1322,24 @@ export default class NodeConfiguration extends React.Component<
                     {saved && (
                         <View style={styles.button}>
                             <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.deleteNode'
-                                )}
-                                onPress={() => this.deleteNodeConfig()}
+                                title={
+                                    deletionAwaitingConfirmation
+                                        ? localeString(
+                                              'views.Settings.AddEditNode.tapToConfirm'
+                                          )
+                                        : localeString(
+                                              'views.Settings.AddEditNode.deleteNode'
+                                          )
+                                }
+                                onPress={() => {
+                                    if (!deletionAwaitingConfirmation) {
+                                        this.setState({
+                                            deletionAwaitingConfirmation: true
+                                        });
+                                    } else {
+                                        this.deleteNodeConfig();
+                                    }
+                                }}
                                 containerStyle={{
                                     borderColor: themeColor('delete')
                                 }}

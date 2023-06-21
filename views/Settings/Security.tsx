@@ -239,7 +239,7 @@ export default class Security extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     <FlatList
                         data={displaySecurityItems}
                         renderItem={this.renderItem}

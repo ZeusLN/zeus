@@ -318,7 +318,7 @@ export default class PaymentRequest extends React.Component<
                     </View>
                 )}
 
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     {!!getPayReqError && (
                         <View style={styles.content}>
                             <Text

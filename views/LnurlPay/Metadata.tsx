@@ -32,6 +32,7 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
                     justifyContent: 'center',
                     alignItems: 'center'
                 }}
+                keyboardShouldPersistTaps="handled"
             >
                 {image ? (
                     <Image

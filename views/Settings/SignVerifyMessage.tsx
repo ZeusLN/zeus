@@ -138,7 +138,10 @@ export default class SignVerifyMessage extends React.Component<
                     navigation={navigation}
                 />
 
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
