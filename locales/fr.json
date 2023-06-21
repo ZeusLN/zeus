@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "Scanner QR code LNDHub",
     "views.Settings.AddEditNode.scanSpark": "Scanner le QR Spark",
     "views.Settings.AddEditNode.deleteNode": "Supprimer configuration du noeud",
+    "views.Settings.AddEditNode.copyNode": "Copier la configuration du nœud",
     "views.Settings.AddEditNode.nodeInterface": "Interface du nœud",
     "views.Settings.AddEditNode.useTor": "Utiliser Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Phrase de jumelage",

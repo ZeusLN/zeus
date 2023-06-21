@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "Scanna LNDHub QR",
     "views.Settings.AddEditNode.scanSpark": "Scanna Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Radera nodkonfiguration",
+    "views.Settings.AddEditNode.copyNode": "Kopiera nodkonfiguration",
     "views.Settings.AddEditNode.nodeInterface": "Nodinterface",
     "views.Settings.AddEditNode.useTor": "Använd Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Paringsfras",

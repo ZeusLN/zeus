@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "Сканувати LNDHub QR",
     "views.Settings.AddEditNode.scanSpark": "Scan Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Видалити налаштування вузла",
+    "views.Settings.AddEditNode.copyNode": "Copy Node config",
     "views.Settings.AddEditNode.nodeInterface": "Інтерфейс вузла",
     "views.Settings.AddEditNode.useTor": "Use Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Pairing Phrase",

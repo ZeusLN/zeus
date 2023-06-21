@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "扫描 LNDHub 二维码",
     "views.Settings.AddEditNode.scanSpark": "扫描 Spark 二维码",
     "views.Settings.AddEditNode.deleteNode": "删除节点配置",
+    "views.Settings.AddEditNode.copyNode": "复制节点配置",
     "views.Settings.AddEditNode.nodeInterface": "节点接口",
     "views.Settings.AddEditNode.useTor": "使用 Tor",
     "views.Settings.AddEditNode.pairingPhrase": "配对短语",

@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "סריקת QR של LNDHub",
     "views.Settings.AddEditNode.scanSpark": "סריקת QR של Spark",
     "views.Settings.AddEditNode.deleteNode": "מחיקת הגדרות צומת",
+    "views.Settings.AddEditNode.copyNode": "העתקת הגדרות צומת",
     "views.Settings.AddEditNode.nodeInterface": "ממשק צומת",
     "views.Settings.AddEditNode.useTor": "שימוש ב- Tor",
     "views.Settings.AddEditNode.pairingPhrase": "ביטוי לצימוד",

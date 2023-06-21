@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "LNDHub QR Szkennelése",
     "views.Settings.AddEditNode.scanSpark": "Scan Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Node konfigurációk törlése",
+    "views.Settings.AddEditNode.copyNode": "Node beállíások másolása",
     "views.Settings.AddEditNode.nodeInterface": "Node kezelőfelület",
     "views.Settings.AddEditNode.useTor": "Tor használata",
     "views.Settings.AddEditNode.pairingPhrase": "Pairing Phrase",
