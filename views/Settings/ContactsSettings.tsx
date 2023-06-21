@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, View, TouchableOpacity, FlatList, Image } from 'react-native';
-import { Header, Icon, Divider } from 'react-native-elements';
+import { Header, Icon, SearchBar } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
@@ -22,6 +22,7 @@ interface ContactItem {
 
 interface ContactsSettingsState {
     contacts: ContactItem[];
+    search: string;
 }
 
 export default class ContactsSettings extends React.Component<
@@ -31,7 +32,8 @@ export default class ContactsSettings extends React.Component<
     constructor(props: ContactsSettingsProps) {
         super(props);
         this.state = {
-            contacts: []
+            contacts: [],
+            search: ''
         };
     }
 
@@ -40,18 +42,19 @@ export default class ContactsSettings extends React.Component<
     }
 
     loadContacts = async () => {
-        try {
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
-            );
-            if (contactsString) {
-                const contacts: ContactItem[] = JSON.parse(contactsString);
-                this.setState({ contacts });
-                console.log(this.state.contacts);
+        this.props.navigation.addListener('didFocus', async () => {
+            try {
+                const contactsString = await EncryptedStorage.getItem(
+                    'zeus-contacts'
+                );
+                if (contactsString) {
+                    const contacts: ContactItem[] = JSON.parse(contactsString);
+                    this.setState({ contacts });
+                }
+            } catch (error) {
+                console.log('Error loading contacts:', error);
             }
-        } catch (error) {
-            console.log('Error loading contacts:', error);
-        }
+        });
     };
 
     renderContactItem = ({ item }: { item: ContactItem }) => (
@@ -87,8 +90,22 @@ export default class ContactsSettings extends React.Component<
         </View>
     );
 
+    updateSearch = (query: string) => {
+        this.setState({ search: query });
+    };
+
     render() {
         const { navigation } = this.props;
+        const { search, contacts } = this.state;
+        const filteredContacts = contacts.filter(
+            (contact) =>
+                contact.name.includes(search) ||
+                contact.lnAddress.includes(search) ||
+                contact.nip05.includes(search) ||
+                contact.onchainAddress.includes(search) ||
+                contact.nostrNpub.includes(search)
+        );
+
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -114,8 +131,6 @@ export default class ContactsSettings extends React.Component<
             </TouchableOpacity>
         );
 
-        const { contacts } = this.state;
-
         return (
             <View
                 style={{
@@ -132,25 +147,32 @@ export default class ContactsSettings extends React.Component<
                     rightComponent={<Add navigation={navigation} />}
                 />
                 <View>
-                    <Divider
-                        orientation="horizontal"
-                        style={{ marginTop: 14 }}
+                    <SearchBar
+                        placeholder="Search"
+                        onChangeText={this.updateSearch}
+                        value={this.state.search}
+                        inputStyle={{
+                            color: themeColor('text')
+                        }}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        containerStyle={{
+                            backgroundColor: 'transparent',
+                            borderTopWidth: 0,
+                            borderBottomWidth: 0
+                        }}
+                        inputContainerStyle={{
+                            borderRadius: 15,
+                            backgroundColor: themeColor('secondary')
+                        }}
                     />
-                    <View style={{ margin: 18 }}>
-                        <Text
-                            style={{ color: themeColor('text'), fontSize: 16 }}
-                        >
-                            Search
-                        </Text>
-                    </View>
-                    <Divider orientation="horizontal" />
+
                     <View style={{ margin: 18 }}>
                         <Text style={{ fontSize: 18 }}>
-                            Contacts ({contacts.length})
+                            Contacts ({filteredContacts.length})
                         </Text>
                     </View>
                     <FlatList
-                        data={contacts}
+                        data={filteredContacts}
                         renderItem={this.renderContactItem}
                         keyExtractor={(item, index) => index.toString()}
                     />
