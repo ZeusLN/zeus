@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "Scansiona QR LNDHub",
     "views.Settings.AddEditNode.scanSpark": "Scansiona Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Cancella config del Nodo",
+    "views.Settings.AddEditNode.copyNode": "Copia configurazione del nodo",
     "views.Settings.AddEditNode.nodeInterface": "Interfaccia del Nodo",
     "views.Settings.AddEditNode.useTor": "Usa rete TOR",
     "views.Settings.AddEditNode.pairingPhrase": "Frase di pairing",

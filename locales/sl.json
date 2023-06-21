@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "Skeniraj LNDHub QR",
     "views.Settings.AddEditNode.scanSpark": "Scan Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Izbriši nastavitve vozlišča",
+    "views.Settings.AddEditNode.copyNode": "Kopiraj nast. vozlišča",
     "views.Settings.AddEditNode.nodeInterface": "Vmesnik vozlišča",
     "views.Settings.AddEditNode.useTor": "Uporabi Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Pairing Phrase",

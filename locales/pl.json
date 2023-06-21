@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "Skanuj kod QR LNDHub",
     "views.Settings.AddEditNode.scanSpark": "Skanuj QR Spark",
     "views.Settings.AddEditNode.deleteNode": "Skasuj konfigurację węzła",
+    "views.Settings.AddEditNode.copyNode": "Kopiuj konfigurację węzła",
     "views.Settings.AddEditNode.nodeInterface": "Interfejs węzła",
     "views.Settings.AddEditNode.useTor": "Używaj Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Fraza parowania",

@@ -153,6 +153,7 @@
     "views.Settings.AddEditNode.scanLndhub": "Skeniraj LNDHub QR",
     "views.Settings.AddEditNode.scanSpark": "Skeniraj Spark QR",
     "views.Settings.AddEditNode.deleteNode": "Izbriši konfiguraciju noda",
+    "views.Settings.AddEditNode.copyNode": "Kopiraj konfiguraciju noda",
     "views.Settings.AddEditNode.nodeInterface": "Sučelje noda",
     "views.Settings.AddEditNode.useTor": "Koristi Tor",
     "views.Settings.AddEditNode.pairingPhrase": "Fraza za uparivanje",
