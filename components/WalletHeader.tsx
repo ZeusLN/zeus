@@ -340,7 +340,7 @@ export default class WalletHeader extends React.Component<
                                     />
                                 </View>
                             )}
-                            <View style={{ marginTop: 1 }}>
+                            <View>
                                 <ScanBadge navigation={navigation} />
                             </View>
                             {squareEnabled && (
