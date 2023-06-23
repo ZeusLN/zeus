@@ -65,57 +65,57 @@ export function localeString(localeString: string): any {
     const { locale } = settings;
 
     switch (locale) {
-        case 'Español':
+        case 'es':
             return Spanish[localeString] || English[localeString];
-        case 'Português':
+        case 'pt':
             return BrazilianPortuguese[localeString] || English[localeString];
-        case 'Türkçe':
+        case 'tr':
             return Turkish[localeString] || English[localeString];
-        case 'Slovenčina':
+        case 'sk':
             return Slovak[localeString] || English[localeString];
-        case 'Čeština':
+        case 'cs':
             return Czech[localeString] || English[localeString];
-        case 'Deutsch':
+        case 'de':
             return German[localeString] || English[localeString];
-        case 'Ελληνικά':
+        case 'el':
             return Greek[localeString] || English[localeString];
-        case 'Bokmål':
+        case 'nb':
             return NorwegianBokmal[localeString] || English[localeString];
-        case 'Svenska':
+        case 'sv':
             return Swedish[localeString] || English[localeString];
-        case 'ภาษาไทย':
+        case 'th':
             return Thai[localeString] || English[localeString];
-        case 'украї́нська мо́ва':
+        case 'uk':
             return Ukranian[localeString] || English[localeString];
-        case 'Limba română':
+        case 'ro':
             return Romanian[localeString] || English[localeString];
-        case 'Polski':
+        case 'pl':
             return Polish[localeString] || English[localeString];
-        case 'زبان فارسي':
+        case 'fa':
             return Persian[localeString] || English[localeString];
-        case 'Français':
+        case 'fr':
             return French[localeString] || English[localeString];
-        case 'Nederlands':
+        case 'nl':
             return Dutch[localeString] || English[localeString];
-        case 'Magyar nyelv':
+        case 'hu':
             return Hungarian[localeString] || English[localeString];
-        case '简化字':
+        case 'zh':
             return SimplifiedChinese[localeString] || English[localeString];
-        case 'Slovenski jezik':
+        case 'sl':
             return Slovenian[localeString] || English[localeString];
-        case 'русский язык':
+        case 'ru':
             return Russian[localeString] || English[localeString];
-        case 'Suomen kieli':
+        case 'fi':
             return Finnish[localeString] || English[localeString];
-        case 'Italiano':
+        case 'it':
             return Italian[localeString] || English[localeString];
-        case 'Tiếng Việt':
+        case 'vi':
             return Vietnamese[localeString] || English[localeString];
-        case '日本語':
+        case 'jp':
             return Japanese[localeString] || English[localeString];
-        case 'עִבְרִית':
+        case 'he':
             return Hebrew[localeString] || English[localeString];
-        case 'Hrvatski':
+        case 'hr':
             return Croatian[localeString] || English[localeString];
         default:
             return English[localeString];

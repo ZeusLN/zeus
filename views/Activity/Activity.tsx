@@ -56,16 +56,16 @@ export default class Activity extends React.PureComponent<
         const { ActivityStore, SettingsStore } = this.props;
         const { getActivityAndFilter, getFilters } = ActivityStore;
         const filters = await getFilters();
-        await getActivityAndFilter(filters);
+        await getActivityAndFilter(SettingsStore.settings.locale, filters);
         if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribeEvents();
         }
     }
 
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
-        const { ActivityStore } = newProps;
+        const { ActivityStore, SettingsStore } = newProps;
         const { getActivityAndFilter } = ActivityStore;
-        getActivityAndFilter();
+        getActivityAndFilter(SettingsStore.settings.locale);
     };
 
     componentWillUnmount() {
@@ -76,7 +76,7 @@ export default class Activity extends React.PureComponent<
     }
 
     subscribeEvents = () => {
-        const { ActivityStore } = this.props;
+        const { ActivityStore, SettingsStore } = this.props;
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);
         this.transactionListener = eventEmitter.addListener(
@@ -89,7 +89,7 @@ export default class Activity extends React.PureComponent<
         this.invoicesListener = eventEmitter.addListener(
             BackendUtils.subscribeInvoices(),
             () => {
-                ActivityStore.updateInvoices();
+                ActivityStore.updateInvoices(SettingsStore.settings.locale);
             }
         );
     };
@@ -138,6 +138,7 @@ export default class Activity extends React.PureComponent<
             SettingsStore
         } = this.props;
         const { selectedPaymentForOrder } = this.state;
+
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
         const { recordPayment } = PosStore;
@@ -261,13 +262,7 @@ export default class Activity extends React.PureComponent<
                                         ? localeString('general.lightning')
                                         : `${localeString(
                                               'views.PaymentRequest.title'
-                                          )}: ${
-                                              item.isExpired
-                                                  ? localeString(
-                                                        'views.Activity.expired'
-                                                    )
-                                                  : item.expirationDate
-                                          }`
+                                          )}`
                                 }${item.memo ? `: ${item.memo}` : ''}`;
                             }
 
@@ -411,8 +406,33 @@ export default class Activity extends React.PureComponent<
                                             >
                                                 {subTitle}
                                             </ListItem.Subtitle>
+                                            {!item.isPaid &&
+                                                item.formattedExpiryTime && (
+                                                    <ListItem.Subtitle
+                                                        right
+                                                        style={{
+                                                            color:
+                                                                item ===
+                                                                selectedPaymentForOrder
+                                                                    ? themeColor(
+                                                                          'highlight'
+                                                                      )
+                                                                    : themeColor(
+                                                                          'secondaryText'
+                                                                      ),
+                                                            fontFamily:
+                                                                'Lato-Regular'
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Invoice.expiration'
+                                                        )}
+                                                    </ListItem.Subtitle>
+                                                )}
                                         </ListItem.Content>
-                                        <ListItem.Content right>
+                                        <ListItem.Content
+                                            style={{ alignItems: 'flex-end' }}
+                                        >
                                             <Amount
                                                 sats={item.getAmount}
                                                 sensitive
@@ -433,6 +453,23 @@ export default class Activity extends React.PureComponent<
                                                     ? item.getDisplayTimeOrder
                                                     : item.getDisplayTimeShort}
                                             </ListItem.Subtitle>
+                                            {!item.isPaid &&
+                                                item.formattedExpiryTime && (
+                                                    <ListItem.Subtitle
+                                                        right
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontFamily:
+                                                                'Lato-Regular'
+                                                        }}
+                                                    >
+                                                        {
+                                                            item.formattedExpiryTime
+                                                        }
+                                                    </ListItem.Subtitle>
+                                                )}
                                         </ListItem.Content>
                                     </ListItem>
                                 </React.Fragment>
@@ -442,7 +479,9 @@ export default class Activity extends React.PureComponent<
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => getActivityAndFilter()}
+                        onRefresh={() =>
+                            getActivityAndFilter(SettingsStore.settings.locale)
+                        }
                         initialNumToRender={10}
                         maxToRenderPerBatch={5}
                         windowSize={10}
@@ -455,7 +494,9 @@ export default class Activity extends React.PureComponent<
                             size: 25,
                             color: themeColor('text')
                         }}
-                        onPress={() => getActivityAndFilter()}
+                        onPress={() =>
+                            getActivityAndFilter(SettingsStore.settings.locale)
+                        }
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30

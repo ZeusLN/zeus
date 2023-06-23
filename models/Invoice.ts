@@ -1,4 +1,5 @@
 import { observable, computed } from 'mobx';
+import humanizeDuration from 'humanize-duration';
 
 import BaseModel from './BaseModel';
 import Base64Utils from './../utils/Base64Utils';
@@ -59,6 +60,8 @@ export default class Invoice extends BaseModel {
     public expire_time?: number;
     public millisatoshis?: string;
     public pay_req?: string;
+
+    public formattedExpiryTime: string;
 
     @computed public get model(): string {
         return localeString('views.Invoice.title');
@@ -199,18 +202,6 @@ export default class Invoice extends BaseModel {
         return DateTimeUtils.listFormattedDate(this.creation_date);
     }
 
-    @computed public get expirationDate(): Date | string {
-        if (this.expiry || this.expire_time) {
-            const expiration = this.expiry || this.expire_time;
-            if (expiration == '0') return localeString('models.Invoice.never');
-            return `${expiration} ${localeString('models.Invoice.seconds')}`;
-        }
-
-        return this.expires_at
-            ? DateTimeUtils.listFormattedDate(this.expires_at)
-            : localeString('models.Invoice.never');
-    }
-
     @computed public get isExpired(): boolean {
         if (this.expiry) {
             return (
@@ -220,5 +211,47 @@ export default class Invoice extends BaseModel {
         }
 
         return false;
+    }
+
+    public determineFormattedExpiryTime(locale: string | undefined): void {
+        if (
+            this.expiry === '0' ||
+            (this.expiry == null &&
+                this.expire_time == null &&
+                this.expires_at == null)
+        ) {
+            this.formattedExpiryTime = localeString('models.Invoice.never');
+            return;
+        }
+
+        const millisecondsUntilExpiry = this.getMillisecondsUntilExpiry();
+
+        this.formattedExpiryTime =
+            millisecondsUntilExpiry <= 0
+                ? localeString('views.Activity.expired')
+                : humanizeDuration(millisecondsUntilExpiry, {
+                      language: locale === 'zh' ? 'zh_CN' : locale,
+                      fallbacks: ['en'],
+                      round: true,
+                      largest: 2
+                  })
+                      .replace(/(\d+) /g, '$1 ')
+                      .replace(/ (\d+)/g, ' $1');
+    }
+
+    private getMillisecondsUntilExpiry(): number {
+        if (this.expiry) {
+            return (
+                (Number(this.creation_date) + Number(this.expiry)) * 1000 -
+                new Date().getTime()
+            );
+        }
+        if (this.expire_time) {
+            return (
+                (Number(this.creation_date) + this.expire_time) * 1000 -
+                new Date().getTime()
+            );
+        }
+        return this.expires_at * 1000 - new Date().getTime();
     }
 }

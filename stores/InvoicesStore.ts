@@ -83,13 +83,16 @@ export default class InvoicesStore {
     };
 
     @action
-    public getInvoices = async () => {
+    public getInvoices = async (locale: string | undefined) => {
         this.loading = true;
         await BackendUtils.getInvoices()
             .then((data: any) => {
                 this.invoices = data.invoices;
                 this.invoices = this.invoices.map(
                     (invoice) => new Invoice(invoice)
+                );
+                this.invoices.forEach((invoice) =>
+                    invoice.determineFormattedExpiryTime(locale)
                 );
                 this.invoices = this.invoices.slice().reverse();
                 this.invoicesCount =

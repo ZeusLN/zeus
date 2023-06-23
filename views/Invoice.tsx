@@ -54,7 +54,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             payment_hash,
             getRPreimage,
             cltv_expiry,
-            expirationDate,
+            formattedExpiryTime,
             getPaymentRequest
         } = invoice;
         const privateInvoice = invoice.private;
@@ -150,12 +150,12 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
-                        {!!expirationDate && (
+                        {!!formattedExpiryTime && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.expiration'
                                 )}
-                                value={expirationDate}
+                                value={formattedExpiryTime}
                                 sensitive
                             />
                         )}

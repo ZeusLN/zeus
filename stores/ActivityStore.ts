@@ -121,7 +121,7 @@ export default class ActivityStore {
     };
 
     getSortedActivity = () => {
-        const activity: any = [];
+        const activity: any[] = [];
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
         const invoices = this.invoicesStore.invoices;
@@ -142,13 +142,13 @@ export default class ActivityStore {
     };
 
     @action
-    public getActivity = async () => {
+    public getActivity = async (locale: string | undefined) => {
         this.loading = true;
         this.activity = [];
         await this.paymentsStore.getPayments();
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
-        await this.invoicesStore.getInvoices();
+        await this.invoicesStore.getInvoices(locale);
 
         this.activity = this.getSortedActivity();
         this.filteredActivity = this.activity;
@@ -157,8 +157,8 @@ export default class ActivityStore {
     };
 
     @action
-    public updateInvoices = async () => {
-        await this.invoicesStore.getInvoices();
+    public updateInvoices = async (locale: string | undefined) => {
+        await this.invoicesStore.getInvoices(locale);
         this.activity = this.getSortedActivity();
         await this.setFilters(this.filters);
     };
@@ -285,8 +285,11 @@ export default class ActivityStore {
     };
 
     @action
-    public getActivityAndFilter = async (filters: Filter = this.filters) => {
-        await this.getActivity();
+    public getActivityAndFilter = async (
+        locale: string | undefined,
+        filters: Filter = this.filters
+    ) => {
+        await this.getActivity(locale);
         await this.setFilters(filters);
     };
 }
