@@ -168,7 +168,8 @@ const styles = StyleSheet.create({
     actionText: {
         fontSize: 12,
         backgroundColor: 'transparent',
-        padding: 10,
+        paddingTop: 10,
+        paddingHorizontal: 4,
         fontFamily: 'Lato-Regular'
     },
     action: {
