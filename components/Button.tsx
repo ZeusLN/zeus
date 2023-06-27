@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Button as ElementsButton } from 'react-native-elements';
 import { themeColor } from './../utils/ThemeUtils';
+import { StyleProp, ViewStyle } from 'react-native';
 
 interface ButtonProps {
     title: string;
@@ -15,7 +16,7 @@ interface ButtonProps {
     iconOnly?: boolean;
     adaptiveWidth?: boolean;
     containerStyle?: any;
-    buttonStyle?: any;
+    buttonStyle?: StyleProp<ViewStyle>;
     noUppercase?: boolean;
     disabled?: boolean;
 }

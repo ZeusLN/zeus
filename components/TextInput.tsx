@@ -1,10 +1,13 @@
 import * as React from 'react';
 import {
+    StyleProp,
     StyleSheet,
     Text,
     TextInput as TextInputRN,
+    TextStyle,
     TouchableOpacity,
-    View
+    View,
+    ViewStyle
 } from 'react-native';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -13,7 +16,8 @@ interface TextInputProps {
     value?: string;
     onChangeText?: any;
     numberOfLines?: number;
-    style?: any;
+    style?: StyleProp<ViewStyle>;
+    textInputStyle?: StyleProp<TextStyle>;
     placeholderTextColor?: string;
     locked?: boolean;
     keyboardType?: string;
@@ -36,6 +40,7 @@ export default function TextInput(props: TextInputProps) {
         onChangeText,
         numberOfLines,
         style,
+        textInputStyle,
         placeholderTextColor,
         locked,
         keyboardType,
@@ -96,7 +101,11 @@ export default function TextInput(props: TextInputProps) {
                 value={value}
                 onChangeText={onChangeText}
                 numberOfLines={numberOfLines || 1}
-                style={{ ...styles.input, color: themeColor('text') }}
+                style={{
+                    ...textInputStyle,
+                    ...styles.input,
+                    color: themeColor('text')
+                }}
                 placeholderTextColor={
                     placeholderTextColor || themeColor('secondaryText')
                 }

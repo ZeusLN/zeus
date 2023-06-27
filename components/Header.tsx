@@ -1,12 +1,13 @@
 import React from 'react';
 import { Header, Icon } from 'react-native-elements';
 import { themeColor } from '../utils/ThemeUtils';
+import { StyleProp, ViewStyle } from 'react-native';
 
 interface HeaderProps {
     leftComponent?: 'Back' | 'Close' | JSX.Element;
     centerComponent?: JSX.Element;
     rightComponent?: JSX.Element;
-    containerStyle?: any;
+    containerStyle?: StyleProp<ViewStyle>;
     placement?: 'left' | 'center' | 'right' | undefined;
     navigation?: any;
     onBack?: () => void;
