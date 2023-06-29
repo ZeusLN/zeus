@@ -37,6 +37,7 @@ import { Row } from '../components/layout/Row';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
+import Conversion from '../components/Conversion';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -359,6 +360,9 @@ export default class PaymentRequest extends React.Component<
                                             jumboText
                                             toggleable
                                         />
+                                        <View style={{ top: 10 }}>
+                                            <Conversion sats={requestAmount} />
+                                        </View>
                                     </View>
                                 )}
                             </>
