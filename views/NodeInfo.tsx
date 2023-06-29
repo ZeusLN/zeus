@@ -20,12 +20,26 @@ interface NodeInfoProps {
     SettingsStore: SettingsStore;
 }
 
+interface NodeInfoState {
+    loading: boolean;
+}
+
 @inject('NodeInfoStore', 'SettingsStore')
 @observer
-export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
+export default class NodeInfo extends React.Component<
+    NodeInfoProps,
+    NodeInfoState
+> {
+    state = {
+        loading: false
+    };
+
     UNSAFE_componentWillMount() {
         const { NodeInfoStore } = this.props;
-        NodeInfoStore.getNodeInfo();
+        this.setState({ loading: true });
+        NodeInfoStore.getNodeInfo().then(() =>
+            this.setState({ loading: false })
+        );
     }
 
     render() {
@@ -58,6 +72,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     keyValue={localeString('views.NodeInfo.alias')}
                     value={nodeInfo.alias}
                     sensitive
+                    showLoadingIndicator={this.state.loading}
                 />
 
                 {nodeInfo.nodeId && (
@@ -65,6 +80,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                         keyValue={localeString('views.NodeInfo.pubkey')}
                         value={nodeInfo.nodeId}
                         sensitive
+                        showLoadingIndicator={this.state.loading}
                     />
                 )}
 
@@ -75,46 +91,52 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                         )}
                         value={nodeInfo.version}
                         sensitive
+                        showLoadingIndicator={this.state.loading}
                     />
                 )}
 
-                {nodeInfo.version && (
-                    <KeyValue
-                        keyValue={localeString('views.NodeInfo.zeusVersion')}
-                        value={`v${version}`}
-                    />
-                )}
+                <KeyValue
+                    keyValue={localeString('views.NodeInfo.zeusVersion')}
+                    value={`v${version}`}
+                />
 
                 {!!nodeInfo.synced_to_chain && (
                     <KeyValue
                         keyValue={localeString('views.NodeInfo.synced')}
                         value={nodeInfo.synced_to_chain ? 'True' : 'False'}
                         color={nodeInfo.synced_to_chain ? 'green' : 'red'}
+                        showLoadingIndicator={this.state.loading}
                     />
                 )}
 
                 <KeyValue
                     keyValue={localeString('views.NodeInfo.blockHeight')}
                     value={nodeInfo.currentBlockHeight}
+                    showLoadingIndicator={this.state.loading}
                 />
 
                 {nodeInfo.block_hash && (
                     <KeyValue
                         keyValue={localeString('views.NodeInfo.blockHash')}
                         value={nodeInfo.block_hash}
+                        showLoadingIndicator={this.state.loading}
                     />
                 )}
 
-                <KeyValue keyValue={localeString('views.NodeInfo.uris')} />
-                {nodeInfo.getURIs &&
-                nodeInfo.getURIs.length > 0 &&
-                !lurkerMode ? (
-                    <URIs uris={nodeInfo.getURIs} />
-                ) : (
-                    <Text style={styles.error}>
-                        {localeString('views.NodeInfo.noUris')}
-                    </Text>
-                )}
+                <KeyValue
+                    keyValue={localeString('views.NodeInfo.uris')}
+                    showLoadingIndicator={this.state.loading}
+                />
+                {!this.state.loading &&
+                    (nodeInfo.getURIs &&
+                    nodeInfo.getURIs.length > 0 &&
+                    !lurkerMode ? (
+                        <URIs uris={nodeInfo.getURIs} />
+                    ) : (
+                        <Text style={styles.error}>
+                            {localeString('views.NodeInfo.noUris')}
+                        </Text>
+                    ))}
             </React.Fragment>
         );
 

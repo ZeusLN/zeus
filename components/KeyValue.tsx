@@ -15,6 +15,7 @@ import { Row } from './layout/Row';
 import { themeColor } from '../utils/ThemeUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import SettingsStore from '../stores/SettingsStore';
+import LoadingIndicator from './LoadingIndicator';
 
 interface KeyValueProps {
     keyValue: string;
@@ -22,13 +23,21 @@ interface KeyValueProps {
     color?: string;
     sensitive?: boolean;
     SettingsStore: SettingsStore;
+    showLoadingIndicator?: boolean;
 }
 
 @inject('SettingsStore')
 @observer
 export default class KeyValue extends React.Component<KeyValueProps, {}> {
     render() {
-        const { keyValue, value, color, sensitive, SettingsStore } = this.props;
+        const {
+            keyValue,
+            value,
+            color,
+            sensitive,
+            SettingsStore,
+            showLoadingIndicator
+        } = this.props;
 
         const lurkerMode: boolean =
             SettingsStore?.settings?.privacy?.lurkerMode || false;
@@ -75,11 +84,25 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             <Row justify="space-between">
                 <View style={rtl ? styles.rtlValue : styles.key}>
                     <Text style={{ color: themeColor('secondaryText') }}>
-                        {rtl ? Value : Key}
+                        {rtl ? (
+                            showLoadingIndicator ? (
+                                <LoadingIndicator size={18} />
+                            ) : (
+                                Value
+                            )
+                        ) : (
+                            Key
+                        )}
                     </Text>
                 </View>
                 <View style={rtl ? styles.rtlKey : styles.value}>
-                    {rtl ? Key : Value}
+                    {rtl ? (
+                        Key
+                    ) : showLoadingIndicator ? (
+                        <LoadingIndicator size={18} />
+                    ) : (
+                        Value
+                    )}
                 </View>
             </Row>
         );

@@ -42,7 +42,7 @@ export default class NodeInfoStore {
     public getNodeInfo = () => {
         this.errorMsg = '';
         this.loading = true;
-        BackendUtils.getMyNodeInfo()
+        return BackendUtils.getMyNodeInfo()
             .then((data: any) => {
                 const nodeInfo = new NodeInfo(data);
                 this.nodeInfo = nodeInfo;
