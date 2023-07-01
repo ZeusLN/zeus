@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Keyboard, View, TextInput } from 'react-native';
+import { Keyboard, View } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { inject, observer } from 'mobx-react';
 
@@ -11,6 +11,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import NotesStore from '../stores/NotesStore';
+import TextInput from '../components/TextInput';
 
 interface AddNotesProps {
     navigation: any;
@@ -69,21 +70,30 @@ export default class AddNotes extends React.Component<
         const { notes } = this.state;
         return (
             <Screen>
-                <Header
-                    leftComponent="Back"
-                    centerComponent={{
-                        text: isNoteStored
-                            ? localeString('views.SendingLightning.UpdateNote')
-                            : localeString('views.SendingLightning.AddANote'),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
-                            fontSize: 20
-                        }
+                <View
+                    style={{
+                        flexDirection: 'column',
+                        height: '100%'
                     }}
-                    navigation={navigation}
-                />
-                <View style={{ padding: 20 }}>
+                >
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: isNoteStored
+                                ? localeString(
+                                      'views.SendingLightning.UpdateNote'
+                                  )
+                                : localeString(
+                                      'views.SendingLightning.AddANote'
+                                  ),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular',
+                                fontSize: 20
+                            }
+                        }}
+                        navigation={navigation}
+                    />
                     <TextInput
                         onChangeText={(text: string) => {
                             this.setState({ notes: text });
@@ -96,28 +106,51 @@ export default class AddNotes extends React.Component<
                         }}
                         multiline
                         numberOfLines={0}
-                        style={{ fontSize: 20, color: themeColor('text') }}
+                        style={{
+                            padding: 20,
+                            flexGrow: 1,
+                            flexShrink: 1
+                        }}
+                        textInputStyle={{
+                            height: '100%',
+                            textAlignVertical: 'top',
+                            marginTop: -13
+                        }}
                         value={notes}
                         placeholder={localeString('views.Payment.writeNote')}
                         onSubmitEditing={() => Keyboard.dismiss()}
                     />
+                    <View
+                        style={{
+                            marginHorizontal: 20,
+                            marginBottom: 20,
+                            marginTop: 10
+                        }}
+                    >
+                        <Button
+                            title={
+                                isNoteStored
+                                    ? localeString(
+                                          'views.SendingLightning.UpdateNote'
+                                      )
+                                    : localeString(
+                                          'views.SendingLightning.AddANote'
+                                      )
+                            }
+                            onPress={async () => {
+                                const key: string =
+                                    'note-' +
+                                    (payment_hash || txid || RPreimage);
+                                EncryptedStorage.setItem(key, notes);
+                                await storeNoteKeys(key, notes);
+                                navigation.goBack();
+                            }}
+                            buttonStyle={{
+                                padding: 15
+                            }}
+                        />
+                    </View>
                 </View>
-                <Button
-                    title={
-                        isNoteStored
-                            ? localeString('views.SendingLightning.UpdateNote')
-                            : localeString('views.SendingLightning.AddANote')
-                    }
-                    onPress={async () => {
-                        const key: string =
-                            'note-' + (payment_hash || txid || RPreimage);
-                        await EncryptedStorage.setItem(key, notes);
-                        await storeNoteKeys(key, notes);
-                        navigation.goBack();
-                    }}
-                    containerStyle={{ position: 'absolute', bottom: 40 }}
-                    buttonStyle={{ padding: 15 }}
-                />
             </Screen>
         );
     }
