@@ -220,33 +220,36 @@ export default class ChannelsStore {
         });
 
     @action
-    enrichChannels = (channels: Array<Channel>) => {
+    enrichChannels = async (channels: Array<Channel>) => {
         this.loading = true;
-        channels.forEach(async (channel: Channel) => {
-            if (!channel.remotePubkey) return;
-            if (
-                this.settingsStore.implementation !== 'c-lightning-REST' &&
-                !this.nodes[channel.remotePubkey]
-            ) {
-                await this.getNodeInfo(channel.remotePubkey)
-                    .then((nodeInfo: any) => {
-                        if (!nodeInfo) return;
-                        this.nodes[channel.remotePubkey] = nodeInfo;
-                        this.aliasesById[channel.channelId] = nodeInfo.alias;
-                    })
-                    .catch(() => {
-                        // console.log(
-                        //     `Couldn't find node alias for ${channel.remotePubkey}`,
-                        //     err
-                        // );
-                    });
-            }
-            if (!channel.alias && this.aliasesById[channel.channelId]) {
-                channel.alias = this.aliasesById[channel.channelId];
-            }
-            channel.displayName =
-                channel.alias || channel.remotePubkey || channel.channelId;
-        });
+        await Promise.all(
+            channels.map(async (channel: Channel) => {
+                if (!channel.remotePubkey) return;
+                if (
+                    this.settingsStore.implementation !== 'c-lightning-REST' &&
+                    !this.nodes[channel.remotePubkey]
+                ) {
+                    await this.getNodeInfo(channel.remotePubkey)
+                        .then((nodeInfo: any) => {
+                            if (!nodeInfo) return;
+                            this.nodes[channel.remotePubkey] = nodeInfo;
+                            this.aliasesById[channel.channelId] =
+                                nodeInfo.alias;
+                        })
+                        .catch(() => {
+                            // console.log(
+                            //     `Couldn't find node alias for ${channel.remotePubkey}`,
+                            //     err
+                            // );
+                        });
+                }
+                if (!channel.alias && this.aliasesById[channel.channelId]) {
+                    channel.alias = this.aliasesById[channel.channelId];
+                }
+                channel.displayName =
+                    channel.alias || channel.remotePubkey || channel.channelId;
+            })
+        );
         this.loading = false;
         return channels;
     };
