@@ -85,7 +85,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     />
                 )}
 
-                {!!nodeInfo.synced_to_chain && (
+                {nodeInfo.synced_to_chain != null && (
                     <KeyValue
                         keyValue={localeString('views.NodeInfo.synced')}
                         value={nodeInfo.synced_to_chain ? 'True' : 'False'}
