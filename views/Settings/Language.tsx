@@ -117,7 +117,7 @@ export default class Language extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color:
-                                                selectedLocale === item.value ||
+                                                selectedLocale === item.key ||
                                                 (!selectedLocale &&
                                                     item.value === 'English')
                                                     ? themeColor('highlight')
@@ -127,7 +127,7 @@ export default class Language extends React.Component<
                                         {item.value}
                                     </ListItem.Title>
                                 </ListItem.Content>
-                                {(selectedLocale === item.value ||
+                                {(selectedLocale === item.key ||
                                     (!selectedLocale &&
                                         item.value === 'English')) && (
                                     <View style={{ textAlign: 'right' }}>
