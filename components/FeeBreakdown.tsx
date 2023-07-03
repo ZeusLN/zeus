@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 
@@ -366,42 +366,36 @@ export default class FeeBreakdown extends React.Component<
                         )}
 
                         {channelId && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.channelId'
+                                )}
+                                value={channelId}
+                                color={themeColor('chain')}
+                                sensitive
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerChannelId(
                                         channelId,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.channelId'
-                                    )}
-                                    value={channelId}
-                                    color={themeColor('chain')}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                         {channelPoint && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.channelPoint'
+                                )}
+                                value={channelPoint}
+                                color={themeColor('chain')}
+                                sensitive
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
                                         channelPoint,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.channelPoint'
-                                    )}
-                                    value={channelPoint}
-                                    color={themeColor('chain')}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                     </React.Fragment>
                 )}
