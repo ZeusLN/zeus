@@ -70,6 +70,7 @@ import QR from './views/QR';
 import AddNotes from './views/AddNotes';
 import ContactsSettings from './views/Settings/ContactsSettings';
 import AddContacts from './views/Settings/AddContacts';
+import ContactDetails from './views/ContactDetails';
 // POS
 import Order from './views/Order';
 
@@ -273,6 +274,9 @@ const AppScenes = {
     },
     AddContacts: {
         screen: AddContacts
+    },
+    ContactDetails: {
+        screen: ContactDetails
     }
 };
 

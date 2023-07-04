@@ -61,11 +61,12 @@ export default function TextInput(props: TextInputProps) {
 
     return (
         <View
-        // style={{
-        //     ...style,
-        //     // ...defaultStyle,
-        //     // ...styles.wrapper,
-        //     backgroundColor: themeColor('secondary')
+        // style={
+        //     {
+        //         ...style
+        //        // ...defaultStyle,
+        //        // ...styles.wrapper,
+        //         backgroundColor: themeColor('secondary')
         // }}
         >
             {prefix && (

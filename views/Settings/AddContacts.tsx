@@ -17,6 +17,7 @@ import Temp from '../../assets/images/SVG/Lock.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import { themeColor } from '../../utils/ThemeUtils';
 import Button from '../../components/Button';
+import DropdownSetting from '../../components/DropdownSetting';
 
 import TextInput from '../../components/TextInput';
 
@@ -36,10 +37,10 @@ interface Contact {
 
 interface AddContactsState {
     contacts: Contact[];
-    lnAddress: string;
-    onchainAddress: string;
-    nip05: string;
-    nostrNpub: string;
+    lnAddress: string[];
+    onchainAddress: string[];
+    nip05: string[];
+    nostrNpub: string[];
     name: string;
     description: string;
     photo: string | null;
@@ -53,15 +54,22 @@ export default class AddContacts extends React.Component<
         super(props);
         this.state = {
             contacts: [],
-            lnAddress: '',
-            onchainAddress: '',
-            nip05: '',
-            nostrNpub: '',
+            lnAddress: [''],
+            onchainAddress: [''],
+            nip05: [''],
+            nostrNpub: [''],
             name: '',
             description: '',
             photo: null
         };
     }
+
+    addExtraField = (field: string) => {
+        this.setState((prevState) => ({
+            [field]: [...prevState[field], '']
+        }));
+    };
+
     saveContact = async () => {
         const {
             lnAddress,
@@ -107,10 +115,10 @@ export default class AddContacts extends React.Component<
             // Reset the input fields after saving the contact
             this.setState({
                 contacts: updatedContacts,
-                lnAddress: '',
-                onchainAddress: '',
-                nip05: '',
-                nostrNpub: '',
+                lnAddress: [],
+                onchainAddress: [],
+                nip05: [],
+                nostrNpub: [],
                 name: '',
                 description: '',
                 photo: null
@@ -150,6 +158,18 @@ export default class AddContacts extends React.Component<
             name,
             description
         } = this.state;
+        const dropdownValues = [
+            { key: '', translateKey: '', value: '' },
+            { key: 'lnAddress', translateKey: '', value: 'lnAddress' },
+            {
+                key: 'onchainAddress',
+                translateKey: '',
+                value: 'onchainAddress'
+            },
+            { key: 'nip05', translateKey: '', value: 'nip05' },
+            { key: 'nostrNpub', translateKey: '', value: 'nostrNpub' }
+        ];
+
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -241,7 +261,7 @@ export default class AddContacts extends React.Component<
                             }}
                             value={name}
                             placeholder="Name*"
-                            style={{ fontSize: 60 }}
+                            style={{ backgroundColor: themeColor('primary') }}
                         />
                     </View>
                     <Divider
@@ -271,14 +291,45 @@ export default class AddContacts extends React.Component<
                             <Temp stroke={themeColor('text')} />
                         </View>
                         <TextInput
-                            onChangeText={(text: string) => {
-                                this.setState({ lnAddress: text });
+                            onChangeText={(text) => {
+                                const updatedAddresses = [...lnAddress];
+                                updatedAddresses[0] = text;
+                                this.setState({ lnAddress: updatedAddresses });
                             }}
-                            value={lnAddress}
+                            value={lnAddress[0]}
                             placeholder="LN address"
                             style={styles.inputField}
                         />
                     </View>
+                    {lnAddress.slice(1).map((address, index) => (
+                        <>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ marginTop: 16 }}
+                            />
+                            <View key={index} style={styles.inputContainer}>
+                                <View>
+                                    <Temp stroke={themeColor('text')} />
+                                </View>
+                                <View>
+                                    <TextInput
+                                        onChangeText={(text) => {
+                                            const updatedAddresses = [
+                                                ...lnAddress
+                                            ];
+                                            updatedAddresses[index + 1] = text;
+                                            this.setState({
+                                                lnAddress: updatedAddresses
+                                            });
+                                        }}
+                                        value={address}
+                                        placeholder="LN address"
+                                        style={styles.inputField}
+                                    />
+                                </View>
+                            </View>
+                        </>
+                    ))}
                     <Divider
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
@@ -288,15 +339,48 @@ export default class AddContacts extends React.Component<
                             <Temp stroke={themeColor('text')} />
                         </View>
                         <TextInput
-                            onChangeText={(text: string) => {
-                                this.setState({ onchainAddress: text });
+                            onChangeText={(text) => {
+                                const updatedAddresses = [...onchainAddress];
+                                updatedAddresses[0] = text;
+                                this.setState({
+                                    onchainAddress: updatedAddresses
+                                });
                             }}
-                            value={onchainAddress}
+                            value={onchainAddress[0]}
                             placeholder="Onchain address"
                             numberOfLines={1}
                             style={styles.inputField}
                         />
                     </View>
+                    {onchainAddress.slice(1).map((address, index) => (
+                        <>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ marginTop: 16 }}
+                            />
+                            <View key={index} style={styles.inputContainer}>
+                                <View>
+                                    <Temp stroke={themeColor('text')} />
+                                </View>
+                                <View>
+                                    <TextInput
+                                        onChangeText={(text) => {
+                                            const updatedAddresses = [
+                                                ...onchainAddress
+                                            ];
+                                            updatedAddresses[index + 1] = text;
+                                            this.setState({
+                                                onchainAddress: updatedAddresses
+                                            });
+                                        }}
+                                        value={address}
+                                        placeholder="Onchain address"
+                                        style={styles.inputField}
+                                    />
+                                </View>
+                            </View>
+                        </>
+                    ))}
                     <Divider
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
@@ -306,14 +390,46 @@ export default class AddContacts extends React.Component<
                             <Temp stroke={themeColor('text')} />
                         </View>
                         <TextInput
-                            onChangeText={(text: string) => {
-                                this.setState({ nip05: text });
+                            onChangeText={(text) => {
+                                const updatedAddresses = [...nip05];
+                                updatedAddresses[0] = text;
+                                this.setState({
+                                    nip05: updatedAddresses
+                                });
                             }}
-                            value={nip05}
+                            value={nip05[0]}
                             placeholder="NIP 05"
+                            numberOfLines={1}
                             style={styles.inputField}
                         />
                     </View>
+                    {nip05.slice(1).map((address, index) => (
+                        <>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ marginTop: 16 }}
+                            />
+                            <View key={index} style={styles.inputContainer}>
+                                <View>
+                                    <Temp stroke={themeColor('text')} />
+                                </View>
+                                <View>
+                                    <TextInput
+                                        onChangeText={(text) => {
+                                            const updatedAddresses = [...nip05];
+                                            updatedAddresses[index + 1] = text;
+                                            this.setState({
+                                                nip05: updatedAddresses
+                                            });
+                                        }}
+                                        value={address}
+                                        placeholder="NIP 05"
+                                        style={styles.inputField}
+                                    />
+                                </View>
+                            </View>
+                        </>
+                    ))}
                     <Divider
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
@@ -323,17 +439,56 @@ export default class AddContacts extends React.Component<
                             <Temp stroke={themeColor('text')} />
                         </View>
                         <TextInput
-                            onChangeText={(text: string) => {
-                                this.setState({ nostrNpub: text });
+                            onChangeText={(text) => {
+                                const updatedAddresses = [...nostrNpub];
+                                updatedAddresses[0] = text;
+                                this.setState({
+                                    nostrNpub: updatedAddresses
+                                });
                             }}
-                            value={nostrNpub}
-                            placeholder="Nostr npub"
+                            value={nostrNpub[0]}
+                            placeholder="NOSTR Npub"
+                            numberOfLines={1}
                             style={styles.inputField}
                         />
                     </View>
+                    {nostrNpub.slice(1).map((address, index) => (
+                        <>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ marginTop: 16 }}
+                            />
+                            <View key={index} style={styles.inputContainer}>
+                                <View>
+                                    <Temp stroke={themeColor('text')} />
+                                </View>
+                                <View>
+                                    <TextInput
+                                        onChangeText={(text) => {
+                                            const updatedAddresses = [
+                                                ...nostrNpub
+                                            ];
+                                            updatedAddresses[index + 1] = text;
+                                            this.setState({
+                                                nostrNpub: updatedAddresses
+                                            });
+                                        }}
+                                        value={address}
+                                        placeholder="NOSTR Npub"
+                                        style={styles.inputField}
+                                    />
+                                </View>
+                            </View>
+                        </>
+                    ))}
                     <Divider
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
+                    />
+                    <DropdownSetting
+                        selectedValue={''}
+                        onValueChange={this.addExtraField}
+                        values={dropdownValues}
                     />
                     <Button
                         title="Save Contact"
@@ -342,7 +497,7 @@ export default class AddContacts extends React.Component<
                             this.saveContact();
                         }}
                         containerStyle={{
-                            bottom: -110
+                            bottom: 0
                         }}
                     />
                 </ScrollView>

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, View, TouchableOpacity, FlatList, Image } from 'react-native';
-import { Header, Icon, SearchBar } from 'react-native-elements';
+import { Header, Icon, SearchBar, Chip } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
@@ -23,6 +23,7 @@ interface ContactItem {
 interface ContactsSettingsState {
     contacts: ContactItem[];
     search: string;
+    SendScreen: boolean;
 }
 
 export default class ContactsSettings extends React.Component<
@@ -31,9 +32,14 @@ export default class ContactsSettings extends React.Component<
 > {
     constructor(props: ContactsSettingsProps) {
         super(props);
+        const SendScreen: boolean = this.props.navigation.getParam(
+            'SendScreen',
+            null
+        );
         this.state = {
             contacts: [],
-            search: ''
+            search: '',
+            SendScreen
         };
     }
 
@@ -58,36 +64,50 @@ export default class ContactsSettings extends React.Component<
     };
 
     renderContactItem = ({ item }: { item: ContactItem }) => (
-        <View
-            style={{
-                marginVertical: 10,
-                paddingLeft: 16,
-                flexDirection: 'row',
-                alignItems: 'center'
-            }}
+        <TouchableOpacity
+            onPress={() =>
+                this.state.SendScreen &&
+                this.props.navigation.navigate('ContactDetails', {
+                    contact: item
+                })
+            }
         >
-            {item.photo && (
-                <Image
-                    source={{ uri: item.photo }}
-                    style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        marginRight: 10
-                    }}
-                />
-            )}
-            <View>
-                <Text style={{ fontSize: 16, color: themeColor('text') }}>
-                    {item.name}
-                </Text>
-                <Text
-                    style={{ fontSize: 16, color: themeColor('secondaryText') }}
-                >
-                    {item.lnAddress}
-                </Text>
+            <View
+                style={{
+                    marginVertical: 10,
+                    paddingLeft: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center'
+                }}
+            >
+                {item.photo && (
+                    <Image
+                        source={{ uri: item.photo }}
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
+                            marginRight: 10
+                        }}
+                    />
+                )}
+                <View>
+                    <Text style={{ fontSize: 16, color: themeColor('text') }}>
+                        {item.name}
+                    </Text>
+                    <Text
+                        style={{
+                            fontSize: 16,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {item.lnAddress.length === 1
+                            ? item.lnAddress
+                            : 'multiple addresses'}
+                    </Text>
+                </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     updateSearch = (query: string) => {
@@ -96,7 +116,7 @@ export default class ContactsSettings extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { search, contacts } = this.state;
+        const { search, contacts, SendScreen } = this.state;
         const filteredContacts = contacts.filter(
             (contact) =>
                 contact.name.includes(search) ||
@@ -130,6 +150,17 @@ export default class ContactsSettings extends React.Component<
                 />
             </TouchableOpacity>
         );
+        const PayButton = ({ navigation }: { navigation: any }) => (
+            <Chip
+                title="Pay"
+                titleStyle={{ color: 'black', fontSize: 16 }}
+                buttonStyle={{
+                    backgroundColor: themeColor('chain'),
+                    minWidth: 70
+                }}
+                onPress={() => navigation.navigate('AddContacts')}
+            />
+        );
 
         return (
             <View
@@ -144,7 +175,13 @@ export default class ContactsSettings extends React.Component<
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
-                    rightComponent={<Add navigation={navigation} />}
+                    rightComponent={
+                        SendScreen ? (
+                            <PayButton navigation={navigation} />
+                        ) : (
+                            <Add navigation={navigation} />
+                        )
+                    }
                 />
                 <View>
                     <SearchBar
