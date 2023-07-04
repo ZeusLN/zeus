@@ -49,6 +49,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Scan from '../assets/images/SVG/Scan.svg';
+import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 
 interface SendProps {
     exitSetup: any;
@@ -417,6 +418,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (BackendUtils.supportsKeysend()) {
             paymentOptions.push(localeString('views.Send.keysendAddress'));
         }
+
         return (
             <Screen>
                 <Header
@@ -487,19 +489,31 @@ export default class Send extends React.Component<SendProps, SendState> {
                     >
                         {paymentOptions.join(', ')}
                     </Text>
-                    <TextInput
-                        placeholder={'lnbc1...'}
-                        value={destination}
-                        onChangeText={(text: string) => {
-                            this.setState({
-                                destination: text
-                            });
-                            this.validateAddress(text);
-                        }}
-                        style={styles.textInput}
-                        autoCorrect={false}
-                        autoCapitalize="none"
-                    />
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            placeholder={'lnbc1...'}
+                            value={destination}
+                            onChangeText={(text: string) => {
+                                this.setState({
+                                    destination: text
+                                });
+                                this.validateAddress(text);
+                            }}
+                            style={{ flex: 1 }}
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                        />
+                        <TouchableOpacity
+                            onPress={() =>
+                                navigation.navigate('ContactsSettings', {
+                                    SendScreen: true
+                                })
+                            }
+                        >
+                            <ContactIcon stroke={themeColor('text')} />
+                        </TouchableOpacity>
+                    </View>
+
                     {!!error_msg && !!destination && (
                         <View style={{ paddingTop: 10, paddingBottom: 10 }}>
                             <ErrorMessage message={error_msg} />
@@ -938,9 +952,13 @@ const styles = StyleSheet.create({
     secondaryText: {
         fontFamily: 'Lato-Regular'
     },
-    textInput: {
-        paddingTop: 10,
-        paddingBottom: 10
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 6,
+        marginTop: 10,
+        paddingHorizontal: 10,
+        backgroundColor: themeColor('secondary')
     },
     content: {
         padding: 20
