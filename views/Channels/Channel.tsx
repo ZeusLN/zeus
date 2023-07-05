@@ -284,23 +284,20 @@ export default class ChannelView extends React.Component<
                             />
                         )}
                         {closeHeight && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closeHeight'
+                                )}
+                                value={closeHeight}
+                                color={themeColor('chain')}
+                                sensitive
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerBlockHeight(
                                         closeHeight,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.closeHeight'
-                                    )}
-                                    value={closeHeight}
-                                    color={themeColor('chain')}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                         {closeType && (
                             <KeyValue
@@ -330,62 +327,53 @@ export default class ChannelView extends React.Component<
                             />
                         )}
                         {closing_txid && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closingTxId'
+                                )}
+                                value={closing_txid}
+                                sensitive
+                                color={themeColor('chain')}
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
                                         closing_txid,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.closingTxId'
-                                    )}
-                                    value={closing_txid}
-                                    sensitive
-                                    color={themeColor('chain')}
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                         {closing_tx_hash && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closingTxHash'
+                                )}
+                                value={closing_tx_hash}
+                                sensitive
+                                color={themeColor('chain')}
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
                                         closing_tx_hash,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.closingTxHash'
-                                    )}
-                                    value={closing_tx_hash}
-                                    sensitive
-                                    color={themeColor('chain')}
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                         {(pendingOpen || pendingClose || closing) &&
                             channel_point && (
-                                <TouchableOpacity
-                                    onPress={() =>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.channelPoint'
+                                    )}
+                                    value={channel_point}
+                                    sensitive
+                                    color={themeColor('chain')}
+                                    mempoolLink={() =>
                                         UrlUtils.goToBlockExplorerTXID(
                                             channel_point,
                                             testnet
                                         )
                                     }
-                                >
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Channel.channelPoint'
-                                        )}
-                                        value={channel_point}
-                                        sensitive
-                                        color={themeColor('chain')}
-                                    />
-                                </TouchableOpacity>
+                                />
                             )}
                         <KeyValue
                             keyValue={localeString(
