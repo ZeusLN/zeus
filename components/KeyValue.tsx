@@ -21,6 +21,7 @@ interface KeyValueProps {
     value?: any;
     color?: string;
     sensitive?: boolean;
+    mempoolLink?: () => void;
     SettingsStore: SettingsStore;
 }
 
@@ -28,7 +29,14 @@ interface KeyValueProps {
 @observer
 export default class KeyValue extends React.Component<KeyValueProps, {}> {
     render() {
-        const { keyValue, value, color, sensitive, SettingsStore } = this.props;
+        const {
+            keyValue,
+            value,
+            color,
+            sensitive,
+            mempoolLink,
+            SettingsStore
+        } = this.props;
 
         const lurkerMode: boolean =
             SettingsStore?.settings?.privacy?.lurkerMode || false;
@@ -86,7 +94,10 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
 
         const InteractiveKeyValueRow = () =>
             !lurkerMode && isCopyable ? (
-                <TouchableOpacity onLongPress={() => copyText()}>
+                <TouchableOpacity
+                    onLongPress={() => copyText()}
+                    onPress={mempoolLink}
+                >
                     <KeyValueRow />
                 </TouchableOpacity>
             ) : (
