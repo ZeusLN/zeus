@@ -1235,17 +1235,17 @@
     base58check "^2.0.0"
     tslib "~2.2.0"
 
-"@lightninglabs/lnc-core@0.2.3-alpha":
-  version "0.2.3-alpha"
-  resolved "https://registry.yarnpkg.com/@lightninglabs/lnc-core/-/lnc-core-0.2.3-alpha.tgz#e1b92a9071d1dfb92e2d565710b56f28f57cbbd4"
-  integrity sha512-93D/uU64ayAaJv5kv4Pqwvkt+uT7yCtmHD08aUzvql+lbWm6U7m5loZLxz7tACFLXVPOQ8OHJL25W+3QMEYthg==
+"@lightninglabs/lnc-core@^0.2.5-alpha":
+  version "0.2.5-alpha"
+  resolved "https://registry.yarnpkg.com/@lightninglabs/lnc-core/-/lnc-core-0.2.5-alpha.tgz#4150b9d8002a8dac582edc6216581feb2b613196"
+  integrity sha512-mdofMCydpNLAf0Abwy81FsuOMIrUqsxR5kZ9Qzjp+E7bZdMntsKY3p0oqq/y3o/6hfrKN7Ornht42Cebc/i9Iw==
 
-"@lightninglabs/lnc-rn@0.2.3-alpha":
-  version "0.2.3-alpha"
-  resolved "https://registry.yarnpkg.com/@lightninglabs/lnc-rn/-/lnc-rn-0.2.3-alpha.tgz#b9b06e30a711384b8c94d578767858965d8804e2"
-  integrity sha512-t1eWjZcbizoI2xKw4Uu/gPM0pNh1KdIpFCUzOmCXiaW36bCxgR7d8M069yU9xck6mbGCnhwFS4TIEqVN4sGSkg==
+"@lightninglabs/lnc-rn@0.2.5-alpha":
+  version "0.2.5-alpha"
+  resolved "https://registry.yarnpkg.com/@lightninglabs/lnc-rn/-/lnc-rn-0.2.5-alpha.tgz#fa95d73bdd5ab13efe39e938701aa610978eebf5"
+  integrity sha512-g/5VapgfPZKHZ8f63CffT8VEXhHMC+FpI5O8OMJpXLxrYs696kHAO4AmGQ9gQGzXYZeKmBHCcPSvRBLJKxQqKQ==
   dependencies:
-    "@lightninglabs/lnc-core" "0.2.3-alpha"
+    "@lightninglabs/lnc-core" "^0.2.5-alpha"
 
 "@ngraveio/bc-ur@1.1.6", "@ngraveio/bc-ur@^1.1.5":
   version "1.1.6"

@@ -52,6 +52,7 @@
 		6ACB3216EC1B40A190B0A268 /* Channels.svg in Resources */ = {isa = PBXBuildFile; fileRef = 289689C09C974491A933737A /* Channels.svg */; };
 		745E06AA295CB0E500597EE8 /* Caret Down.svg in Resources */ = {isa = PBXBuildFile; fileRef = 745E06A9295CB0E500597EE8 /* Caret Down.svg */; };
 		748582B6293A4E8300494AD8 /* Lncmobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 748582B5293A4E8300494AD8 /* Lncmobile.xcframework */; };
+		74A116732A55DEE600F7078C /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 74A116702A55DEE600F7078C /* libresolv.tbd */; };
 		78FB5414F55B4D94804920B7 /* Caret Right-1.svg in Resources */ = {isa = PBXBuildFile; fileRef = 34845404A9F04B35ADA34F80 /* Caret Right-1.svg */; };
 		7C9A1A0DC41A4B56BC555750 /* Node On.svg in Resources */ = {isa = PBXBuildFile; fileRef = 62458EE70D8546B7AE7F87DF /* Node On.svg */; };
 		7D5F7108F3164222AE36A242 /* Filter Off.svg in Resources */ = {isa = PBXBuildFile; fileRef = 2EC02052907E453CB15DBADA /* Filter Off.svg */; };
@@ -330,6 +331,7 @@
 		7407D2CE274E079100850BAB /* zeusRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = zeusRelease.entitlements; path = zeus/zeusRelease.entitlements; sourceTree = "<group>"; };
 		745E06A9295CB0E500597EE8 /* Caret Down.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "Caret Down.svg"; path = "../assets/images/SVG/Caret Down.svg"; sourceTree = "<group>"; };
 		748582B5293A4E8300494AD8 /* Lncmobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Lncmobile.xcframework; path = "../node_modules/@lightninglabs/lnc-rn/ios/Lncmobile.xcframework"; sourceTree = "<group>"; };
+		74A116702A55DEE600F7078C /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
 		77EC666A91C04742A050DEF4 /* Help Icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Help Icon.svg"; path = "../assets/images/SVG/Help Icon.svg"; sourceTree = "<group>"; };
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
 		794C8E7556B54F62BEAD1975 /* 2.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 2.png; path = ../assets/images/intro/2.png; sourceTree = "<group>"; };
@@ -413,6 +415,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				74A116732A55DEE600F7078C /* libresolv.tbd in Frameworks */,
 				ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */,
 				FE68A5FF7AF76A7CC17F753E /* libPods-zeus.a in Frameworks */,
 				748582B6293A4E8300494AD8 /* Lncmobile.xcframework in Frameworks */,
@@ -540,6 +543,7 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				74A116702A55DEE600F7078C /* libresolv.tbd */,
 				748582B5293A4E8300494AD8 /* Lncmobile.xcframework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				ED2971642150620600B7C4FE /* JavaScriptCore.framework */,
