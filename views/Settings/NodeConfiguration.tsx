@@ -37,6 +37,7 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
+import { Settings } from '../../stores/SettingsStore';
 
 interface NodeConfigurationProps {
     navigation: any;
@@ -91,7 +92,7 @@ export default class NodeConfiguration extends React.Component<
         port: '',
         macaroonHex: '',
         saved: false,
-        index: null,
+        index: null as number | null,
         active: false,
         newEntry: false,
         implementation: 'lnd',
@@ -409,12 +410,30 @@ export default class NodeConfiguration extends React.Component<
 
         updateSettings({
             nodes: newNodes,
-            selectedNode:
-                index === settings.selectedNode ? 0 : settings.selectedNode
+            selectedNode: this.getNewSelectedNodeIndex(index, settings)
         }).then(() => {
             navigation.navigate('Nodes', { refresh: true });
         });
     };
+
+    getNewSelectedNodeIndex(
+        indexOfDeletedNode: number | null,
+        settings: Settings
+    ): number | undefined {
+        if (
+            settings.selectedNode == null ||
+            indexOfDeletedNode == null ||
+            indexOfDeletedNode > settings.selectedNode
+        ) {
+            return settings.selectedNode;
+        }
+        if (indexOfDeletedNode < settings.selectedNode) {
+            return settings.selectedNode - 1;
+        }
+        return settings.nodes?.length != null && settings.nodes?.length > 0
+            ? 0
+            : undefined;
+    }
 
     setNodeConfigurationAsActive = () => {
         const { SettingsStore, navigation } = this.props;
