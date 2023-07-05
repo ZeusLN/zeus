@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, View, TouchableOpacity, FlatList, Image } from 'react-native';
-import { Header, Icon, SearchBar, Chip } from 'react-native-elements';
+import { Header, Icon, SearchBar, Chip, Divider } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
@@ -74,8 +74,8 @@ export default class ContactsSettings extends React.Component<
         >
             <View
                 style={{
-                    marginVertical: 10,
-                    paddingLeft: 16,
+                    marginHorizontal: 24,
+                    paddingBottom: 20,
                     flexDirection: 'row',
                     alignItems: 'center'
                 }}
@@ -117,14 +117,21 @@ export default class ContactsSettings extends React.Component<
     render() {
         const { navigation } = this.props;
         const { search, contacts, SendScreen } = this.state;
-        const filteredContacts = contacts.filter(
-            (contact) =>
-                contact.name.includes(search) ||
-                contact.lnAddress.includes(search) ||
-                contact.nip05.includes(search) ||
-                contact.onchainAddress.includes(search) ||
-                contact.nostrNpub.includes(search)
-        );
+        const filteredContacts = contacts.filter((contact) => {
+            const hasMatch = (field: string) =>
+                Array.isArray(contact[field])
+                    ? contact[field].some((input) => input.includes(search))
+                    : contact[field].includes(search);
+
+            return (
+                hasMatch('name') ||
+                hasMatch('description') ||
+                hasMatch('lnAddress') ||
+                hasMatch('nip05') ||
+                hasMatch('onchainAddress') ||
+                hasMatch('nostrNpub')
+            );
+        });
 
         const BackButton = () => (
             <Icon
@@ -184,26 +191,70 @@ export default class ContactsSettings extends React.Component<
                     }
                 />
                 <View>
-                    <SearchBar
-                        placeholder="Search"
-                        onChangeText={this.updateSearch}
-                        value={this.state.search}
-                        inputStyle={{
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor={themeColor('secondaryText')}
-                        containerStyle={{
-                            backgroundColor: 'transparent',
-                            borderTopWidth: 0,
-                            borderBottomWidth: 0
-                        }}
-                        inputContainerStyle={{
-                            borderRadius: 15,
-                            backgroundColor: themeColor('secondary')
-                        }}
-                    />
+                    {SendScreen ? (
+                        <View>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ marginTop: 14 }}
+                            />
+                            <SearchBar
+                                placeholder="NOSTR Npub, NIP05, LN address, Onchain address"
+                                onChangeText={this.updateSearch}
+                                value={this.state.search}
+                                inputStyle={{
+                                    color: themeColor('text')
+                                }}
+                                placeholderTextColor={themeColor(
+                                    'secondaryText'
+                                )}
+                                containerStyle={{
+                                    backgroundColor: themeColor('background'),
+                                    borderTopWidth: 0,
+                                    borderBottomWidth: 0
+                                }}
+                                inputContainerStyle={{
+                                    backgroundColor: themeColor('background')
+                                }}
+                                searchIcon={
+                                    <Text
+                                        style={{
+                                            fontSize: 20,
+                                            color: themeColor('text'),
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        To
+                                    </Text>
+                                }
+                                leftIconContainerStyle={{
+                                    marginLeft: 18,
+                                    marginRight: -8
+                                }}
+                            />
+                            <Divider orientation="horizontal" />
+                        </View>
+                    ) : (
+                        <SearchBar
+                            placeholder="Search"
+                            onChangeText={this.updateSearch}
+                            value={this.state.search}
+                            inputStyle={{
+                                color: themeColor('text')
+                            }}
+                            placeholderTextColor={themeColor('secondaryText')}
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                borderTopWidth: 0,
+                                borderBottomWidth: 0
+                            }}
+                            inputContainerStyle={{
+                                borderRadius: 15,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                        />
+                    )}
 
-                    <View style={{ margin: 18 }}>
+                    <View style={{ margin: 28 }}>
                         <Text style={{ fontSize: 18 }}>
                             Contacts ({filteredContacts.length})
                         </Text>
