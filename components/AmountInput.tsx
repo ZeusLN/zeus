@@ -79,7 +79,12 @@ export default class AmountInput extends React.Component<
 
         const { amount, onAmountChange } = props;
         let satAmount = '0';
-        if (amount) satAmount = getSatAmount(amount).toString();
+        if (amount) {
+            // reset units to sats if amount is passed in
+            this.props.UnitsStore?.resetUnits();
+            satAmount = getSatAmount(amount).toString();
+        }
+
         onAmountChange(amount, satAmount);
         this.state = {
             satAmount
