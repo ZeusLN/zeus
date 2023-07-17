@@ -16,7 +16,7 @@ PODS:
   - glog (0.3.5)
   - hermes-engine (0.70.6)
   - libevent (2.1.12)
-  - lnc-rn (0.2.3-alpha):
+  - lnc-rn (0.2.5-alpha):
     - React
   - lottie-ios (3.4.4)
   - lottie-react-native (5.1.5):
@@ -568,7 +568,7 @@ SPEC CHECKSUMS:
   glog: 04b94705f318337d7ead9e6d17c019bd9b1f6b1b
   hermes-engine: 2af7b7a59128f250adfd86f15aa1d5a2ecd39995
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
-  lnc-rn: 4481ea672dbc31ccaeb32576d8e6d2ae1845f57b
+  lnc-rn: 90b224889e086be0043f92827b47355ea1f1a06e
   lottie-ios: 8f97d3271e155c2d688875c29cd3c74908aef5f8
   lottie-react-native: 3e722c63015fdb9c27638b0a77969fc412067c18
   RCT-Folly: 0080d0a6ebf2577475bda044aa59e2ca1f909cda
