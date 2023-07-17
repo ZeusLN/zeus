@@ -21,13 +21,14 @@ export default class Utxo extends BaseModel {
     status: string;
     reserved: boolean;
     blockheight: number;
+    amount_msat: number;
 
     @computed public get isUnconfirmed(): boolean {
         return this.getConfs <= 0;
     }
 
     @computed public get getAmount(): number | string {
-        return this.amount_sat || this.value;
+        return this.amount_sat || this.value || Number(this.amount_msat) / 1000;
     }
 
     @computed public get getConfs(): number {
