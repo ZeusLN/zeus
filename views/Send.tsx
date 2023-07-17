@@ -592,12 +592,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     />
                                 )}
 
-                                {BackendUtils.supportsCoinControl() && (
-                                    <UTXOPicker
-                                        onValueChange={this.selectUTXOs}
-                                        UTXOsStore={UTXOsStore}
-                                    />
-                                )}
+                                {BackendUtils.supportsCoinControl() &&
+                                    !BackendUtils.isLNDBased && (
+                                        <UTXOPicker
+                                            onValueChange={this.selectUTXOs}
+                                            UTXOsStore={UTXOsStore}
+                                        />
+                                    )}
                                 <View style={styles.button}>
                                     <Button
                                         title={localeString(
