@@ -38,7 +38,7 @@
     "bc-ur": "0.1.6",
     "bignumber.js": "9.0.2",
     "bitcoinjs-lib": "3.3.2",
-    "bolt11": "1.2.7",
+    "bolt11": "1.4.1",
     "browserify-zlib": "0.1.4",
     "bs58check": "2.1.2",
     "buffer": "5.6.0",
