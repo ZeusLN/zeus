@@ -41,7 +41,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
             this.setState({ lnurlpaytx });
         }
         navigation.addListener('didFocus', () => {
-            EncryptedStorage.getItem('note-' + payment.payment_hash)
+            const noteKey = payment.payment_hash || payment.getPreimage;
+            EncryptedStorage.getItem('note-' + noteKey)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
                 })
@@ -65,11 +66,12 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getMemo
         } = payment;
         const date = getDisplayTime;
+        const noteKey = payment_hash || getPreimage;
 
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('AddNotes', { payment_hash })
+                    navigation.navigate('AddNotes', { payment_hash: noteKey })
                 }
                 style={{ marginTop: -12 }}
             >
@@ -203,23 +205,18 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             </ListItem>
                         )}
                         {storedNotes && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString('views.Payment.notes')}
+                                value={storedNotes}
+                                sensitive
+                                mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
-                                        payment_hash
+                                        payment_hash: noteKey
                                     })
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Payment.notes'
-                                    )}
-                                    value={storedNotes}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
-                        {payment_hash && (
+                        {noteKey && (
                             <Button
                                 title={
                                     storedNotes
@@ -232,7 +229,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 }
                                 onPress={() =>
                                     navigation.navigate('AddNotes', {
-                                        payment_hash
+                                        payment_hash: noteKey
                                     })
                                 }
                                 containerStyle={{ marginTop: 15 }}
