@@ -35,7 +35,8 @@ const getSatAmount = (amount: string | number) => {
     const { fiat } = settings;
     const { units } = unitsStore;
 
-    const value = amount || '0';
+    // replace , with . for unit separator
+    const value = amount.toString().replace(/,/g, ',') || '0';
 
     const fiatEntry =
         fiat && fiatRates
