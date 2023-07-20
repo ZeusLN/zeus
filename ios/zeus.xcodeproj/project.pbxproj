@@ -1580,7 +1580,7 @@
 					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
 				);
 				INFOPLIST_FILE = zeus/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Zeus LN";
+				INFOPLIST_KEY_CFBundleDisplayName = Zeus;
 				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1627,7 +1627,7 @@
 					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
 				);
 				INFOPLIST_FILE = zeus/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Zeus LN";
+				INFOPLIST_KEY_CFBundleDisplayName = Zeus;
 				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
