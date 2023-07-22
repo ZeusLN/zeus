@@ -69,3 +69,7 @@ buck-out/
 # CocoaPods
 ios/Pods
 **.swp
+
+# Lnd binaries
+android/lndmobile/Lndmobile.aar
+ios/LncMobile/Lndmobile.xcframework

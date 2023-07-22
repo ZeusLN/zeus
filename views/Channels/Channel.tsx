@@ -157,7 +157,8 @@ export default class ChannelView extends React.Component<
             pendingClose,
             forceClose,
             pendingOpen,
-            closing
+            closing,
+            zero_conf
         } = channel;
         const privateChannel = channel.private;
 
@@ -274,6 +275,23 @@ export default class ChannelView extends React.Component<
                                 ? localeString('views.Channel.active')
                                 : localeString('views.Channel.inactive')}
                         </Text>
+                        {zero_conf && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.zeroConf'
+                                )}
+                                value={localeString('general.true')}
+                            />
+                        )}
+                        <KeyValue
+                            keyValue={localeString('views.Channel.unannounced')}
+                            value={
+                                privateChannel
+                                    ? localeString('general.true')
+                                    : localeString('general.false')
+                            }
+                            color={privateChannel ? 'green' : '#808000'}
+                        />
                         {chain_hash && (
                             <KeyValue
                                 keyValue={localeString(
@@ -521,7 +539,6 @@ export default class ChannelView extends React.Component<
                                 commit_fee={commit_fee}
                                 commit_weight={commit_weight}
                                 csv_delay={csv_delay}
-                                privateChannel={privateChannel}
                             />
                         )}
                         {BackendUtils.supportsBumpFee() && bumpable && (

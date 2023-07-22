@@ -100,7 +100,7 @@ export default class OnchainSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: BackendUtils.supportsRouting() ? 200 : 135,
+                width: BackendUtils.supportsCoinControl() ? 200 : 135,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
