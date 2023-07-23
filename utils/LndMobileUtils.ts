@@ -156,7 +156,6 @@ export async function startLnd(walletPassword: string) {
     const { unlockWallet } = lndMobile.wallet;
 
     const status = await checkStatus();
-    console.log('status', status);
     if (
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
@@ -205,6 +204,7 @@ export async function startLnd(walletPassword: string) {
 }
 
 export async function createLndWallet(
+    seedMnemonic?: string,
     walletPassphrase?: string,
     isTestnet?: boolean
 ) {
@@ -212,7 +212,8 @@ export async function createLndWallet(
         initialize,
         startLnd,
         createIOSApplicationSupportAndLndDirectories,
-        excludeLndICloudBackup
+        excludeLndICloudBackup,
+        checkStatus
     } = lndMobile.index;
     const { genSeed, initWallet } = lndMobile.wallet;
 
@@ -224,23 +225,35 @@ export async function createLndWallet(
     await writeLndConfig(isTestnet);
     await initialize();
 
-    await startLnd('');
+    const status = await checkStatus();
+    if (
+        (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
+        ELndMobileStatusCodes.STATUS_PROCESS_STARTED
+    ) {
+        await startLnd('');
+    }
     sleep(2000);
 
-    const seed = await genSeed(undefined);
+    let seed: any;
+    if (!seedMnemonic) {
+        seed = await genSeed(undefined);
+        if (!seed) return;
+    } else {
+        seed = {
+            cipher_seed_mnemonic: seedMnemonic?.split(' ')
+        };
+    }
 
-    if (!seed) return;
     const random = await generateSecureRandom(32);
-
     const randomBase64 = base64.fromByteArray(random);
 
-    const isRestore = walletPassphrase;
+    const isRestore = walletPassphrase || seedMnemonic;
     const wallet: any = await initWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
         !!isRestore ? 100 : undefined,
         undefined, // TODO add channels backup restore
-        !!isRestore ? walletPassphrase : undefined
+        walletPassphrase ? walletPassphrase : undefined
     );
     return { wallet, seed, randomBase64 };
 }

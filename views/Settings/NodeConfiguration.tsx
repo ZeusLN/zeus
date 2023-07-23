@@ -902,6 +902,31 @@ export default class NodeConfiguration extends React.Component<
 
                         {!adminMacaroon && <NodeInterface />}
 
+                        {!embeddedLndNetwork && (
+                            <View>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {`${localeString(
+                                        'views.Settings.AddEditNode.recoveryPassphrase'
+                                    )} (${localeString('general.optional')})`}
+                                </Text>
+                                <TextInput
+                                    placeholder="ship yellow box resource scan pelican..."
+                                    value={recoveryPassphrase}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            recoveryPassphrase: text
+                                        })
+                                    }
+                                    locked={loading}
+                                />
+                            </View>
+                        )}
+
                         {(implementation === 'spark' ||
                             implementation == 'eclair') && (
                             <>
@@ -1430,6 +1455,7 @@ export default class NodeConfiguration extends React.Component<
                                                 const response =
                                                     await createLndWallet(
                                                         recoveryPassphrase,
+                                                        undefined,
                                                         true
                                                     );
                                                 const {

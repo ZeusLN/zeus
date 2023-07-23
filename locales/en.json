@@ -171,6 +171,7 @@
     "views.Settings.AddEditNode.customMailboxServer": "Custom Mailbox Server",
     "views.Settings.AddEditNode.localKey": "Local key",
     "views.Settings.AddEditNode.remoteKey": "Remote key",
+    "views.Settings.AddEditNode.recoveryPassphrase": "Recovery Passphrase",
     "views.Settings.CertInstallInstructions.title": "Certificate Installation Instructions",
     "views.Settings.CertInstallInstructions.graph1": "To install a certificate on Android, copy the certificate file to your device. Then go to Settings > Security > Install from storage. It should detect the certificate and let you add install it to the device. The certificate should have the extension .crt",
     "views.Settings.CertInstallInstructions.graph2": "To install a certificate on iOS, transfer the file to your device. Once you select the file on your device you will be prompted to install it as a profile. You must enable your certificate in General > About > Certificate trust settings. The certificate should have the extension .crt",
