@@ -7848,11 +7848,6 @@ react-native-ratings@8.0.4:
   dependencies:
     lodash "^4.17.15"
 
-react-native-restart@0.0.24:
-  version "0.0.24"
-  resolved "https://registry.npmjs.org/react-native-restart/-/react-native-restart-0.0.24.tgz"
-  integrity sha512-pvJNU3NwQk6bCG2gOWcQpZ4IxhtELB0K9gzmtixfsaTFbW1UXXHkJNjk1kHazcbH5hrD7QbUkR63fsAVh8X4VQ==
-
 react-native-safe-area-context@0.6.2:
   version "0.6.2"
   resolved "https://registry.npmjs.org/react-native-safe-area-context/-/react-native-safe-area-context-0.6.2.tgz"
