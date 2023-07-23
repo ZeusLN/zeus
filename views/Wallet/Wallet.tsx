@@ -17,7 +17,6 @@ import {
     NavigationContainerRef
 } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
-import RNRestart from 'react-native-restart';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -351,8 +350,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } = this.props;
         const { nodeInfo } = NodeInfoStore;
         const error = NodeInfoStore.error || SettingsStore.error;
-        const { implementation, settings, loggedIn, connecting, posStatus } =
-            SettingsStore;
+        const {
+            implementation,
+            settings,
+            loggedIn,
+            connecting,
+            posStatus,
+            setConnectingStatus
+        } = SettingsStore;
         const loginRequired = !settings || SettingsStore.loginRequired();
 
         const squareEnabled: boolean =
@@ -379,7 +384,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     name: 'sync',
                                     size: 25
                                 }}
-                                onPress={() => RNRestart.Restart()}
+                                onPress={() => {
+                                    setConnectingStatus(true);
+                                    this.refresh();
+                                }}
                             />
                         </View>
                     )}
