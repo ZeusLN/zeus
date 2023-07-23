@@ -40,9 +40,15 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                 <View style={{ margin: 10, flex: 1, marginTop: '35%' }}>
                     <View style={{ alignSelf: 'center', marginBottom: 40 }}>
                         <CircularProgress
-                            value={Number(
-                                (currentBlockHeight / bestBlockHeight) * 100
-                            )}
+                            value={
+                                currentBlockHeight && bestBlockHeight
+                                    ? Number(
+                                          (currentBlockHeight /
+                                              bestBlockHeight) *
+                                              100
+                                      )
+                                    : 0
+                            }
                             radius={120}
                             inActiveStrokeOpacity={0.5}
                             activeStrokeWidth={15}
@@ -63,26 +69,34 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                             }}
                             progressFormatter={(value: number) => {
                                 'worklet';
-                                return (value.toFixed && value.toFixed(1)) || 0; // 2 decimal places
+                                return value.toFixed && value.toFixed(1); // 1 decimal place
                             }}
                             valueSuffix="%"
                         />
                     </View>
 
-                    <KeyValue
-                        keyValue={localeString('views.Sync.currentBlockHeight')}
-                        value={currentBlockHeight}
-                    />
-                    <KeyValue
-                        keyValue={localeString('views.Sync.tip')}
-                        value={bestBlockHeight}
-                    />
-                    <KeyValue
-                        keyValue={localeString(
-                            'views.Sync.numBlocksUntilSynced'
-                        )}
-                        value={numBlocksUntilSynced}
-                    />
+                    {currentBlockHeight && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Sync.currentBlockHeight'
+                            )}
+                            value={currentBlockHeight}
+                        />
+                    )}
+                    {bestBlockHeight && (
+                        <KeyValue
+                            keyValue={localeString('views.Sync.tip')}
+                            value={bestBlockHeight}
+                        />
+                    )}
+                    {numBlocksUntilSynced && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Sync.numBlocksUntilSynced'
+                            )}
+                            value={numBlocksUntilSynced}
+                        />
+                    )}
                 </View>
             </Screen>
         );
