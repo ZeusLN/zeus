@@ -232,7 +232,6 @@
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "Your first lightning receive must be 50,000 sats or more. A setup fee will be deducted from this amount.",
     "views.Wallet.KeypadPane.lspExplainer": "You will be charged a setup fee if paid over lightning.",
     "views.Wallet.KeypadPane.lspExplainerBelowMin": "Your next lightning receive must be 50,000 sats or more. A setup fee will be deducted from this amount.",
-    // "views.Wallet.KeypadPane.lspExplainerAlt": "This amount is about your inbound capacity. Your next lightning receive must be below the value below, or 50,000 sats or more to have a channel opened to you. Tap to learn more.",
     "view.Wallet.PosPane.orderNumber": "Order number",
     "views.BTCPayConfigQRScanner.text": "Scan a BTCPay Config under Settings > Services > LND Rest",
     "views.BTCPayConfigQRScanner.error": "Error fetching BTCPay config",
