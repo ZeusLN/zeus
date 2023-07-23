@@ -156,6 +156,7 @@ export const LOCALE_KEYS = [
     { key: 'hr', value: 'Hrvatski' }
 ];
 
+// this mapping is only for migration and does not need to be updated when new languages are added
 const localeMigrationMapping: { [oldLocale: string]: string } = {
     English: 'en',
     Español: 'es',
