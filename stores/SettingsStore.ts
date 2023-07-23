@@ -614,7 +614,8 @@ export default class SettingsStore {
         isBiometryEnabled: false,
         scramblePin: true,
         loginBackground: false,
-        fiat: DEFAULT_FIAT,
+        fiat: undefined,
+        fiatEnabled: undefined,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE
     };
     @observable public posStatus: string = 'unselected';
