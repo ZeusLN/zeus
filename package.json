@@ -11,13 +11,14 @@
   },
   "scripts": {
     "start": "react-native start",
-    "postinstall": "rn-nodeify --install --hack; npx jetify; react-native setup-ios-permissions; yarn run install-lnc; pod-install",
+    "postinstall": "rn-nodeify --install --hack; npx jetify; yarn run patch; react-native setup-ios-permissions; yarn run install-lnc; pod-install",
     "test": "jest",
     "tsc": "tsc",
     "lint": "eslint --ext .js,.ts,.tsx '*.@(js|ts|tsx)' .",
     "prettier": "prettier --check '**/*.ts*'",
     "prettier-write": "prettier --check --write '**/*.ts*'",
-    "install-lnc": "cd node_modules/@lightninglabs/lnc-rn; yarn run fetch-libraries"
+    "install-lnc": "cd node_modules/@lightninglabs/lnc-rn; yarn run fetch-libraries",
+    "patch": "git apply patches/rnqli-build.gradle.patch"
   },
   "dependencies": {
     "@keystonehq/bc-ur-registry": "0.4.2",
@@ -28,7 +29,7 @@
     "@react-native-picker/picker": "2.4.8",
     "@react-navigation/bottom-tabs": "5.11.11",
     "@react-navigation/native": "6.0.16",
-    "@remobile/react-native-qrcode-local-image": "github:BlueWallet/react-native-qrcode-local-image#31b0113",
+    "@remobile/react-native-qrcode-local-image": "github:BlueWallet/react-native-qrcode-local-image#b8baa79",
     "@tradle/react-native-http": "2.0.1",
     "@types/react-native-snap-carousel": "3.8.5",
     "assert": "1.5.0",
