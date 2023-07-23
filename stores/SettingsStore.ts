@@ -615,6 +615,7 @@ export default class SettingsStore {
         scramblePin: true,
         loginBackground: false,
         fiat: DEFAULT_FIAT,
+        fiatEnabled: false,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE
     };
     @observable public posStatus: string = 'unselected';
