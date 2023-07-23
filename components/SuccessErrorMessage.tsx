@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import UrlUtils from '../utils/UrlUtils';
 
@@ -7,10 +7,27 @@ interface MessageProps {
     fontSize?: number;
     link: string;
     mainStyle: any;
+    dismissable?: boolean;
 }
 
-const Message = ({ message, fontSize, link, mainStyle }: MessageProps) =>
-    link ? (
+const Message = ({
+    message,
+    fontSize,
+    link,
+    mainStyle,
+    dismissable
+}: MessageProps) => {
+    const [isDismissed, setDismissed] = useState(false);
+    if (isDismissed) return;
+    return dismissable ? (
+        <TouchableOpacity onPress={() => setDismissed(true)}>
+            <Text
+                style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}
+            >
+                {message}
+            </Text>
+        </TouchableOpacity>
+    ) : link ? (
         <TouchableOpacity onPress={() => UrlUtils.goToUrl(link)}>
             <Text
                 style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}
@@ -23,31 +40,50 @@ const Message = ({ message, fontSize, link, mainStyle }: MessageProps) =>
             {message}
         </Text>
     );
+};
 
-const SuccessMessage = ({ message, fontSize, link }: MessageProps) => (
+const SuccessMessage = ({
+    message,
+    fontSize,
+    link,
+    dismissable
+}: MessageProps) => (
     <Message
         message={message}
         fontSize={fontSize}
         link={link}
         mainStyle={styles.successField}
+        dismissable={dismissable}
     />
 );
 
-const WarningMessage = ({ message, fontSize, link }: MessageProps) => (
+const WarningMessage = ({
+    message,
+    fontSize,
+    link,
+    dismissable
+}: MessageProps) => (
     <Message
         message={message}
         fontSize={fontSize}
         link={link}
         mainStyle={styles.warningField}
+        dismissable={dismissable}
     />
 );
 
-const ErrorMessage = ({ message, fontSize, link }: MessageProps) => (
+const ErrorMessage = ({
+    message,
+    fontSize,
+    link,
+    dismissable
+}: MessageProps) => (
     <Message
         message={message}
         fontSize={fontSize}
         link={link}
         mainStyle={styles.errorField}
+        dismissable={dismissable}
     />
 );
 
@@ -67,7 +103,7 @@ const styles = StyleSheet.create({
     },
     warningField: {
         color: '#000',
-        backgroundColor: '#FFD93F'
+        backgroundColor: '#ffe065'
     },
     errorField: {
         color: '#E14C4C',

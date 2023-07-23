@@ -403,37 +403,49 @@ export default class ChannelsStore {
     };
 
     @action
-    public connectPeer = (request: OpenChannelRequest) => {
+    public connectPeer = (request: OpenChannelRequest, acceptErr?: boolean) => {
+        console.log('@@connectPeer');
         this.connectingToPeer = true;
 
-        BackendUtils.connectPeer({
-            addr: {
-                pubkey: request.node_pubkey_string,
-                host: request.host
-            }
-        })
-            .then(() => {
-                this.errorPeerConnect = false;
-                this.connectingToPeer = false;
-                this.errorMsgPeer = null;
-                this.channelRequest = request;
-                this.peerSuccess = true;
-            })
-            .catch((error: any) => {
-                // handle error
-                this.errorMsgPeer = error.toString();
-                this.errorPeerConnect = true;
-                this.connectingToPeer = false;
-                this.peerSuccess = false;
-                this.channelSuccess = false;
-
-                if (
-                    this.errorMsgPeer &&
-                    this.errorMsgPeer.includes('already')
-                ) {
-                    this.channelRequest = request;
+        return new Promise((resolve, reject) => {
+            BackendUtils.connectPeer({
+                addr: {
+                    pubkey: request.node_pubkey_string,
+                    host: request.host
                 }
-            });
+            })
+                .then(() => {
+                    this.errorPeerConnect = false;
+                    this.connectingToPeer = false;
+                    this.errorMsgPeer = null;
+                    this.channelRequest = request;
+                    this.peerSuccess = true;
+                    console.log('connectPeer success');
+                    resolve(true);
+                })
+                .catch((error: any) => {
+                    console.log('connectPeer err');
+                    // handle error
+                    if (!acceptErr) {
+                        this.errorMsgPeer = error.toString();
+                        console.log('^^', error.toString());
+                        this.errorPeerConnect = true;
+                        this.connectingToPeer = false;
+                        this.peerSuccess = false;
+                        this.channelSuccess = false;
+
+                        if (
+                            this.errorMsgPeer &&
+                            this.errorMsgPeer.includes('already')
+                        ) {
+                            this.channelRequest = request;
+                        }
+                        reject(this.errorMsgPeer);
+                    } else {
+                        resolve(true);
+                    }
+                });
+        });
     };
 
     openChannelLNDCoinControl = (request: OpenChannelRequest) => {

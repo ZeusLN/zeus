@@ -1,6 +1,9 @@
 import * as React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { LinearProgress } from 'react-native-elements';
+import EncryptedStorage from 'react-native-encrypted-storage';
+
 import Button from '../../components/Button';
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
@@ -8,28 +11,55 @@ import Conversion from '../../components/Conversion';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import BalanceStore from './../../stores/BalanceStore';
-import NodeInfoStore from './../../stores/NodeInfoStore';
-import SettingsStore from './../../stores/SettingsStore';
+import BalanceStore from '../../stores/BalanceStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import SettingsStore from '../../stores/SettingsStore';
+import SyncStore from '../../stores/SyncStore';
 
-import { version, playStore } from './../../package.json';
+import { version, playStore } from '../../package.json';
+
+import LockIcon from '../../assets/images/SVG/Lock.svg';
 
 interface BalancePaneProps {
     navigation: any;
     BalanceStore: BalanceStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
+    SyncStore: SyncStore;
 }
 
-@inject('BalanceStore', 'NodeInfoStore', 'SettingsStore')
+interface BalancePaneState {
+    isBackedUp: boolean;
+}
+
+@inject('BalanceStore', 'NodeInfoStore', 'SettingsStore', 'SyncStore')
 @observer
 export default class BalancePane extends React.PureComponent<
     BalancePaneProps,
-    {}
+    BalancePaneState
 > {
+    state = {
+        isBackedUp: false
+    };
+
+    async UNSAFE_componentWillMount() {
+        const isBackedUp = await EncryptedStorage.getItem('backup-complete');
+        if (isBackedUp === 'true') {
+            this.setState({
+                isBackedUp: true
+            });
+        }
+    }
+
     render() {
-        const { NodeInfoStore, BalanceStore, SettingsStore, navigation } =
-            this.props;
+        const {
+            NodeInfoStore,
+            BalanceStore,
+            SettingsStore,
+            SyncStore,
+            navigation
+        } = this.props;
+        const { isBackedUp } = this.state;
         const {
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
@@ -37,6 +67,7 @@ export default class BalancePane extends React.PureComponent<
             pendingOpenBalance
         } = BalanceStore;
         const { implementation } = SettingsStore;
+        const { currentBlockHeight, bestBlockHeight, isSyncing } = SyncStore;
 
         const pendingUnconfirmedBalance =
             Number(pendingOpenBalance) + Number(unconfirmedBlockchainBalance);
@@ -117,7 +148,6 @@ export default class BalancePane extends React.PureComponent<
             balancePane = (
                 <View
                     style={{
-                        alignItems: 'center',
                         minHeight: 200
                     }}
                 >
@@ -127,14 +157,164 @@ export default class BalancePane extends React.PureComponent<
                     />
                     <View
                         style={{
-                            marginTop: 40,
                             marginBottom: 20
                         }}
                     >
+                        {isSyncing && (
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Sync')}
+                            >
+                                <View
+                                    style={{
+                                        backgroundColor:
+                                            themeColor('secondary'),
+                                        borderRadius: 10,
+                                        width: '90%',
+                                        top: 10,
+                                        margin: 20,
+                                        padding: 15,
+                                        borderWidth: 0.5
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            fontFamily: 'Lato-Bold',
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Wallet.BalancePane.sync.title'
+                                        )}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            fontFamily: 'Lato-Regular',
+                                            color: themeColor('text'),
+                                            marginTop: 20
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Wallet.BalancePane.sync.text'
+                                        )}
+                                    </Text>
+                                    {currentBlockHeight && bestBlockHeight && (
+                                        <View
+                                            style={{
+                                                marginTop: 30,
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                flexWrap: 'wrap',
+                                                width: '100%'
+                                            }}
+                                        >
+                                            <LinearProgress
+                                                value={Number(
+                                                    currentBlockHeight /
+                                                        bestBlockHeight
+                                                )}
+                                                variant="determinate"
+                                                color={themeColor('highlight')}
+                                                trackColor={themeColor(
+                                                    'secondaryBackground'
+                                                )}
+                                                style={{
+                                                    width: '80%'
+                                                }}
+                                            />
+                                            <Text
+                                                style={{
+                                                    fontFamily: 'Lato-Bold',
+                                                    color: themeColor('text'),
+                                                    marginTop: -8,
+                                                    marginLeft: 14
+                                                }}
+                                            >
+                                                {`~${Number(
+                                                    (currentBlockHeight /
+                                                        bestBlockHeight) *
+                                                        100
+                                                )
+                                                    .toFixed(0)
+                                                    .toString()}%`}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                        )}
+                        {implementation === 'embedded-lnd' &&
+                            !isSyncing &&
+                            !isBackedUp &&
+                            (BalanceStore.lightningBalance !== 0 ||
+                                BalanceStore.totalBlockchainBalance !== 0) &&
+                            !BalanceStore.loadingBlockchainBalance &&
+                            !BalanceStore.loadingLightningBalance && (
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate('Seed')}
+                                >
+                                    <View
+                                        style={{
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            borderRadius: 10,
+                                            borderColor:
+                                                themeColor('highlight'),
+                                            width: '90%',
+                                            top: 10,
+                                            margin: 20,
+                                            padding: 15,
+                                            borderWidth: 1.5
+                                        }}
+                                    >
+                                        <View style={{ marginBottom: 10 }}>
+                                            <LockIcon
+                                                color={themeColor('highlight')}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                fontFamily: 'Lato-Bold',
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.BalancePane.backup.title'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                fontFamily: 'Lato-Regular',
+                                                color: themeColor('text'),
+                                                marginTop: 20
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.BalancePane.backup.text'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                fontFamily: 'Lato-Regular',
+                                                fontWeight: 'bold',
+                                                color: themeColor('text'),
+                                                marginTop: 20
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.BalancePane.backup.action'
+                                            )}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
                         {implementation === 'lndhub' ? (
-                            <LightningBalance />
+                            <View style={{ marginTop: 40 }}>
+                                <LightningBalance />
+                            </View>
                         ) : (
-                            <BalanceViewCombined />
+                            <View style={{ marginTop: 40 }}>
+                                <BalanceViewCombined />
+                            </View>
                         )}
                     </View>
                 </View>

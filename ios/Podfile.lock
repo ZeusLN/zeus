@@ -16,8 +16,6 @@ PODS:
   - glog (0.3.5)
   - hermes-engine (0.70.6)
   - libevent (2.1.12)
-  - lnc-rn (0.2.5-alpha):
-    - React
   - lottie-ios (3.4.4)
   - lottie-react-native (5.1.5):
     - lottie-ios (~> 3.4.0)
@@ -260,14 +258,20 @@ PODS:
     - React
   - react-native-image-picker (5.0.1):
     - React-Core
+  - react-native-netinfo (9.4.1):
+    - React-Core
   - react-native-nfc-manager (3.13.0):
     - React
   - react-native-randombytes (3.5.3):
     - React
   - react-native-restart (0.0.24):
     - React-Core
-  - react-native-safe-area-context (0.6.2):
-    - React
+  - react-native-safe-area-context (4.6.4):
+    - RCT-Folly
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - ReactCommon/turbomodule/core
   - react-native-tor (0.1.8):
     - React
   - react-native-udp (4.1.7):
@@ -349,17 +353,51 @@ PODS:
     - React
   - RNCPicker (2.4.8):
     - React-Core
-  - RNGestureHandler (2.2.0):
+  - RNGestureHandler (2.12.0):
+    - React-Core
+  - RNKeychain (8.1.1):
     - React-Core
   - RNPermissions (3.8.0):
     - React-Core
-  - RNScreens (3.10.1):
+  - RNReanimated (3.3.0):
+    - DoubleConversion
+    - FBLazyVector
+    - FBReactNativeSpec
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCTRequired
+    - RCTTypeSafety
+    - React-callinvoker
+    - React-Core
+    - React-Core/DevSupport
+    - React-Core/RCTWebSocket
+    - React-CoreModules
+    - React-cxxreact
+    - React-hermes
+    - React-jsi
+    - React-jsiexecutor
+    - React-jsinspector
+    - React-RCTActionSheet
+    - React-RCTAnimation
+    - React-RCTBlob
+    - React-RCTImage
+    - React-RCTLinking
+    - React-RCTNetwork
+    - React-RCTSettings
+    - React-RCTText
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - RNScreens (3.22.1):
     - React-Core
     - React-RCTImage
+  - RNSecureRandom (1.0.1):
+    - React
   - RNSVG (13.6.0):
     - React-Core
   - RNVectorIcons (7.1.0):
     - React
+  - SwiftProtobuf (1.21.0)
   - TcpSockets (4.0.0):
     - React
   - Yoga (1.14.0)
@@ -373,7 +411,6 @@ DEPENDENCIES:
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes/hermes-engine.podspec`)
   - libevent (~> 2.1.12)
-  - "lnc-rn (from `../node_modules/@lightninglabs/lnc-rn`)"
   - lottie-react-native (from `../node_modules/lottie-react-native`)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTRequired (from `../node_modules/react-native/Libraries/RCTRequired`)
@@ -397,6 +434,7 @@ DEPENDENCIES:
   - react-native-encrypted-storage (from `../node_modules/react-native-encrypted-storage`)
   - react-native-hce (from `../node_modules/react-native-hce`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
+  - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-nfc-manager (from `../node_modules/react-native-nfc-manager`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-restart (from `../node_modules/react-native-restart`)
@@ -421,10 +459,14 @@ DEPENDENCIES:
   - "RNCMaskedView (from `../node_modules/@react-native-community/masked-view`)"
   - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
+  - RNKeychain (from `../node_modules/react-native-keychain`)
   - RNPermissions (from `../node_modules/react-native-permissions`)
+  - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
+  - RNSecureRandom (from `../node_modules/react-native-securerandom`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
+  - SwiftProtobuf (~> 1.0)
   - TcpSockets (from `../node_modules/react-native-tcp`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -434,6 +476,7 @@ SPEC REPOS:
     - fmt
     - libevent
     - lottie-ios
+    - SwiftProtobuf
 
 EXTERNAL SOURCES:
   boost:
@@ -450,8 +493,6 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/react-native/third-party-podspecs/glog.podspec"
   hermes-engine:
     :podspec: "../node_modules/react-native/sdks/hermes/hermes-engine.podspec"
-  lnc-rn:
-    :path: "../node_modules/@lightninglabs/lnc-rn"
   lottie-react-native:
     :path: "../node_modules/lottie-react-native"
   RCT-Folly:
@@ -496,6 +537,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-hce"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
+  react-native-netinfo:
+    :path: "../node_modules/@react-native-community/netinfo"
   react-native-nfc-manager:
     :path: "../node_modules/react-native-nfc-manager"
   react-native-randombytes:
@@ -544,10 +587,16 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-picker/picker"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
+  RNKeychain:
+    :path: "../node_modules/react-native-keychain"
   RNPermissions:
     :path: "../node_modules/react-native-permissions"
+  RNReanimated:
+    :path: "../node_modules/react-native-reanimated"
   RNScreens:
     :path: "../node_modules/react-native-screens"
+  RNSecureRandom:
+    :path: "../node_modules/react-native-securerandom"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
@@ -568,7 +617,6 @@ SPEC CHECKSUMS:
   glog: 04b94705f318337d7ead9e6d17c019bd9b1f6b1b
   hermes-engine: 2af7b7a59128f250adfd86f15aa1d5a2ecd39995
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
-  lnc-rn: 90b224889e086be0043f92827b47355ea1f1a06e
   lottie-ios: 8f97d3271e155c2d688875c29cd3c74908aef5f8
   lottie-react-native: 3e722c63015fdb9c27638b0a77969fc412067c18
   RCT-Folly: 0080d0a6ebf2577475bda044aa59e2ca1f909cda
@@ -592,10 +640,11 @@ SPEC CHECKSUMS:
   react-native-encrypted-storage: e78d848ce0fb663c2ce306e37921d026809322e6
   react-native-hce: 677aa1c41edf183523bb7b1014d106a08631ff88
   react-native-image-picker: 8cb4280e2c1efc3daeb2d9d597f9429a60472e40
+  react-native-netinfo: fefd4e98d75cbdd6e85fc530f7111a8afdf2b0c5
   react-native-nfc-manager: 001c3a98e68efd57b7fb04b1837ab06ca7243238
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-restart: 45c8dca02491980f2958595333cbccd6877cb57e
-  react-native-safe-area-context: 25260c5d0b9c53fd7aa88e569e2edae72af1f6a3
+  react-native-safe-area-context: 68b07eabfb0d14547d36f6929c0e98d818064f02
   react-native-tor: 3b14e9160b2eb7fa3f310921b2dee71a5171e5b7
   react-native-udp: df79c3cb72c4e71240cd3ce4687bfb8a137140d5
   React-perflogger: 8c79399b0500a30ee8152d0f9f11beae7fc36595
@@ -615,14 +664,18 @@ SPEC CHECKSUMS:
   RNCClipboard: 99fc8ad669a376b756fbc8098ae2fd05c0ed0668
   RNCMaskedView: 0e1bc4bfa8365eba5fbbb71e07fbdc0555249489
   RNCPicker: 0bf8ef8f7800524f32d2bb2a8bcadd53eda0ecd1
-  RNGestureHandler: bf572f552ea324acd5b5464b8d30755b2d8c1de6
+  RNGestureHandler: dec4645026e7401a0899f2846d864403478ff6a5
+  RNKeychain: ff836453cba46938e0e9e4c22e43d43fa2c90333
   RNPermissions: 06845210af313594dc3fe5e8ae6afc820d791409
-  RNScreens: 522705f2e5c9d27efb17f24aceb2bf8335bc7b8e
+  RNReanimated: 38e8c4a0232f4596ba46b547ae8b9a8192322dea
+  RNScreens: 50ffe2fa2342eabb2d0afbe19f7c1af286bc7fb3
+  RNSecureRandom: 07efbdf2cd99efe13497433668e54acd7df49fef
   RNSVG: 3a79c0c4992213e4f06c08e62730c5e7b9e4dc17
   RNVectorIcons: bc69e6a278b14842063605de32bec61f0b251a59
+  SwiftProtobuf: afced68785854575756db965e9da52bbf3dc45e7
   TcpSockets: 4ef55305239923b343ed0a378b1fac188b1373b0
   Yoga: 99caf8d5ab45e9d637ee6e0174ec16fbbb01bcfc
 
-PODFILE CHECKSUM: 484ccfa2ce3a7012f09dd892fa52be243e5fcb71
+PODFILE CHECKSUM: 643f83a7955aa123651bac4a54204e22598914df
 
 COCOAPODS: 1.12.1

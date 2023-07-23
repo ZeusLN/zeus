@@ -1,0 +1,175 @@
+import { action, observable } from 'mobx';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+
+import SettingsStore from './SettingsStore';
+import stores from './Stores';
+
+import lndMobile from '../lndmobile/LndMobileInjection';
+const { channel } = lndMobile;
+
+import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
+import { localeString } from '../utils/LocaleUtils';
+
+export default class LSPStore {
+    @observable public info: any = {};
+    @observable public zeroConfFee: number | undefined;
+    @observable public error: boolean = false;
+    @observable public error_msg: string = '';
+    @observable public channelAcceptor: any;
+
+    settingsStore: SettingsStore;
+
+    constructor(settingsStore: SettingsStore) {
+        this.settingsStore = settingsStore;
+    }
+
+    @action
+    public reset = () => {
+        this.info = {};
+        this.zeroConfFee = undefined;
+        this.error = false;
+        this.error_msg = '';
+        this.channelAcceptor = undefined;
+    };
+
+    @action
+    public getLSPInfo = () => {
+        console.log(
+            'this.settingsStore.settings.lspMainnet',
+            this.settingsStore.settings.lspMainnet
+        );
+        return new Promise((resolve, reject) => {
+            ReactNativeBlobUtil.fetch(
+                'get',
+                `${
+                    this.settingsStore.embeddedLndNetwork === 'Mainnet'
+                        ? this.settingsStore.settings.lspMainnet
+                        : this.settingsStore.settings.lspTestnet
+                }/api/v1/info`,
+                {
+                    'Content-Type': 'application/json'
+                }
+            )
+                .then((response: any) => {
+                    const status = response.info().status;
+                    const data = response.json();
+                    if (status == 200) {
+                        this.info = data;
+                        resolve(this.info);
+                    } else {
+                        this.error = true;
+                        reject();
+                    }
+                })
+                .catch(() => {
+                    this.error = true;
+                    reject();
+                });
+        });
+    };
+
+    @action
+    public getZeroConfFee = (amount_msat: number) => {
+        return new Promise((resolve, reject) => {
+            ReactNativeBlobUtil.fetch(
+                'post',
+                `${
+                    this.settingsStore.embeddedLndNetwork === 'Mainnet'
+                        ? this.settingsStore.settings.lspMainnet
+                        : this.settingsStore.settings.lspTestnet
+                }/api/v1/fee`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify({
+                    amount_msat,
+                    pubkey: stores.nodeInfoStore.nodeInfo.nodeId
+                })
+            )
+                .then((response: any) => {
+                    const status = response.info().status;
+                    const data = response.json();
+                    if (status == 200) {
+                        this.zeroConfFee = Number.parseInt(
+                            (Number(data.fee_amount_msat) / 1000).toString()
+                        );
+                        resolve(this.zeroConfFee);
+                    } else {
+                        this.error = true;
+                        reject();
+                    }
+                })
+                .catch(() => {
+                    this.error = true;
+                    reject();
+                });
+        });
+    };
+
+    @action
+    public initChannelAcceptor = async () => {
+        if (this.channelAcceptor) return;
+        this.channelAcceptor = LndMobileEventEmitter.addListener(
+            'ChannelAcceptor',
+            async (event: any) => {
+                try {
+                    const channelAcceptRequest =
+                        channel.decodeChannelAcceptRequest(event.data);
+
+                    // PEGASUS TODO only allow chans from LSP
+                    const isZeroConfAllowed = true;
+
+                    await channel.channelAcceptorResponse(
+                        channelAcceptRequest.pending_chan_id,
+                        !channelAcceptRequest.wants_zero_conf ||
+                            isZeroConfAllowed,
+                        isZeroConfAllowed
+                    );
+                } catch (error: any) {
+                    console.error('channel acceptance error: ' + error.message);
+                }
+            }
+        );
+
+        await channel.channelAcceptor();
+    };
+
+    @action
+    public getZeroConfInvoice = (bolt11: string) => {
+        this.error = false;
+        this.error_msg = '';
+        return new Promise((resolve, reject) => {
+            ReactNativeBlobUtil.fetch(
+                'post',
+                `${
+                    this.settingsStore.embeddedLndNetwork === 'Mainnet'
+                        ? this.settingsStore.settings.lspMainnet
+                        : this.settingsStore.settings.lspTestnet
+                }/api/v1/proposal`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify({
+                    bolt11
+                })
+            )
+                .then(async (response: any) => {
+                    const status = response.info().status;
+                    const data = response.json();
+                    if (status == 200 || status == 201) {
+                        resolve(data.jit_bolt11);
+                    } else {
+                        this.error = true;
+                        this.error_msg = `${localeString(
+                            'stores.LSPStore.error'
+                        )}: ${data.message}`;
+                        reject();
+                    }
+                })
+                .catch(() => {
+                    this.error = true;
+                    reject();
+                });
+        });
+    };
+}
