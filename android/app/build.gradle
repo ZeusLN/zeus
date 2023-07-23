@@ -207,7 +207,6 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.4.0'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0-alpha02'
     implementation files("../../node_modules/react-native-tor/android/libs/sifir_android.aar")
-    implementation project(':react-native-restart')
     implementation project(':react-native-qrcode-local-image')
     // gif
     implementation 'com.facebook.fresco:fresco:2.6.0'
