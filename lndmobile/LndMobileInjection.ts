@@ -1,3 +1,5 @@
+import Long from 'long';
+
 import {
     initialize,
     writeConfig,

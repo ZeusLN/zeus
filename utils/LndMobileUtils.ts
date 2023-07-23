@@ -251,7 +251,7 @@ export async function createLndWallet(
     const wallet: any = await initWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
-        !!isRestore ? 100 : undefined,
+        isRestore ? 100 : undefined,
         undefined, // TODO add channels backup restore
         walletPassphrase ? walletPassphrase : undefined
     );

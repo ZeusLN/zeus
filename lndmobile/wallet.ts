@@ -95,10 +95,7 @@ export const unlockWallet = async (
 /**
  * @throws
  */
-export const deriveKey = async (
-    key_family: number,
-    key_index: number
-): Promise<signrpc.KeyDescriptor> => {
+export const deriveKey = async (): Promise<signrpc.KeyDescriptor> => {
     const response = await sendCommand<
         signrpc.IKeyLocator,
         signrpc.KeyLocator,

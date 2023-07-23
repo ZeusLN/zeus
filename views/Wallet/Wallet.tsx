@@ -4,7 +4,6 @@ import {
     AppState,
     BackHandler,
     Linking,
-    NativeModules,
     PanResponder,
     Text,
     TouchableOpacity,

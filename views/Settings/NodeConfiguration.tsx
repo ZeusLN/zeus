@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     Modal,
-    Platform,
     StyleSheet,
     Text,
     View,
@@ -44,7 +43,6 @@ import Scan from '../../assets/images/SVG/Scan.svg';
 import { Settings } from '../../stores/SettingsStore';
 
 import { createLndWallet } from '../../utils/LndMobileUtils';
-import { locale } from 'moment';
 
 interface NodeConfigurationProps {
     navigation: any;

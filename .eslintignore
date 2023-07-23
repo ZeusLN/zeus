@@ -5,3 +5,4 @@ babel.config.js
 index.js
 metro.config.js
 shim.js
+proto

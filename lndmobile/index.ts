@@ -11,9 +11,9 @@ import {
 import { getChanInfo, listPrivateChannels } from './channel';
 const { LndMobile, LndMobileTools } = NativeModules;
 
-const TLV_KEYSEND = 5482373484;
+// const TLV_KEYSEND = 5482373484;
 const TLV_RECORD_NAME = 128101;
-const TLV_WHATSAT_MESSAGE = 34349334;
+// const TLV_WHATSAT_MESSAGE = 34349334;
 
 /**
  * @throws
@@ -308,6 +308,8 @@ export const sendPaymentV2Sync = (
             },
             false
         );
+
+        return response;
     });
 };
 
@@ -489,9 +491,7 @@ export const addInvoice = async (
     return response;
 };
 
-export const getRouteHints = async (
-    max: number = 5
-): Promise<lnrpc.IRouteHint[]> => {
+export const getRouteHints = async (): Promise<lnrpc.IRouteHint[]> => {
     const routeHints: lnrpc.IRouteHint[] = [];
     const channels = await listPrivateChannels();
 
