@@ -86,6 +86,7 @@ export default class KeypadPane extends React.PureComponent<
         let belowMinAmount = false;
         if (
             BackendUtils.supportsLSPs() &&
+            this.props.SettingsStore.settings?.enableLSP &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
                 this.props.ChannelsStore.totalInbound
@@ -127,6 +128,7 @@ export default class KeypadPane extends React.PureComponent<
         let belowMinAmount = false;
         if (
             BackendUtils.supportsLSPs() &&
+            this.props.SettingsStore.settings?.enableLSP &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
                 this.props.ChannelsStore.totalInbound

@@ -194,8 +194,11 @@ export default class InvoicesStore {
         if (ampInvoice) req.is_amp = true;
         if (routeHints) req.private = true;
 
-        // TODO LSP cond
-        if (BackendUtils.supportsLSPs() && value !== '0') {
+        if (
+            BackendUtils.supportsLSPs() &&
+            this.settingsStore.settings?.enableLSP &&
+            value !== '0'
+        ) {
             await this.lspStore.getLSPInfo().then(async (result) => {
                 const info: any = result;
                 const method = info.connection_methods[0];
@@ -298,8 +301,11 @@ export default class InvoicesStore {
                         ? invoice.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
                         : Base64Utils.bytesToHexString(invoice.r_hash);
 
-                // TODO LSP cond
-                if (BackendUtils.supportsLSPs() && value !== '0') {
+                if (
+                    BackendUtils.supportsLSPs() &&
+                    this.settingsStore.settings?.enableLSP &&
+                    value !== '0'
+                ) {
                     return await this.lspStore
                         .getZeroConfInvoice(invoice.getPaymentRequest)
                         .then((response: any) => {

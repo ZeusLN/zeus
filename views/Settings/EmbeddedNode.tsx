@@ -19,10 +19,11 @@ interface EmbeddedNodeProps {
 }
 
 interface EmbeddedNodeState {
+    enableLSP: boolean | undefined;
+    lsp: string;
     expressGraphSync: boolean | undefined;
     expressGraphSyncMobile: boolean | undefined;
     resetExpressGraphSyncOnStartup: boolean | undefined;
-    lsp: string;
 }
 
 @inject('SettingsStore')
@@ -32,10 +33,11 @@ export default class EmbeddedNode extends React.Component<
     EmbeddedNodeState
 > {
     state = {
+        enableLSP: true,
+        lsp: '',
         expressGraphSync: false,
         expressGraphSyncMobile: false,
-        resetExpressGraphSyncOnStartup: false,
-        lsp: ''
+        resetExpressGraphSyncOnStartup: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -43,24 +45,26 @@ export default class EmbeddedNode extends React.Component<
         const { settings, embeddedLndNetwork } = SettingsStore;
 
         this.setState({
-            expressGraphSync: settings.expressGraphSync,
-            expressGraphSyncMobile: settings.expressGraphSyncMobile,
-            resetExpressGraphSyncOnStartup:
-                settings.resetExpressGraphSyncOnStartup,
+            enableLSP: settings.enableLSP,
             lsp:
                 embeddedLndNetwork === 'Mainnet'
                     ? settings.lspMainnet
-                    : settings.lspTestnet
+                    : settings.lspTestnet,
+            expressGraphSync: settings.expressGraphSync,
+            expressGraphSyncMobile: settings.expressGraphSyncMobile,
+            resetExpressGraphSyncOnStartup:
+                settings.resetExpressGraphSyncOnStartup
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
         const {
+            enableLSP,
+            lsp,
             expressGraphSync,
             expressGraphSyncMobile,
-            resetExpressGraphSyncOnStartup,
-            lsp
+            resetExpressGraphSyncOnStartup
         } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
 
@@ -80,6 +84,42 @@ export default class EmbeddedNode extends React.Component<
                         }}
                         navigation={navigation}
                     />
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular'
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.EmbeddedNode.enableLSP'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={enableLSP}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        enableLSP: !enableLSP
+                                    });
+                                    await updateSettings({
+                                        enableLSP: !enableLSP
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
                     <View
                         style={{
                             paddingTop: 5,

@@ -193,6 +193,7 @@ export default class Receive extends React.Component<
             let belowMinAmount = false;
             if (
                 BackendUtils.supportsLSPs() &&
+                settings?.enableLSP &&
                 new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
                     this.props.ChannelsStore.totalInbound
                 )
@@ -220,6 +221,7 @@ export default class Receive extends React.Component<
             let belowMinAmount = false;
             if (
                 BackendUtils.supportsLSPs() &&
+                settings?.enableLSP &&
                 getSatAmount(amount) != '0' &&
                 new BigNumber(getSatAmount(amount)).gt(
                     this.props.ChannelsStore.totalInbound
@@ -256,8 +258,9 @@ export default class Receive extends React.Component<
     }
 
     async UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation, InvoicesStore } = nextProps;
+        const { navigation, InvoicesStore, SettingsStore } = nextProps;
         const { reset } = InvoicesStore;
+        const { settings } = SettingsStore;
 
         reset();
         const amount: string = navigation.getParam('amount');
@@ -269,6 +272,7 @@ export default class Receive extends React.Component<
             let belowMinAmount = false;
             if (
                 BackendUtils.supportsLSPs() &&
+                settings?.enableLSP &&
                 getSatAmount(amount) != '0' &&
                 new BigNumber(getSatAmount(amount)).gt(
                     this.props.ChannelsStore.totalInbound
@@ -292,6 +296,7 @@ export default class Receive extends React.Component<
             let belowMinAmount = false;
             if (
                 BackendUtils.supportsLSPs() &&
+                settings?.enableLSP &&
                 new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
                     this.props.ChannelsStore.totalInbound
                 )
@@ -369,7 +374,10 @@ export default class Receive extends React.Component<
                 this.subscribeInvoice(rHash, onChainAddress);
 
                 // TODO LSP conditions
-                if (BackendUtils.supportsLSPs()) {
+                if (
+                    BackendUtils.supportsLSPs() &&
+                    this.props.SettingsStore.settings?.enableLSP
+                ) {
                     this.props.LSPStore.initChannelAcceptor();
                 }
             }
@@ -1327,6 +1335,7 @@ export default class Receive extends React.Component<
                                             let belowMinAmount = false;
                                             if (
                                                 BackendUtils.supportsLSPs() &&
+                                                settings?.enableLSP &&
                                                 satAmount != '0' &&
                                                 new BigNumber(satAmount).gt(
                                                     this.props.ChannelsStore
@@ -1529,9 +1538,9 @@ export default class Receive extends React.Component<
                                                             onChainAddress
                                                         );
 
-                                                        // TODO LSP conditions
                                                         if (
-                                                            BackendUtils.supportsLSPs()
+                                                            BackendUtils.supportsLSPs() &&
+                                                            settings?.enableLSP
                                                         ) {
                                                             this.props.LSPStore.initChannelAcceptor();
                                                         }
