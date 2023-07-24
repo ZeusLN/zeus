@@ -142,7 +142,7 @@ const Intro: React.FC<IntroProps> = (props) => {
         return (
             <View
                 style={{
-                    backgroundColor: themeColor('text'),
+                    backgroundColor: themeColor('secondaryText'),
                     width,
                     height: width,
                     borderRadius: 50,
