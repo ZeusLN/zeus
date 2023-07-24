@@ -15,6 +15,8 @@ import ActivityStore from './ActivityStore';
 import PosStore from './PosStore';
 import ModalStore from './ModalStore';
 import NotesStore from './NotesStore';
+import SyncStore from './SyncStore';
+import LSPStore from './LSPStore';
 
 class Stores {
     public channelsStore: ChannelsStore;
@@ -33,18 +35,25 @@ class Stores {
     public activityStore: ActivityStore;
     public posStore: PosStore;
     public modalStore: ModalStore;
-    public NotesStore: NotesStore;
+    public notesStore: NotesStore;
+    public syncStore: SyncStore;
+    public lspStore: LSPStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
         this.modalStore = new ModalStore();
         this.fiatStore = new FiatStore(this.settingsStore);
         this.channelsStore = new ChannelsStore(this.settingsStore);
-        this.invoicesStore = new InvoicesStore(this.settingsStore);
+        this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
+        this.lspStore = new LSPStore(this.settingsStore);
+        this.invoicesStore = new InvoicesStore(
+            this.settingsStore,
+            this.lspStore,
+            this.channelsStore
+        );
         this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
         this.transactionsStore = new TransactionsStore(this.settingsStore);
         this.balanceStore = new BalanceStore(this.settingsStore);
-        this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
         this.unitsStore = new UnitsStore(this.settingsStore, this.fiatStore);
         this.paymentsStore = new PaymentsStore(
             this.settingsStore,
@@ -57,7 +66,8 @@ class Stores {
         this.feeStore = new FeeStore(this.settingsStore, this.nodeInfoStore);
         this.utxosStore = new UTXOsStore(this.settingsStore);
         this.messageSignStore = new MessageSignStore();
-        this.NotesStore = new NotesStore();
+        this.notesStore = new NotesStore();
+        this.syncStore = new SyncStore(this.settingsStore);
         this.activityStore = new ActivityStore(
             this.settingsStore,
             this.paymentsStore,

@@ -106,7 +106,7 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                     {item.text ===
                         localeString('views.Intro.carousel4.text') && (
                         <Button
-                            title={localeString('views.Intro.getStarted')}
+                            title={localeString('views.Intro.advancedSetUp')}
                             onPress={() => navigation.navigate('Settings')}
                         />
                     )}

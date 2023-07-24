@@ -1,0 +1,1 @@
+{"version":3,"names":[],"sources":["typings.d.ts"],"sourcesContent":["declare var global: any;\n"],"mappings":""}

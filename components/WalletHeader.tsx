@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Badge } from 'react-native-elements';
-import { Image, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, Image, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 
@@ -8,6 +8,7 @@ import ChannelsStore from '../stores/ChannelsStore';
 import SettingsStore from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
+import SyncStore from '../stores/SyncStore';
 
 import Button from '../components/Button';
 import Header from './Header';
@@ -25,6 +26,7 @@ import Scan from '../assets/images/SVG/Scan.svg';
 import POS from '../assets/images/SVG/POS.svg';
 import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
+import Sync from '../assets/images/SVG/Sync.svg';
 
 import stores from '../stores/Stores';
 
@@ -125,6 +127,7 @@ interface WalletHeaderProps {
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
     PosStore: PosStore;
+    SyncStore: SyncStore;
     navigation: any;
     loading: boolean;
     title: string;
@@ -136,7 +139,13 @@ interface WalletHeaderState {
     clipboard: string;
 }
 
-@inject('ChannelsStore', 'SettingsStore', 'NodeInfoStore', 'PosStore')
+@inject(
+    'ChannelsStore',
+    'SettingsStore',
+    'NodeInfoStore',
+    'PosStore',
+    'SyncStore'
+)
 @observer
 export default class WalletHeader extends React.Component<
     WalletHeaderProps,
@@ -172,9 +181,11 @@ export default class WalletHeader extends React.Component<
             SettingsStore,
             NodeInfoStore,
             ChannelsStore,
-            PosStore
+            PosStore,
+            SyncStore
         } = this.props;
         const { settings, posStatus, setPosStatus } = SettingsStore;
+        const { isSyncing } = SyncStore;
         const { getOrders } = PosStore;
         const multipleNodes: boolean =
             (settings && settings.nodes && settings.nodes.length > 1) || false;
@@ -276,6 +287,44 @@ export default class WalletHeader extends React.Component<
             </TouchableOpacity>
         );
 
+        const SyncBadge = ({ navigation }: { navigation: any }) => {
+            const [spinAnim] = useState(new Animated.Value(0));
+
+            const interpolateRotation = spinAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', '360deg']
+            });
+
+            const animatedStyle = {
+                transform: [{ rotate: interpolateRotation }]
+            };
+
+            useEffect(() => {
+                Animated.loop(
+                    Animated.timing(spinAnim, {
+                        toValue: 1,
+                        duration: 3000,
+                        easing: Easing.linear,
+                        useNativeDriver: true
+                    })
+                ).start();
+            });
+
+            return (
+                <Animated.View style={animatedStyle}>
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Sync')}
+                    >
+                        <Sync
+                            fill={themeColor('text')}
+                            width="40"
+                            height="40"
+                        />
+                    </TouchableOpacity>
+                </Animated.View>
+            );
+        };
+
         return (
             <Header
                 leftComponent={loading ? undefined : <SettingsButton />}
@@ -338,6 +387,16 @@ export default class WalletHeader extends React.Component<
                                         navigation={navigation}
                                         clipboard={clipboard}
                                     />
+                                </View>
+                            )}
+                            {isSyncing && (
+                                <View
+                                    style={{
+                                        marginTop: -6,
+                                        marginRight: 20
+                                    }}
+                                >
+                                    <SyncBadge navigation={navigation} />
                                 </View>
                             )}
                             <View>
