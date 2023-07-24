@@ -556,19 +556,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             )}
                             {posStatus !== 'active' && (
                                 <>
-                                    {!error ? (
+                                    {!error && !isSyncing && (
                                         <Tab.Screen
                                             name="Keypad"
                                             component={KeypadScreen}
                                         />
-                                    ) : (
-                                        <Tab.Screen
-                                            name={'  '}
-                                            component={BalanceScreen}
-                                        />
                                     )}
                                     {BackendUtils.supportsChannelManagement() &&
-                                        !error && (
+                                        !error &&
+                                        !isSyncing && (
                                             <Tab.Screen
                                                 name={localeString(
                                                     'views.Wallet.Wallet.channels'
