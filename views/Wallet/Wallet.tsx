@@ -44,12 +44,22 @@ import UTXOsStore from './../../stores/UTXOsStore';
 import ModalStore from './../../stores/ModalStore';
 
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
+<<<<<<< Updated upstream
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import POS from './../../assets/images/SVG/POS.svg';
 import Temple from './../../assets/images/SVG/Temple.svg';
 import WordLogo from './../../assets/images/SVG/Word Logo.svg';
+=======
+import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
+import CaretUp from '../../assets/images/SVG/Caret Up.svg';
+import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
+import POS from '../../assets/images/SVG/POS.svg';
+import Scan from '../../assets/images/SVG/Scan.svg';
+import Temple from '../../assets/images/SVG/Temple.svg';
+import WordLogo from '../../assets/images/SVG/Word Logo.svg';
+>>>>>>> Stashed changes
 
 interface WalletProps {
     enterSetup: any;
@@ -104,7 +114,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     toValue: { x: 0, y: 0 },
                     useNativeDriver: false
                 }).start();
-                props.navigation.navigate('Activity');
+                props.navigation.navigate('HandleAnythingQRScanner');
             }
         });
     }
@@ -419,13 +429,20 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 <TouchableOpacity
                                     onPress={() =>
                                         this.props.navigation.navigate(
-                                            'Activity'
+                                            'HandleAnythingQRScanner'
                                         )
                                     }
+                                    style={{ alignItems: 'center' }}
                                 >
                                     <CaretUp
                                         stroke={themeColor('text')}
                                         fill={themeColor('text')}
+                                        width="10"
+                                    />
+                                    <Scan
+                                        stroke={themeColor('text')}
+                                        fill={themeColor('text')}
+                                        width="24"
                                     />
                                 </TouchableOpacity>
                             </Animated.View>

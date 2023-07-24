@@ -176,6 +176,8 @@ export default class KeypadPane extends React.PureComponent<
                 <WalletHeader
                     navigation={navigation}
                     SettingsStore={SettingsStore}
+                    amount={amount}
+                    keypad
                 />
 
                 <Animated.View
@@ -248,6 +250,7 @@ export default class KeypadPane extends React.PureComponent<
                                 buttonStyle={{ height: 40 }}
                             />
                         </View>
+<<<<<<< Updated upstream
                         <View style={{ width: '20%' }}>
                             <Button
                                 icon={{
@@ -265,6 +268,62 @@ export default class KeypadPane extends React.PureComponent<
                                 }}
                                 buttonStyle={{ height: 40 }}
                             />
+=======
+                    ) : (
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                position: 'absolute',
+                                bottom: 10
+                            }}
+                        >
+                            <View style={{ width: '40%' }}>
+                                <Button
+                                    title={localeString('general.request')}
+                                    quinary
+                                    noUppercase
+                                    onPress={() => {
+                                        navigation.navigate('Receive', {
+                                            amount,
+                                            autoGenerate: true
+                                        });
+                                    }}
+                                    buttonStyle={{ height: 40 }}
+                                    disabled={belowMinAmount}
+                                />
+                            </View>
+                            <View style={{ width: '20%' }}>
+                                <Button
+                                    icon={{
+                                        name: 'qr-code',
+                                        size: 20,
+                                        color: themeColor('text')
+                                    }}
+                                    quinary
+                                    noUppercase
+                                    onPress={() => {
+                                        navigation.navigate(
+                                            'HandleAnythingQRScanner'
+                                        );
+                                    }}
+                                    buttonStyle={{ height: 40 }}
+                                />
+                            </View>
+                            <View style={{ width: '40%' }}>
+                                <Button
+                                    title={localeString('general.send')}
+                                    quinary
+                                    noUppercase
+                                    onPress={() => {
+                                        navigation.navigate('Send', {
+                                            amount
+                                        });
+                                    }}
+                                    buttonStyle={{ height: 40 }}
+                                />
+                            </View>
+>>>>>>> Stashed changes
                         </View>
                         <View style={{ width: '40%' }}>
                             <Button

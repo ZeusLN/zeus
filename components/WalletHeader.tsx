@@ -21,7 +21,6 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
-import Scan from '../assets/images/SVG/Scan.svg';
 import POS from '../assets/images/SVG/POS.svg';
 import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
@@ -81,12 +80,23 @@ const TempleButton = ({ navigation }: { navigation: any }) => (
     </TouchableOpacity>
 );
 
-const ScanBadge = ({ navigation }: { navigation: any }) => (
-    <TouchableOpacity
-        onPress={() => navigation.navigate('HandleAnythingQRScanner')}
-    >
-        <Scan fill={themeColor('text')} />
-    </TouchableOpacity>
+const EditBadge = ({
+    navigation,
+    amount
+}: {
+    navigation: any;
+    amount?: string;
+}) => (
+    <View style={{ width: 70 }}>
+        <Button
+            icon={{
+                name: 'edit',
+                size: 30
+            }}
+            iconOnly
+            onPress={() => navigation.navigate('Receive', { amount })}
+        ></Button>
+    </View>
 );
 
 const ClipboardBadge = ({
@@ -129,6 +139,8 @@ interface WalletHeaderProps {
     loading: boolean;
     title: string;
     channels: boolean;
+    keypad: boolean;
+    amount?: string;
     toggle?: () => void;
 }
 
@@ -168,6 +180,8 @@ export default class WalletHeader extends React.Component<
             loading,
             title,
             channels,
+            keypad,
+            amount,
             toggle,
             SettingsStore,
             NodeInfoStore,
@@ -340,8 +354,32 @@ export default class WalletHeader extends React.Component<
                                     />
                                 </View>
                             )}
-                            <View>
-                                <ScanBadge navigation={navigation} />
+                            {isSyncing && (
+                                <View
+                                    style={{
+                                        marginTop: -6,
+                                        marginRight: 20
+                                    }}
+                                >
+                                    <SyncBadge navigation={navigation} />
+                                </View>
+                            )}
+                            <View
+                                style={{
+                                    height: 60,
+                                    marginTop: -8,
+                                    marginLeft: -30,
+                                    marginRight: -20
+                                }}
+                            >
+                                {keypad ? (
+                                    <EditBadge
+                                        navigation={navigation}
+                                        amount={amount}
+                                    />
+                                ) : (
+                                    <ActivityButton navigation={navigation} />
+                                )}
                             </View>
                             {squareEnabled && (
                                 <View
