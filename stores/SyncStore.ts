@@ -42,7 +42,8 @@ export default class SyncStore {
                 (this.bestBlockHeight ?? 0) - this.currentBlockHeight;
         }
 
-        if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced === 0)
+        // PEGASUS TODO get new best block height when we hit 0 or lower
+        if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced <= 0)
             this.isSyncing = false;
 
         return;
@@ -76,7 +77,7 @@ export default class SyncStore {
                     // initial fetch
                     await this.getNodeInfo().then(() => this.setSyncInfo(true));
 
-                    while (this.numBlocksUntilSynced !== 0) {
+                    while (this.numBlocksUntilSynced > 0) {
                         sleep(2000);
                         await this.getNodeInfo().then(() => this.setSyncInfo());
                     }
