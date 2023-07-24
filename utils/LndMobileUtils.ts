@@ -89,8 +89,19 @@ const writeLndConfig = async (isTestnet?: boolean) => {
     bitcoin.defaultchanconfs=1
     
     [Neutrino]
-    neutrino.connect=${
+    ${isTestnet ? 'neutrino.addpeer=testnet.lnolymp.us' : ''}
+    neutrino.addpeer=${
         isTestnet ? 'testnet.blixtwallet.com' : 'node.blixtwallet.com'
+    }
+    neutrino.addpeer=${
+        isTestnet
+            ? 'btcd-testnet.lightning.computer'
+            : 'btcd-mainnet.lightning.computer'
+    }
+    ${
+        !isTestnet
+            ? 'neutrino.assertfilterheader=230000:1308d5cfc6462f877a5587fd77d7c1ab029d45e58d5175aaf8c264cee9bde760'
+            : ''
     }
     neutrino.feeurl=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
     neutrino.broadcasttimeout=11s
