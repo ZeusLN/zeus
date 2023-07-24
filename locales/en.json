@@ -626,6 +626,7 @@
     "views.Settings.Seed.text4": "On the following screen, tap each pane to reveal the seed word.",
     "views.Settings.Seed.backupComplete": "I've backed up my 24 words",
     "views.Settings.EmbeddedNode.title": "Embedded node",
+    "views.Settings.EmbeddedNode.enableLSP": "Enable Lightning Service Provider (LSP)",
     "views.Settings.EmbeddedNode.expressGraphSync": "Enable express graph sync (EGS)",
     "views.Settings.EmbeddedNode.expressGraphSync.subtitle": "Download Lightning network's gossip data on startup. This while make pathfinding when trying to make a payment much more reliable. Restart the app to take effect.",
     "views.Settings.EmbeddedNode.expressGraphSyncMobile": "Allow express graph sync on mobile",

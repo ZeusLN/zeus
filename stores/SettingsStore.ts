@@ -93,6 +93,7 @@ export interface Settings {
     expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
     // LSP
+    enableLSP: boolean;
     lspMainnet: string;
     lspTestnet: string;
 }
@@ -630,6 +631,7 @@ export default class SettingsStore {
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
         // LSP
+        enableLSP: true,
         lspMainnet: 'https://lsp.voltageapi.com',
         lspTestnet: 'https://testnet-lsp.voltageapi.com'
     };
