@@ -22,7 +22,7 @@ export default class ClosedChannel extends Channel {
 
     @computed
     public get remoteBalance(): string {
-        return `${Number(this.capacity) - Number(this.settled_balance)}`;
+        return `${Number(this.capacity) - Number(this.settled_balance || 0)}`;
     }
 
     @computed

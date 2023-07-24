@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
+import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import AccountIcon from '../../assets/images/SVG/Wallet2.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
@@ -24,6 +25,8 @@ import Olympus from '../../assets/images/SVG/Olympus.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
+import MnemonicIcon from '../../assets/images/SVG/Mnemonic.svg';
+import NetworkIcon from '../../assets/images/SVG/Network.svg';
 
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
@@ -97,6 +100,17 @@ export default class Settings extends React.Component<
             </TouchableOpacity>
         );
 
+        let nodeSubtitle = '';
+
+        if (selectedNode) {
+            nodeSubtitle +=
+                implementationDisplayValue[selectedNode.implementation];
+
+            if (selectedNode.embeddedLndNetwork) {
+                nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
+            }
+        }
+
         return (
             <Screen>
                 <Header
@@ -127,8 +141,8 @@ export default class Settings extends React.Component<
                                 height: selectedNode ? 70 : 50,
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 20,
-                                marginBottom: 10
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <View
@@ -183,24 +197,13 @@ export default class Settings extends React.Component<
                                         fontFamily: 'Lato-Regular'
                                     }}
                                 >
-                                    {selectedNode.implementation ===
-                                    'lightning-node-connect'
-                                        ? `${
-                                              implementationDisplayValue[
-                                                  selectedNode.implementation
-                                              ] || 'Unknown'
-                                          }`
-                                        : `${
-                                              implementationDisplayValue[
-                                                  selectedNode.implementation
-                                              ] || 'Unknown'
-                                          }`}
+                                    {nodeSubtitle}
                                 </Text>
                             )}
                         </View>
                     </TouchableOpacity>
 
-                    {selectedNode && BackendUtils.supportsNodeInfo() && (
+                    {implementation === 'embedded-lnd' && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -208,22 +211,24 @@ export default class Settings extends React.Component<
                                 height: 45,
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15,
-                                marginTop: 5
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
                                 style={styles.columnField}
-                                onPress={() => navigation.navigate('NodeInfo')}
+                                onPress={() => navigation.navigate('Seed')}
                             >
-                                <NodeOn color={themeColor('text')} />
+                                <View style={{ paddingLeft: 3 }}>
+                                    <MnemonicIcon fill={themeColor('text')} />
+                                </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('views.NodeInfo.title')}
+                                    {localeString('views.Settings.Seed.title')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon />
@@ -231,6 +236,141 @@ export default class Settings extends React.Component<
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    {selectedNode &&
+                        BackendUtils.supportsNodeInfo() &&
+                        !BackendUtils.supportsNetworkInfo() && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    height: 45,
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginTop: 5,
+                                    marginBottom: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('NodeInfo')
+                                    }
+                                >
+                                    <NodeOn color={themeColor('text')} />
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.NodeInfo.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                    {selectedNode &&
+                        BackendUtils.supportsNodeInfo() &&
+                        BackendUtils.supportsNetworkInfo() && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginTop: 5,
+                                    marginBottom: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'EmbeddedNodeSettings'
+                                        )
+                                    }
+                                >
+                                    <BlockIcon
+                                        color={themeColor('text')}
+                                        width={30}
+                                    />
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.title'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </TouchableOpacity>
+
+                                <View style={styles.separationLine} />
+
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('NodeInfo')
+                                    }
+                                >
+                                    <NodeOn color={themeColor('text')} />
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.NodeInfo.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </TouchableOpacity>
+
+                                <View style={styles.separationLine} />
+
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('NetworkInfo')
+                                    }
+                                >
+                                    <View
+                                        style={{
+                                            alignContent: 'center',
+                                            margin: 3
+                                        }}
+                                    >
+                                        <NetworkIcon
+                                            fill={themeColor('text')}
+                                            width={25}
+                                            height={25}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.NetworkInfo.title'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {/* Coming Soon */}
                     {false && (
@@ -286,7 +426,8 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -347,8 +488,8 @@ export default class Settings extends React.Component<
                                     height: 45,
                                     borderRadius: 10,
                                     alignSelf: 'center',
-                                    marginBottom: 15,
-                                    marginTop: 5
+                                    marginTop: 5,
+                                    marginBottom: 5
                                 }}
                             >
                                 <TouchableOpacity
@@ -386,7 +527,8 @@ export default class Settings extends React.Component<
                                 height: 138,
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -464,7 +606,8 @@ export default class Settings extends React.Component<
                                 height: 90,
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -518,7 +661,8 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -553,7 +697,8 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -611,7 +756,8 @@ export default class Settings extends React.Component<
                             width: '90%',
                             borderRadius: 10,
                             alignSelf: 'center',
-                            marginBottom: 15
+                            marginTop: 5,
+                            marginBottom: 5
                         }}
                     >
                         <TouchableOpacity
@@ -644,7 +790,8 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -679,7 +826,8 @@ export default class Settings extends React.Component<
                             width: '90%',
                             borderRadius: 10,
                             alignSelf: 'center',
-                            marginBottom: 15
+                            marginTop: 5,
+                            marginBottom: 5
                         }}
                     >
                         <TouchableOpacity
@@ -718,6 +866,7 @@ export default class Settings extends React.Component<
                                 color: '#A7A9AC',
                                 alignSelf: 'center',
                                 fontFamily: 'Lato-Regular',
+                                marginTop: 5,
                                 marginBottom: 20
                             }}
                         >

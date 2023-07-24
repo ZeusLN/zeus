@@ -29,6 +29,7 @@ body:
       label: Zeus version
       description: What version of Zeus were you running when the bug occurred?
       options:
+        - v0.8.0
         - v0.7.7
         - v0.7.6
         - v0.7.5
@@ -43,6 +44,7 @@ body:
       label: Node interface
       description: Which node interfaces does this bug affect?
       options:
+        - Embedded LND
         - LND (REST)
         - LND (Lightning Node Connect)
         - Core Lightning (c-lightning-REST)

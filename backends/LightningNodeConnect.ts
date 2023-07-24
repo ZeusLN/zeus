@@ -1,4 +1,4 @@
-import LNC, { lnrpc, walletrpc } from '@lightninglabs/lnc-rn';
+import LNC, { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-rn';
 
 import stores from '../stores/Stores';
 import CredentialStore from './LNC/credentialStore';
@@ -346,5 +346,7 @@ export default class LightningNodeConnect {
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
+    supportsLSPs = () => false;
+    supportsNetworkInfo = () => false;
     isLNDBased = () => true;
 }

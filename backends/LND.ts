@@ -377,5 +377,7 @@ export default class LND {
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
+    supportsLSPs = () => false;
+    supportsNetworkInfo = () => false;
     isLNDBased = () => true;
 }
