@@ -5,7 +5,6 @@ import { inject, observer } from 'mobx-react';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
-import TextInput from '../../components/TextInput';
 
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -19,8 +18,6 @@ interface EmbeddedNodeProps {
 }
 
 interface EmbeddedNodeState {
-    enableLSP: boolean | undefined;
-    lsp: string;
     expressGraphSync: boolean | undefined;
     expressGraphSyncMobile: boolean | undefined;
     resetExpressGraphSyncOnStartup: boolean | undefined;
@@ -33,8 +30,6 @@ export default class EmbeddedNode extends React.Component<
     EmbeddedNodeState
 > {
     state = {
-        enableLSP: true,
-        lsp: '',
         expressGraphSync: false,
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false
@@ -42,14 +37,9 @@ export default class EmbeddedNode extends React.Component<
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
-        const { settings, embeddedLndNetwork } = SettingsStore;
+        const { settings } = SettingsStore;
 
         this.setState({
-            enableLSP: settings.enableLSP,
-            lsp:
-                embeddedLndNetwork === 'Mainnet'
-                    ? settings.lspMainnet
-                    : settings.lspTestnet,
             expressGraphSync: settings.expressGraphSync,
             expressGraphSyncMobile: settings.expressGraphSyncMobile,
             resetExpressGraphSyncOnStartup:
@@ -60,8 +50,6 @@ export default class EmbeddedNode extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const {
-            enableLSP,
-            lsp,
             expressGraphSync,
             expressGraphSyncMobile,
             resetExpressGraphSyncOnStartup
@@ -84,74 +72,6 @@ export default class EmbeddedNode extends React.Component<
                         }}
                         navigation={navigation}
                     />
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular'
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.EmbeddedNode.enableLSP'
-                            )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
-                            <Switch
-                                value={enableLSP}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        enableLSP: !enableLSP
-                                    });
-                                    await updateSettings({
-                                        enableLSP: !enableLSP
-                                    });
-                                }}
-                            />
-                        </View>
-                    </ListItem>
-                    <View
-                        style={{
-                            paddingTop: 5,
-                            paddingBottom: 5,
-                            paddingLeft: 15,
-                            paddingRight: 15
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontFamily: 'Lato-Regular',
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString('general.lsp')}
-                        </Text>
-                        <TextInput
-                            value={lsp}
-                            onChangeText={async (text: string) => {
-                                this.setState({ lsp: text });
-                                await updateSettings(
-                                    embeddedLndNetwork === 'Mainnet'
-                                        ? {
-                                              lspMainnet: text
-                                          }
-                                        : {
-                                              lspTestnet: text
-                                          }
-                                );
-                            }}
-                        />
-                    </View>
                     {embeddedLndNetwork === 'Mainnet' && (
                         <>
                             <>

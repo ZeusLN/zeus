@@ -27,6 +27,7 @@ import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
 import MnemonicIcon from '../../assets/images/SVG/Mnemonic.svg';
 import NetworkIcon from '../../assets/images/SVG/Network.svg';
+import CloudIcon from '../../assets/images/SVG/Cloud.svg';
 
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
@@ -203,7 +204,7 @@ export default class Settings extends React.Component<
                         </View>
                     </TouchableOpacity>
 
-                    {implementation === 'embedded-lnd' && (
+                    {BackendUtils.supportsLSPs() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -217,10 +218,12 @@ export default class Settings extends React.Component<
                         >
                             <TouchableOpacity
                                 style={styles.columnField}
-                                onPress={() => navigation.navigate('Seed')}
+                                onPress={() =>
+                                    navigation.navigate('LSPSettings')
+                                }
                             >
                                 <View style={{ paddingLeft: 3 }}>
-                                    <MnemonicIcon fill={themeColor('text')} />
+                                    <CloudIcon fill={themeColor('text')} />
                                 </View>
                                 <Text
                                     style={{
@@ -228,7 +231,7 @@ export default class Settings extends React.Component<
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('views.Settings.Seed.title')}
+                                    {localeString('general.lsp')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon />
@@ -237,140 +240,148 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {selectedNode &&
-                        BackendUtils.supportsNodeInfo() &&
-                        !BackendUtils.supportsNetworkInfo() && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    height: 45,
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginTop: 5,
-                                    marginBottom: 5
-                                }}
-                            >
-                                <TouchableOpacity
-                                    style={styles.columnField}
-                                    onPress={() =>
-                                        navigation.navigate('NodeInfo')
-                                    }
-                                >
-                                    <NodeOn color={themeColor('text')} />
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
+                    {selectedNode && BackendUtils.supportsNodeInfo() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginTop: 5,
+                                marginBottom: 5
+                            }}
+                        >
+                            {implementation === 'embedded-lnd' && (
+                                <>
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate('Seed')
+                                        }
                                     >
-                                        {localeString('views.NodeInfo.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon />
-                                    </View>
-                                </TouchableOpacity>
-                            </View>
-                        )}
+                                        <View style={{ paddingLeft: 3 }}>
+                                            <MnemonicIcon
+                                                fill={themeColor('text')}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.Seed.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
 
-                    {selectedNode &&
-                        BackendUtils.supportsNodeInfo() &&
-                        BackendUtils.supportsNetworkInfo() && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginTop: 5,
-                                    marginBottom: 5
-                                }}
-                            >
-                                <TouchableOpacity
-                                    style={styles.columnField}
-                                    onPress={() =>
-                                        navigation.navigate(
-                                            'EmbeddedNodeSettings'
-                                        )
-                                    }
-                                >
-                                    <BlockIcon
-                                        color={themeColor('text')}
-                                        width={30}
-                                    />
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
+                                    <View style={styles.separationLine} />
+                                </>
+                            )}
+
+                            {selectedNode.embeddedLndNetwork === 'Mainnet' && (
+                                <>
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'EmbeddedNodeSettings'
+                                            )
+                                        }
                                     >
-                                        {localeString(
-                                            'views.Settings.EmbeddedNode.title'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon />
-                                    </View>
-                                </TouchableOpacity>
-
-                                <View style={styles.separationLine} />
-
-                                <TouchableOpacity
-                                    style={styles.columnField}
-                                    onPress={() =>
-                                        navigation.navigate('NodeInfo')
-                                    }
-                                >
-                                    <NodeOn color={themeColor('text')} />
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.NodeInfo.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon />
-                                    </View>
-                                </TouchableOpacity>
-
-                                <View style={styles.separationLine} />
-
-                                <TouchableOpacity
-                                    style={styles.columnField}
-                                    onPress={() =>
-                                        navigation.navigate('NetworkInfo')
-                                    }
-                                >
-                                    <View
-                                        style={{
-                                            alignContent: 'center',
-                                            margin: 3
-                                        }}
-                                    >
-                                        <NetworkIcon
-                                            fill={themeColor('text')}
-                                            width={25}
-                                            height={25}
+                                        <BlockIcon
+                                            color={themeColor('text')}
+                                            width={30}
                                         />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.EmbeddedNode.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    <View style={styles.separationLine} />
+                                </>
+                            )}
+
+                            {BackendUtils.supportsNodeInfo() && (
+                                <>
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate('NodeInfo')
+                                        }
                                     >
-                                        {localeString(
-                                            'views.NetworkInfo.title'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon />
-                                    </View>
-                                </TouchableOpacity>
-                            </View>
-                        )}
+                                        <NodeOn color={themeColor('text')} />
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.NodeInfo.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+
+                            {BackendUtils.supportsNetworkInfo() && (
+                                <>
+                                    <View style={styles.separationLine} />
+
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate('NetworkInfo')
+                                        }
+                                    >
+                                        <View
+                                            style={{
+                                                alignContent: 'center',
+                                                margin: 3
+                                            }}
+                                        >
+                                            <NetworkIcon
+                                                fill={themeColor('text')}
+                                                width={25}
+                                                height={25}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.NetworkInfo.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </View>
+                    )}
 
                     {/* Coming Soon */}
                     {false && (

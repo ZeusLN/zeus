@@ -53,6 +53,7 @@ import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import EmbeddedNode from './views/Settings/EmbeddedNode';
+import LSP from './views/Settings/LSP';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -288,6 +289,9 @@ const AppScenes = {
     },
     EmbeddedNodeSettings: {
         screen: EmbeddedNode
+    },
+    LSPSettings: {
+        screen: LSP
     }
 };
 
