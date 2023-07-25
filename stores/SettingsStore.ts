@@ -633,7 +633,7 @@ export default class SettingsStore {
         // LSP
         enableLSP: true,
         lspMainnet: 'https://lsp.voltageapi.com',
-        lspTestnet: 'https://testnet-lsp.voltageapi.com'
+        lspTestnet: 'https://testnet-lsp.lnolymp.us'
     };
     @observable public posStatus: string = 'unselected';
     @observable public loading = false;
