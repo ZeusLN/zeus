@@ -425,6 +425,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 UnitsStore={UnitsStore}
                                 SettingsStore={SettingsStore}
                                 onRefresh={() => this.refresh()}
+                                locked={isSyncing}
                             />
 
                             <Animated.View
