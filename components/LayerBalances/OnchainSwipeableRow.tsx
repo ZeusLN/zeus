@@ -22,6 +22,7 @@ interface OnchainSwipeableRowProps {
     navigation: any;
     value?: string;
     amount?: string;
+    locked?: boolean;
 }
 
 export default class OnchainSwipeableRow extends Component<
@@ -143,7 +144,18 @@ export default class OnchainSwipeableRow extends Component<
     };
 
     render() {
-        const { children, value } = this.props;
+        const { children, value, locked } = this.props;
+        if (locked && value) {
+            return (
+                <TouchableOpacity
+                    onPress={() => this.sendToAddress()}
+                    activeOpacity={1}
+                >
+                    {children}
+                </TouchableOpacity>
+            );
+        }
+        if (locked) return children;
         return (
             <Swipeable
                 ref={this.updateRef}

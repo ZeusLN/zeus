@@ -136,6 +136,7 @@ export default class Accounts extends React.Component<
                         value={value}
                         amount={amount}
                         lightning={lightning}
+                        locked
                     />
                 )}
                 {!loadingAccounts && !!value && !!lightning && (
