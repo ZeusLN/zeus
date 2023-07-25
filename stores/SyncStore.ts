@@ -60,6 +60,7 @@ export default class SyncStore {
     @action
     public startSyncing = () => {
         this.isSyncing = true;
+        sleep(6000);
 
         ReactNativeBlobUtil.fetch(
             'get',
