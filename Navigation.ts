@@ -84,6 +84,7 @@ import EditFee from './views/EditFee';
 import Seed from './views/Settings/Seed';
 import Sync from './views/Sync';
 import LspExplanation from './views/LspExplanation';
+import LspExplanationRouting from './views/LspExplanationRouting';
 
 const AppScenes = {
     Wallet: {
@@ -286,6 +287,9 @@ const AppScenes = {
     },
     LspExplanation: {
         screen: LspExplanation
+    },
+    LspExplanationRouting: {
+        screen: LspExplanationRouting
     },
     EmbeddedNodeSettings: {
         screen: EmbeddedNode
