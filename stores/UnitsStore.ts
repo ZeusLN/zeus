@@ -113,9 +113,8 @@ export default class UnitsStore {
                 const { symbol, space, rtl, separatorSwap } =
                     this.fiatStore.getSymbol();
 
-                const amount = (
-                    FeeUtils.toFixed(absValueSats / SATS_PER_BTC) * rate
-                ).toFixed(2);
+                const amount =
+                    FeeUtils.toFixed(absValueSats / SATS_PER_BTC) * rate;
 
                 return {
                     amount: separatorSwap
@@ -169,10 +168,9 @@ export default class UnitsStore {
                 const { symbol, space, rtl, separatorSwap } =
                     this.fiatStore.symbolLookup(code);
 
-                const amount = (
+                const amount =
                     FeeUtils.toFixed(Number(wholeSats || 0) / SATS_PER_BTC) *
-                    rate
-                ).toFixed(2);
+                    rate;
 
                 const formattedAmount = separatorSwap
                     ? this.fiatStore.numberWithDecimals(amount, 2)
