@@ -35,20 +35,27 @@ export default class FiatStore {
 
     numberWithCommas = (
         x: string | number,
-        maximumFractionDigits: number = 11
+        maximumFractionDigits: number = 11,
+        minimumFractionDigits?: number
     ) =>
         Number(x)
             .toLocaleString(undefined, {
                 maximumFractionDigits,
+                minimumFractionDigits,
                 useGrouping: true
             })
             .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-    numberWithDecimals = (x: string | number, maximumFractionDigits?: number) =>
-        this.numberWithCommas(x, maximumFractionDigits).replace(
-            /[,.]/g,
-            (y: string) => (y === ',' ? '.' : ',')
-        );
+    numberWithDecimals = (
+        x: string | number,
+        maximumFractionDigits?: number,
+        minimumFractionDigits?: number
+    ) =>
+        this.numberWithCommas(
+            x,
+            maximumFractionDigits,
+            minimumFractionDigits
+        ).replace(/[,.]/g, (y: string) => (y === ',' ? '.' : ','));
 
     // Resource below may be helpful for formatting
     // https://fastspring.com/blog/how-to-format-30-currencies-from-countries-all-over-the-world/

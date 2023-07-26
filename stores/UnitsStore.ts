@@ -118,8 +118,8 @@ export default class UnitsStore {
 
                 return {
                     amount: separatorSwap
-                        ? this.fiatStore.numberWithDecimals(amount, 2)
-                        : this.fiatStore.numberWithCommas(amount, 2),
+                        ? this.fiatStore.numberWithDecimals(amount, 2, 2)
+                        : this.fiatStore.numberWithCommas(amount, 2, 2),
                     unit: 'fiat',
                     symbol,
                     negative,
@@ -173,8 +173,8 @@ export default class UnitsStore {
                     rate;
 
                 const formattedAmount = separatorSwap
-                    ? this.fiatStore.numberWithDecimals(amount, 2)
-                    : this.fiatStore.numberWithCommas(amount, 2);
+                    ? this.fiatStore.numberWithDecimals(amount, 2, 2)
+                    : this.fiatStore.numberWithCommas(amount, 2, 2);
 
                 if (rtl) {
                     return `${formattedAmount}${space ? ' ' : ''}${symbol}`;
