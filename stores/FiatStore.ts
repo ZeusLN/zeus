@@ -33,12 +33,21 @@ export default class FiatStore {
         this.settingsStore = settingsStore;
     }
 
-    numberWithCommas = (x: string | number) =>
-        x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    numberWithCommas = (
+        x: string | number,
+        maximumFractionDigits: number = 11
+    ) =>
+        Number(x)
+            .toLocaleString(undefined, {
+                maximumFractionDigits: maximumFractionDigits,
+                useGrouping: true
+            })
+            .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-    numberWithDecimals = (x: string | number) =>
-        this.numberWithCommas(x).replace(/[,.]/g, (y: string) =>
-            y === ',' ? '.' : ','
+    numberWithDecimals = (x: string | number, maximumFractionDigits?: number) =>
+        this.numberWithCommas(x, maximumFractionDigits).replace(
+            /[,.]/g,
+            (y: string) => (y === ',' ? '.' : ',')
         );
 
     // Resource below may be helpful for formatting
