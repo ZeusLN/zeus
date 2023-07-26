@@ -39,7 +39,7 @@ export default class FiatStore {
     ) =>
         Number(x)
             .toLocaleString(undefined, {
-                maximumFractionDigits: maximumFractionDigits,
+                maximumFractionDigits,
                 useGrouping: true
             })
             .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
