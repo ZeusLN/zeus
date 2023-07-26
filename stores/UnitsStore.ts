@@ -81,10 +81,7 @@ export default class UnitsStore {
             };
         } else if (units === 'sats') {
             return {
-                amount: this.fiatStore.numberWithCommas(
-                    absValueSats,
-                    3
-                ),
+                amount: this.fiatStore.numberWithCommas(absValueSats, 3),
                 unit: 'sats',
                 negative,
                 plural: !(Number(value) === 1 || Number(value) === -1)
