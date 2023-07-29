@@ -28,6 +28,7 @@ const {
     closeChannel,
     openChannel
 } = lndMobile.channel;
+const { signMessageNodePubkey, verifyMessageNodePubkey } = lndMobile.wallet;
 const { walletBalance, newAddress, getTransactions, sendCoins } =
     lndMobile.onchain;
 
@@ -104,6 +105,14 @@ export default class EmbeddedLND extends LND {
 
     getNodeInfo = async (urlParams?: Array<string>) =>
         await getNodeInfo(urlParams[0]);
+    signMessage = async (msg: Uint8Array) => {
+        return await signMessageNodePubkey(msg);
+    };
+    verifyMessage = async (data: object) => {
+        const { signature, msg } = data;
+        return await verifyMessageNodePubkey(signature, msg);
+    };
+
     // getFees = () => N/A;
     // TODO remove functionality to SetFees for Embedded LND users
     // setFees = (data: any) => {
