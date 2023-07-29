@@ -200,6 +200,7 @@
     "views.Wallet.Channels.private": "Private",
     "views.OpenChannel.announceChannel": "Announce channel",
     "views.OpenChannel.scidAlias": "Attempt to use SCID alias",
+    "views.OpenChannel.openChannelToOlympus": "Open channel to Olympus",
     "views.Wallet.BalancePane.sync.title": "Finishing sync",
     "views.Wallet.BalancePane.sync.text": "Hang on tight! You will be ready to use Zeus soon.",
     "views.Wallet.BalancePane.backup.title": "Back up your funds",
