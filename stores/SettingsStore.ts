@@ -633,7 +633,7 @@ export default class SettingsStore {
         resetExpressGraphSyncOnStartup: false,
         // LSP
         enableLSP: true,
-        lspMainnet: 'https://lsp.voltageapi.com',
+        lspMainnet: 'https://lsp-preview.lnolymp.us',
         lspTestnet: 'https://testnet-lsp.lnolymp.us',
         lspAccessKey: ''
     };
