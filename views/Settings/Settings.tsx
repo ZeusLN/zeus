@@ -280,11 +280,7 @@ export default class Settings extends React.Component<
                                     </TouchableOpacity>
 
                                     <View style={styles.separationLine} />
-                                </>
-                            )}
 
-                            {selectedNode.embeddedLndNetwork === 'Mainnet' && (
-                                <>
                                     <TouchableOpacity
                                         style={styles.columnField}
                                         onPress={() =>

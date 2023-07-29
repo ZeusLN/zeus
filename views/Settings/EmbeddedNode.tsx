@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import Button from '../../components/Button';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 
@@ -11,6 +12,8 @@ import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Switch from '../../components/Switch';
+
+import { resetMissionControl } from '../../lndmobile';
 
 interface EmbeddedNodeProps {
     navigation: any;
@@ -21,6 +24,7 @@ interface EmbeddedNodeState {
     expressGraphSync: boolean | undefined;
     expressGraphSyncMobile: boolean | undefined;
     resetExpressGraphSyncOnStartup: boolean | undefined;
+    resetMissionControlSuccess: boolean | undefined;
 }
 
 @inject('SettingsStore')
@@ -32,7 +36,8 @@ export default class EmbeddedNode extends React.Component<
     state = {
         expressGraphSync: false,
         expressGraphSyncMobile: false,
-        resetExpressGraphSyncOnStartup: false
+        resetExpressGraphSyncOnStartup: false,
+        resetMissionControlSuccess: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -52,7 +57,8 @@ export default class EmbeddedNode extends React.Component<
         const {
             expressGraphSync,
             expressGraphSyncMobile,
-            resetExpressGraphSyncOnStartup
+            resetExpressGraphSyncOnStartup,
+            resetMissionControlSuccess
         } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
 
@@ -245,6 +251,54 @@ export default class EmbeddedNode extends React.Component<
                             </>
                         </>
                     )}
+                    <>
+                        <View style={{ margin: 10 }}>
+                            <Button
+                                title={
+                                    resetMissionControlSuccess
+                                        ? localeString('general.success')
+                                        : localeString(
+                                              'views.Settings.EmbeddedNode.resetMissionControl'
+                                          )
+                                }
+                                onPress={async () => {
+                                    try {
+                                        await resetMissionControl();
+                                        this.setState({
+                                            resetMissionControlSuccess: true
+                                        });
+
+                                        setTimeout(() => {
+                                            this.setState({
+                                                resetMissionControlSuccess:
+                                                    false
+                                            });
+                                        }, 5000);
+                                    } catch (e) {
+                                        console.log(
+                                            'Error on resetMissionControl:',
+                                            e
+                                        );
+                                    }
+                                }}
+                            />
+                        </View>
+                        <View
+                            style={{
+                                margin: 10
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.EmbeddedNode.resetMissionControl.subtitle'
+                                )}
+                            </Text>
+                        </View>
+                    </>
                 </View>
             </Screen>
         );
