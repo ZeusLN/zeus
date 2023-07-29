@@ -21,6 +21,7 @@ interface EmbeddedNodeProps {
 interface EmbeddedNodeState {
     enableLSP: boolean | undefined;
     lsp: string;
+    accessKey: string;
 }
 
 @inject('SettingsStore')
@@ -31,7 +32,8 @@ export default class EmbeddedNode extends React.Component<
 > {
     state = {
         enableLSP: true,
-        lsp: ''
+        lsp: '',
+        accessKey: ''
     };
 
     async UNSAFE_componentWillMount() {
@@ -43,13 +45,14 @@ export default class EmbeddedNode extends React.Component<
             lsp:
                 embeddedLndNetwork === 'Mainnet'
                     ? settings.lspMainnet
-                    : settings.lspTestnet
+                    : settings.lspTestnet,
+            accessKey: settings.lspAccessKey
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { enableLSP, lsp } = this.state;
+        const { enableLSP, lsp, accessKey } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
 
         return (
@@ -145,6 +148,36 @@ export default class EmbeddedNode extends React.Component<
                                           }
                                 );
                             }}
+                            locked={!enableLSP}
+                        />
+                    </View>
+                    <View
+                        style={{
+                            paddingTop: 5,
+                            paddingBottom: 5,
+                            paddingLeft: 15,
+                            paddingRight: 15
+                        }}
+                    >
+                        <Text
+                            style={{
+                                fontFamily: 'Lato-Regular',
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {`${localeString(
+                                'views.Settings.LSP.lspAccessKey'
+                            )}`}
+                        </Text>
+                        <TextInput
+                            value={accessKey}
+                            onChangeText={async (text: string) => {
+                                this.setState({ accessKey: text });
+                                await updateSettings({
+                                    lspAccessKey: text
+                                });
+                            }}
+                            locked={!enableLSP}
                         />
                     </View>
                 </View>

@@ -800,7 +800,7 @@ export default class Receive extends React.Component<
             needInbound,
             belowMinAmount
         } = this.state;
-        const { zeroConfFee } = LSPStore;
+        const { zeroConfFee, showLspSettings } = LSPStore;
         const { getAmount } = UnitsStore;
 
         const {
@@ -1036,6 +1036,19 @@ export default class Receive extends React.Component<
                         />
                     )}
                     {error_msg && <ErrorMessage message={error_msg} />}
+
+                    {showLspSettings && (
+                        <View style={{ margin: 10 }}>
+                            <Button
+                                title={localeString(
+                                    'views.Receive.goToLspSettings'
+                                )}
+                                onPress={() =>
+                                    navigation.navigate('LSPSettings')
+                                }
+                            />
+                        </View>
+                    )}
 
                     {watchedInvoicePaid ? (
                         <View
