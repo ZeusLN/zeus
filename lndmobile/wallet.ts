@@ -144,41 +144,54 @@ export const verifyMessageNodePubkey = async (
     signature: string,
     msg: Uint8Array
 ): Promise<lnrpc.VerifyMessageResponse> => {
-    const response = await sendCommand<
-        lnrpc.IVerifyMessageRequest,
-        lnrpc.VerifyMessageRequest,
-        lnrpc.VerifyMessageResponse
-    >({
-        request: lnrpc.VerifyMessageRequest,
-        response: lnrpc.VerifyMessageResponse,
-        method: 'VerifyMessage',
-        options: {
-            signature,
-            msg
-        }
-    });
-    return response;
+    try {
+        const response = await sendCommand<
+            lnrpc.IVerifyMessageRequest,
+            lnrpc.VerifyMessageRequest,
+            lnrpc.VerifyMessageResponse
+        >({
+            request: lnrpc.VerifyMessageRequest,
+            response: lnrpc.VerifyMessageResponse,
+            method: 'VerifyMessage',
+            options: {
+                signature,
+                msg
+            }
+        });
+
+        return response;
+    } catch (error) {
+        console.error('Error in verifyMessageNodePubkey:', error);
+        throw error;
+    }
 };
 
 /**
  * @throws
  */
+
 export const signMessageNodePubkey = async (
     msg: Uint8Array
 ): Promise<lnrpc.SignMessageResponse> => {
-    const response = await sendCommand<
-        lnrpc.ISignMessageRequest,
-        lnrpc.SignMessageRequest,
-        lnrpc.SignMessageResponse
-    >({
-        request: lnrpc.SignMessageRequest,
-        response: lnrpc.SignMessageResponse,
-        method: 'SignMessage',
-        options: {
-            msg
-        }
-    });
-    return response;
+    try {
+        const response = await sendCommand<
+            lnrpc.ISignMessageRequest,
+            lnrpc.SignMessageRequest,
+            lnrpc.SignMessageResponse
+        >({
+            request: lnrpc.SignMessageRequest,
+            response: lnrpc.SignMessageResponse,
+            method: 'SignMessage',
+            options: {
+                msg
+            }
+        });
+
+        return response;
+    } catch (error) {
+        console.error('Error in signMessageNodePubkey:', error);
+        throw error;
+    }
 };
 
 /**
