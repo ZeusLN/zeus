@@ -36,6 +36,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import BalanceStore from './../stores/BalanceStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import ModalStore from './../stores/ModalStore';
+import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
 import UTXOsStore from './../stores/UTXOsStore';
 
@@ -47,6 +48,7 @@ interface OpenChannelProps {
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     ModalStore: ModalStore;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UTXOsStore: UTXOsStore;
 }
@@ -70,6 +72,7 @@ interface OpenChannelState {
     'BalanceStore',
     'ChannelsStore',
     'ModalStore',
+    'NodeInfoStore',
     'SettingsStore',
     'UTXOsStore'
 )
@@ -238,6 +241,7 @@ export default class OpenChannel extends React.Component<
         const {
             ChannelsStore,
             BalanceStore,
+            NodeInfoStore,
             UTXOsStore,
             SettingsStore,
             navigation
@@ -390,6 +394,35 @@ export default class OpenChannel extends React.Component<
                             }
                             locked={openingChannel}
                         />
+
+                        {!(connectingToPeer || openingChannel) &&
+                            !node_pubkey_string &&
+                            !host && (
+                                <View style={{ margin: 10, marginBottom: 25 }}>
+                                    <Button
+                                        title={localeString(
+                                            'views.OpenChannel.openChannelToOlympus'
+                                        )}
+                                        onPress={() => {
+                                            if (
+                                                NodeInfoStore.nodeInfo.isTestNet
+                                            ) {
+                                                this.setState({
+                                                    node_pubkey_string:
+                                                        '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
+                                                    host: '139.144.22.237:9735'
+                                                });
+                                            } else {
+                                                this.setState({
+                                                    node_pubkey_string:
+                                                        '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
+                                                    host: '45.79.192.236:9735'
+                                                });
+                                            }
+                                        }}
+                                    />
+                                </View>
+                            )}
 
                         <AmountInput
                             amount={local_funding_amount}
