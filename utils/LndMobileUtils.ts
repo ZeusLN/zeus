@@ -89,7 +89,6 @@ const writeLndConfig = async (isTestnet?: boolean) => {
     bitcoin.defaultchanconfs=1
     
     [Neutrino]
-    ${isTestnet ? 'neutrino.addpeer=testnet.lnolymp.us' : ''}
     neutrino.addpeer=${
         isTestnet ? 'testnet.blixtwallet.com' : 'node.blixtwallet.com'
     }

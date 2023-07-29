@@ -96,6 +96,7 @@ export interface Settings {
     enableLSP: boolean;
     lspMainnet: string;
     lspTestnet: string;
+    lspAccessKey: string;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -633,7 +634,8 @@ export default class SettingsStore {
         // LSP
         enableLSP: true,
         lspMainnet: 'https://lsp.voltageapi.com',
-        lspTestnet: 'https://testnet-lsp.lnolymp.us'
+        lspTestnet: 'https://testnet-lsp.lnolymp.us',
+        lspAccessKey: ''
     };
     @observable public posStatus: string = 'unselected';
     @observable public loading = false;

@@ -15,6 +15,7 @@ export default class LSPStore {
     @observable public zeroConfFee: number | undefined;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
+    @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
 
     settingsStore: SettingsStore;
@@ -29,15 +30,12 @@ export default class LSPStore {
         this.zeroConfFee = undefined;
         this.error = false;
         this.error_msg = '';
+        this.showLspSettings = false;
         this.channelAcceptor = undefined;
     };
 
     @action
     public getLSPInfo = () => {
-        console.log(
-            'this.settingsStore.settings.lspMainnet',
-            this.settingsStore.settings.lspMainnet
-        );
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'get',
@@ -138,6 +136,7 @@ export default class LSPStore {
     public getZeroConfInvoice = (bolt11: string) => {
         this.error = false;
         this.error_msg = '';
+        this.showLspSettings = false;
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
@@ -146,9 +145,15 @@ export default class LSPStore {
                         ? this.settingsStore.settings.lspMainnet
                         : this.settingsStore.settings.lspTestnet
                 }/api/v1/proposal`,
-                {
-                    'Content-Type': 'application/json'
-                },
+                this.settingsStore.settings.lspAccessKey
+                    ? {
+                          'Content-Type': 'application/json',
+                          'x-auth-token':
+                              this.settingsStore.settings.lspAccessKey
+                      }
+                    : {
+                          'Content-Type': 'application/json'
+                      },
                 JSON.stringify({
                     bolt11
                 })
@@ -163,6 +168,12 @@ export default class LSPStore {
                         this.error_msg = `${localeString(
                             'stores.LSPStore.error'
                         )}: ${data.message}`;
+                        if (
+                            data.message &&
+                            data.message.includes('access key')
+                        ) {
+                            this.showLspSettings = true;
+                        }
                         reject();
                     }
                 })
