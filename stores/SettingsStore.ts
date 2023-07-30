@@ -604,7 +604,7 @@ export default class SettingsStore {
             defaultFeeFixed: '100'
         },
         invoices: {
-            addressType: '1',
+            addressType: '0',
             memo: '',
             expiry: '3600',
             routeHints: false,
