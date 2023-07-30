@@ -1142,7 +1142,9 @@ export default class Receive extends React.Component<
                                     <TouchableOpacity
                                         onPress={() =>
                                             navigation.navigate(
-                                                zeroConfFee > 1000
+                                                new BigNumber(zeroConfFee).gt(
+                                                    1000
+                                                )
                                                     ? 'LspExplanation'
                                                     : 'LspExplanationRouting'
                                             )
@@ -1167,7 +1169,9 @@ export default class Receive extends React.Component<
                                                 }}
                                             >
                                                 {localeString(
-                                                    zeroConfFee > 1000
+                                                    new BigNumber(
+                                                        zeroConfFee
+                                                    ).gt(1000)
                                                         ? 'views.Receive.lspExplainer'
                                                         : 'views.Receive.lspExplainerRouting'
                                                 )}
