@@ -145,7 +145,7 @@ export default class Receive extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            addressType: settings?.invoices?.addressType || '1',
+            addressType: settings?.invoices?.addressType || '0',
             memo: settings?.invoices?.memo || '',
             expiry: settings?.invoices?.expiry || '3600',
             routeHints: settings?.invoices?.routeHints || false,
