@@ -1,6 +1,6 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
-// import Base64Utils from './../utils/Base64Utils';
+import Base64Utils from './../utils/Base64Utils';
 // import { Hash as sha256Hash } from 'fast-sha256';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
@@ -106,11 +106,14 @@ export default class EmbeddedLND extends LND {
     getNodeInfo = async (urlParams?: Array<string>) =>
         await getNodeInfo(urlParams[0]);
     signMessage = async (msg: Uint8Array) => {
-        return await signMessageNodePubkey(msg);
+        return await signMessageNodePubkey(Base64Utils.stringToUint8Array(msg));
     };
-    verifyMessage = async (data: object) => {
+    verifyMessage = async (data: any) => {
         const { signature, msg } = data;
-        return await verifyMessageNodePubkey(signature, msg);
+        return await verifyMessageNodePubkey(
+            signature,
+            Base64Utils.stringToUint8Array(msg)
+        );
     };
 
     // getFees = () => N/A;
