@@ -22,6 +22,7 @@ interface AmountInputProps {
     FiatStore?: FiatStore;
     SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
+    preventUnitReset?: boolean;
 }
 
 interface AmountInputState {
@@ -78,9 +79,9 @@ export default class AmountInput extends React.Component<
     constructor(props: any) {
         super(props);
 
-        const { amount, onAmountChange } = props;
+        const { amount, onAmountChange, preventUnitReset } = props;
         let satAmount = '0';
-        if (amount) {
+        if (amount && !preventUnitReset) {
             // reset units to sats if amount is passed in
             this.props.UnitsStore?.resetUnits();
             satAmount = getSatAmount(amount).toString();
