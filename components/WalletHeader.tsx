@@ -99,7 +99,7 @@ const ClipboardBadge = ({
     <TouchableOpacity
         onPress={() => navigation.navigate('Send', { destination: clipboard })}
     >
-        <ClipboardSVG fill={themeColor('text')} width="27" height="27" />
+        <ClipboardSVG fill={themeColor('text')} width="30" height="30" />
     </TouchableOpacity>
 );
 
@@ -116,7 +116,7 @@ const POSBadge = ({
             setPosStatus('active');
         }}
     >
-        <POS stroke={themeColor('text')} width="34" height="34" />
+        <POS stroke={themeColor('text')} width="30" height="30" />
     </TouchableOpacity>
 );
 
@@ -344,13 +344,7 @@ export default class WalletHeader extends React.Component<
                                 <ScanBadge navigation={navigation} />
                             </View>
                             {squareEnabled && (
-                                <View
-                                    style={{
-                                        marginLeft: 10,
-                                        top: -4,
-                                        right: -4
-                                    }}
-                                >
+                                <View style={{ marginLeft: 20 }}>
                                     <POSBadge
                                         setPosStatus={setPosStatus}
                                         getOrders={getOrders}
