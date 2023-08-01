@@ -328,12 +328,12 @@ export default class WalletHeader extends React.Component<
                             {(stores.balanceStore.loadingBlockchainBalance ||
                                 stores.balanceStore
                                     .loadingLightningBalance) && (
-                                <View style={{ paddingRight: 15 }}>
+                                <View style={{ paddingRight: 10 }}>
                                     <LoadingIndicator size={30} />
                                 </View>
                             )}
                             {!!clipboard && (
-                                <View style={{ marginRight: 20 }}>
+                                <View style={{ marginRight: 15 }}>
                                     <ClipboardBadge
                                         navigation={navigation}
                                         clipboard={clipboard}
@@ -344,7 +344,7 @@ export default class WalletHeader extends React.Component<
                                 <ScanBadge navigation={navigation} />
                             </View>
                             {squareEnabled && (
-                                <View style={{ marginLeft: 20 }}>
+                                <View style={{ marginLeft: 15 }}>
                                     <POSBadge
                                         setPosStatus={setPosStatus}
                                         getOrders={getOrders}
