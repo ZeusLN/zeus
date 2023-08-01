@@ -403,8 +403,7 @@ export default class ChannelsStore {
     };
 
     @action
-    public connectPeer = (request: OpenChannelRequest, acceptErr?: boolean) => {
-        console.log('@@connectPeer');
+    public connectPeer = (request: OpenChannelRequest) => {
         this.connectingToPeer = true;
 
         return new Promise((resolve, reject) => {
@@ -420,29 +419,23 @@ export default class ChannelsStore {
                     this.errorMsgPeer = null;
                     this.channelRequest = request;
                     this.peerSuccess = true;
-                    console.log('connectPeer success');
                     resolve(true);
                 })
                 .catch((error: any) => {
-                    console.log('connectPeer err');
+                    this.connectingToPeer = false;
+                    this.peerSuccess = false;
+                    this.channelSuccess = false;
                     // handle error
-                    if (!acceptErr) {
-                        this.errorMsgPeer = error.toString();
-                        console.log('^^', error.toString());
-                        this.errorPeerConnect = true;
-                        this.connectingToPeer = false;
-                        this.peerSuccess = false;
-                        this.channelSuccess = false;
-
-                        if (
-                            this.errorMsgPeer &&
-                            this.errorMsgPeer.includes('already')
-                        ) {
-                            this.channelRequest = request;
-                        }
-                        reject(this.errorMsgPeer);
-                    } else {
+                    if (
+                        error.toString() &&
+                        error.toString().includes('already')
+                    ) {
+                        this.channelRequest = request;
                         resolve(true);
+                    } else {
+                        this.errorMsgPeer = error.toString();
+                        this.errorPeerConnect = true;
+                        reject(this.errorMsgPeer);
                     }
                 });
         });
