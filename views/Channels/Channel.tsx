@@ -196,7 +196,10 @@ export default class ChannelView extends React.Component<
         );
 
         const centerComponent = () => {
-            if (editableFees) {
+            if (
+                editableFees &&
+                this.props.SettingsStore.implementation !== 'embedded-lnd'
+            ) {
                 return <EditFees />;
             }
             return null;

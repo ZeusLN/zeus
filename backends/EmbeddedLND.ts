@@ -117,41 +117,7 @@ export default class EmbeddedLND extends LND {
     };
 
     // getFees = () => N/A;
-    // TODO remove functionality to SetFees for Embedded LND users
-    // setFees = (data: any) => {
-    //     const {
-    //         chan_point,
-    //         base_fee_msat,
-    //         fee_rate,
-    //         time_lock_delta,
-    //         min_htlc,
-    //         max_htlc
-    //     } = data;
-
-    //     if (data.global) {
-    //         return this.postRequest('/v1/chanpolicy', {
-    //             base_fee_msat,
-    //             fee_rate: `${Number(fee_rate) / 100}`,
-    //             global: true,
-    //             time_lock_delta: Number(time_lock_delta),
-    //             min_htlc_msat: min_htlc ? `${Number(min_htlc) * 1000}` : null,
-    //             max_htlc_msat: max_htlc ? `${Number(max_htlc) * 1000}` : null,
-    //             min_htlc_msat_specified: min_htlc ? true : false
-    //         });
-    //     }
-    //     return this.postRequest('/v1/chanpolicy', {
-    //         base_fee_msat,
-    //         fee_rate: `${Number(fee_rate) / 100}`,
-    //         chan_point: {
-    //             funding_txid_str: chan_point.funding_txid_str,
-    //             output_index: chan_point.output_index
-    //         },
-    //         time_lock_delta: Number(time_lock_delta),
-    //         min_htlc_msat: min_htlc ? `${Number(min_htlc) * 1000}` : null,
-    //         max_htlc_msat: max_htlc ? `${Number(max_htlc) * 1000}` : null,
-    //         min_htlc_msat_specified: min_htlc ? true : false
-    //     });
-    // };
+    // setFees = () => N/A;
     getRoutes = async (urlParams?: Array<string>) =>
         urlParams && (await queryRoutes(urlParams[0], urlParams[1]));
     // getForwardingHistory = () => N/A
