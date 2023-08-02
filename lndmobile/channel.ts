@@ -72,12 +72,12 @@ export const openChannelAll = async (
 
 /**
  * @throws
- * TODO implement
  */
 export const closeChannel = async (
     funding_txid: string,
     output_index: number,
-    force: boolean
+    force?: boolean,
+    sat_per_vbyte?: number
 ): Promise<string> => {
     const response = await sendStreamCommand<
         lnrpc.ICloseChannelRequest,
@@ -91,6 +91,9 @@ export const closeChannel = async (
                     funding_txid_str: funding_txid,
                     output_index
                 },
+                sat_per_vbyte: sat_per_vbyte
+                    ? Long.fromValue(sat_per_vbyte)
+                    : undefined,
                 force
             }
         },

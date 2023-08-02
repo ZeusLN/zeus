@@ -97,19 +97,10 @@ export default class EmbeddedLND extends LND {
         const outputIndex =
             urlParams && urlParams[1] ? Number(urlParams[1]) : 0;
         const force = urlParams && urlParams[2] ? true : false;
+        const sat_per_vbyte =
+            urlParams && urlParams[3] ? Number(urlParams[3]) : undefined;
 
-        // TODO add sat_per_vbyte rate
-        // if (urlParams && urlParams.length === 4) {
-        //     return this.deleteRequest(
-        //         `/v1/channels/${urlParams && urlParams[0]}/${
-        //             urlParams && urlParams[1]
-        //         }?force=${urlParams && urlParams[2]}&sat_per_vbyte=${
-        //             urlParams && urlParams[3]
-        //         }`
-        //     );
-        // }
-
-        await closeChannel(fundingTxId, outputIndex, force);
+        await closeChannel(fundingTxId, outputIndex, force, sat_per_vbyte);
     };
 
     getNodeInfo = async (urlParams?: Array<string>) =>
