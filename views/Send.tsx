@@ -33,7 +33,10 @@ import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
-import { ErrorMessage } from '../components/SuccessErrorMessage';
+import {
+    WarningMessage,
+    ErrorMessage
+} from '../components/SuccessErrorMessage';
 import Header from '../components/Header';
 import Screen from '../components/Screen';
 import Switch from '../components/Switch';
@@ -393,7 +396,11 @@ export default class Send extends React.Component<SendProps, SendState> {
             clipboard,
             loading
         } = this.state;
-        const { confirmedBlockchainBalance } = BalanceStore;
+        const {
+            confirmedBlockchainBalance,
+            unconfirmedBlockchainBalance,
+            lightningBalance
+        } = BalanceStore;
         const { implementation, settings } = SettingsStore;
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
@@ -443,6 +450,31 @@ export default class Send extends React.Component<SendProps, SendState> {
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
+                    {!!destination &&
+                        transactionType === 'On-chain' &&
+                        BackendUtils.supportsOnchainSends() &&
+                        confirmedBlockchainBalance === 0 &&
+                        unconfirmedBlockchainBalance === 0 && (
+                            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.Send.noOnchainBalance'
+                                    )}
+                                />
+                            </View>
+                        )}
+                    {!!destination &&
+                        (transactionType === 'Lightning' ||
+                            transactionType === 'Keysend') &&
+                        lightningBalance === 0 && (
+                            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.Send.noLightningBalance'
+                                    )}
+                                />
+                            </View>
+                        )}
                     <Text
                         style={{
                             ...styles.secondaryText,
