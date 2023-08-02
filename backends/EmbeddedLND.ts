@@ -40,9 +40,13 @@ export default class EmbeddedLND extends LND {
     getChannelInfo = async (chanId: string) => await getChanInfo(chanId);
     getBlockchainBalance = async () => await walletBalance();
     getLightningBalance = async () => await channelBalance();
-    // TODO add remaining fields spend_unconfirmed
     sendCoins = async (data: any) =>
-        await sendCoins(data.addr, data.amount, data.sat_per_vbyte);
+        await sendCoins(
+            data.addr,
+            data.amount,
+            data.sat_per_vbyte,
+            data.spend_unconfirmed
+        );
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
     getInvoices = async () => await listInvoices();
@@ -168,25 +172,6 @@ export default class EmbeddedLND extends LND {
     // TODO inject
     // importAccount = (data: any) =>
     //     this.postRequest('/v2/wallet/accounts/import', data);
-    // TODO inject
-    // signMessage = (message: string) =>
-    //     this.postRequest('/v1/signmessage', {
-    //         msg: Base64Utils.btoa(message)
-    //     });
-    // TODO inject
-    // verifyMessage = (data: any) =>
-    //     this.postRequest('/v1/verifymessage', {
-    //         msg: Base64Utils.btoa(data.msg),
-    //         signature: data.signature
-    //     });
-    // lnurlAuth = async (r_hash: string) => {
-    //     const signed = await this.signMessage(r_hash);
-    //     return {
-    //         signature: new sha256Hash()
-    //             .update(Base64Utils.stringToUint8Array(signed.signature))
-    //             .digest()
-    //     };
-    // };
     // subscribeInvoice = (r_hash: string) =>
     //     this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
     // subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');

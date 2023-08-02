@@ -202,7 +202,8 @@ export interface ILndMobileInjections {
         sendCoins: (
             address: string,
             sat: number,
-            feeRate?: number
+            feeRate?: number,
+            spend_unconfirmed?: boolean
         ) => Promise<lnrpc.SendCoinsResponse>;
         sendCoinsAll: (
             address: string,
