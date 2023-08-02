@@ -305,7 +305,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (utxos && utxos.length > 0) {
             request = {
                 addr: destination,
-                sat_per_byte: fee,
+                sat_per_vbyte: fee,
                 amount: satAmount.toString(),
                 target_conf: Number(confirmationTarget),
                 utxos,
@@ -314,7 +314,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         } else {
             request = {
                 addr: destination,
-                sat_per_byte: fee,
+                sat_per_vbyte: fee,
                 amount: satAmount.toString(),
                 target_conf: Number(confirmationTarget),
                 spend_unconfirmed: true
@@ -550,7 +550,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {localeString('views.Send.feeSats')}:
+                                    {localeString('views.Send.feeSatsVbyte')}:
                                 </Text>
                                 {enableMempoolRates ? (
                                     <TouchableWithoutFeedback

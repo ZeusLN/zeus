@@ -95,7 +95,7 @@ export default class TransactionsStore {
     public sendCoinsLNDCoinControl = (
         transactionRequest: TransactionRequest
     ) => {
-        const { utxos, addr, amount, sat_per_byte } = transactionRequest;
+        const { utxos, addr, amount, sat_per_vbyte } = transactionRequest;
         const inputs: any = [];
         const outputs: any = {};
 
@@ -115,7 +115,7 @@ export default class TransactionsStore {
                 outputs,
                 inputs
             },
-            sat_per_vbyte: Number(sat_per_byte),
+            sat_per_vbyte: Number(sat_per_vbyte),
             spend_unconfirmed: true
         };
 

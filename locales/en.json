@@ -288,7 +288,7 @@
     "views.Channel.keysend": "Keysend",
     "views.Channel.cancelClose": "Cancel Channel Close",
     "views.Channel.close": "Close Channel",
-    "views.Channel.closingRate": "(Optional) Sat per byte closing fee",
+    "views.Channel.closingRate": "(Optional) Sat per vbyte closing fee",
     "views.Channel.forceClose": "Force close",
     "views.Channel.confirmClose": "Confirm Channel Close",
     "views.Channel.aliasScid": "Alias SCID",

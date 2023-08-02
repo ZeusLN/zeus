@@ -59,7 +59,7 @@ interface OpenChannelState {
     satAmount: string | number;
     min_confs: number;
     spend_unconfirmed: boolean;
-    sat_per_byte: string;
+    sat_per_vbyte: string;
     privateChannel: boolean;
     scidAlias: boolean;
     host: string;
@@ -89,7 +89,7 @@ export default class OpenChannel extends React.Component<
             satAmount: '',
             min_confs: 1,
             spend_unconfirmed: false,
-            sat_per_byte: '2',
+            sat_per_vbyte: '2',
             privateChannel: true,
             scidAlias: true,
             host: '',
@@ -228,12 +228,12 @@ export default class OpenChannel extends React.Component<
     };
 
     setFee = (text: string) => {
-        this.setState({ sat_per_byte: text });
+        this.setState({ sat_per_vbyte: text });
     };
 
-    handleOnNavigateBack = (sat_per_byte: string) => {
+    handleOnNavigateBack = (sat_per_vbyte: string) => {
         this.setState({
-            sat_per_byte
+            sat_per_vbyte
         });
     };
 
@@ -252,7 +252,7 @@ export default class OpenChannel extends React.Component<
             satAmount,
             min_confs,
             host,
-            sat_per_byte,
+            sat_per_vbyte,
             suggestImport,
             utxoBalance,
             privateChannel,
@@ -508,7 +508,7 @@ export default class OpenChannel extends React.Component<
                                                 fontSize: 18
                                             }}
                                         >
-                                            {sat_per_byte}
+                                            {sat_per_vbyte}
                                         </Text>
                                     </View>
                                 </TouchableWithoutFeedback>
@@ -516,10 +516,10 @@ export default class OpenChannel extends React.Component<
                                 <TextInput
                                     keyboardType="numeric"
                                     placeholder={'2'}
-                                    value={sat_per_byte}
+                                    value={sat_per_vbyte}
                                     onChangeText={(text: string) =>
                                         this.setState({
-                                            sat_per_byte: text
+                                            sat_per_vbyte: text
                                         })
                                     }
                                 />

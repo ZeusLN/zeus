@@ -245,7 +245,7 @@ export default class Eclair {
         this.api('open', {
             nodeId: data.node_pubkey_string,
             fundingSatoshis: data.satoshis,
-            fundingFeerateSatByte: data.sat_per_byte,
+            fundingFeerateSatByte: data.sat_per_vbyte,
             channelFlags: data.privateChannel ? 0 : 1
         }).then(() => ({}));
     connectPeer = (data: any) =>

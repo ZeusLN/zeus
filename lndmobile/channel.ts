@@ -31,7 +31,7 @@ export const openChannel = async (
             local_funding_amount: Long.fromValue(amount),
             target_conf: fee_rate_sat ? undefined : 2,
             private: private_channel,
-            sat_per_byte: fee_rate_sat
+            sat_per_vbyte: fee_rate_sat
                 ? Long.fromValue(fee_rate_sat)
                 : undefined,
             scid_alias: true
@@ -61,7 +61,7 @@ export const openChannelAll = async (
             fund_max: true,
             target_conf: fee_rate_sat ? undefined : 2,
             private: private_channel,
-            sat_per_byte: fee_rate_sat
+            sat_per_vbyte: fee_rate_sat
                 ? Long.fromValue(fee_rate_sat)
                 : undefined,
             scid_alias: true
