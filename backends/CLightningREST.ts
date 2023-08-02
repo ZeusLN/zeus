@@ -139,14 +139,14 @@ export default class CLightningREST extends LND {
         if (data.utxos) {
             request = {
                 address: data.addr,
-                feeRate: `${Number(data.sat_per_byte) * 1000}perkb`,
+                feeRate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
                 satoshis: data.amount,
                 utxos: data.utxos
             };
         } else {
             request = {
                 address: data.addr,
-                feeRate: `${Number(data.sat_per_byte) * 1000}perkb`,
+                feeRate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
                 satoshis: data.amount
             };
         }
@@ -173,7 +173,7 @@ export default class CLightningREST extends LND {
             request = {
                 id: data.id,
                 satoshis: data.satoshis,
-                feeRate: data.sat_per_byte,
+                feeRate: data.sat_per_vbyte,
                 announce: !data.privateChannel ? 'true' : 'false',
                 minfConf: data.min_confs,
                 utxos: data.utxos
@@ -182,7 +182,7 @@ export default class CLightningREST extends LND {
             request = {
                 id: data.id,
                 satoshis: data.satoshis,
-                feeRate: data.sat_per_byte,
+                feeRate: data.sat_per_vbyte,
                 announce: !data.privateChannel ? 'true' : 'false',
                 minfConf: data.min_confs
             };

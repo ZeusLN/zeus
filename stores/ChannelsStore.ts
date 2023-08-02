@@ -445,7 +445,7 @@ export default class ChannelsStore {
         const { utxos } = request;
         const inputs: any = [];
         const outputs: any = {};
-        const sat_per_byte = request.sat_per_byte;
+        const sat_per_vbyte = request.sat_per_vbyte;
 
         if (utxos) {
             utxos.forEach((input) => {
@@ -459,7 +459,7 @@ export default class ChannelsStore {
         const node_pubkey = Base64Utils.hexToBase64(request.node_pubkey_string);
 
         delete request.node_pubkey_string;
-        delete request.sat_per_byte;
+        delete request.sat_per_vbyte;
 
         const pending_chan_id = randomBytes(32).toString('base64');
 
@@ -488,7 +488,7 @@ export default class ChannelsStore {
                         inputs,
                         outputs
                     },
-                    sat_per_vbyte: Number(sat_per_byte),
+                    sat_per_vbyte: Number(sat_per_vbyte),
                     spend_unconfirmed:
                         openChanRequest.min_confs &&
                         openChanRequest.min_confs === 0

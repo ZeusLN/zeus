@@ -42,7 +42,7 @@ export default class EmbeddedLND extends LND {
     getLightningBalance = async () => await channelBalance();
     // TODO add remaining fields spend_unconfirmed
     sendCoins = async (data: any) =>
-        await sendCoins(data.addr, data.amount, data.sat_per_byte);
+        await sendCoins(data.addr, data.amount, data.sat_per_vbyte);
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
     getInvoices = async () => await listInvoices();
@@ -57,7 +57,7 @@ export default class EmbeddedLND extends LND {
             data.node_pubkey_string,
             Number(data.local_funding_amount),
             data.privateChannel || false,
-            data.sat_per_byte ? Number(data.sat_per_byte) : undefined
+            data.sat_per_vbyte ? Number(data.sat_per_vbyte) : undefined
         );
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host);
@@ -89,12 +89,12 @@ export default class EmbeddedLND extends LND {
             urlParams && urlParams[1] ? Number(urlParams[1]) : 0;
         const force = urlParams && urlParams[2] ? true : false;
 
-        // TODO add sat_per_byte rate
+        // TODO add sat_per_vbyte rate
         // if (urlParams && urlParams.length === 4) {
         //     return this.deleteRequest(
         //         `/v1/channels/${urlParams && urlParams[0]}/${
         //             urlParams && urlParams[1]
-        //         }?force=${urlParams && urlParams[2]}&sat_per_byte=${
+        //         }?force=${urlParams && urlParams[2]}&sat_per_vbyte=${
         //             urlParams && urlParams[3]
         //         }`
         //     );
