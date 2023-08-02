@@ -420,8 +420,6 @@ export const sendKeysendPayment = async (
             }
         });
 
-        console.log('responseQueryRoutes', responseQueryRoutes);
-
         for (const route of responseQueryRoutes.routes) {
             try {
                 const lastHop = route.hops!.length - 1;
@@ -470,7 +468,9 @@ export const decodePaymentStatus = (data: string): routerrpc.PaymentStatus => {
 export const addInvoice = async (
     amount: number,
     memo: string,
-    expiry: number = 3600
+    expiry: number = 3600,
+    is_amp?: boolean,
+    is_private?: boolean
 ): Promise<lnrpc.AddInvoiceResponse> => {
     const response = await sendCommand<
         lnrpc.IInvoice,
@@ -484,8 +484,9 @@ export const addInvoice = async (
             value: Long.fromValue(amount),
             memo,
             expiry: Long.fromValue(expiry),
-            private: true,
-            min_hop_hints: 6
+            private: is_private,
+            min_hop_hints: 6,
+            is_amp
         }
     });
     return response;

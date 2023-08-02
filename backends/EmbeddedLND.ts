@@ -50,9 +50,14 @@ export default class EmbeddedLND extends LND {
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
     getInvoices = async () => await listInvoices();
-    // TODO add remaining fields is_amp and private
     createInvoice = async (data: any) =>
-        await addInvoice(Number(data.value), data.memo, data.expiry);
+        await addInvoice(
+            Number(data.value),
+            data.memo,
+            data.expiry,
+            data.is_amp,
+            data.is_private
+        );
     getPayments = async () => await listPayments();
     getNewAddress = async (data: any) => await newAddress(data.type);
     // TODO add remaining fields scid_alias, min_confs, spend_unconfirmed

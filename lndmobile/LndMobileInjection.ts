@@ -105,7 +105,9 @@ export interface ILndMobileInjections {
         addInvoice: (
             amount: number,
             memo: string,
-            expiry?: number
+            expiry?: number,
+            is_amp?: boolean,
+            is_private?: boolean
         ) => Promise<lnrpc.AddInvoiceResponse>;
         cancelInvoice: (
             paymentHash: string
