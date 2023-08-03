@@ -114,7 +114,8 @@ export interface ILndMobileInjections {
         ) => Promise<invoicesrpc.CancelInvoiceResp>;
         connectPeer: (
             pubkey: string,
-            host: string
+            host: string,
+            perm?: boolean
         ) => Promise<lnrpc.ConnectPeerResponse>;
         disconnectPeer: (
             pubkey: string

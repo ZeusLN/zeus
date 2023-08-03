@@ -69,7 +69,7 @@ export default class EmbeddedLND extends LND {
             data.sat_per_vbyte ? Number(data.sat_per_vbyte) : undefined
         );
     connectPeer = async (data: any) =>
-        await connectPeer(data.addr.pubkey, data.addr.host);
+        await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
     decodePaymentRequest = async (urlParams?: string[]) =>
         await decodePayReq(urlParams && urlParams[0]);
     // TODO add remaining fields (see transactionsStore.sendPayment) + timeout_seconds, allow_self_payment

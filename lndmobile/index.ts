@@ -122,7 +122,8 @@ export const excludeLndICloudBackup = async () => {
  */
 export const connectPeer = async (
     pubkey: string,
-    host: string
+    host: string,
+    perm?: boolean
 ): Promise<lnrpc.ConnectPeerResponse> => {
     return await sendCommand<
         lnrpc.IConnectPeerRequest,
@@ -136,7 +137,8 @@ export const connectPeer = async (
             addr: lnrpc.LightningAddress.create({
                 host,
                 pubkey
-            })
+            }),
+            perm
         }
     });
 };
