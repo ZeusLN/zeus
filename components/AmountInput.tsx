@@ -22,6 +22,9 @@ interface AmountInputProps {
     FiatStore?: FiatStore;
     SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
+    // Quick fix for ZEUS-1580
+    // Prevents unit reset when Keysend is initiated from Keypad
+    // since unit depends on user selection and is not necessarily sats
     preventUnitReset?: boolean;
 }
 
