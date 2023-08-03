@@ -136,7 +136,8 @@ export const connectPeer = async (
             addr: lnrpc.LightningAddress.create({
                 host,
                 pubkey
-            })
+            }),
+            perm: true
         }
     });
 };
