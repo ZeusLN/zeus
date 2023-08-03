@@ -403,7 +403,7 @@ export default class ChannelsStore {
     };
 
     @action
-    public connectPeer = (request: OpenChannelRequest) => {
+    public connectPeer = (request: OpenChannelRequest, perm?: boolean) => {
         this.connectingToPeer = true;
 
         return new Promise((resolve, reject) => {
@@ -411,7 +411,8 @@ export default class ChannelsStore {
                 addr: {
                     pubkey: request.node_pubkey_string,
                     host: request.host
-                }
+                },
+                perm
             })
                 .then(() => {
                     this.errorPeerConnect = false;
