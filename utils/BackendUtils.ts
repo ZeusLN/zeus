@@ -147,6 +147,8 @@ class BackendUtils {
     // Embedded LND
     initChannelAcceptor = (...args: any[]) =>
         this.call('initChannelAcceptor', args);
+
+    clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
 }
 
 const backendUtils = new BackendUtils();
