@@ -77,6 +77,7 @@ interface SendState {
     enableAtomicMultiPathPayment: boolean;
     clipboard: string;
     loading: boolean;
+    preventUnitReset: boolean;
 }
 
 @inject(
@@ -98,6 +99,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
         const isValid = navigation.getParam('isValid', false);
+        const preventUnitReset = navigation.getParam('preventUnitReset', false);
 
         if (transactionType === 'Lightning') {
             this.props.InvoicesStore.getPayReq(destination);
@@ -120,7 +122,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             message: '',
             enableAtomicMultiPathPayment: false,
             clipboard: '',
-            loading: false
+            loading: false,
+            preventUnitReset
         };
     }
 
@@ -391,7 +394,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             message,
             enableAtomicMultiPathPayment,
             clipboard,
-            loading
+            loading,
+            preventUnitReset
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
@@ -620,6 +624,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <AmountInput
                                     amount={amount}
+                                    preventUnitReset={preventUnitReset}
                                     title={localeString('views.Send.amount')}
                                     onAmountChange={(
                                         amount: string,
