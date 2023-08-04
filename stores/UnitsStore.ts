@@ -81,7 +81,7 @@ export default class UnitsStore {
             };
         } else if (units === 'sats') {
             return {
-                amount: this.fiatStore.numberWithCommas(absValueSats),
+                amount: this.fiatStore.numberWithCommas(absValueSats, 3),
                 unit: 'sats',
                 negative,
                 plural: !(Number(value) === 1 || Number(value) === -1)
@@ -113,14 +113,13 @@ export default class UnitsStore {
                 const { symbol, space, rtl, separatorSwap } =
                     this.fiatStore.getSymbol();
 
-                const amount = (
-                    FeeUtils.toFixed(absValueSats / SATS_PER_BTC) * rate
-                ).toFixed(2);
+                const amount =
+                    FeeUtils.toFixed(absValueSats / SATS_PER_BTC) * rate;
 
                 return {
                     amount: separatorSwap
-                        ? this.fiatStore.numberWithDecimals(amount)
-                        : this.fiatStore.numberWithCommas(amount),
+                        ? this.fiatStore.numberWithDecimals(amount, 2, 2)
+                        : this.fiatStore.numberWithCommas(amount, 2, 2),
                     unit: 'fiat',
                     symbol,
                     negative,
@@ -155,7 +154,7 @@ export default class UnitsStore {
                 Number(wholeSats || 0) / SATS_PER_BTC
             )}`;
         } else if (units === 'sats') {
-            const sats = `${this.fiatStore.numberWithCommas(value) || 0} ${
+            const sats = `${this.fiatStore.numberWithCommas(value, 3) || 0} ${
                 Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
             }`;
             return sats;
@@ -169,14 +168,13 @@ export default class UnitsStore {
                 const { symbol, space, rtl, separatorSwap } =
                     this.fiatStore.symbolLookup(code);
 
-                const amount = (
+                const amount =
                     FeeUtils.toFixed(Number(wholeSats || 0) / SATS_PER_BTC) *
-                    rate
-                ).toFixed(2);
+                    rate;
 
                 const formattedAmount = separatorSwap
-                    ? this.fiatStore.numberWithDecimals(amount)
-                    : this.fiatStore.numberWithCommas(amount);
+                    ? this.fiatStore.numberWithDecimals(amount, 2, 2)
+                    : this.fiatStore.numberWithCommas(amount, 2, 2);
 
                 if (rtl) {
                     return `${formattedAmount}${space ? ' ' : ''}${symbol}`;
