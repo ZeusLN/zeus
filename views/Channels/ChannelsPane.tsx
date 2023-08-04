@@ -7,6 +7,7 @@ import { duration } from 'moment';
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 import SortButton from '../../components/Channels/SortButton';
+import { FilterOptions } from '../../components/Channels/FilterOptions';
 
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
@@ -257,35 +258,40 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     lurkerMode={lurkerMode}
                 />
                 {showSearch && (
-                    <Row>
-                        <SearchBar
-                            placeholder={localeString('general.search')}
-                            onChangeText={this.updateSearch}
-                            value={search}
-                            inputStyle={{
-                                color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
-                            }}
-                            placeholderTextColor={themeColor('secondaryText')}
-                            containerStyle={{
-                                backgroundColor: null,
-                                borderTopWidth: 0,
-                                borderBottomWidth: 0,
-                                width: windowWidth - 55
-                            }}
-                            inputContainerStyle={{
-                                borderRadius: 15,
-                                backgroundColor: themeColor('secondary')
-                            }}
-                            autoCapitalize="none"
-                        />
-                        <SortButton
-                            onValueChange={(value: any) => {
-                                setSort(value);
-                            }}
-                            values={this.getChannelsSortKeys()}
-                        />
-                    </Row>
+                    <View>
+                        <Row>
+                            <SearchBar
+                                placeholder={localeString('general.search')}
+                                onChangeText={this.updateSearch}
+                                value={search}
+                                inputStyle={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                                placeholderTextColor={themeColor(
+                                    'secondaryText'
+                                )}
+                                containerStyle={{
+                                    backgroundColor: null,
+                                    borderTopWidth: 0,
+                                    borderBottomWidth: 0,
+                                    width: windowWidth - 55
+                                }}
+                                inputContainerStyle={{
+                                    borderRadius: 15,
+                                    backgroundColor: themeColor('secondary')
+                                }}
+                                autoCapitalize="none"
+                            />
+                            <SortButton
+                                onValueChange={(value: any) => {
+                                    setSort(value);
+                                }}
+                                values={this.getChannelsSortKeys()}
+                            />
+                        </Row>
+                        <FilterOptions ChannelsStore={ChannelsStore} />
+                    </View>
                 )}
                 {loading ? (
                     <View style={{ marginTop: 40 }}>
