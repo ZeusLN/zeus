@@ -60,6 +60,7 @@ export default class ChannelsStore {
     @observable public filteredChannels: Array<Channel> = [];
     @observable public filteredPendingChannels: Array<Channel> = [];
     @observable public filteredClosedChannels: Array<Channel> = [];
+    @observable public filterOptions: Array<string> = [];
     @observable public sort = {
         param: 'channelCapacity',
         dir: 'DESC',
@@ -165,21 +166,36 @@ export default class ChannelsStore {
     };
 
     @action
+    setFilterOptions = (options: string[]) => {
+        this.filterOptions = options;
+        this.filterChannels();
+        this.filterPendingChannels();
+        this.filterClosedChannels();
+    };
+
+    @action
     filter = (channels: Array<Channel>) => {
         const query = this.search;
-        const filtered = channels.filter(
-            (channel: Channel) =>
-                channel.alias
-                    ?.toLocaleLowerCase()
-                    .includes(query.toLocaleLowerCase()) ||
-                channel.remotePubkey
-                    .toLocaleLowerCase()
-                    .includes(query.toLocaleLowerCase()) ||
-                channel.channelId
-                    .toLocaleLowerCase()
-                    .includes(query.toLocaleLowerCase())
-        );
-
+        const filtered = channels
+            .filter(
+                (channel: Channel) =>
+                    channel.alias
+                        ?.toLocaleLowerCase()
+                        .includes(query.toLocaleLowerCase()) ||
+                    channel.remotePubkey
+                        .toLocaleLowerCase()
+                        .includes(query.toLocaleLowerCase()) ||
+                    channel.channelId
+                        .toLocaleLowerCase()
+                        .includes(query.toLocaleLowerCase())
+            )
+            .filter(
+                (channel: Channel) =>
+                    this.filterOptions?.length === 0 ||
+                    this.filterOptions?.includes(
+                        channel.private ? 'unannounced' : 'announced'
+                    )
+            );
         const sorted = filtered.sort((a: any, b: any) => {
             if (this.sort.type === 'numeric') {
                 return Number(a[this.sort.param]) < Number(b[this.sort.param])
