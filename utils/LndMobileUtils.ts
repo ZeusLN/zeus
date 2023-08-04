@@ -216,7 +216,8 @@ export async function startLnd(walletPassword: string) {
 export async function createLndWallet(
     seedMnemonic?: string,
     walletPassphrase?: string,
-    isTestnet?: boolean
+    isTestnet?: boolean,
+    channelBackupsBase64?: string
 ) {
     const {
         initialize,
@@ -262,7 +263,7 @@ export async function createLndWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
         isRestore ? 100 : undefined,
-        undefined, // TODO add channels backup restore
+        channelBackupsBase64 ? channelBackupsBase64 : undefined,
         walletPassphrase ? walletPassphrase : undefined
     );
     return { wallet, seed, randomBase64 };

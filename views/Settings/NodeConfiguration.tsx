@@ -83,7 +83,8 @@ interface NodeConfigurationState {
     walletPassword: string;
     adminMacaroon: string;
     embeddedLndNetwork: string;
-    recoveryPassphrase: string;
+    recoveryCipherSeed: string;
+    channelBackupsBase64: string;
     creatingWallet: boolean;
     errorCreatingWallet: boolean;
 }
@@ -134,7 +135,8 @@ export default class NodeConfiguration extends React.Component<
         adminMacaroon: '',
         embeddedLndNetwork: '',
         interfaceKeys: [],
-        recoveryPassphrase: '',
+        recoveryCipherSeed: '',
+        channelBackupsBase64: '',
         creatingWallet: false,
         errorCreatingWallet: false
     };
@@ -555,7 +557,8 @@ export default class NodeConfiguration extends React.Component<
             deletionAwaitingConfirmation,
             adminMacaroon,
             embeddedLndNetwork,
-            recoveryPassphrase,
+            recoveryCipherSeed,
+            channelBackupsBase64,
             creatingWallet,
             errorCreatingWallet
         } = this.state;
@@ -910,17 +913,45 @@ export default class NodeConfiguration extends React.Component<
                                         }}
                                     >
                                         {`${localeString(
-                                            'views.Settings.AddEditNode.recoveryPassphrase'
+                                            'views.Settings.AddEditNode.recoveryCipherSeed'
                                         )} (${localeString(
                                             'general.optional'
                                         )})`}
                                     </Text>
                                     <TextInput
                                         placeholder="ship yellow box resource scan pelican..."
-                                        value={recoveryPassphrase}
+                                        value={recoveryCipherSeed}
                                         onChangeText={(text: string) =>
                                             this.setState({
-                                                recoveryPassphrase: text
+                                                recoveryCipherSeed: text
+                                            })
+                                        }
+                                        locked={loading}
+                                    />
+                                </View>
+                            )}
+
+                        {!embeddedLndNetwork &&
+                            implementation === 'embedded-lnd' &&
+                            recoveryCipherSeed && (
+                                <View>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {`${localeString(
+                                            'views.Settings.AddEditNode.channelBackupsBase64'
+                                        )} (${localeString(
+                                            'general.optional'
+                                        )})`}
+                                    </Text>
+                                    <TextInput
+                                        value={channelBackupsBase64}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                channelBackupsBase64: text
                                             })
                                         }
                                         locked={loading}
@@ -1385,7 +1416,7 @@ export default class NodeConfiguration extends React.Component<
                                     <View style={styles.button}>
                                         <Button
                                             title={
-                                                recoveryPassphrase
+                                                recoveryCipherSeed
                                                     ? localeString(
                                                           'views.Settings.NodeConfiguration.restoreMainnetWallet'
                                                       )
@@ -1400,7 +1431,10 @@ export default class NodeConfiguration extends React.Component<
 
                                                 const response =
                                                     await createLndWallet(
-                                                        recoveryPassphrase
+                                                        recoveryCipherSeed,
+                                                        undefined,
+                                                        undefined,
+                                                        channelBackupsBase64
                                                     );
                                                 const {
                                                     wallet,
@@ -1440,7 +1474,7 @@ export default class NodeConfiguration extends React.Component<
                                     <View style={styles.button}>
                                         <Button
                                             title={
-                                                recoveryPassphrase
+                                                recoveryCipherSeed
                                                     ? localeString(
                                                           'views.Settings.NodeConfiguration.restoreTestnetWallet'
                                                       )
@@ -1455,9 +1489,10 @@ export default class NodeConfiguration extends React.Component<
 
                                                 const response =
                                                     await createLndWallet(
-                                                        recoveryPassphrase,
+                                                        recoveryCipherSeed,
                                                         undefined,
-                                                        true
+                                                        true,
+                                                        channelBackupsBase64
                                                     );
                                                 const {
                                                     wallet,
