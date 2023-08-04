@@ -135,6 +135,8 @@ class BackendUtils {
     checkPerms = () => this.call('checkPerms');
     isConnected = (...args: any[]) => this.call('isConnected', args);
     disconnect = (...args: any[]) => this.call('disconnect', args);
+
+    clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
 }
 
 const backendUtils = new BackendUtils();
