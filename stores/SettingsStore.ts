@@ -1056,6 +1056,7 @@ export default class SettingsStore {
         if (status) {
             this.error = false;
             this.errorMsg = '';
+            BackendUtils.clearCachedCalls();
         }
         this.connecting = status;
         return this.connecting;
