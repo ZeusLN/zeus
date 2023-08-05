@@ -405,10 +405,13 @@ export default class ChannelsStore {
     };
 
     @action
-    public connectPeer = (request: OpenChannelRequest, perm?: boolean) => {
+    public connectPeer = async (
+        request: OpenChannelRequest,
+        perm?: boolean
+    ) => {
         this.connectingToPeer = true;
 
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
             BackendUtils.connectPeer({
                 addr: {
                     pubkey: request.node_pubkey_string,
