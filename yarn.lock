@@ -2279,9 +2279,9 @@
   integrity sha512-jQ21kQ120mo+IrDs1nFNVm/AsdFxIx2+vZ347DbogHJPd/JzKNMOqU6HCYin1W6v8l5R9XSO2/e9cxmn7HAnVw==
 
 "@types/node@*", "@types/node@>=13.7.0":
-  version "20.4.7"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.4.7.tgz#74d323a93f1391a63477b27b9aec56669c98b2ab"
-  integrity sha512-bUBrPjEry2QUTsnuEjzjbS7voGWCc30W0qzgMf90GPeDGFRakvrz47ju+oqDAKCXLUCe39u57/ORMl/O/04/9g==
+  version "20.4.8"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.4.8.tgz#b5dda19adaa473a9bf0ab5cbd8f30ec7d43f5c85"
+  integrity sha512-0mHckf6D2DiIAzh8fM8f3HQCvMKDpK94YQ0DSVkfWTG9BZleYIWudw9cJxX8oCk9bM+vAkDyujDV6dmKHbvQpg==
 
 "@types/node@^17.0.0":
   version "17.0.45"
@@ -4574,13 +4574,13 @@ eslint-config-prettier@^8.5.0:
   integrity sha512-SM8AMJdeQqRYT9O9zguiruQZaN7+z+E4eAP9oiLNGKMtomwaB1E9dcgUD6ZAn/eQAb52USbvezbiljfZUhbJcg==
 
 eslint-import-resolver-node@^0.3.6:
-  version "0.3.7"
-  resolved "https://registry.yarnpkg.com/eslint-import-resolver-node/-/eslint-import-resolver-node-0.3.7.tgz#83b375187d412324a1963d84fa664377a23eb4d7"
-  integrity sha512-gozW2blMLJCeFpBwugLTGyvVjNoeo1knonXAcatC6bjPBZitotxdWf7Gimr25N4c0AAOo4eOUfaG82IJPDpqCA==
+  version "0.3.8"
+  resolved "https://registry.yarnpkg.com/eslint-import-resolver-node/-/eslint-import-resolver-node-0.3.8.tgz#be719e72f5e96dcef7a60f74147c842db0c74b06"
+  integrity sha512-tEe+Pok22qIGaK3KoMP+N96GVDS66B/zreoVVmiavLvRUEmGRtvb4B8wO9jwnb8d2lvHtrkhZ7UD73dWBVnf/Q==
   dependencies:
     debug "^3.2.7"
-    is-core-module "^2.11.0"
-    resolve "^1.22.1"
+    is-core-module "^2.13.0"
+    resolve "^1.22.4"
 
 eslint-module-utils@^2.7.3:
   version "2.8.0"
@@ -5735,10 +5735,10 @@ is-ci@^2.0.0:
   dependencies:
     ci-info "^2.0.0"
 
-is-core-module@^2.11.0, is-core-module@^2.8.1, is-core-module@^2.9.0:
-  version "2.12.1"
-  resolved "https://registry.yarnpkg.com/is-core-module/-/is-core-module-2.12.1.tgz#0c0b6885b6f80011c71541ce15c8d66cf5a4f9fd"
-  integrity sha512-Q4ZuBAe2FUsKtyQJoQHlvP8OvBERxO3jEmy1I7hcRXcJBGGHFh/aJBswbXuS9sgrDH2QUO8ilkwNPHvHMd8clg==
+is-core-module@^2.13.0, is-core-module@^2.8.1, is-core-module@^2.9.0:
+  version "2.13.0"
+  resolved "https://registry.yarnpkg.com/is-core-module/-/is-core-module-2.13.0.tgz#bb52aa6e2cbd49a30c2ba68c42bf3435ba6072db"
+  integrity sha512-Z7dk6Qo8pOCp3l4tsX2C5ZVas4V+UxwQodwZhLopL91TX8UyyHEXafPcyoeeWuLrwzHcr3igO78wNLwHJHsMCQ==
   dependencies:
     has "^1.0.3"
 
@@ -8650,10 +8650,10 @@ react-native-restart@0.0.24:
   resolved "https://registry.yarnpkg.com/react-native-restart/-/react-native-restart-0.0.24.tgz#c7036f25d900d9221b84d3e5129b02d4289d4e94"
   integrity sha512-pvJNU3NwQk6bCG2gOWcQpZ4IxhtELB0K9gzmtixfsaTFbW1UXXHkJNjk1kHazcbH5hrD7QbUkR63fsAVh8X4VQ==
 
-react-native-safe-area-context@4.7.1:
-  version "4.7.1"
-  resolved "https://registry.yarnpkg.com/react-native-safe-area-context/-/react-native-safe-area-context-4.7.1.tgz#b7be2d68dee909717cfa439bb5c7966042d231e8"
-  integrity sha512-X2pJG2ttmAbiGlItWedvDkZg1T1ikmEDiz+7HsiIwAIm2UbFqlhqn+B1JF53mSxPzdNaDcCQVHRNPvj8oFu6Yg==
+react-native-safe-area-context@0.6.4:
+  version "0.6.4"
+  resolved "https://registry.yarnpkg.com/react-native-safe-area-context/-/react-native-safe-area-context-0.6.4.tgz#624bd50cebc9f47853f179373501511931d2a0c3"
+  integrity sha512-xj8Mv8ZHfc8RquBgVYt+4+nOJaexTblLsQJpyx4Dh4qFUG+3QtbNlfOF7/ITj/qY5LNdlfafKoDsVgFz0WIU1w==
 
 react-native-safe-area-view@^0.14.9:
   version "0.14.9"
@@ -9053,12 +9053,12 @@ resolve-url@^0.2.1:
   resolved "https://registry.yarnpkg.com/resolve-url/-/resolve-url-0.2.1.tgz#2c637fe77c893afd2a663fe21aa9080068e2052a"
   integrity sha512-ZuF55hVUQaaczgOIwqWzkEcEidmlD/xl44x1UZnhOXcYuFN2S6+rcxpG+C1N3So0wvNI3DmJICUFfu2SxhBmvg==
 
-resolve@^1.10.0, resolve@^1.14.2, resolve@^1.18.1, resolve@^1.22.0, resolve@^1.22.1:
-  version "1.22.2"
-  resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.22.2.tgz#0ed0943d4e301867955766c9f3e1ae6d01c6845f"
-  integrity sha512-Sb+mjNHOULsBv818T40qSPeRiuWLyaGMa5ewydRLFimneixmVy2zdivRl+AF6jaYPC8ERxGDmFSiqui6SfPd+g==
+resolve@^1.10.0, resolve@^1.14.2, resolve@^1.18.1, resolve@^1.22.0, resolve@^1.22.4:
+  version "1.22.4"
+  resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.22.4.tgz#1dc40df46554cdaf8948a486a10f6ba1e2026c34"
+  integrity sha512-PXNdCiPqDqeUou+w1C2eTQbNfxKSuMxqTCuvlmmMsk1NWHL5fRrhY6Pl0qEYYc6+QqGClco1Qj8XnjPego4wfg==
   dependencies:
-    is-core-module "^2.11.0"
+    is-core-module "^2.13.0"
     path-parse "^1.0.7"
     supports-preserve-symlinks-flag "^1.0.0"
 
