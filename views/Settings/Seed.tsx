@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import Button from '../../components/Button';
+import CopyButton from '../../components/CopyButton';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 
@@ -14,6 +22,8 @@ import SettingsStore from '../../stores/SettingsStore';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
+import Skull from '../../assets/images/SVG/Skull.svg';
+
 interface SeedProps {
     navigation: any;
     SettingsStore: SettingsStore;
@@ -21,6 +31,7 @@ interface SeedProps {
 
 interface SeedState {
     understood: boolean;
+    showModal: boolean;
 }
 
 const MnemonicWord = ({ index, word }) => {
@@ -70,13 +81,23 @@ const MnemonicWord = ({ index, word }) => {
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     state = {
-        understood: false
+        understood: false,
+        showModal: false
     };
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { understood } = this.state;
+        const { understood, showModal } = this.state;
         const { seedPhrase }: any = SettingsStore;
+
+        const DangerouslyCopySeed = () => (
+            <TouchableOpacity
+                onPress={() => this.setState({ showModal: true })}
+            >
+                <Skull fill={themeColor('text')} />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <Header
@@ -88,8 +109,82 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={
+                        understood ? DangerouslyCopySeed : undefined
+                    }
                     navigation={navigation}
                 />
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={showModal}
+                >
+                    <View style={styles.centeredView}>
+                        <View style={styles.modal}>
+                            {showModal && (
+                                <View>
+                                    <Text
+                                        style={{
+                                            ...styles.blackText,
+                                            fontSize: 40,
+                                            alignSelf: 'center',
+                                            marginBottom: 20
+                                        }}
+                                    >
+                                        {localeString('general.danger')}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            color: 'black',
+                                            margin: 10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Seed.dangerousText1'
+                                        )}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            ...styles.blackText,
+                                            color: 'black',
+                                            margin: 10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Seed.dangerousText2'
+                                        )}
+                                    </Text>
+                                    <View style={styles.button}>
+                                        <CopyButton
+                                            title={localeString(
+                                                'views.Settings.Seed.dangerousButton'
+                                            )}
+                                            copyValue={seedPhrase.join(' ')}
+                                            icon={{
+                                                name: 'warning',
+                                                size: 40
+                                            }}
+                                            containerStyle={{ color: 'red' }}
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={localeString(
+                                                'general.cancel'
+                                            )}
+                                            onPress={() =>
+                                                this.setState({
+                                                    showModal: false
+                                                })
+                                            }
+                                            primary
+                                        />
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                </Modal>
                 {!understood && (
                     <>
                         <View style={{ marginLeft: 10, marginRight: 10 }}>
@@ -162,14 +257,15 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                 )}
                 {understood && (
                     <>
-                        <ScrollView style={{ flex: 1 }}>
+                        <ScrollView style={{ flex: 1, marginBottom: 80 }}>
                             <View
                                 style={{
                                     flex: 1,
                                     marginTop: 8,
                                     maxHeight: 720,
                                     flexWrap: 'wrap',
-                                    alignContent: 'flex-start'
+                                    alignItems: 'flex-start',
+                                    flexDirection: 'row'
                                 }}
                             >
                                 {seedPhrase.map(
@@ -185,21 +281,71 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 )}
                             </View>
                         </ScrollView>
-                        <Button
-                            onPress={async () => {
-                                await EncryptedStorage.setItem(
-                                    'backup-complete',
-                                    JSON.stringify(true)
-                                );
-                                navigation.navigate('Wallet');
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                position: 'absolute',
+                                bottom: 35,
+                                width: '90%'
                             }}
-                            title={localeString(
-                                'views.Settings.Seed.backupComplete'
-                            )}
-                        />
+                        >
+                            <Button
+                                onPress={async () => {
+                                    await EncryptedStorage.setItem(
+                                        'backup-complete',
+                                        JSON.stringify(true)
+                                    );
+                                    navigation.navigate('Wallet');
+                                }}
+                                title={localeString(
+                                    'views.Settings.Seed.backupComplete'
+                                )}
+                            />
+                        </View>
                     </>
                 )}
             </Screen>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    text: {
+        fontFamily: 'Lato-Regular'
+    },
+    whiteText: {
+        color: 'white',
+        fontFamily: 'Lato-Regular'
+    },
+    blackText: {
+        color: 'black',
+        fontFamily: 'Lato-Regular'
+    },
+    button: {
+        paddingTop: 10,
+        paddingBottom: 10,
+        width: 350,
+        alignSelf: 'center'
+    },
+    modal: {
+        margin: 20,
+        backgroundColor: 'white',
+        borderRadius: 35,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5
+    },
+    centeredView: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 22
+    }
+});
