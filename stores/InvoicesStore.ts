@@ -307,6 +307,8 @@ export default class InvoicesStore {
                 const formattedRhash =
                     typeof invoice.r_hash === 'string'
                         ? invoice.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
+                        : invoice.r_hash.data
+                        ? Base64Utils.bytesToHexString(invoice.r_hash.data)
                         : Base64Utils.bytesToHexString(invoice.r_hash);
 
                 if (
