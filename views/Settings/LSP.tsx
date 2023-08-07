@@ -149,6 +149,8 @@ export default class EmbeddedNode extends React.Component<
                                 );
                             }}
                             locked={!enableLSP}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
                     <View
@@ -178,6 +180,8 @@ export default class EmbeddedNode extends React.Component<
                                 });
                             }}
                             locked={!enableLSP}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
                 </View>
