@@ -70,6 +70,10 @@ export default class LSPStore {
                 })
                 .catch(() => {
                     this.error = true;
+                    this.error_msg = localeString(
+                        'stores.LSPStore.connectionError'
+                    );
+                    this.showLspSettings = true;
                     reject();
                 });
         });

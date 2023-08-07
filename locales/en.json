@@ -719,6 +719,7 @@
     "stores.SettingsStore.lndhubLoginError": "Failed to log in to LNDHub server",
     "stores.SettingsStore.lncConnectError": "Failed to connect the LNC client to the proxy server",
     "stores.LSPStore.error": "LSP error",
+    "stores.LSPStore.connectionError": "Could not connect to LSP. Please check your LSP settings or try again later.",
     "error.connectionRefused": "Host unreachable. Try restarting your node or its Tor process.",
     "error.hostUnreachable": "Host unreachable. Try restarting your node or its Tor process.",
     "error.torBootstrap": "Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.",
