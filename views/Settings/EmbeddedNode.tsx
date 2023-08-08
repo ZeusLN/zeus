@@ -27,6 +27,7 @@ interface EmbeddedNodeState {
     expressGraphSync: boolean | undefined;
     expressGraphSyncMobile: boolean | undefined;
     resetExpressGraphSyncOnStartup: boolean | undefined;
+    bimodalPathfinding: boolean | undefined;
     resetMissionControlSuccess: boolean | undefined;
     channelBackupCopied: boolean | undefined;
 }
@@ -41,6 +42,7 @@ export default class EmbeddedNode extends React.Component<
         expressGraphSync: false,
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
+        bimodalPathfinding: false,
         resetMissionControlSuccess: false,
         channelBackupCopied: false
     };
@@ -53,7 +55,8 @@ export default class EmbeddedNode extends React.Component<
             expressGraphSync: settings.expressGraphSync,
             expressGraphSyncMobile: settings.expressGraphSyncMobile,
             resetExpressGraphSyncOnStartup:
-                settings.resetExpressGraphSyncOnStartup
+                settings.resetExpressGraphSyncOnStartup,
+            bimodalPathfinding: settings.bimodalPathfinding
         });
     }
 
@@ -63,6 +66,7 @@ export default class EmbeddedNode extends React.Component<
             expressGraphSync,
             expressGraphSyncMobile,
             resetExpressGraphSyncOnStartup,
+            bimodalPathfinding,
             resetMissionControlSuccess,
             channelBackupCopied
         } = this.state;
@@ -270,6 +274,61 @@ export default class EmbeddedNode extends React.Component<
                                 </>
                             </>
                         )}
+                        <>
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: 'transparent'
+                                }}
+                            >
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.bimodalPathfinding'
+                                    )}
+                                </ListItem.Title>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    <Switch
+                                        value={bimodalPathfinding}
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                bimodalPathfinding:
+                                                    !bimodalPathfinding
+                                            });
+                                            await updateSettings({
+                                                bimodalPathfinding:
+                                                    !bimodalPathfinding
+                                            });
+                                        }}
+                                    />
+                                </View>
+                            </ListItem>
+                            <View
+                                style={{
+                                    margin: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.bimodalPathfinding.subtitle'
+                                    )}
+                                </Text>
+                            </View>
+                        </>
                         <>
                             <View style={{ margin: 10 }}>
                                 <Button

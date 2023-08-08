@@ -92,6 +92,7 @@ export interface Settings {
     expressGraphSync: boolean;
     expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
+    bimodalPathfinding: boolean;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -631,6 +632,8 @@ export default class SettingsStore {
         expressGraphSync: false,
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
+        // embedded node
+        bimodalPathfinding: false,
         // LSP
         enableLSP: true,
         lspMainnet: 'https://lsp-preview.lnolymp.us',

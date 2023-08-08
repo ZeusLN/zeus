@@ -65,7 +65,6 @@ export function checkLndStreamErrorResponse(
 const writeLndConfig = async (isTestnet?: boolean) => {
     const { writeConfig } = lndMobile.index;
 
-    // TODO move off of Blixt neutrino servers
     const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
@@ -121,7 +120,11 @@ const writeLndConfig = async (isTestnet?: boolean) => {
     protocol.zero-conf=true
     
     [routerrpc]
-    routerrpc.estimator=apriori`;
+    routerrpc.estimator=${
+        stores.settingsStore?.settings?.bimodalPathfinding
+            ? 'bimodal'
+            : 'apriori'
+    }`;
 
     await writeConfig(config);
     return;
