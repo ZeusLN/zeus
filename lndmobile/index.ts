@@ -248,7 +248,7 @@ export const sendPaymentV2Sync = async (
     const {
         payment_request,
         amt,
-        max_fee_percent,
+        fee_limit_sat,
         last_hop_pubkey,
         route_hints,
         dest_custom_records,
@@ -261,16 +261,12 @@ export const sendPaymentV2Sync = async (
         dest
     } = sendPaymentReq;
 
-    const maxFeeRatio = (max_fee_percent ?? 2) / 100;
-
     const options: routerrpc.ISendPaymentRequest = {
         payment_request,
         no_inflight_updates: true,
         timeout_seconds: 60,
         max_parts,
-        fee_limit_sat: Long.fromValue(
-            Math.max(10, (amt?.toNumber() || 0) * maxFeeRatio)
-        ),
+        fee_limit_sat,
         route_hints,
         cltv_limit: cltv_limit || 0,
         allow_self_payment: true,
@@ -334,32 +330,33 @@ export const decodeSendPaymentV2Result = (data: string): lnrpc.Payment => {
     });
 };
 
-export const sendKeysendPaymentV2 = (
-    destination_pub_key: string,
-    sat: Long,
-    dest_custom_records: any,
-    payment_hash: string,
-    route_hints: lnrpc.IRouteHint[]
-    // max_ln_fee_percentage: number = 3
-): Promise<lnrpc.Payment> => {
-    // const maxFeeRatio = (max_ln_fee_percentage ?? 2) / 100;
+export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
+    const {
+        dest,
+        amt,
+        dest_custom_records,
+        payment_hash,
+        fee_limit_sat,
+        max_shard_size_msat,
+        max_parts,
+        cltv_limit,
+        amp
+    } = request;
 
     const options: routerrpc.ISendPaymentRequest = {
-        dest: Base64Utils.hexToUint8Array(destination_pub_key),
-        amt: sat,
-        route_hints,
+        dest: Base64Utils.hexToUint8Array(dest),
+        amt,
+        dest_custom_records,
         payment_hash,
         dest_features: [lnrpc.FeatureBit.TLV_ONION_REQ],
         no_inflight_updates: true,
         timeout_seconds: 60,
-        max_parts: 2,
-        // fee_limit_sat: new Long(Number((sat?.toNumber() || 0) * maxFeeRatio)),
-        cltv_limit: 0
+        max_parts: max_parts || 1,
+        fee_limit_sat: fee_limit_sat || 0,
+        max_shard_size_msat,
+        cltv_limit: cltv_limit || 0,
+        amp
     };
-
-    if (dest_custom_records) {
-        options.dest_custom_records = dest_custom_records;
-    }
 
     return new Promise(async (resolve, reject) => {
         const listener = LndMobileEventEmitter.addListener(
