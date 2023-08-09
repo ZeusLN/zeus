@@ -16,7 +16,10 @@ export const openChannel = async (
     pubkey: string,
     amount: number,
     private_channel: boolean,
-    fee_rate_sat?: number
+    fee_rate_sat?: number,
+    scidAlias?: boolean,
+    min_confs?: number,
+    spend_unconfirmed?: boolean
 ): Promise<lnrpc.ChannelPoint> => {
     const response = await sendCommand<
         lnrpc.IOpenChannelRequest,
@@ -34,7 +37,9 @@ export const openChannel = async (
             sat_per_vbyte: fee_rate_sat
                 ? Long.fromValue(fee_rate_sat)
                 : undefined,
-            scid_alias: true
+            scid_alias: scidAlias,
+            min_confs: min_confs,
+            spend_unconfirmed: spend_unconfirmed
         }
     });
     return response;
