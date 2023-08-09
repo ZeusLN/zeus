@@ -74,7 +74,6 @@ export default class EmbeddedLND extends LND {
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
     decodePaymentRequest = async (urlParams?: string[]) =>
         await decodePayReq(urlParams && urlParams[0]);
-    // TODO add remaining fields (see transactionsStore.sendPayment) + timeout_seconds, allow_self_payment
     payLightningInvoice = async (data: any) => {
         const sendPaymentReq = {
             payment_request: data.payment_request,
@@ -103,7 +102,6 @@ export default class EmbeddedLND extends LND {
 
         return await sendPaymentV2Sync(sendPaymentReq);
     };
-    // TODO wire up fee limits
     sendKeysend = async (data: any) =>
         await sendKeysendPaymentV2(
             data.pubkey,

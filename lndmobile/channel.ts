@@ -38,8 +38,8 @@ export const openChannel = async (
                 ? Long.fromValue(fee_rate_sat)
                 : undefined,
             scid_alias: scidAlias,
-            min_confs: min_confs,
-            spend_unconfirmed: spend_unconfirmed
+            min_confs,
+            spend_unconfirmed
         }
     });
     return response;
