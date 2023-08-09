@@ -258,7 +258,7 @@ export default class OpenChannel extends React.Component<
             privateChannel,
             scidAlias
         } = this.state;
-        const { implementation, settings } = SettingsStore;
+        const { settings } = SettingsStore;
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
@@ -527,7 +527,7 @@ export default class OpenChannel extends React.Component<
                         </>
 
                         {BackendUtils.supportsCoinControl() &&
-                            implementation !== 'lnd' && (
+                            !BackendUtils.isLNDBased() && (
                                 <UTXOPicker
                                     onValueChange={this.selectUTXOs}
                                     UTXOsStore={UTXOsStore}
