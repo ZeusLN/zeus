@@ -136,14 +136,41 @@ export interface ILndMobileInjections {
             amount?: Long,
             tlvRecordName?: string | null
         ) => Promise<lnrpc.SendResponse>;
-        sendPaymentV2Sync: (
-            paymentRequest: string,
-            amount?: Long,
-            payAmount?: Long,
-            tlvRecordName?: string | null,
-            multiPath?: boolean,
-            maxLNFeePercentage?: number
-        ) => Promise<lnrpc.Payment>;
+        sendPaymentV2Sync: ({
+            payment_request,
+            amt,
+            max_shard_size_msat,
+            max_parts = 1,
+            maxLNFeePercentage,
+            last_hop_pubkey,
+            message,
+            cltv_limit,
+            outgoing_chan_id,
+            allow_self_payment,
+            multi_path,
+            route_hints,
+            dest_custom_records,
+            payment_hash,
+            amp,
+            dest
+        }: {
+            payment_request?: string;
+            amt?: Long;
+            max_shard_size_msat?: string;
+            max_parts?: number;
+            maxLNFeePercentage?: number;
+            last_hop_pubkey?: string;
+            message?: string;
+            cltv_limit?: any;
+            outgoing_chan_id?: string;
+            allow_self_payment?: boolean;
+            multi_path?: boolean;
+            route_hints?: lnrpc.IRouteHint[];
+            dest_custom_records?: any;
+            payment_hash: string;
+            amp: boolean;
+            dest: string;
+        }) => Promise<lnrpc.Payment>;
         queryRoutes: (
             pubkey: string,
             amount?: Long,
@@ -180,7 +207,10 @@ export interface ILndMobileInjections {
             pubkey: string,
             amount: number,
             privateChannel: boolean,
-            feeRateSat?: number
+            feeRateSat?: number,
+            scidAlias?: boolean,
+            min_confs?: number,
+            spend_unconfirmed?: boolean
         ) => Promise<lnrpc.ChannelPoint>;
         openChannelAll: (
             pubkey: string,
