@@ -46,6 +46,7 @@ const MnemonicWord = ({ index, word }) => {
                 width: '45%',
                 borderRadius: 5,
                 margin: 9,
+                marginTop: 4,
                 flexDirection: 'row'
             }}
         >
