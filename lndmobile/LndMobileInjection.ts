@@ -141,7 +141,7 @@ export interface ILndMobileInjections {
             amt,
             max_shard_size_msat,
             max_parts = 1,
-            maxLNFeePercentage,
+            fee_limit_sat,
             last_hop_pubkey,
             message,
             cltv_limit,
@@ -158,7 +158,7 @@ export interface ILndMobileInjections {
             amt?: Long;
             max_shard_size_msat?: string;
             max_parts?: number;
-            maxLNFeePercentage?: number;
+            fee_limit_sat?: number;
             last_hop_pubkey?: string;
             message?: string;
             cltv_limit?: any;
@@ -178,14 +178,29 @@ export interface ILndMobileInjections {
         ) => Promise<lnrpc.QueryRoutesResponse>;
         listPayments: () => Promise<lnrpc.ListPaymentsResponse>;
         subscribeChannelGraph: () => Promise<string>;
-        sendKeysendPaymentV2: (
-            destination_pub_key: string,
-            sat: Long,
-            dest_custom_records: any,
-            payment_hash: string,
-            route_hints: lnrpc.IRouteHint[],
-            max_ln_fee_percentage: number
-        ) => Promise<lnrpc.Payment>;
+        sendKeysendPaymentV2: ({
+            amt,
+            max_shard_size_msat,
+            max_parts = 1,
+            fee_limit_sat,
+            message,
+            cltv_limit,
+            payment_hash,
+            amp,
+            dest,
+            dest_custom_records
+        }: {
+            amt?: Long;
+            max_shard_size_msat?: string;
+            max_parts?: number;
+            fee_limit_sat?: number;
+            message?: string;
+            cltv_limit?: any;
+            payment_hash: string;
+            amp: boolean;
+            dest: string;
+            dest_custom_records?: any;
+        }) => Promise<lnrpc.Payment>;
     };
     channel: {
         channelBalance: () => Promise<lnrpc.ChannelBalanceResponse>;

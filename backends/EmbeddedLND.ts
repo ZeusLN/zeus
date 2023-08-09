@@ -1,7 +1,6 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
-// import { Hash as sha256Hash } from 'fast-sha256';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 
@@ -78,11 +77,10 @@ export default class EmbeddedLND extends LND {
         const sendPaymentReq = {
             payment_request: data.payment_request,
             payment_hash: data.payment_hash,
-            amount: data?.amt,
+            amt: data?.amt,
             max_parts: data?.max_parts,
             max_shard_amt: data?.max_shard_amt,
-            fee_limit_sat: data?.fee_limit_sat,
-            max_fee_percent: data?.max_fee_percent,
+            fee_limit_sat: data?.fee_limit_sat || 0,
             outgoing_chan_id: data?.outgoing_chan_id,
             last_hop_pubkey: data?.last_hop_pubkey
                 ? Base64Utils.base64ToHex(data?.last_hop_pubkey)
@@ -103,14 +101,17 @@ export default class EmbeddedLND extends LND {
         return await sendPaymentV2Sync(sendPaymentReq);
     };
     sendKeysend = async (data: any) =>
-        await sendKeysendPaymentV2(
-            data.pubkey,
-            data.amt,
-            data.dest_custom_records,
-            data.payment_hash,
-            [],
-            data.max_fee_percent
-        );
+        await sendKeysendPaymentV2({
+            dest: data.pubkey,
+            amt: data.amt,
+            dest_custom_records: data.dest_custom_records,
+            payment_hash: data.payment_hash,
+            fee_limit_sat: data.fee_limit_sat,
+            max_shard_size_msat: data.max_shard_size_msat,
+            max_parts: data.max_parts,
+            cltv_limit: data.cltv_limit,
+            amp: data.amp
+        });
     closeChannel = async (urlParams?: Array<string>) => {
         const fundingTxId = (urlParams && urlParams[0]) || '';
         const outputIndex =
