@@ -3,6 +3,7 @@ import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { LinearProgress } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import BigNumber from 'bignumber.js';
 
 import Button from '../../components/Button';
 import WalletHeader from '../../components/WalletHeader';
@@ -69,10 +70,14 @@ export default class BalancePane extends React.PureComponent<
         const { implementation } = SettingsStore;
         const { currentBlockHeight, bestBlockHeight, isSyncing } = SyncStore;
 
-        const pendingUnconfirmedBalance =
-            Number(pendingOpenBalance) + Number(unconfirmedBlockchainBalance);
-        const combinedBalanceValue =
-            Number(totalBlockchainBalance) + Number(lightningBalance);
+        const pendingUnconfirmedBalance = new BigNumber(pendingOpenBalance)
+            .plus(unconfirmedBlockchainBalance)
+            .toNumber()
+            .toFixed(3);
+        const combinedBalanceValue = new BigNumber(totalBlockchainBalance)
+            .plus(lightningBalance)
+            .toNumber()
+            .toFixed(3);
 
         const LightningBalance = () => (
             <View style={styles.balance}>
