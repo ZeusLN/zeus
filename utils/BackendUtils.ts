@@ -144,10 +144,6 @@ class BackendUtils {
     isConnected = (...args: any[]) => this.call('isConnected', args);
     disconnect = (...args: any[]) => this.call('disconnect', args);
 
-    // Embedded LND
-    initChannelAcceptor = (...args: any[]) =>
-        this.call('initChannelAcceptor', args);
-
     clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
 }
 

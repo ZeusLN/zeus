@@ -27,7 +27,8 @@ const {
     closeChannel,
     openChannel
 } = lndMobile.channel;
-const { signMessageNodePubkey, verifyMessageNodePubkey } = lndMobile.wallet;
+const { signMessageNodePubkey, verifyMessageNodePubkey, bumpFee } =
+    lndMobile.wallet;
 const { walletBalance, newAddress, getTransactions, sendCoins } =
     lndMobile.onchain;
 
@@ -147,27 +148,26 @@ export default class EmbeddedLND extends LND {
     //     this.postRequest('/v2/wallet/psbt/finalize', data);
     // publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
     getUTXOs = async () => await listUnspent();
-    // TODO inject
-    // bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
+    bumpFee = async (data: any) => await bumpFee(data);
+
     // TODO inject
     // listAccounts = () => this.getRequest('/v2/wallet/accounts');
     // TODO inject
     // importAccount = (data: any) =>
     //     this.postRequest('/v2/wallet/accounts/import', data);
+
+    // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>
     //     this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
     // subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
-
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
-    // initChannelAcceptor = async () => await subscribeState();
 
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;
-    // TODO add advanced mode logic
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => true;
     supportsMPP = () => this.supports('v0.10.0');

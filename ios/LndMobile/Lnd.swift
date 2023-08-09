@@ -119,6 +119,7 @@ open class Lnd {
     "VerifyMessage": { bytes, cb in LndmobileVerifyMessage(bytes, cb) },
     "SignMessage": { bytes, cb in LndmobileSignMessage(bytes, cb) },
     "SignerSignMessage": { bytes, cb in LndmobileSignerSignMessage(bytes, cb) },
+    "BumpFee": { bytes, cb in LndmobileWalletKitBumpFee(bytes, cb) },
 
     // autopilot
     "AutopilotStatus": { bytes, cb in LndmobileAutopilotStatus(bytes, cb) },
