@@ -72,7 +72,8 @@ import {
     derivePrivateKey,
     verifyMessageNodePubkey,
     signMessage,
-    signMessageNodePubkey
+    signMessageNodePubkey,
+    bumpFee
 } from './wallet';
 import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
@@ -81,7 +82,8 @@ import {
     signrpc,
     invoicesrpc,
     autopilotrpc,
-    routerrpc
+    routerrpc,
+    walletrpc
 } from './../proto/lightning';
 import { WorkInfo } from './LndMobile';
 import { checkScheduledGossipSyncWorkStatus } from '../lndmobile/scheduled-gossip-sync';
@@ -295,6 +297,17 @@ export interface ILndMobileInjections {
         signMessageNodePubkey: (
             msg: Uint8Array
         ) => Promise<lnrpc.SignMessageResponse>;
+        bumpFee: ({
+            outpoint,
+            target_conf,
+            force,
+            sat_per_vbyte
+        }: {
+            outpoint: lnrpc.OutPoint;
+            target_conf?: number;
+            force?: boolean;
+            sat_per_vbyte?: Long;
+        }) => Promise<walletrpc.BumpFeeResponse>;
     };
     autopilot: {
         status: () => Promise<autopilotrpc.StatusResponse>;
@@ -385,7 +398,8 @@ export default {
         derivePrivateKey,
         verifyMessageNodePubkey,
         signMessage,
-        signMessageNodePubkey
+        signMessageNodePubkey,
+        bumpFee
     },
     autopilot: {
         status,

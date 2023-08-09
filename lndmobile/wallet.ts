@@ -1,9 +1,47 @@
 import * as base64 from 'base64-js';
+import Long from 'long';
 
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
-import { lnrpc, signrpc } from './../proto/lightning';
+import { lnrpc, signrpc, walletrpc } from './../proto/lightning';
 
 import Base64Utils from '../utils/Base64Utils';
+
+// WalletKit
+
+/**
+ * @throws
+ */
+export const bumpFee = async ({
+    outpoint,
+    target_conf,
+    force,
+    sat_per_vbyte
+}: {
+    outpoint: lnrpc.OutPoint;
+    target_conf?: number;
+    force?: boolean;
+    sat_per_vbyte?: Long;
+}): Promise<walletrpc.BumpFeeResponse> => {
+    const options: walletrpc.IBumpFeeRequest = {
+        outpoint,
+        target_conf,
+        force,
+        sat_per_vbyte
+    };
+    const response = await sendCommand<
+        walletrpc.IBumpFeeRequest,
+        walletrpc.BumpFeeRequest,
+        walletrpc.BumpFeeResponse
+    >({
+        request: walletrpc.BumpFeeRequest,
+        response: walletrpc.BumpFeeResponse,
+        method: 'BumpFee',
+        options
+    });
+    return response;
+};
+
+// Base wallet
 
 /**
  * @throws
