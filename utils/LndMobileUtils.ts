@@ -65,7 +65,6 @@ export function checkLndStreamErrorResponse(
 const writeLndConfig = async (isTestnet?: boolean) => {
     const { writeConfig } = lndMobile.index;
 
-    // TODO move off of Blixt neutrino servers
     const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
@@ -121,7 +120,11 @@ const writeLndConfig = async (isTestnet?: boolean) => {
     protocol.zero-conf=true
     
     [routerrpc]
-    routerrpc.estimator=apriori`;
+    routerrpc.estimator=${
+        stores.settingsStore?.settings?.bimodalPathfinding
+            ? 'bimodal'
+            : 'apriori'
+    }`;
 
     await writeConfig(config);
     return;
@@ -216,7 +219,8 @@ export async function startLnd(walletPassword: string) {
 export async function createLndWallet(
     seedMnemonic?: string,
     walletPassphrase?: string,
-    isTestnet?: boolean
+    isTestnet?: boolean,
+    channelBackupsBase64?: string
 ) {
     const {
         initialize,
@@ -262,7 +266,7 @@ export async function createLndWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
         isRestore ? 100 : undefined,
-        undefined, // TODO add channels backup restore
+        channelBackupsBase64 ? channelBackupsBase64 : undefined,
         walletPassphrase ? walletPassphrase : undefined
     );
     return { wallet, seed, randomBase64 };

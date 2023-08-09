@@ -327,7 +327,9 @@ export default class ChannelsStore {
                                 pending.channel.forceClose = true;
                                 pending.channel.closing_txid =
                                     pending.closing_txid;
-                                return new Channel(pending.channel);
+                                const a = new Channel(pending.channel);
+                                console.log('a', a);
+                                return a;
                             }
                         );
                     const waitCloseChannels = data.waiting_close_channels.map(
@@ -403,10 +405,13 @@ export default class ChannelsStore {
     };
 
     @action
-    public connectPeer = (request: OpenChannelRequest, perm?: boolean) => {
+    public connectPeer = async (
+        request: OpenChannelRequest,
+        perm?: boolean
+    ) => {
         this.connectingToPeer = true;
 
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
             BackendUtils.connectPeer({
                 addr: {
                     pubkey: request.node_pubkey_string,

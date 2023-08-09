@@ -39,12 +39,18 @@ export default class NodeInfoStore {
         this.loading = true;
     };
 
+    private currentRequest: any;
+
     @action
     public getNodeInfo = () => {
         this.errorMsg = '';
         this.loading = true;
+        const currentRequest = (this.currentRequest = {});
         return BackendUtils.getMyNodeInfo()
             .then((data: any) => {
+                if (this.currentRequest !== currentRequest) {
+                    return;
+                }
                 const nodeInfo = new NodeInfo(data);
                 this.nodeInfo = nodeInfo;
                 this.testnet = nodeInfo.isTestNet;
@@ -66,6 +72,7 @@ export default class NodeInfoStore {
     public getNetworkInfo = () => {
         this.errorMsg = '';
         this.loading = true;
+        const currentRequest = (this.currentRequest = {});
         return BackendUtils.getNetworkInfo()
             .then((data: any) => {
                 this.networkInfo = data;
@@ -74,6 +81,9 @@ export default class NodeInfoStore {
                 return this.networkInfo;
             })
             .catch((error: any) => {
+                if (this.currentRequest !== currentRequest) {
+                    return;
+                }
                 // handle error
                 this.errorMsg = ErrorUtils.errorToUserFriendly(
                     error.toString()

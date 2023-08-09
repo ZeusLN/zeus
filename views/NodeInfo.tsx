@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, Text } from 'react-native';
+import { RefreshControl, StyleSheet, ScrollView, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import CollapsedQR from '../components/CollapsedQR';
@@ -135,6 +135,12 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                 <ScrollView
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={NodeInfoStore.loading}
+                            onRefresh={() => NodeInfoStore.getNodeInfo()}
+                        />
+                    }
                 >
                     <NodeInfoView />
                 </ScrollView>

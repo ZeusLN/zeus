@@ -20,7 +20,7 @@ interface RouteHint {
 export default class Invoice extends BaseModel {
     public route_hints: Array<RouteHint>;
     public fallback_addr: string;
-    public r_hash: string;
+    public r_hash: any;
     public settle_date: string;
     public expiry: string;
     public memo: string;

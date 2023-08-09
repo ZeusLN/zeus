@@ -19891,9 +19891,6 @@ export namespace lnrpc {
 
         /** Invoice amp_invoice_state */
         amp_invoice_state?: { [k: string]: lnrpc.IAMPInvoiceState } | null;
-
-        /** Invoice min_hop_hints */
-        min_hop_hints?: number | null;
     }
 
     /** Represents an Invoice. */
@@ -19984,9 +19981,6 @@ export namespace lnrpc {
 
         /** Invoice amp_invoice_state. */
         public amp_invoice_state: { [k: string]: lnrpc.IAMPInvoiceState };
-
-        /** Invoice min_hop_hints. */
-        public min_hop_hints: number;
 
         /**
          * Creates a new Invoice instance using the specified properties.
