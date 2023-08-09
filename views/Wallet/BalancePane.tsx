@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
+
 import Button from '../../components/Button';
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
@@ -38,10 +40,14 @@ export default class BalancePane extends React.PureComponent<
         } = BalanceStore;
         const { implementation } = SettingsStore;
 
-        const pendingUnconfirmedBalance =
-            Number(pendingOpenBalance) + Number(unconfirmedBlockchainBalance);
-        const combinedBalanceValue =
-            Number(totalBlockchainBalance) + Number(lightningBalance);
+        const pendingUnconfirmedBalance = new BigNumber(pendingOpenBalance)
+            .plus(unconfirmedBlockchainBalance)
+            .toNumber()
+            .toFixed(3);
+        const combinedBalanceValue = new BigNumber(totalBlockchainBalance)
+            .plus(lightningBalance)
+            .toNumber()
+            .toFixed(3);
 
         const LightningBalance = () => (
             <View style={styles.balance}>
