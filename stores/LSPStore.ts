@@ -56,6 +56,15 @@ export default class LSPStore {
                         resolve(this.info);
                     } else {
                         this.error = true;
+                        this.error_msg = data.message;
+                        // handle LSP geoblocking :(
+                        if (
+                            this.error_msg.includes(
+                                'unavailable in your country'
+                            )
+                        ) {
+                            this.showLspSettings = true;
+                        }
                         reject();
                     }
                 })

@@ -60,16 +60,18 @@ export default class EmbeddedLND extends LND {
         );
     getPayments = async () => await listPayments();
     getNewAddress = async (data: any) => await newAddress(data.type);
-    // TODO add remaining fields scid_alias, min_confs, spend_unconfirmed
     openChannel = async (data: OpenChannelRequest) =>
         await openChannel(
             data.node_pubkey_string,
             Number(data.local_funding_amount),
             data.privateChannel || false,
-            data.sat_per_vbyte ? Number(data.sat_per_vbyte) : undefined
+            data.sat_per_vbyte ? Number(data.sat_per_vbyte) : undefined,
+            data.scidAlias,
+            data.min_confs,
+            data.spend_unconfirmed
         );
     connectPeer = async (data: any) =>
-        await connectPeer(data.addr.pubkey, data.addr.host);
+        await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
     decodePaymentRequest = async (urlParams?: string[]) =>
         await decodePayReq(urlParams && urlParams[0]);
     // TODO add remaining fields (see transactionsStore.sendPayment) + timeout_seconds, allow_self_payment

@@ -199,22 +199,25 @@ export default class InvoicesStore {
             this.settingsStore.settings?.enableLSP &&
             value !== '0'
         ) {
-            await this.lspStore.getLSPInfo().then(async (result) => {
-                const info: any = result;
-                const method = info.connection_methods[0];
+            await this.lspStore
+                .getLSPInfo()
+                .then(async (result) => {
+                    const info: any = result;
+                    const method = info.connection_methods[0];
 
-                await this.channelsStore.connectPeer({
-                    host: `${method.address}:${method.port}`,
-                    node_pubkey_string: info.pubkey,
-                    local_funding_amount: ''
-                });
+                    await this.channelsStore.connectPeer({
+                        host: `${method.address}:${method.port}`,
+                        node_pubkey_string: info.pubkey,
+                        local_funding_amount: ''
+                    });
 
-                if (value) {
-                    await this.lspStore.getZeroConfFee(
-                        Number(new BigNumber(value).times(1000))
-                    );
-                }
-            });
+                    if (value) {
+                        await this.lspStore.getZeroConfFee(
+                            Number(new BigNumber(value).times(1000))
+                        );
+                    }
+                })
+                .catch(() => {});
 
             if (new BigNumber(value).gt(this.lspStore.zeroConfFee || 0)) {
                 req.value = new BigNumber(value).minus(
@@ -228,6 +231,11 @@ export default class InvoicesStore {
                     'stores.InvoicesStore.lspNewChannelNeeded'
                 );
             }
+        }
+
+        if (this.lspStore.error) {
+            this.creatingInvoice = false;
+            return;
         }
 
         return BackendUtils.createInvoice(req)

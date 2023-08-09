@@ -114,7 +114,8 @@ export interface ILndMobileInjections {
         ) => Promise<invoicesrpc.CancelInvoiceResp>;
         connectPeer: (
             pubkey: string,
-            host: string
+            host: string,
+            perm?: boolean
         ) => Promise<lnrpc.ConnectPeerResponse>;
         disconnectPeer: (
             pubkey: string
@@ -208,7 +209,10 @@ export interface ILndMobileInjections {
             pubkey: string,
             amount: number,
             privateChannel: boolean,
-            feeRateSat?: number
+            feeRateSat?: number,
+            scidAlias?: boolean,
+            min_confs?: number,
+            spend_unconfirmed?: boolean
         ) => Promise<lnrpc.ChannelPoint>;
         openChannelAll: (
             pubkey: string,
