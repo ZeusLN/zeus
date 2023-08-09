@@ -15,9 +15,13 @@ interface Headers {
 }
 
 // keep track of all active calls so we can cancel when appropriate
-const calls: any = {};
+const calls = new Map<string, Promise<any>>();
+
 export default class LND {
     torSocksPort?: number = undefined;
+
+    clearCachedCalls = () => calls.clear();
+
     restReq = async (
         headers: Headers | any,
         url: string,
@@ -29,49 +33,60 @@ export default class LND {
         // use body data as an identifier too, we don't want to cancel when we
         // are making multiples calls to get all the node names, for example
         const id = data ? `${url}${JSON.stringify(data)}` : url;
-        if (calls[id]) {
-            return calls[id];
+        if (calls.has(id)) {
+            return calls.get(id);
         }
         // API is a bit of a mess but
         // If tor enabled in setting, start up the daemon here
         if (useTor === true) {
-            calls[id] = doTorRequest(
-                url,
-                method as RequestMethod,
-                JSON.stringify(data),
-                headers
-            ).then((response: any) => {
-                delete calls[id];
-                return response;
-            });
+            calls.set(
+                id,
+                doTorRequest(
+                    url,
+                    method as RequestMethod,
+                    JSON.stringify(data),
+                    headers
+                ).then((response: any) => {
+                    calls.delete(id);
+                    return response;
+                })
+            );
         } else {
-            calls[id] = ReactNativeBlobUtil.config({
-                trusty: !certVerification
-            })
-                .fetch(method, url, headers, data ? JSON.stringify(data) : data)
-                .then((response: any) => {
-                    delete calls[id];
-                    if (response.info().status < 300) {
-                        // handle ws responses
-                        if (response.data.includes('\n')) {
-                            const split = response.data.split('\n');
-                            const length = split.length;
-                            // last instance is empty
-                            return JSON.parse(split[length - 2]);
+            calls.set(
+                id,
+                ReactNativeBlobUtil.config({
+                    trusty: !certVerification
+                })
+                    .fetch(
+                        method,
+                        url,
+                        headers,
+                        data ? JSON.stringify(data) : data
+                    )
+                    .then((response: any) => {
+                        calls.delete(id);
+                        if (response.info().status < 300) {
+                            // handle ws responses
+                            if (response.data.includes('\n')) {
+                                const split = response.data.split('\n');
+                                const length = split.length;
+                                // last instance is empty
+                                return JSON.parse(split[length - 2]);
+                            }
+                            return response.json();
+                        } else {
+                            const errorInfo = response.json();
+                            throw new Error(
+                                (errorInfo.error && errorInfo.error.message) ||
+                                    errorInfo.message ||
+                                    errorInfo.error
+                            );
                         }
-                        return response.json();
-                    } else {
-                        const errorInfo = response.json();
-                        throw new Error(
-                            (errorInfo.error && errorInfo.error.message) ||
-                                errorInfo.message ||
-                                errorInfo.error
-                        );
-                    }
-                });
+                    })
+            );
         }
 
-        return await calls[id];
+        return await calls.get(id);
     };
 
     supports = (minVersion: string, eosVersion?: string) => {

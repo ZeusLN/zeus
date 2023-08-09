@@ -430,7 +430,8 @@ export default class KeypadPane extends React.PureComponent<
                                     noUppercase
                                     onPress={() => {
                                         navigation.navigate('Send', {
-                                            amount
+                                            amount,
+                                            preventUnitReset: true
                                         });
                                     }}
                                     buttonStyle={{ height: 40 }}
