@@ -137,9 +137,8 @@ export interface ILndMobileInjections {
             tlvRecordName?: string | null
         ) => Promise<lnrpc.SendResponse>;
         sendPaymentV2Sync: ({
-            paymentRequest,
+            payment_request,
             amt,
-            tlvRecordName,
             max_shard_size_msat,
             max_parts = 1,
             maxLNFeePercentage,
@@ -155,9 +154,8 @@ export interface ILndMobileInjections {
             amp,
             dest
         }: {
-            paymentRequest: string;
+            payment_request?: string;
             amt?: Long;
-            tlvRecordName?: string | null;
             max_shard_size_msat?: string;
             max_parts?: number;
             maxLNFeePercentage?: number;
@@ -170,8 +168,8 @@ export interface ILndMobileInjections {
             route_hints?: lnrpc.IRouteHint[];
             dest_custom_records?: any;
             payment_hash: string;
-            amp: boolean,
-            dest: string
+            amp: boolean;
+            dest: string;
         }) => Promise<lnrpc.Payment>;
         queryRoutes: (
             pubkey: string,
