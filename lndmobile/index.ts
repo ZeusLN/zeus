@@ -241,36 +241,47 @@ export const sendPaymentSync = async (
     return response;
 };
 
-export const sendPaymentV2Sync = (
-    payment_request: string,
-    amount?: Long,
-    pay_amount?: Long,
-    tlv_record_name?: string | null,
-    multi_path?: boolean,
-    max_ln_fee_percentage: number = 2
+export const sendPaymentV2Sync = async (
+    sendPaymentReq: any
 ): Promise<lnrpc.Payment> => {
-    const maxFeeRatio = (max_ln_fee_percentage ?? 2) / 100;
+    const {
+        payment_request,
+        amt,
+        max_fee_percent,
+        last_hop_pubkey,
+        route_hints,
+        dest_custom_records,
+        max_parts,
+        cltv_limit,
+        outgoing_chan_id,
+        max_shard_size_msat,
+        payment_hash,
+        amp,
+        dest
+    } = sendPaymentReq;
+
+    const maxFeeRatio = (max_fee_percent ?? 2) / 100;
 
     const options: routerrpc.ISendPaymentRequest = {
         payment_request,
         no_inflight_updates: true,
         timeout_seconds: 60,
-        max_parts: multi_path ? 16 : 1,
+        max_parts,
         fee_limit_sat: Long.fromValue(
-            Math.max(10, (pay_amount?.toNumber() || 0) * maxFeeRatio)
+            Math.max(10, (amt?.toNumber() || 0) * maxFeeRatio)
         ),
-        cltv_limit: 0
+        route_hints,
+        cltv_limit: cltv_limit || 0,
+        allow_self_payment: true,
+        last_hop_pubkey,
+        outgoing_chan_id,
+        max_shard_size_msat,
+        dest_custom_records,
+        amt,
+        payment_hash,
+        amp,
+        dest
     };
-    if (amount) {
-        options.amt = amount;
-    }
-    if (tlv_record_name && tlv_record_name.length > 0) {
-        options.dest_custom_records = {
-            [TLV_RECORD_NAME]:
-                Base64Utils.unicodeStringToUint8Array(tlv_record_name)
-        };
-    }
-
     return new Promise(async (resolve, reject) => {
         const listener = LndMobileEventEmitter.addListener(
             'RouterSendPaymentV2',
