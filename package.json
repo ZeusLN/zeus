@@ -159,6 +159,7 @@
     "metro-react-native-babel-preset": "0.76.7",
     "pod-install": "0.1.38",
     "prettier": "2.4.1",
+    "protobufjs-cli": "1.1.1",
     "react-test-renderer": "18.1.0",
     "rn-nodeify": "10.3.0",
     "typescript": "3.7.5"
