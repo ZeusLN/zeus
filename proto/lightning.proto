@@ -3541,11 +3541,6 @@ message Invoice {
     Note: Output only, don't specify for creating an invoice.
     */
     map<string, AMPInvoiceState> amp_invoice_state = 28;
-
-    /*
-    The minimum number of hop hints to include in this invoice.
-    */
-    int32 min_hop_hints = 29;
 }
 
 enum InvoiceHTLCState {
