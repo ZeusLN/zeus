@@ -60,29 +60,48 @@ export default class EmbeddedLND extends LND {
         );
     getPayments = async () => await listPayments();
     getNewAddress = async (data: any) => await newAddress(data.type);
-    // TODO add remaining fields scid_alias, min_confs, spend_unconfirmed
     openChannel = async (data: OpenChannelRequest) =>
         await openChannel(
             data.node_pubkey_string,
             Number(data.local_funding_amount),
             data.privateChannel || false,
-            data.sat_per_vbyte ? Number(data.sat_per_vbyte) : undefined
+            data.sat_per_vbyte ? Number(data.sat_per_vbyte) : undefined,
+            data.scidAlias,
+            data.min_confs,
+            data.spend_unconfirmed
         );
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
     decodePaymentRequest = async (urlParams?: string[]) =>
         await decodePayReq(urlParams && urlParams[0]);
-    // TODO add remaining fields (see transactionsStore.sendPayment) + timeout_seconds, allow_self_payment
-    payLightningInvoice = async (data: any) =>
-        await sendPaymentV2Sync(
-            data.payment_request,
-            data.amt,
-            data.amt,
-            null,
-            !!data.max_parts,
-            data.max_fee_percent
-        );
-    // TODO wire up fee limits
+    payLightningInvoice = async (data: any) => {
+        const sendPaymentReq = {
+            payment_request: data.payment_request,
+            payment_hash: data.payment_hash,
+            amount: data?.amt,
+            max_parts: data?.max_parts,
+            max_shard_amt: data?.max_shard_amt,
+            fee_limit_sat: data?.fee_limit_sat,
+            max_fee_percent: data?.max_fee_percent,
+            outgoing_chan_id: data?.outgoing_chan_id,
+            last_hop_pubkey: data?.last_hop_pubkey
+                ? Base64Utils.base64ToHex(data?.last_hop_pubkey)
+                : undefined,
+            message: data?.message
+                ? Base64Utils.hexToBase64(
+                      Base64Utils.utf8ToHexString(data?.message)
+                  )
+                : undefined,
+            amp: data?.amp,
+            timeout_seconds: 60,
+            allow_self_payment: true,
+            multi_path: data?.multi_path,
+            max_shard_size_msat: data?.max_shard_size_msat,
+            dest: data.dest
+        };
+
+        return await sendPaymentV2Sync(sendPaymentReq);
+    };
     sendKeysend = async (data: any) =>
         await sendKeysendPaymentV2(
             data.pubkey,
