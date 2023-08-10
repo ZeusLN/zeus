@@ -63,7 +63,8 @@ export default class BalanceStore {
             .then((data: any) => {
                 // process external accounts
                 const accounts = data.account_balance;
-                if (accounts && accounts.default) delete accounts.default;
+                if (accounts && accounts.default && data.confirmed_balance)
+                    delete accounts.default;
 
                 const unconfirmedBlockchainBalance = Number(
                     data.unconfirmed_balance || 0

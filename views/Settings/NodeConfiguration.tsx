@@ -10,6 +10,8 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import cloneDeep from 'lodash/cloneDeep';
+
 import { hash, STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
 import AddressUtils, { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
@@ -22,6 +24,7 @@ import Button from '../../components/Button';
 import CollapsedQR from '../../components/CollapsedQR';
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import {
@@ -37,6 +40,9 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
+import { Settings } from '../../stores/SettingsStore';
+
+import { createLndWallet } from '../../utils/LndMobileUtils';
 
 interface NodeConfigurationProps {
     navigation: any;
@@ -64,12 +70,23 @@ interface NodeConfigurationState {
     showLndHubModal: boolean;
     showCertModal: boolean;
     enableTor: boolean;
+    interfaceKeys: Array<any>;
     // lnc
     pairingPhrase: string;
     mailboxServer: string;
     customMailboxServer: string;
     localKey: string;
     remoteKey: string;
+    deletionAwaitingConfirmation: boolean;
+    // embeded lnd
+    seedPhrase: Array<string>;
+    walletPassword: string;
+    adminMacaroon: string;
+    embeddedLndNetwork: string;
+    recoveryCipherSeed: string;
+    channelBackupsBase64: string;
+    creatingWallet: boolean;
+    errorCreatingWallet: boolean;
 }
 
 const ScanBadge = ({ onPress }: { onPress: () => void }) => (
@@ -90,10 +107,10 @@ export default class NodeConfiguration extends React.Component<
         port: '',
         macaroonHex: '',
         saved: false,
-        index: null,
+        index: null as number | null,
         active: false,
         newEntry: false,
-        implementation: 'lnd',
+        implementation: 'embedded-lnd',
         certVerification: false,
         enableTor: false,
         existingAccount: false,
@@ -110,7 +127,18 @@ export default class NodeConfiguration extends React.Component<
         mailboxServer: 'mailbox.terminal.lightning.today:443',
         customMailboxServer: '',
         localKey: '',
-        remoteKey: ''
+        remoteKey: '',
+        deletionAwaitingConfirmation: false,
+        // embedded lnd
+        seedPhrase: [],
+        walletPassword: '',
+        adminMacaroon: '',
+        embeddedLndNetwork: '',
+        interfaceKeys: [],
+        recoveryCipherSeed: '',
+        channelBackupsBase64: '',
+        creatingWallet: false,
+        errorCreatingWallet: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -187,6 +215,7 @@ export default class NodeConfiguration extends React.Component<
 
     async componentDidMount() {
         await this.initFromProps(this.props);
+
         const { implementation, pairingPhrase } = this.state;
         if (implementation === 'lightning-node-connect') {
             const key = `${STORAGE_KEY}:${hash(pairingPhrase)}`;
@@ -201,6 +230,32 @@ export default class NodeConfiguration extends React.Component<
                 }
             }
         }
+
+        let interfaceKeys = cloneDeep(INTERFACE_KEYS);
+
+        // remove option to add a new embedded node if initialized already
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        const { embeddedLndNetwork } = this.state;
+        if (settings.nodes) {
+            const result = settings?.nodes?.filter(
+                (node) => node.implementation === 'embedded-lnd'
+            );
+            if (result.length > 0) {
+                interfaceKeys = interfaceKeys.filter(
+                    (item) => item.value !== 'embedded-lnd'
+                );
+                if (!embeddedLndNetwork) {
+                    this.setState({
+                        implementation: 'lnd'
+                    });
+                }
+            }
+        }
+
+        this.setState({
+            interfaceKeys
+        });
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -232,9 +287,15 @@ export default class NodeConfiguration extends React.Component<
                 implementation,
                 certVerification,
                 enableTor,
+                // LNC
                 pairingPhrase,
                 mailboxServer,
-                customMailboxServer
+                customMailboxServer,
+                // embedded LND
+                seedPhrase,
+                walletPassword,
+                adminMacaroon,
+                embeddedLndNetwork
             } = node;
 
             this.setState({
@@ -255,9 +316,15 @@ export default class NodeConfiguration extends React.Component<
                 saved,
                 newEntry,
                 enableTor: tor || enableTor,
+                // LNC
                 pairingPhrase,
                 mailboxServer,
-                customMailboxServer
+                customMailboxServer,
+                // embedded LND
+                seedPhrase,
+                walletPassword,
+                adminMacaroon,
+                embeddedLndNetwork
             });
         } else {
             this.setState({
@@ -268,7 +335,7 @@ export default class NodeConfiguration extends React.Component<
         }
     }
 
-    saveNodeConfiguration = () => {
+    saveNodeConfiguration = (skipRedirect?: boolean) => {
         const { SettingsStore, navigation } = this.props;
         const {
             nickname,
@@ -287,7 +354,11 @@ export default class NodeConfiguration extends React.Component<
             index,
             pairingPhrase,
             mailboxServer,
-            customMailboxServer
+            customMailboxServer,
+            seedPhrase,
+            walletPassword,
+            adminMacaroon,
+            embeddedLndNetwork
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -314,7 +385,11 @@ export default class NodeConfiguration extends React.Component<
             enableTor,
             pairingPhrase,
             mailboxServer,
-            customMailboxServer
+            customMailboxServer,
+            seedPhrase,
+            walletPassword,
+            adminMacaroon,
+            embeddedLndNetwork
         };
 
         let nodes: any;
@@ -329,6 +404,8 @@ export default class NodeConfiguration extends React.Component<
             this.setState({
                 saved: true
             });
+
+            if (skipRedirect) return;
 
             if (nodes.length === 1) {
                 if (implementation === 'lightning-node-connect') {
@@ -407,12 +484,30 @@ export default class NodeConfiguration extends React.Component<
 
         updateSettings({
             nodes: newNodes,
-            selectedNode:
-                index === settings.selectedNode ? 0 : settings.selectedNode
+            selectedNode: this.getNewSelectedNodeIndex(index, settings)
         }).then(() => {
             navigation.navigate('Nodes', { refresh: true });
         });
     };
+
+    getNewSelectedNodeIndex(
+        indexOfDeletedNode: number | null,
+        settings: Settings
+    ): number | undefined {
+        if (
+            settings.selectedNode == null ||
+            indexOfDeletedNode == null ||
+            indexOfDeletedNode > settings.selectedNode
+        ) {
+            return settings.selectedNode;
+        }
+        if (indexOfDeletedNode < settings.selectedNode) {
+            return settings.selectedNode - 1;
+        }
+        return settings.nodes?.length != null && settings.nodes?.length > 0
+            ? 0
+            : undefined;
+    }
 
     setNodeConfigurationAsActive = () => {
         const { SettingsStore, navigation } = this.props;
@@ -449,6 +544,7 @@ export default class NodeConfiguration extends React.Component<
             implementation,
             certVerification,
             enableTor,
+            interfaceKeys,
             existingAccount,
             suggestImport,
             showLndHubModal,
@@ -457,7 +553,14 @@ export default class NodeConfiguration extends React.Component<
             mailboxServer,
             customMailboxServer,
             localKey,
-            remoteKey
+            remoteKey,
+            deletionAwaitingConfirmation,
+            adminMacaroon,
+            embeddedLndNetwork,
+            recoveryCipherSeed,
+            channelBackupsBase64,
+            creatingWallet,
+            errorCreatingWallet
         } = this.state;
         const {
             loading,
@@ -465,6 +568,13 @@ export default class NodeConfiguration extends React.Component<
             createAccountSuccess,
             createAccount
         } = SettingsStore;
+
+        const supportsTor =
+            implementation !== 'lightning-node-connect' &&
+            implementation !== 'embedded-lnd';
+        const supportsCertVerification =
+            implementation !== 'lightning-node-connect' &&
+            implementation !== 'embedded-lnd';
 
         const CertInstallInstructions = () => (
             <View style={styles.button}>
@@ -494,7 +604,7 @@ export default class NodeConfiguration extends React.Component<
                         certVerification: value === 'lndhub' ? true : false
                     });
                 }}
-                values={INTERFACE_KEYS}
+                values={interfaceKeys}
             />
         );
 
@@ -750,6 +860,7 @@ export default class NodeConfiguration extends React.Component<
                 <ScrollView
                     ref="_scrollView"
                     style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.form}>
                         {!!createAccountError &&
@@ -790,7 +901,63 @@ export default class NodeConfiguration extends React.Component<
                             />
                         </View>
 
-                        <NodeInterface />
+                        {!adminMacaroon && <NodeInterface />}
+
+                        {!embeddedLndNetwork &&
+                            implementation === 'embedded-lnd' && (
+                                <View>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {`${localeString(
+                                            'views.Settings.AddEditNode.recoveryCipherSeed'
+                                        )} (${localeString(
+                                            'general.optional'
+                                        )})`}
+                                    </Text>
+                                    <TextInput
+                                        placeholder="ship yellow box resource scan pelican..."
+                                        value={recoveryCipherSeed}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                recoveryCipherSeed: text
+                                            })
+                                        }
+                                        locked={loading}
+                                    />
+                                </View>
+                            )}
+
+                        {!embeddedLndNetwork &&
+                            implementation === 'embedded-lnd' &&
+                            recoveryCipherSeed && (
+                                <View>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {`${localeString(
+                                            'views.Settings.AddEditNode.channelBackupsBase64'
+                                        )} (${localeString(
+                                            'general.optional'
+                                        )})`}
+                                    </Text>
+                                    <TextInput
+                                        value={channelBackupsBase64}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                channelBackupsBase64: text
+                                            })
+                                        }
+                                        locked={loading}
+                                    />
+                                </View>
+                            )}
 
                         {(implementation === 'spark' ||
                             implementation == 'eclair') && (
@@ -1155,7 +1322,7 @@ export default class NodeConfiguration extends React.Component<
                             </>
                         )}
 
-                        {implementation !== 'lightning-node-connect' && (
+                        {supportsTor && (
                             <>
                                 <Text
                                     style={{
@@ -1179,31 +1346,29 @@ export default class NodeConfiguration extends React.Component<
                             </>
                         )}
 
-                        {implementation !== 'lightning-node-connect' &&
-                            !enableTor && (
-                                <>
-                                    <Text
-                                        style={{
-                                            top: 20,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.AddEditNode.certificateVerification'
-                                        )}
-                                    </Text>
-                                    <Switch
-                                        value={certVerification}
-                                        onValueChange={() =>
-                                            this.setState({
-                                                certVerification:
-                                                    !certVerification,
-                                                saved: false
-                                            })
-                                        }
-                                    />
-                                </>
-                            )}
+                        {supportsCertVerification && !enableTor && (
+                            <>
+                                <Text
+                                    style={{
+                                        top: 20,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.certificateVerification'
+                                    )}
+                                </Text>
+                                <Switch
+                                    value={certVerification}
+                                    onValueChange={() =>
+                                        this.setState({
+                                            certVerification: !certVerification,
+                                            saved: false
+                                        })
+                                    }
+                                />
+                            </>
+                        )}
                     </View>
 
                     {!existingAccount && implementation === 'lndhub' && (
@@ -1237,36 +1402,191 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
-                    <View style={{ ...styles.button, marginTop: 20 }}>
-                        <Button
-                            title={
-                                saved
-                                    ? localeString(
-                                          'views.Settings.AddEditNode.nodeSaved'
-                                      )
-                                    : localeString(
-                                          'views.Settings.AddEditNode.saveNode'
-                                      )
-                            }
-                            onPress={() => {
-                                if (
-                                    !saved &&
-                                    !certVerification &&
-                                    !enableTor &&
-                                    implementation !== 'lightning-node-connect'
-                                ) {
-                                    this.setState({ showCertModal: true });
-                                } else {
-                                    this.saveNodeConfiguration();
-                                }
-                            }}
-                            // disable save button if no creds passed
-                            disabled={
-                                implementation === 'lndhub' &&
-                                !(username && password)
-                            }
+                    {implementation === 'embedded-lnd' && (
+                        <KeyValue
+                            keyValue={localeString('general.network')}
+                            value={embeddedLndNetwork}
                         />
-                    </View>
+                    )}
+
+                    {implementation === 'embedded-lnd' && (
+                        <View style={{ ...styles.button, marginTop: 20 }}>
+                            {!adminMacaroon && !creatingWallet && (
+                                <>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={
+                                                recoveryCipherSeed
+                                                    ? localeString(
+                                                          'views.Settings.NodeConfiguration.restoreMainnetWallet'
+                                                      )
+                                                    : localeString(
+                                                          'views.Settings.NodeConfiguration.createMainnetWallet'
+                                                      )
+                                            }
+                                            onPress={async () => {
+                                                this.setState({
+                                                    creatingWallet: true
+                                                });
+
+                                                const response =
+                                                    await createLndWallet(
+                                                        recoveryCipherSeed,
+                                                        undefined,
+                                                        undefined,
+                                                        channelBackupsBase64
+                                                    );
+                                                const {
+                                                    wallet,
+                                                    seed,
+                                                    randomBase64
+                                                }: any = response;
+                                                if (
+                                                    wallet &&
+                                                    wallet.admin_macaroon
+                                                ) {
+                                                    this.setState({
+                                                        adminMacaroon:
+                                                            wallet.admin_macaroon,
+                                                        seedPhrase:
+                                                            seed.cipher_seed_mnemonic,
+                                                        walletPassword:
+                                                            randomBase64,
+                                                        embeddedLndNetwork:
+                                                            'Mainnet',
+                                                        creatingWallet: false
+                                                    });
+
+                                                    this.saveNodeConfiguration(
+                                                        true
+                                                    );
+                                                } else {
+                                                    this.setState({
+                                                        creatingWallet: false,
+                                                        errorCreatingWallet:
+                                                            true
+                                                    });
+                                                }
+                                            }}
+                                            tertiary
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={
+                                                recoveryCipherSeed
+                                                    ? localeString(
+                                                          'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                                      )
+                                                    : localeString(
+                                                          'views.Settings.NodeConfiguration.createTestnetWallet'
+                                                      )
+                                            }
+                                            onPress={async () => {
+                                                this.setState({
+                                                    creatingWallet: true
+                                                });
+
+                                                const response =
+                                                    await createLndWallet(
+                                                        recoveryCipherSeed,
+                                                        undefined,
+                                                        true,
+                                                        channelBackupsBase64
+                                                    );
+                                                const {
+                                                    wallet,
+                                                    seed,
+                                                    randomBase64
+                                                }: any = response;
+                                                if (
+                                                    wallet &&
+                                                    wallet.admin_macaroon
+                                                ) {
+                                                    this.setState({
+                                                        adminMacaroon:
+                                                            wallet.admin_macaroon,
+                                                        seedPhrase:
+                                                            seed.cipher_seed_mnemonic,
+                                                        walletPassword:
+                                                            randomBase64,
+                                                        embeddedLndNetwork:
+                                                            'Testnet',
+                                                        creatingWallet: false
+                                                    });
+
+                                                    this.saveNodeConfiguration(
+                                                        true
+                                                    );
+                                                } else {
+                                                    this.setState({
+                                                        creatingWallet: false,
+                                                        errorCreatingWallet:
+                                                            true
+                                                    });
+                                                }
+                                            }}
+                                            tertiary
+                                        />
+                                    </View>
+                                </>
+                            )}
+                            {adminMacaroon && (
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.NodeConfiguration.backUpWallet'
+                                    )}
+                                    onPress={() => navigation.navigate('Seed')}
+                                    secondary
+                                />
+                            )}
+                        </View>
+                    )}
+
+                    {!creatingWallet && (
+                        <View style={{ ...styles.button, marginTop: 20 }}>
+                            <Button
+                                title={
+                                    saved
+                                        ? localeString(
+                                              'views.Settings.AddEditNode.nodeSaved'
+                                          )
+                                        : localeString(
+                                              'views.Settings.AddEditNode.saveNode'
+                                          )
+                                }
+                                onPress={() => {
+                                    if (
+                                        !saved &&
+                                        !certVerification &&
+                                        !enableTor &&
+                                        implementation !==
+                                            'lightning-node-connect' &&
+                                        implementation !== 'embedded-lnd'
+                                    ) {
+                                        this.setState({ showCertModal: true });
+                                    } else {
+                                        this.saveNodeConfiguration();
+                                    }
+                                }}
+                                // disable save button if no creds passed
+                                disabled={
+                                    implementation === 'lndhub' &&
+                                    !(username && password)
+                                }
+                            />
+                        </View>
+                    )}
+
+                    {creatingWallet && <LoadingIndicator />}
+
+                    {errorCreatingWallet && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Intro.errorCreatingWallet'
+                            )}
+                        />
+                    )}
 
                     {!saved && certVerification && !enableTor && (
                         <CertInstallInstructions />
@@ -1291,11 +1611,11 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {saved && (
+                    {saved && implementation !== 'embedded-lnd' && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.AddEditNode.copyNode'
+                                    'views.Settings.AddEditNode.duplicateNode'
                                 )}
                                 onPress={() => {
                                     /**
@@ -1315,13 +1635,27 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {saved && (
+                    {implementation !== 'embedded-lnd' && saved && (
                         <View style={styles.button}>
                             <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.deleteNode'
-                                )}
-                                onPress={() => this.deleteNodeConfig()}
+                                title={
+                                    deletionAwaitingConfirmation
+                                        ? localeString(
+                                              'views.Settings.AddEditNode.tapToConfirm'
+                                          )
+                                        : localeString(
+                                              'views.Settings.AddEditNode.deleteNode'
+                                          )
+                                }
+                                onPress={() => {
+                                    if (!deletionAwaitingConfirmation) {
+                                        this.setState({
+                                            deletionAwaitingConfirmation: true
+                                        });
+                                    } else {
+                                        this.deleteNodeConfig();
+                                    }
+                                }}
                                 containerStyle={{
                                     borderColor: themeColor('delete')
                                 }}

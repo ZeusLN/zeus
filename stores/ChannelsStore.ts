@@ -220,33 +220,36 @@ export default class ChannelsStore {
         });
 
     @action
-    enrichChannels = (channels: Array<Channel>) => {
+    enrichChannels = async (channels: Array<Channel>) => {
         this.loading = true;
-        channels.forEach(async (channel: Channel) => {
-            if (!channel.remotePubkey) return;
-            if (
-                this.settingsStore.implementation !== 'c-lightning-REST' &&
-                !this.nodes[channel.remotePubkey]
-            ) {
-                await this.getNodeInfo(channel.remotePubkey)
-                    .then((nodeInfo: any) => {
-                        if (!nodeInfo) return;
-                        this.nodes[channel.remotePubkey] = nodeInfo;
-                        this.aliasesById[channel.channelId] = nodeInfo.alias;
-                    })
-                    .catch(() => {
-                        // console.log(
-                        //     `Couldn't find node alias for ${channel.remotePubkey}`,
-                        //     err
-                        // );
-                    });
-            }
-            if (!channel.alias && this.aliasesById[channel.channelId]) {
-                channel.alias = this.aliasesById[channel.channelId];
-            }
-            channel.displayName =
-                channel.alias || channel.remotePubkey || channel.channelId;
-        });
+        await Promise.all(
+            channels.map(async (channel: Channel) => {
+                if (!channel.remotePubkey) return;
+                if (
+                    this.settingsStore.implementation !== 'c-lightning-REST' &&
+                    !this.nodes[channel.remotePubkey]
+                ) {
+                    await this.getNodeInfo(channel.remotePubkey)
+                        .then((nodeInfo: any) => {
+                            if (!nodeInfo) return;
+                            this.nodes[channel.remotePubkey] = nodeInfo;
+                            this.aliasesById[channel.channelId] =
+                                nodeInfo.alias;
+                        })
+                        .catch(() => {
+                            // console.log(
+                            //     `Couldn't find node alias for ${channel.remotePubkey}`,
+                            //     err
+                            // );
+                        });
+                }
+                if (!channel.alias && this.aliasesById[channel.channelId]) {
+                    channel.alias = this.aliasesById[channel.channelId];
+                }
+                channel.displayName =
+                    channel.alias || channel.remotePubkey || channel.channelId;
+            })
+        );
         this.loading = false;
         return channels;
     };
@@ -324,7 +327,9 @@ export default class ChannelsStore {
                                 pending.channel.forceClose = true;
                                 pending.channel.closing_txid =
                                     pending.closing_txid;
-                                return new Channel(pending.channel);
+                                const a = new Channel(pending.channel);
+                                console.log('a', a);
+                                return a;
                             }
                         );
                     const waitCloseChannels = data.waiting_close_channels.map(
@@ -400,44 +405,53 @@ export default class ChannelsStore {
     };
 
     @action
-    public connectPeer = (request: OpenChannelRequest) => {
+    public connectPeer = async (
+        request: OpenChannelRequest,
+        perm?: boolean
+    ) => {
         this.connectingToPeer = true;
 
-        BackendUtils.connectPeer({
-            addr: {
-                pubkey: request.node_pubkey_string,
-                host: request.host
-            }
-        })
-            .then(() => {
-                this.errorPeerConnect = false;
-                this.connectingToPeer = false;
-                this.errorMsgPeer = null;
-                this.channelRequest = request;
-                this.peerSuccess = true;
+        return await new Promise((resolve, reject) => {
+            BackendUtils.connectPeer({
+                addr: {
+                    pubkey: request.node_pubkey_string,
+                    host: request.host
+                },
+                perm
             })
-            .catch((error: any) => {
-                // handle error
-                this.errorMsgPeer = error.toString();
-                this.errorPeerConnect = true;
-                this.connectingToPeer = false;
-                this.peerSuccess = false;
-                this.channelSuccess = false;
-
-                if (
-                    this.errorMsgPeer &&
-                    this.errorMsgPeer.includes('already')
-                ) {
+                .then(() => {
+                    this.errorPeerConnect = false;
+                    this.connectingToPeer = false;
+                    this.errorMsgPeer = null;
                     this.channelRequest = request;
-                }
-            });
+                    this.peerSuccess = true;
+                    resolve(true);
+                })
+                .catch((error: any) => {
+                    this.connectingToPeer = false;
+                    this.peerSuccess = false;
+                    this.channelSuccess = false;
+                    // handle error
+                    if (
+                        error.toString() &&
+                        error.toString().includes('already')
+                    ) {
+                        this.channelRequest = request;
+                        resolve(true);
+                    } else {
+                        this.errorMsgPeer = error.toString();
+                        this.errorPeerConnect = true;
+                        reject(this.errorMsgPeer);
+                    }
+                });
+        });
     };
 
     openChannelLNDCoinControl = (request: OpenChannelRequest) => {
         const { utxos } = request;
         const inputs: any = [];
         const outputs: any = {};
-        const sat_per_byte = request.sat_per_byte;
+        const sat_per_vbyte = request.sat_per_vbyte;
 
         if (utxos) {
             utxos.forEach((input) => {
@@ -451,7 +465,7 @@ export default class ChannelsStore {
         const node_pubkey = Base64Utils.hexToBase64(request.node_pubkey_string);
 
         delete request.node_pubkey_string;
-        delete request.sat_per_byte;
+        delete request.sat_per_vbyte;
 
         const pending_chan_id = randomBytes(32).toString('base64');
 
@@ -480,7 +494,7 @@ export default class ChannelsStore {
                         inputs,
                         outputs
                     },
-                    sat_per_vbyte: Number(sat_per_byte),
+                    sat_per_vbyte: Number(sat_per_vbyte),
                     spend_unconfirmed:
                         openChanRequest.min_confs &&
                         openChanRequest.min_confs === 0

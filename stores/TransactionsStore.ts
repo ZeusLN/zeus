@@ -1,11 +1,13 @@
 import { action, reaction, observable } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
-import Transaction from './../models/Transaction';
-import TransactionRequest from './../models/TransactionRequest';
+import Transaction from '../models/Transaction';
+import TransactionRequest from '../models/TransactionRequest';
 import SettingsStore from './SettingsStore';
-import BackendUtils from './../utils/BackendUtils';
-import Base64Utils from './../utils/Base64Utils';
+import BackendUtils from '../utils/BackendUtils';
+import Base64Utils from '../utils/Base64Utils';
+
+import { lnrpc } from '../proto/lightning';
 
 const keySendPreimageType = '5482373484';
 const keySendMessageType = '34349334';
@@ -37,10 +39,9 @@ export default class TransactionsStore {
     @observable payment_error: any;
     @observable onchain_address: string;
     @observable txid: string | null;
+    @observable status: string | number | null;
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
-    // c-lightning
-    @observable status: string | null;
 
     settingsStore: SettingsStore;
 
@@ -94,7 +95,7 @@ export default class TransactionsStore {
     public sendCoinsLNDCoinControl = (
         transactionRequest: TransactionRequest
     ) => {
-        const { utxos, addr, amount, sat_per_byte } = transactionRequest;
+        const { utxos, addr, amount, sat_per_vbyte } = transactionRequest;
         const inputs: any = [];
         const outputs: any = {};
 
@@ -114,7 +115,7 @@ export default class TransactionsStore {
                 outputs,
                 inputs
             },
-            sat_per_vbyte: Number(sat_per_byte),
+            sat_per_vbyte: Number(sat_per_vbyte),
             spend_unconfirmed: true
         };
 
@@ -271,7 +272,9 @@ export default class TransactionsStore {
         }
 
         const payFunc =
-            this.settingsStore.implementation === 'c-lightning-REST' && pubkey
+            (this.settingsStore.implementation === 'c-lightning-REST' ||
+                this.settingsStore.implementation === 'embedded-lnd') &&
+            pubkey
                 ? BackendUtils.sendKeysend
                 : BackendUtils.payLightningInvoice;
 
@@ -298,14 +301,28 @@ export default class TransactionsStore {
             result.payment_hash && typeof result.payment_hash === 'string'
                 ? result.payment_hash
                 : null;
+
+        const implementation = this.settingsStore.implementation;
+
+        // TODO modify enum settings for embedded LND
+        const status =
+            implementation === 'embedded-lnd'
+                ? lnrpc.Payment.PaymentStatus[result.status]
+                : result.status;
+
+        // TODO add message for in-flight transactions
         if (
-            result.status !== 'complete' &&
-            result.status !== 'SUCCEEDED' &&
-            result.status !== 'IN_FLIGHT' &&
-            result.payment_error !== ''
+            (status !== 'complete' &&
+                status !== 'SUCCEEDED' &&
+                status !== 'IN_FLIGHT' &&
+                result.payment_error !== '') ||
+            status === 'FAILED'
         ) {
             this.error = true;
-            this.payment_error = result.payment_error || result.failure_reason;
+            this.payment_error =
+                (implementation === 'embedded-lnd'
+                    ? lnrpc.PaymentFailureReason[result.failure_reason]
+                    : result.failure_reason) || result.payment_error;
         }
         // lndhub
         if (result.error) {

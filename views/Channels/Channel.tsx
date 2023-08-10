@@ -157,7 +157,8 @@ export default class ChannelView extends React.Component<
             pendingClose,
             forceClose,
             pendingOpen,
-            closing
+            closing,
+            zero_conf
         } = channel;
         const privateChannel = channel.private;
 
@@ -195,7 +196,10 @@ export default class ChannelView extends React.Component<
         );
 
         const centerComponent = () => {
-            if (editableFees) {
+            if (
+                editableFees &&
+                this.props.SettingsStore.implementation !== 'embedded-lnd'
+            ) {
                 return <EditFees />;
             }
             return null;
@@ -212,7 +216,10 @@ export default class ChannelView extends React.Component<
                     placement="right"
                     navigation={navigation}
                 />
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <KeyboardAvoidingView
                         behavior="position"
                         keyboardVerticalOffset={keyboardVerticalOffset}
@@ -271,6 +278,23 @@ export default class ChannelView extends React.Component<
                                 ? localeString('views.Channel.active')
                                 : localeString('views.Channel.inactive')}
                         </Text>
+                        {zero_conf && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.zeroConf'
+                                )}
+                                value={localeString('general.true')}
+                            />
+                        )}
+                        <KeyValue
+                            keyValue={localeString('views.Channel.unannounced')}
+                            value={
+                                privateChannel
+                                    ? localeString('general.true')
+                                    : localeString('general.false')
+                            }
+                            color={privateChannel ? 'green' : '#808000'}
+                        />
                         {chain_hash && (
                             <KeyValue
                                 keyValue={localeString(
@@ -281,23 +305,20 @@ export default class ChannelView extends React.Component<
                             />
                         )}
                         {closeHeight && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closeHeight'
+                                )}
+                                value={closeHeight}
+                                color={themeColor('chain')}
+                                sensitive
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerBlockHeight(
                                         closeHeight,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.closeHeight'
-                                    )}
-                                    value={closeHeight}
-                                    color={themeColor('chain')}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                         {closeType && (
                             <KeyValue
@@ -327,62 +348,53 @@ export default class ChannelView extends React.Component<
                             />
                         )}
                         {closing_txid && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closingTxId'
+                                )}
+                                value={closing_txid}
+                                sensitive
+                                color={themeColor('chain')}
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
                                         closing_txid,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.closingTxId'
-                                    )}
-                                    value={closing_txid}
-                                    sensitive
-                                    color={themeColor('chain')}
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                         {closing_tx_hash && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closingTxHash'
+                                )}
+                                value={closing_tx_hash}
+                                sensitive
+                                color={themeColor('chain')}
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
                                         closing_tx_hash,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.closingTxHash'
-                                    )}
-                                    value={closing_tx_hash}
-                                    sensitive
-                                    color={themeColor('chain')}
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                         {(pendingOpen || pendingClose || closing) &&
                             channel_point && (
-                                <TouchableOpacity
-                                    onPress={() =>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.channelPoint'
+                                    )}
+                                    value={channel_point}
+                                    sensitive
+                                    color={themeColor('chain')}
+                                    mempoolLink={() =>
                                         UrlUtils.goToBlockExplorerTXID(
                                             channel_point,
                                             testnet
                                         )
                                     }
-                                >
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Channel.channelPoint'
-                                        )}
-                                        value={channel_point}
-                                        sensitive
-                                        color={themeColor('chain')}
-                                    />
-                                </TouchableOpacity>
+                                />
                             )}
                         <KeyValue
                             keyValue={localeString(
@@ -530,7 +542,6 @@ export default class ChannelView extends React.Component<
                                 commit_fee={commit_fee}
                                 commit_weight={commit_weight}
                                 csv_delay={csv_delay}
-                                privateChannel={privateChannel}
                             />
                         )}
                         {BackendUtils.supportsBumpFee() && bumpable && (

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, ScrollView, Image } from 'react-native';
+import { Text, Image, View } from 'react-native';
 
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -26,17 +26,13 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
             .map(([typ, content]: any) => `data:${typ},${content}`)[0];
 
         return (
-            <ScrollView
+            <View
                 style={{
-                    maxHeight: 220,
-                    paddingTop: 20,
-                    paddingBottom: 20,
-                    flexDirection: 'column'
-                }}
-                contentContainerStyle={{
+                    flexDirection: 'column',
                     justifyContent: 'center',
                     alignItems: 'center'
                 }}
+                keyboardShouldPersistTaps="handled"
             >
                 {image ? (
                     <Image
@@ -56,7 +52,7 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
                 >
                     {text}
                 </Text>
-            </ScrollView>
+            </View>
         );
     }
 }

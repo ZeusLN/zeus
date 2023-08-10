@@ -123,7 +123,10 @@ export default class PointOfSale extends React.Component<
                         />
                     </View>
                 ) : (
-                    <ScrollView style={{ flex: 1 }}>
+                    <ScrollView
+                        style={{ flex: 1 }}
+                        keyboardShouldPersistTaps="handled"
+                    >
                         <View style={{ padding: 15 }}>
                             {!BackendUtils.isLNDBased() && (
                                 <WarningMessage

@@ -5,16 +5,18 @@ import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 
 // keep track of all active calls so we can cancel when appropriate
-const calls: any = {};
+const calls = new Map<string, Promise<any>>();
 
 export default class Spark {
+    clearCachedCalls = () => calls.clear();
+
     rpc = (rpcmethod: string, param = {}, range: any = null) => {
         const { accessKey, certVerification, enableTor } = stores.settingsStore;
         let { url } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
-        if (calls[id]) {
-            return calls[id];
+        if (calls.has(id)) {
+            return calls.get(id);
         }
 
         url = url.slice(-4) === '/rpc' ? url : url + '/rpc';
@@ -26,35 +28,38 @@ export default class Spark {
         const body = JSON.stringify({ method: rpcmethod, params: param });
 
         if (enableTor === true) {
-            calls[id] = doTorRequest(url, RequestMethod.POST, body, headers);
+            calls.set(id, doTorRequest(url, RequestMethod.POST, body, headers));
         } else {
-            calls[id] = ReactNativeBlobUtil.config({
-                trusty: !certVerification
-            })
-                .fetch('POST', url, headers, body)
-                .then((response: any) => {
-                    delete calls[id];
-                    const status = response.info().status;
-                    if (status < 300) {
-                        return response.json();
-                    } else {
-                        let errorInfo;
-                        try {
-                            errorInfo = response.json();
-                        } catch (err) {
-                            throw new Error(
-                                'response was (' +
-                                    status +
-                                    ')' +
-                                    response.text()
-                            );
+            calls.set(
+                id,
+                ReactNativeBlobUtil.config({
+                    trusty: !certVerification
+                })
+                    .fetch('POST', url, headers, body)
+                    .then((response: any) => {
+                        calls.delete(id);
+                        const status = response.info().status;
+                        if (status < 300) {
+                            return response.json();
+                        } else {
+                            let errorInfo;
+                            try {
+                                errorInfo = response.json();
+                            } catch (err) {
+                                throw new Error(
+                                    'response was (' +
+                                        status +
+                                        ')' +
+                                        response.text()
+                                );
+                            }
+                            throw new Error(errorInfo.message);
                         }
-                        throw new Error(errorInfo.message);
-                    }
-                });
+                    })
+            );
         }
 
-        return calls[id];
+        return calls.get(id);
     };
 
     getTransactions = () =>
@@ -172,7 +177,7 @@ export default class Spark {
     sendCoins = (data: TransactionRequest) =>
         this.rpc('withdraw', {
             desination: data.addr,
-            feerate: `${Number(data.sat_per_byte) * 1000}perkb`,
+            feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
             satoshi: data.amount
         });
     getMyNodeInfo = () => this.rpc('getinfo');
@@ -215,7 +220,7 @@ export default class Spark {
         this.rpc('fundchannel', {
             id: data.node_pubkey_string,
             amount: data.satoshis,
-            feerate: `${Number(data.sat_per_byte) * 1000}perkb`,
+            feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
             announce: !data.privateChannel
         }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
@@ -366,5 +371,7 @@ export default class Spark {
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
+    supportsLSPs = () => false;
+    supportsNetworkInfo = () => false;
     isLNDBased = () => false;
 }

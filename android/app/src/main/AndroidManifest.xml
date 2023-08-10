@@ -127,6 +127,9 @@
             android:name="android.nfc.cardemulation.host_apdu_service"
             android:resource="@xml/aid_list" />
       </service>
+      <service
+        android:name=".LndMobileService"
+        android:exported="false" />
     </application>
 
 </manifest>

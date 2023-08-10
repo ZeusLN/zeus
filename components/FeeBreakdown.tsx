@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 
@@ -32,7 +32,6 @@ interface FeeBreakdownProps {
     commit_weight?: number;
     commit_fee?: number;
     csv_delay?: number;
-    privateChannel?: boolean;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore')
@@ -55,8 +54,7 @@ export default class FeeBreakdown extends React.Component<
             total_satoshis_sent,
             commit_weight,
             commit_fee,
-            csv_delay,
-            privateChannel
+            csv_delay
         } = this.props;
         const { loading, chanInfo } = ChannelsStore;
         const { nodeInfo, testnet } = NodeInfoStore;
@@ -319,15 +317,6 @@ export default class FeeBreakdown extends React.Component<
                                     : peerDisplay
                             }
                         />
-                        <KeyValue
-                            keyValue={localeString('views.Channel.unannounced')}
-                            value={
-                                privateChannel
-                                    ? localeString('general.true')
-                                    : localeString('general.false')
-                            }
-                            color={privateChannel ? 'green' : '#808000'}
-                        />
 
                         {commit_fee && (
                             <KeyValue
@@ -366,42 +355,36 @@ export default class FeeBreakdown extends React.Component<
                         )}
 
                         {channelId && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.channelId'
+                                )}
+                                value={channelId}
+                                color={themeColor('chain')}
+                                sensitive
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerChannelId(
                                         channelId,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.channelId'
-                                    )}
-                                    value={channelId}
-                                    color={themeColor('chain')}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                         {channelPoint && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.channelPoint'
+                                )}
+                                value={channelPoint}
+                                color={themeColor('chain')}
+                                sensitive
+                                mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
                                         channelPoint,
                                         testnet
                                     )
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.channelPoint'
-                                    )}
-                                    value={channelPoint}
-                                    color={themeColor('chain')}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                     </React.Fragment>
                 )}

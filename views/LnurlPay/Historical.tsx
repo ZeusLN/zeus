@@ -42,7 +42,8 @@ export default class LnurlPayHistorical extends React.Component<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Bold'
+                            fontFamily: 'Lato-Bold',
+                            marginBottom: 20
                         }}
                     >
                         {lnurl}

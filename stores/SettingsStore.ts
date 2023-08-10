@@ -88,6 +88,16 @@ export interface Settings {
     isBiometryEnabled: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
+    // Embedded node
+    expressGraphSync: boolean;
+    expressGraphSyncMobile: boolean;
+    resetExpressGraphSyncOnStartup: boolean;
+    bimodalPathfinding: boolean;
+    // LSP
+    enableLSP: boolean;
+    lspMainnet: string;
+    lspTestnet: string;
+    lspAccessKey: string;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -106,12 +116,13 @@ export const BLOCK_EXPLORER_KEYS = [
 ];
 
 export const INTERFACE_KEYS = [
+    { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (c-lightning-REST)', value: 'c-lightning-REST' },
-    { key: 'Core Lightning (Sparko)', value: 'spark' },
     { key: 'Eclair', value: 'eclair' },
-    { key: 'LNDHub', value: 'lndhub' }
+    { key: 'LNDHub', value: 'lndhub' },
+    { key: '[DEPRECATED] Core Lightning (Sparko)', value: 'spark' }
 ];
 
 export const LNC_MAILBOX_KEYS = [
@@ -604,7 +615,7 @@ export default class SettingsStore {
             defaultFeeFixed: '100'
         },
         invoices: {
-            addressType: '1',
+            addressType: '0',
             memo: '',
             expiry: '3600',
             routeHints: false,
@@ -614,8 +625,20 @@ export default class SettingsStore {
         isBiometryEnabled: false,
         scramblePin: true,
         loginBackground: false,
+        fiatEnabled: false,
         fiat: DEFAULT_FIAT,
-        fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE
+        fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
+        // EGS
+        expressGraphSync: false,
+        expressGraphSyncMobile: false,
+        resetExpressGraphSyncOnStartup: false,
+        // embedded node
+        bimodalPathfinding: false,
+        // LSP
+        enableLSP: true,
+        lspMainnet: 'https://lsp-preview.lnolymp.us',
+        lspTestnet: 'https://testnet-lsp.lnolymp.us',
+        lspAccessKey: ''
     };
     @observable public posStatus: string = 'unselected';
     @observable public loading = false;
@@ -650,6 +673,11 @@ export default class SettingsStore {
     @observable public customMailboxServer: string;
     @observable public error = false;
     @observable public errorMsg: string;
+    // Embedded lnd
+    @observable public seedPhrase: Array<string>;
+    @observable public walletPassword: string;
+    @observable public adminMacaroon: string;
+    @observable public embeddedLndNetwork: string;
 
     @action
     public changeLocale = (locale: string) => {
@@ -817,6 +845,11 @@ export default class SettingsStore {
                     this.pairingPhrase = node.pairingPhrase;
                     this.mailboxServer = node.mailboxServer;
                     this.customMailboxServer = node.customMailboxServer;
+                    // Embeded lnd
+                    this.seedPhrase = node.seedPhrase;
+                    this.walletPassword = node.walletPassword;
+                    this.adminMacaroon = node.adminMacaroon;
+                    this.embeddedLndNetwork = node.embeddedLndNetwork;
                 }
             } else {
                 console.log('No settings stored');
@@ -1026,6 +1059,7 @@ export default class SettingsStore {
         if (status) {
             this.error = false;
             this.errorMsg = '';
+            BackendUtils.clearCachedCalls();
         }
         this.connecting = status;
         return this.connecting;

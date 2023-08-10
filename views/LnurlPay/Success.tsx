@@ -99,11 +99,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
         }
 
         return (
-            <View
-                style={{
-                    padding: 20
-                }}
-            >
+            <View>
                 <Text
                     style={{
                         padding: 20,

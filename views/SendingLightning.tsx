@@ -39,8 +39,15 @@ export default class SendingLightning extends React.Component<
     };
     async componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
+
         navigation.addListener('didFocus', () => {
-            EncryptedStorage.getItem('note-' + TransactionsStore.payment_hash)
+            const noteKey =
+                typeof TransactionsStore.payment_hash === 'string'
+                    ? TransactionsStore.payment_hash
+                    : typeof TransactionsStore.payment_preimage === 'string'
+                    ? TransactionsStore.payment_preimage
+                    : null;
+            EncryptedStorage.getItem('note-' + noteKey)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
                 })
@@ -63,13 +70,23 @@ export default class SendingLightning extends React.Component<
         } = TransactionsStore;
         const { storedNotes } = this.state;
         const success =
-            payment_route || status === 'complete' || status === 'SUCCEEDED';
+            payment_route ||
+            status === 'complete' ||
+            status === 'SUCCEEDED' ||
+            status === 2;
 
         const inTransit = status === 'IN_FLIGHT';
 
+        const noteKey =
+            typeof payment_hash === 'string'
+                ? payment_hash
+                : typeof payment_preimage === 'string'
+                ? payment_preimage
+                : null;
+
         return (
             <Screen>
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     <View
                         style={{
                             ...styles.content
@@ -207,7 +224,7 @@ export default class SendingLightning extends React.Component<
                                 />
                             </View>
                         )}
-                        {!loading && !(!!error || !!payment_error) && (
+                        {noteKey && !loading && !(!!error || !!payment_error) && (
                             <Button
                                 title={
                                     storedNotes
@@ -220,14 +237,19 @@ export default class SendingLightning extends React.Component<
                                 }
                                 onPress={() =>
                                     navigation.navigate('AddNotes', {
-                                        payment_hash
+                                        payment_hash: noteKey
                                     })
                                 }
                                 secondary
                                 buttonStyle={{ padding: 15 }}
                             />
                         )}
-                        <View style={styles.buttons}>
+                        <View
+                            style={[
+                                styles.buttons,
+                                !noteKey && { marginTop: 14 }
+                            ]}
+                        >
                             {payment_hash && !(!!error || !!payment_error) && (
                                 <View
                                     style={{

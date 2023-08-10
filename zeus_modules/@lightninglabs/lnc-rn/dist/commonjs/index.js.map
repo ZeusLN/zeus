@@ -1,0 +1,1 @@
+{"version":3,"names":["LNC"],"sources":["index.ts"],"sourcesContent":["import LNC from './lnc';\n\nexport type { LncConfig, CredentialStore } from './types/lnc';\nexport * from '@lightninglabs/lnc-core';\nexport default LNC;\n"],"mappings":";;;;;;;AAAA;AAGA;AAAA;EAAA;EAAA;EAAA;EAAA;IAAA;IAAA;MAAA;IAAA;EAAA;AAAA;AAAwC;AAAA,eACzBA,YAAG;AAAA"}

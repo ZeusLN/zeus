@@ -20,6 +20,7 @@ import LnurlPayMetadata from './Metadata';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { ScrollView } from 'react-native-gesture-handler';
 
 interface LnurlPayProps {
     navigation: any;
@@ -170,7 +171,7 @@ export default class LnurlPay extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Send',
+                        text: localeString('general.send'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
@@ -178,131 +179,139 @@ export default class LnurlPay extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                <View style={styles.content}>
-                    <Text
-                        style={{
-                            ...styles.text,
-                            color: themeColor('secondaryText'),
-                            padding: 20,
-                            fontWeight: 'bold',
-                            fontSize: 22
-                        }}
-                    >
-                        {domain}
-                    </Text>
-                </View>
-                <View style={styles.content}>
-                    <Row align="flex-end">
+                <ScrollView keyboardShouldPersistTaps="handled">
+                    <View style={styles.content}>
                         <Text
                             style={{
                                 ...styles.text,
-                                color: themeColor('secondaryText')
+                                color: themeColor('secondaryText'),
+                                padding: 20,
+                                fontWeight: 'bold',
+                                fontSize: 22
                             }}
                         >
-                            {localeString('views.LnurlPay.LnurlPay.amount')}
+                            {domain}
                         </Text>
-                        {lnurl && lnurl.minSendable !== lnurl.maxSendable && (
+                    </View>
+                    <View style={styles.content}>
+                        <Row align="flex-end">
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.LnurlPay.LnurlPay.amount')}
+                            </Text>
+                            {lnurl && lnurl.minSendable !== lnurl.maxSendable && (
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {' ('}
+                                    </Text>
+                                    <Amount
+                                        color="secondaryText"
+                                        sats={Math.ceil(
+                                            lnurl.minSendable / 1000
+                                        )}
+                                    />
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {' - '}
+                                    </Text>
+                                    <Amount
+                                        color="secondaryText"
+                                        sats={Math.floor(
+                                            lnurl.maxSendable / 1000
+                                        )}
+                                    />
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {'):'}
+                                    </Text>
+                                </>
+                            )}
+                        </Row>
+                        <AmountInput
+                            amount={amount}
+                            locked={
+                                lnurl && lnurl.minSendable === lnurl.maxSendable
+                                    ? true
+                                    : false
+                            }
+                            onAmountChange={(
+                                amount: string,
+                                satAmount: string | number
+                            ) => {
+                                this.setState({
+                                    amount,
+                                    satAmount
+                                });
+                            }}
+                        />
+                        {lnurl.commentAllowed > 0 ? (
                             <>
                                 <Text
                                     style={{
                                         ...styles.text,
+                                        marginTop: 10,
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {' ('}
+                                    {localeString(
+                                        'views.LnurlPay.LnurlPay.comment'
+                                    ) + ` (${lnurl.commentAllowed} char)`}
+                                    :
                                 </Text>
-                                <Amount
-                                    color="secondaryText"
-                                    sats={Math.ceil(lnurl.minSendable / 1000)}
+                                <TextInput
+                                    value={comment}
+                                    onChangeText={(text: string) => {
+                                        this.setState({ comment: text });
+                                    }}
+                                    style={styles.textInput}
                                 />
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {' - '}
-                                </Text>
-                                <Amount
-                                    color="secondaryText"
-                                    sats={Math.floor(lnurl.maxSendable / 1000)}
-                                />
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {'):'}
-                                </Text>
                             </>
-                        )}
-                    </Row>
-                    <AmountInput
-                        amount={amount}
-                        locked={
-                            lnurl && lnurl.minSendable === lnurl.maxSendable
-                                ? true
-                                : false
-                        }
-                        onAmountChange={(
-                            amount: string,
-                            satAmount: string | number
-                        ) => {
-                            this.setState({
-                                amount,
-                                satAmount
-                            });
-                        }}
-                    />
-                    {lnurl.commentAllowed > 0 ? (
-                        <>
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    marginTop: 10,
-                                    color: themeColor('secondaryText')
+                        ) : null}
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.LnurlPay.LnurlPay.confirm'
+                                )}
+                                titleStyle={{
+                                    color: themeColor('text')
                                 }}
-                            >
-                                {localeString(
-                                    'views.LnurlPay.LnurlPay.comment'
-                                ) + ` (${lnurl.commentAllowed} char)`}
-                                :
-                            </Text>
-                            <TextInput
-                                value={comment}
-                                onChangeText={(text: string) => {
-                                    this.setState({ comment: text });
+                                icon={{
+                                    name: 'send',
+                                    size: 25,
+                                    color: themeColor('text')
                                 }}
-                                style={styles.textInput}
+                                onPress={() => {
+                                    this.sendValues(satAmount);
+                                }}
+                                style={styles.button}
+                                buttonStyle={{
+                                    backgroundColor: themeColor('secondary'),
+                                    borderRadius: 30
+                                }}
                             />
-                        </>
-                    ) : null}
-                    <View style={styles.button}>
-                        <Button
-                            title="Confirm"
-                            titleStyle={{
-                                color: themeColor('text')
-                            }}
-                            icon={{
-                                name: 'send',
-                                size: 25,
-                                color: themeColor('text')
-                            }}
-                            onPress={() => {
-                                this.sendValues(satAmount);
-                            }}
-                            style={styles.button}
-                            buttonStyle={{
-                                backgroundColor: themeColor('secondary'),
-                                borderRadius: 30
-                            }}
-                        />
+                        </View>
                     </View>
-                </View>
-                <View style={styles.content}>
-                    <LnurlPayMetadata metadata={lnurl.metadata} />
-                </View>
+                    <View style={styles.metadata}>
+                        <LnurlPayMetadata metadata={lnurl.metadata} />
+                    </View>
+                </ScrollView>
             </Screen>
         );
     }
@@ -312,16 +321,8 @@ const styles = StyleSheet.create({
     text: {
         fontFamily: 'Lato-Regular'
     },
-    textInput: {
-        paddingTop: 10,
-        paddingBottom: 10
-    },
-    content: {
-        paddingLeft: 20,
-        paddingRight: 20
-    },
-    button: {
-        paddingTop: 15,
-        paddingBottom: 15
-    }
+    textInput: { paddingVertical: 10 },
+    content: { paddingHorizontal: 20 },
+    button: { paddingVertical: 15 },
+    metadata: { padding: 20 }
 });

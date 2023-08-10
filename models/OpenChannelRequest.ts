@@ -8,7 +8,8 @@ export default class OpenChannelRequest extends BaseModel {
     public node_pubkey?: any;
     public push_sat?: string;
     public target_conf?: number;
-    public sat_per_byte?: string;
+    public sat_per_byte?: string; // deprecated
+    public sat_per_vbyte?: string;
     public private?: boolean;
     public min_htlc_msat?: string;
     public local_funding_amount: string;

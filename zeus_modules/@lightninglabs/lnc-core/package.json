@@ -1,0 +1,121 @@
+{
+  "name": "@lightninglabs/lnc-core",
+  "version": "0.2.5-alpha",
+  "description": "Type definitions and utilities for Lightning Node Connect",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "config": {
+    "lnd_release_tag": "v0.16.3-beta",
+    "loop_release_tag": "v0.24.1-beta",
+    "pool_release_tag": "v0.6.4-beta",
+    "faraday_release_tag": "v0.2.11-alpha",
+    "tapd_release_tag": "v0.2.0-lit-0",
+    "lit_release_tag": "v0.10.1-alpha",
+    "protoc_version": "21.9"
+  },
+  "scripts": {
+    "build": "NODE_ENV=production webpack",
+    "dev": "webpack --watch --stats-error-details",
+    "update-protos": "bash scripts/update_protos.sh ${npm_package_config_lnd_release_tag} ${npm_package_config_loop_release_tag} ${npm_package_config_pool_release_tag} ${npm_package_config_faraday_release_tag} ${npm_package_config_tapd_release_tag} ${npm_package_config_lit_release_tag}",
+    "generate": "bash scripts/generate_types.sh ${npm_package_config_lnd_release_tag} ${npm_package_config_loop_release_tag} ${npm_package_config_pool_release_tag} ${npm_package_config_faraday_release_tag} ${npm_package_config_tapd_release_tag} ${npm_package_config_lit_release_tag} ${npm_package_config_protoc_version}",
+    "prettier": "prettier --check '**/*.ts*'",
+    "prettier-write": "prettier --check --write '**/*.ts*'",
+    "lint": "tslint -p tsconfig.json",
+    "prepare": "yarn run build",
+    "prepublishOnly": "yarn run lint",
+    "preversion": "yarn run lint",
+    "version": "yarn run prettier && git add -A lib",
+    "postversion": "git push && git push --tags"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lightninglabs/lnc-core.git"
+  },
+  "keywords": [
+    "lightning",
+    "lnd",
+    "lightning-node-connect",
+    "lnc"
+  ],
+  "author": "Evan Kaloudis",
+  "bugs": {
+    "url": "https://github.com/lightninglabs/lnc-core/issues"
+  },
+  "homepage": "https://github.com/lightninglabs/lnc-core#readme",
+  "devDependencies": {
+    "@types/crypto-js": "4.1.1",
+    "@types/debug": "4.1.7",
+    "@types/node": "17.0.16",
+    "chai": "4.3.6",
+    "clean-webpack-plugin": "4.0.0",
+    "prettier": "2.6.0",
+    "ts-loader": "9.2.6",
+    "ts-node": "10.7.0",
+    "ts-proto": "1.115.4",
+    "tslint": "6.1.3",
+    "tslint-config-prettier": "1.18.0",
+    "typescript": "4.5.5",
+    "webpack": "5.69.1",
+    "webpack-cli": "4.9.2",
+    "node-polyfill-webpack-plugin": "1.1.4"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "directories": {
+    "lib": "lib"
+  },
+  "license": "MIT",
+  "react-native": {
+    "zlib": "browserify-zlib",
+    "console": "console-browserify",
+    "constants": "constants-browserify",
+    "crypto": "react-native-crypto",
+    "dns": "dns.js",
+    "net": "react-native-tcp",
+    "domain": "domain-browser",
+    "http": "@tradle/react-native-http",
+    "https": "https-browserify",
+    "os": "react-native-os",
+    "path": "path-browserify",
+    "querystring": "querystring-es3",
+    "fs": "react-native-level-fs",
+    "_stream_transform": "readable-stream/transform",
+    "_stream_readable": "readable-stream/readable",
+    "_stream_writable": "readable-stream/writable",
+    "_stream_duplex": "readable-stream/duplex",
+    "_stream_passthrough": "readable-stream/passthrough",
+    "dgram": "react-native-udp",
+    "stream": "stream-browserify",
+    "timers": "timers-browserify",
+    "tty": "tty-browserify",
+    "vm": "vm-browserify",
+    "tls": false
+  },
+  "browser": {
+    "zlib": "browserify-zlib",
+    "console": "console-browserify",
+    "constants": "constants-browserify",
+    "crypto": "react-native-crypto",
+    "dns": "dns.js",
+    "net": "react-native-tcp",
+    "domain": "domain-browser",
+    "http": "@tradle/react-native-http",
+    "https": "https-browserify",
+    "os": "react-native-os",
+    "path": "path-browserify",
+    "querystring": "querystring-es3",
+    "fs": "react-native-level-fs",
+    "_stream_transform": "readable-stream/transform",
+    "_stream_readable": "readable-stream/readable",
+    "_stream_writable": "readable-stream/writable",
+    "_stream_duplex": "readable-stream/duplex",
+    "_stream_passthrough": "readable-stream/passthrough",
+    "dgram": "react-native-udp",
+    "stream": "stream-browserify",
+    "timers": "timers-browserify",
+    "tty": "tty-browserify",
+    "vm": "vm-browserify",
+    "tls": false
+  }
+}

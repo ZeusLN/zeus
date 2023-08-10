@@ -8,16 +8,18 @@ import Base64Utils from './../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
 
 // keep track of all active calls so we can cancel when appropriate
-const calls: any = {};
+const calls = new Map<string, Promise<any>>();
 
 export default class Eclair {
+    clearCachedCalls = () => calls.clear();
+
     api = (method: string, params: any = {}) => {
         const { password, certVerification, enableTor } = stores.settingsStore;
         let { url } = stores.settingsStore;
 
         const id: string = method + JSON.stringify(params);
-        if (calls[id]) {
-            return calls[id];
+        if (calls.has(id)) {
+            return calls.get(id);
         }
 
         url = url.slice(-1) === '/' ? url : url + '/';
@@ -28,48 +30,49 @@ export default class Eclair {
         const body = querystring.stringify(params);
 
         if (enableTor === true) {
-            calls[id] = doTorRequest(
-                url + method,
-                RequestMethod.POST,
-                body,
-                headers
+            calls.set(
+                id,
+                doTorRequest(url + method, RequestMethod.POST, body, headers)
             );
         } else {
-            calls[id] = ReactNativeBlobUtil.config({
-                trusty: !certVerification
-            })
-                .fetch('POST', url + method, headers, body)
-                .then((response: any) => {
-                    delete calls[id];
+            calls.set(
+                id,
+                ReactNativeBlobUtil.config({
+                    trusty: !certVerification
+                })
+                    .fetch('POST', url + method, headers, body)
+                    .then((response: any) => {
+                        calls.delete(id);
 
-                    const status = response.info().status;
-                    if (status < 300) {
-                        return response.json();
-                    } else {
-                        let errorInfo;
-                        try {
-                            errorInfo = response.json();
-                        } catch (err) {
-                            throw new Error(
-                                'response was (' +
-                                    status +
-                                    ')' +
-                                    response.text()
-                            );
+                        const status = response.info().status;
+                        if (status < 300) {
+                            return response.json();
+                        } else {
+                            let errorInfo;
+                            try {
+                                errorInfo = response.json();
+                            } catch (err) {
+                                throw new Error(
+                                    'response was (' +
+                                        status +
+                                        ')' +
+                                        response.text()
+                                );
+                            }
+                            throw new Error(errorInfo.error);
                         }
-                        throw new Error(errorInfo.error);
-                    }
-                });
+                    })
+            );
         }
         setTimeout(
             (id: string) => {
-                delete calls[id];
+                calls.delete(id);
             },
             9000,
             id
         );
 
-        return calls[id];
+        return calls.get(id);
     };
 
     getTransactions = () =>
@@ -245,7 +248,7 @@ export default class Eclair {
         this.api('open', {
             nodeId: data.node_pubkey_string,
             fundingSatoshis: data.satoshis,
-            fundingFeerateSatByte: data.sat_per_byte,
+            fundingFeerateSatByte: data.sat_per_vbyte,
             channelFlags: data.privateChannel ? 0 : 1
         }).then(() => ({}));
     connectPeer = (data: any) =>
@@ -494,6 +497,8 @@ export default class Eclair {
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
+    supportsLSPs = () => false;
+    supportsNetworkInfo = () => false;
     isLNDBased = () => false;
 }
 

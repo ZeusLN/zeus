@@ -41,7 +41,14 @@ export default class PaymentView extends React.Component<PaymentProps> {
             this.setState({ lnurlpaytx });
         }
         navigation.addListener('didFocus', () => {
-            EncryptedStorage.getItem('note-' + payment.payment_hash)
+            const noteKey =
+                typeof payment.payment_hash === 'string'
+                    ? payment.payment_hash
+                    : typeof payment.getPreimage === 'string'
+                    ? payment.getPreimage
+                    : null;
+
+            EncryptedStorage.getItem('note-' + noteKey)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
                 })
@@ -53,7 +60,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
 
     render() {
         const { navigation } = this.props;
-        const { storedNotes } = this.state;
+        const { storedNotes, lnurlpaytx } = this.state;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
@@ -65,13 +72,16 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getMemo
         } = payment;
         const date = getDisplayTime;
-
-        const lnurlpaytx = this.state.lnurlpaytx;
-
+        const noteKey =
+            typeof payment_hash === 'string'
+                ? payment_hash
+                : typeof getPreimage === 'string'
+                ? getPreimage
+                : null;
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('AddNotes', { payment_hash })
+                    navigation.navigate('AddNotes', { payment_hash: noteKey })
                 }
                 style={{ marginTop: -12 }}
             >
@@ -93,7 +103,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     rightComponent={<EditNotesButton />}
                     navigation={navigation}
                 />
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     <View style={styles.center}>
                         <Amount
                             sats={payment.getAmount}
@@ -105,7 +115,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     </View>
 
                     {lnurlpaytx && (
-                        <View style={styles.content}>
+                        <View style={styles.historical}>
                             <LnurlPayHistorical
                                 navigation={navigation}
                                 lnurlpaytx={lnurlpaytx}
@@ -205,23 +215,18 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             </ListItem>
                         )}
                         {storedNotes && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString('views.Payment.notes')}
+                                value={storedNotes}
+                                sensitive
+                                mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
-                                        payment_hash
+                                        payment_hash: noteKey
                                     })
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Payment.notes'
-                                    )}
-                                    value={storedNotes}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
-                        {payment_hash && (
+                        {noteKey && (
                             <Button
                                 title={
                                     storedNotes
@@ -234,7 +239,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 }
                                 onPress={() =>
                                     navigation.navigate('AddNotes', {
-                                        payment_hash
+                                        payment_hash: noteKey
                                     })
                                 }
                                 containerStyle={{ marginTop: 15 }}
@@ -253,6 +258,9 @@ const styles = StyleSheet.create({
     content: {
         paddingLeft: 20,
         paddingRight: 20
+    },
+    historical: {
+        padding: 20
     },
     center: {
         alignItems: 'center',

@@ -21,7 +21,9 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
+import { WarningMessage } from '../components/SuccessErrorMessage';
 
+import BalanceStore from '../stores/BalanceStore';
 import ChannelsStore from '../stores/ChannelsStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import TransactionsStore, { SendPaymentReq } from '../stores/TransactionsStore';
@@ -37,10 +39,12 @@ import { Row } from '../components/layout/Row';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
+import Conversion from '../components/Conversion';
 
 interface InvoiceProps {
     exitSetup: any;
     navigation: any;
+    BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
@@ -64,6 +68,7 @@ interface InvoiceState {
 }
 
 @inject(
+    'BalanceStore',
     'InvoicesStore',
     'TransactionsStore',
     'UnitsStore',
@@ -318,7 +323,7 @@ export default class PaymentRequest extends React.Component<
                     </View>
                 )}
 
-                <ScrollView>
+                <ScrollView keyboardShouldPersistTaps="handled">
                     {!!getPayReqError && (
                         <View style={styles.content}>
                             <Text
@@ -336,6 +341,21 @@ export default class PaymentRequest extends React.Component<
                     {!loading && !loadingFeeEstimate && !!pay_req && (
                         <View style={styles.content}>
                             <>
+                                {this.props.BalanceStore.lightningBalance ===
+                                    0 && (
+                                    <View
+                                        style={{
+                                            paddingTop: 10,
+                                            paddingBottom: 10
+                                        }}
+                                    >
+                                        <WarningMessage
+                                            message={localeString(
+                                                'views.Send.noLightningBalance'
+                                            )}
+                                        />
+                                    </View>
+                                )}
                                 {isNoAmountInvoice ? (
                                     <AmountInput
                                         amount={customAmount}
@@ -359,6 +379,9 @@ export default class PaymentRequest extends React.Component<
                                             jumboText
                                             toggleable
                                         />
+                                        <View style={{ top: 10 }}>
+                                            <Conversion sats={requestAmount} />
+                                        </View>
                                     </View>
                                 )}
                             </>

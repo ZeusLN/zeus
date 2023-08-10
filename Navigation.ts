@@ -22,6 +22,7 @@ import Invoice from './views/Invoice';
 
 import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
+import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
@@ -51,6 +52,8 @@ import PointOfSaleRecon from './views/Settings/PointOfSaleRecon';
 import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
+import EmbeddedNode from './views/Settings/EmbeddedNode';
+import LSP from './views/Settings/LSP';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -78,6 +81,12 @@ import Intro from './views/Intro';
 import IntroSplash from './views/IntroSplash';
 
 import EditFee from './views/EditFee';
+
+// Embedded LND
+import Seed from './views/Settings/Seed';
+import Sync from './views/Sync';
+import LspExplanation from './views/LspExplanation';
+import LspExplanationRouting from './views/LspExplanationRouting';
 
 const AppScenes = {
     Wallet: {
@@ -203,6 +212,9 @@ const AppScenes = {
     SendingLightning: {
         screen: SendingLightning
     },
+    NetworkInfo: {
+        screen: NetworkInfo
+    },
     NodeInfo: {
         screen: NodeInfo
     },
@@ -260,6 +272,12 @@ const AppScenes = {
     InvoicesSettings: {
         screen: InvoicesSettings
     },
+    Seed: {
+        screen: Seed
+    },
+    Sync: {
+        screen: Sync
+    },
     BumpFee: {
         screen: BumpFee
     },
@@ -276,7 +294,18 @@ const AppScenes = {
         screen: AddContacts
     },
     ContactDetails: {
-        screen: ContactDetails
+        screen: ContactDetails,
+    LspExplanation: {
+        screen: LspExplanation
+    },
+    LspExplanationRouting: {
+        screen: LspExplanationRouting
+    },
+    EmbeddedNodeSettings: {
+        screen: EmbeddedNode
+    },
+    LSPSettings: {
+        screen: LSP
     }
 };
 

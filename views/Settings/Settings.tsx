@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
+import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import AccountIcon from '../../assets/images/SVG/Wallet2.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
@@ -24,6 +25,9 @@ import Olympus from '../../assets/images/SVG/Olympus.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
+import KeyIcon from '../../assets/images/SVG/Key.svg';
+import NetworkIcon from '../../assets/images/SVG/Network.svg';
+import CloudIcon from '../../assets/images/SVG/Cloud.svg';
 
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
@@ -97,6 +101,17 @@ export default class Settings extends React.Component<
             </TouchableOpacity>
         );
 
+        let nodeSubtitle = '';
+
+        if (selectedNode) {
+            nodeSubtitle +=
+                implementationDisplayValue[selectedNode.implementation];
+
+            if (selectedNode.embeddedLndNetwork) {
+                nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
+            }
+        }
+
         return (
             <Screen>
                 <Header
@@ -115,6 +130,7 @@ export default class Settings extends React.Component<
                     style={{
                         flex: 1
                     }}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <TouchableOpacity
                         onPress={() => navigation.navigate('Nodes')}
@@ -126,8 +142,8 @@ export default class Settings extends React.Component<
                                 height: selectedNode ? 70 : 50,
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 20,
-                                marginBottom: 10
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <View
@@ -182,24 +198,13 @@ export default class Settings extends React.Component<
                                         fontFamily: 'Lato-Regular'
                                     }}
                                 >
-                                    {selectedNode.implementation ===
-                                    'lightning-node-connect'
-                                        ? `${
-                                              implementationDisplayValue[
-                                                  selectedNode.implementation
-                                              ] || 'Unknown'
-                                          }`
-                                        : `${
-                                              implementationDisplayValue[
-                                                  selectedNode.implementation
-                                              ] || 'Unknown'
-                                          }`}
+                                    {nodeSubtitle}
                                 </Text>
                             )}
                         </View>
                     </TouchableOpacity>
 
-                    {selectedNode && BackendUtils.supportsNodeInfo() && (
+                    {BackendUtils.supportsLSPs() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -207,27 +212,174 @@ export default class Settings extends React.Component<
                                 height: 45,
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15,
-                                marginTop: 5
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
                                 style={styles.columnField}
-                                onPress={() => navigation.navigate('NodeInfo')}
+                                onPress={() =>
+                                    navigation.navigate('LSPSettings')
+                                }
                             >
-                                <NodeOn color={themeColor('text')} />
+                                <View style={{ paddingLeft: 5, paddingTop: 3 }}>
+                                    <CloudIcon fill={themeColor('text')} />
+                                </View>
                                 <Text
                                     style={{
                                         ...styles.columnText,
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('views.NodeInfo.title')}
+                                    {localeString('general.lsp')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon />
                                 </View>
                             </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {selectedNode && BackendUtils.supportsNodeInfo() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginTop: 5,
+                                marginBottom: 5
+                            }}
+                        >
+                            {implementation === 'embedded-lnd' && (
+                                <>
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate('Seed')
+                                        }
+                                    >
+                                        <KeyIcon
+                                            fill={themeColor('text')}
+                                            style={{
+                                                marginLeft: 4,
+                                                marginTop: 2
+                                            }}
+                                            width={130}
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.Seed.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    <View style={styles.separationLine} />
+
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'EmbeddedNodeSettings'
+                                            )
+                                        }
+                                    >
+                                        <BlockIcon
+                                            color={themeColor('text')}
+                                            width={28}
+                                            style={{ marginLeft: 2 }}
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.EmbeddedNode.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    <View style={styles.separationLine} />
+                                </>
+                            )}
+
+                            {BackendUtils.supportsNodeInfo() && (
+                                <>
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate('NodeInfo')
+                                        }
+                                    >
+                                        <NodeOn color={themeColor('text')} />
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.NodeInfo.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+
+                            {BackendUtils.supportsNetworkInfo() && (
+                                <>
+                                    <View style={styles.separationLine} />
+
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate('NetworkInfo')
+                                        }
+                                    >
+                                        <View
+                                            style={{
+                                                alignContent: 'center',
+                                                margin: 3
+                                            }}
+                                        >
+                                            <NetworkIcon
+                                                fill={themeColor('text')}
+                                                width={25}
+                                                height={25}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.NetworkInfo.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
+                                </>
+                            )}
                         </View>
                     )}
 
@@ -292,7 +444,8 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -329,7 +482,10 @@ export default class Settings extends React.Component<
                                 }
                             >
                                 <View>
-                                    <SendIcon stroke={themeColor('text')} />
+                                    <SendIcon
+                                        fill={themeColor('text')}
+                                        style={{ marginLeft: 3, marginTop: 3 }}
+                                    />
                                 </View>
                                 <Text
                                     style={{
@@ -352,7 +508,10 @@ export default class Settings extends React.Component<
                                 }
                             >
                                 <View>
-                                    <ReceiveIcon stroke={themeColor('text')} />
+                                    <ReceiveIcon
+                                        fill={themeColor('text')}
+                                        style={{ marginLeft: 3, marginTop: 3 }}
+                                    />
                                 </View>
                                 <Text
                                     style={{
@@ -380,8 +539,8 @@ export default class Settings extends React.Component<
                                     height: 45,
                                     borderRadius: 10,
                                     alignSelf: 'center',
-                                    marginBottom: 15,
-                                    marginTop: 5
+                                    marginTop: 5,
+                                    marginBottom: 5
                                 }}
                             >
                                 <TouchableOpacity
@@ -419,7 +578,8 @@ export default class Settings extends React.Component<
                                 height: 138,
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -497,7 +657,8 @@ export default class Settings extends React.Component<
                                 height: 90,
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -551,7 +712,8 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -586,7 +748,8 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -594,7 +757,10 @@ export default class Settings extends React.Component<
                                 onPress={() => navigation.navigate('Currency')}
                             >
                                 <View>
-                                    <CurrencyIcon stroke={themeColor('text')} />
+                                    <CurrencyIcon
+                                        stroke={themeColor('text')}
+                                        style={{ marginLeft: 2 }}
+                                    />
                                 </View>
                                 <Text
                                     style={{
@@ -617,10 +783,7 @@ export default class Settings extends React.Component<
                                 onPress={() => navigation.navigate('Language')}
                             >
                                 <View style={{ padding: 4 }}>
-                                    <LanguageIcon
-                                        stroke={themeColor('text')}
-                                        fill={themeColor('secondary')}
-                                    />
+                                    <LanguageIcon fill={themeColor('text')} />
                                 </View>
                                 <Text
                                     style={{
@@ -644,7 +807,8 @@ export default class Settings extends React.Component<
                             width: '90%',
                             borderRadius: 10,
                             alignSelf: 'center',
-                            marginBottom: 15
+                            marginTop: 5,
+                            marginBottom: 5
                         }}
                     >
                         <TouchableOpacity
@@ -677,7 +841,8 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginBottom: 15
+                                marginTop: 5,
+                                marginBottom: 5
                             }}
                         >
                             <TouchableOpacity
@@ -712,7 +877,8 @@ export default class Settings extends React.Component<
                             width: '90%',
                             borderRadius: 10,
                             alignSelf: 'center',
-                            marginBottom: 15
+                            marginTop: 5,
+                            marginBottom: 5
                         }}
                     >
                         <TouchableOpacity
@@ -751,6 +917,7 @@ export default class Settings extends React.Component<
                                 color: '#A7A9AC',
                                 alignSelf: 'center',
                                 fontFamily: 'Lato-Regular',
+                                marginTop: 5,
                                 marginBottom: 20
                             }}
                         >

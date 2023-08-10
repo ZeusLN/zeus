@@ -2,6 +2,7 @@ import stores from '../stores/Stores';
 // LND
 import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
+import EmbeddedLND from '../backends/EmbeddedLND';
 // Core Lightning
 import CLightningREST from '../backends/CLightningREST';
 import Spark from '../backends/Spark';
@@ -13,6 +14,7 @@ import LndHub from '../backends/LndHub';
 class BackendUtils {
     lnd: LND;
     lightningNodeConnect: LightningNodeConnect;
+    embeddedLND: EmbeddedLND;
     clightningREST: CLightningREST;
     spark: Spark;
     eclair: Eclair;
@@ -20,6 +22,7 @@ class BackendUtils {
     constructor() {
         this.lnd = new LND();
         this.lightningNodeConnect = new LightningNodeConnect();
+        this.embeddedLND = new EmbeddedLND();
         this.clightningREST = new CLightningREST();
         this.spark = new Spark();
         this.eclair = new Eclair();
@@ -33,6 +36,8 @@ class BackendUtils {
                 return this.lnd;
             case 'lightning-node-connect':
                 return this.lightningNodeConnect;
+            case 'embedded-lnd':
+                return this.embeddedLND;
             case 'c-lightning-REST':
                 return this.clightningREST;
             case 'spark':
@@ -65,6 +70,7 @@ class BackendUtils {
         this.call('getLightningBalance', args);
     sendCoins = (...args: any[]) => this.call('sendCoins', args);
     getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
+    getNetworkInfo = (...args: any[]) => this.call('getNetworkInfo', args);
     getInvoices = (...args: any[]) => this.call('getInvoices', args);
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
@@ -127,6 +133,8 @@ class BackendUtils {
         this.call('supportsAddressTypeSelection');
     supportsTaproot = () => this.call('supportsTaproot');
     supportsBumpFee = () => this.call('supportsBumpFee');
+    supportsLSPs = () => this.call('supportsLSPs');
+    supportsNetworkInfo = () => this.call('supportsNetworkInfo');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC
@@ -135,6 +143,8 @@ class BackendUtils {
     checkPerms = () => this.call('checkPerms');
     isConnected = (...args: any[]) => this.call('isConnected', args);
     disconnect = (...args: any[]) => this.call('disconnect', args);
+
+    clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
 }
 
 const backendUtils = new BackendUtils();

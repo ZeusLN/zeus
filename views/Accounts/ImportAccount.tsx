@@ -71,6 +71,7 @@ export default class ImportAccount extends React.Component<
                     flex: 1,
                     backgroundColor: themeColor('background')
                 }}
+                keyboardShouldPersistTaps="handled"
             >
                 <Header
                     leftComponent="Back"
@@ -144,7 +145,9 @@ export default class ImportAccount extends React.Component<
                         }
                     />
                     <Button
-                        title="ImportAccount"
+                        title={localeString(
+                            'views.ImportAccount.importAccount'
+                        )}
                         onPress={() =>
                             this.props.UTXOsStore.importAccount({
                                 ...this.state,
@@ -153,7 +156,7 @@ export default class ImportAccount extends React.Component<
                         }
                     />
                     <Button
-                        title="Scan"
+                        title={localeString('general.scan')}
                         onPress={() =>
                             navigation.navigate('ImportAccountQRScanner')
                         }
