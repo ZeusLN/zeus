@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions, View } from 'react-native';
+import { Dimensions, Vibration, View } from 'react-native';
 import Lottie from 'lottie-react-native';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -13,9 +13,12 @@ interface PaidIndicatorProps {
     size?: number;
 }
 
-function LoadingIndicator(props: PaidIndicatorProps) {
+function PaidIndicator(props: PaidIndicatorProps) {
     const { size } = props;
     const randomNumber = Math.ceil(Math.random() * 3) - 1;
+
+    // vibrate for 2.5 seconds upon payment completion
+    Vibration.vibrate(2500);
 
     return (
         <View
@@ -181,4 +184,4 @@ function LoadingIndicator(props: PaidIndicatorProps) {
     );
 }
 
-export default LoadingIndicator;
+export default PaidIndicator;
