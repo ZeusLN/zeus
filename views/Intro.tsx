@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useState } from 'react';
 import { Dimensions, Image, Text, View, SafeAreaView } from 'react-native';
 
 import Animated, {
@@ -10,21 +10,32 @@ import Animated, {
 } from 'react-native-reanimated';
 import Carousel from 'react-native-reanimated-carousel';
 
-import Button from './../components/Button';
+import stores from '../stores/Stores';
 
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import Button from '../components/Button';
+import LoadingIndicator from '../components/LoadingIndicator';
+import Screen from '../components/Screen';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
 
-const One = require('./../assets/images/intro/1.png');
-const Two = require('./../assets/images/intro/2.png');
-const Three = require('./../assets/images/intro/3.png');
-const Four = require('./../assets/images/intro/4.png');
+import { createLndWallet } from '../utils/LndMobileUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+
+const One = require('../assets/images/intro/1.png');
+const Two = require('../assets/images/intro/2.png');
+const Three = require('../assets/images/intro/3.png');
+const Four = require('../assets/images/intro/4.png');
+
+import WordLogo from '../assets/images/SVG/Word Logo.svg';
 
 interface IntroProps {
     navigation: any;
 }
 
 const Intro: React.FC<IntroProps> = (props) => {
+    const [creatingWallet, setCreatingWallet] = useState(false);
+    const [error, setError] = useState(false);
+
     let screenWidth: number;
     const progressValue = useSharedValue<number>(0);
 
@@ -98,11 +109,73 @@ const Intro: React.FC<IntroProps> = (props) => {
                     {item.text}
                 </Text>
                 {item.text === localeString('views.Intro.carousel4.text') && (
-                    <Button
-                        containerStyle={{ marginTop: 10 }}
-                        title={localeString('views.Intro.advancedSetUp')}
-                        onPress={() => navigation.navigate('Settings')}
-                    />
+                    <>
+                        {error && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Intro.errorCreatingWallet'
+                                )}
+                            />
+                        )}
+                        <View
+                            style={{
+                                padding: 10
+                            }}
+                        >
+                            <Button
+                                title={localeString('views.Intro.quickStart')}
+                                onPress={async () => {
+                                    setCreatingWallet(true);
+                                    const { settingsStore } = stores;
+                                    const {
+                                        setConnectingStatus,
+                                        updateSettings
+                                    } = settingsStore;
+                                    const response = await createLndWallet(
+                                        undefined
+                                    );
+                                    const { wallet, seed, randomBase64 }: any =
+                                        response;
+                                    if (wallet && wallet.admin_macaroon) {
+                                        let nodes = [
+                                            {
+                                                adminMacaroon:
+                                                    wallet.admin_macaroon,
+                                                seedPhrase:
+                                                    seed.cipher_seed_mnemonic,
+                                                walletPassword: randomBase64,
+                                                embeddedLndNetwork: 'Mainnet',
+                                                implementation: 'embedded-lnd'
+                                            }
+                                        ];
+
+                                        updateSettings({ nodes }).then(() => {
+                                            setConnectingStatus(true);
+                                            navigation.navigate('Wallet', {
+                                                refresh: true
+                                            });
+                                        });
+                                    } else {
+                                        setCreatingWallet(false);
+                                        setError(true);
+                                    }
+                                }}
+                            />
+                        </View>
+                        <View
+                            style={{
+                                padding: 10
+                            }}
+                        >
+                            <Button
+                                title={localeString(
+                                    'views.Intro.advancedSetUp'
+                                )}
+                                onPress={() => navigation.navigate('Settings')}
+                                secondary
+                            />
+                        </View>
+                    </>
                 )}
             </View>
         </View>
@@ -162,6 +235,49 @@ const Intro: React.FC<IntroProps> = (props) => {
             </View>
         );
     };
+
+    if (creatingWallet) {
+        return (
+            <Screen>
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        top: 10
+                    }}
+                >
+                    <WordLogo
+                        height={100}
+                        style={{
+                            alignSelf: 'center'
+                        }}
+                    />
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            fontFamily: 'Lato-Regular',
+                            alignSelf: 'center',
+                            fontSize: 15,
+                            padding: 8
+                        }}
+                    >
+                        {localeString('views.Intro.creatingWallet')}
+                    </Text>
+                    <View style={{ marginTop: 40 }}>
+                        <LoadingIndicator />
+                    </View>
+                </View>
+                <View
+                    style={{
+                        bottom: 56,
+                        position: 'absolute',
+                        alignSelf: 'center'
+                    }}
+                ></View>
+            </Screen>
+        );
+    }
 
     return (
         <SafeAreaView
