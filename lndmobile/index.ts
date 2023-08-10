@@ -72,6 +72,13 @@ export const startLnd = async (args?: string): Promise<{ data: string }> => {
 /**
  * @throws
  */
+export const stopLnd = async (): Promise<{ data: string }> => {
+    return await LndMobile.stopLnd();
+};
+
+/**
+ * @throws
+ */
 export const gossipSync = async (
     networkType: string
 ): Promise<{ data: string }> => {

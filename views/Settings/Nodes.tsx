@@ -17,6 +17,8 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
 
+import { stopLnd } from '../../utils/LndMobileUtils';
+
 interface NodesProps {
     nodes: any[];
     navigation: any;
@@ -161,12 +163,18 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         await updateSettings({
                                             nodes,
                                             selectedNode: index
-                                        }).then(() => {
+                                        }).then(async () => {
                                             if (
                                                 currentImplementation ===
                                                 'lightning-node-connect'
                                             ) {
                                                 BackendUtils.disconnect();
+                                            }
+                                            if (
+                                                currentImplementation ===
+                                                'embedded-lnd'
+                                            ) {
+                                                await stopLnd();
                                             }
                                             BalanceStore.reset();
                                             NodeInfoStore.reset();

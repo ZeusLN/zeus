@@ -216,6 +216,11 @@ export async function startLnd(walletPassword: string) {
     });
 }
 
+export async function stopLnd() {
+    const { stopLnd } = lndMobile.index;
+    await stopLnd();
+}
+
 export async function createLndWallet(
     seedMnemonic?: string,
     walletPassphrase?: string,
