@@ -17,8 +17,8 @@ function PaidIndicator(props: PaidIndicatorProps) {
     const { size } = props;
     const randomNumber = Math.ceil(Math.random() * 3) - 1;
 
-    // vibrate for 2.5 seconds upon payment completion
-    Vibration.vibrate(2500);
+    // vibrate upon payment completion
+    Vibration.vibrate([250, 250, 1000]);
 
     return (
         <View
