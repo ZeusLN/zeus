@@ -837,6 +837,7 @@ export default class Receive extends React.Component<
                 onPress={() => InvoicesStore.clearUnified()}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={30}
             />
         );
 
@@ -846,6 +847,7 @@ export default class Receive extends React.Component<
                 onPress={() => this.refs.modal.open()}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={30}
             />
         );
 
