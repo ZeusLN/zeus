@@ -78,7 +78,7 @@ export function ChannelItem({
                 ) : null}
                 {status && <Tag status={status} />}
             </Row>
-            {inbound && outbound && inbound != 0 && outbound != 0 && (
+            {inbound && outbound && !(inbound == 0 && outbound == 0) && (
                 <Row style={{ marginTop: 15, marginBottom: 15 }}>
                     <BalanceBar
                         left={lurkerMode ? 50 : Number(outbound)}
