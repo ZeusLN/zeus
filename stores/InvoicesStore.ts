@@ -205,11 +205,15 @@ export default class InvoicesStore {
                     const info: any = result;
                     const method = info.connection_methods[0];
 
-                    await this.channelsStore.connectPeer({
-                        host: `${method.address}:${method.port}`,
-                        node_pubkey_string: info.pubkey,
-                        local_funding_amount: ''
-                    });
+                    await this.channelsStore.connectPeer(
+                        {
+                            host: `${method.address}:${method.port}`,
+                            node_pubkey_string: info.pubkey,
+                            local_funding_amount: ''
+                        },
+                        false,
+                        true
+                    );
 
                     if (value) {
                         await this.lspStore.getZeroConfFee(
