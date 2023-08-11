@@ -174,18 +174,16 @@ export default class ChannelView extends React.Component<
         const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
 
         const EditFees = () => (
-            <View style={{ top: -3 }}>
-                <Edit
-                    onPress={() => navigation.navigate('SetFees', { channel })}
-                    fill={themeColor('text')}
-                    height={35}
-                    width={35}
-                />
-            </View>
+            <TouchableOpacity
+                onPress={() => navigation.navigate('SetFees', { channel })}
+                style={{ top: -5 }}
+            >
+                <Edit fill={themeColor('text')} height={38} width={38} />
+            </TouchableOpacity>
         );
 
         const KeySend = () => (
-            <Share
+            <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('Send', {
                         destination: remotePubkey,
@@ -193,10 +191,9 @@ export default class ChannelView extends React.Component<
                         isValid: true
                     })
                 }
-                fill={themeColor('text')}
-                height={30}
-                width={30}
-            />
+            >
+                <Share fill={themeColor('text')} height={30} width={30} />
+            </TouchableOpacity>
         );
 
         const centerComponent = () => {
