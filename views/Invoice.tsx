@@ -63,7 +63,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const noteKey = getRPreimage || payment_hash;
 
         const QRButton = () => (
-            <View style={{ marginTop: -12 }}>
+            <View style={{ marginTop: -4 }}>
                 <Icon
                     name="qr-code"
                     onPress={() => {
@@ -71,6 +71,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     }}
                     color={themeColor('text')}
                     underlayColor="transparent"
+                    size={30}
                 />
             </View>
         );
@@ -79,7 +80,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 onPress={() =>
                     navigation.navigate('AddNotes', { getRPreimage: noteKey })
                 }
-                style={{ marginTop: -12, alignSelf: 'center', marginRight: 6 }}
+                style={{ marginTop: -6, alignSelf: 'center', marginRight: 6 }}
             >
                 <EditNotes height={40} width={40} />
             </TouchableOpacity>

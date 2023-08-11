@@ -264,8 +264,8 @@ export default class WalletHeader extends React.Component<
             <TouchableOpacity onPress={() => ChannelsStore.toggleSearch()}>
                 <Search
                     fill={themeColor('text')}
-                    width="25"
-                    height="25"
+                    width="30"
+                    height="30"
                     style={{
                         alignSelf: 'center',
                         marginRight: 20
@@ -280,8 +280,8 @@ export default class WalletHeader extends React.Component<
             >
                 <Add
                     fill={themeColor('text')}
-                    width="25"
-                    height="25"
+                    width="30"
+                    height="30"
                     style={{ alignSelf: 'center' }}
                 />
             </TouchableOpacity>

@@ -96,7 +96,7 @@ export default class Settings extends React.Component<
                 onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
             >
                 <View style={{ top: -7 }}>
-                    <Olympus width="35" height="35" fill={themeColor('text')} />
+                    <Olympus width="45" height="45" fill={themeColor('text')} />
                 </View>
             </TouchableOpacity>
         );
