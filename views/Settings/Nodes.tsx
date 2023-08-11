@@ -109,6 +109,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 }
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={30}
             />
         );
 

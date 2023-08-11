@@ -294,7 +294,8 @@ const AppScenes = {
         screen: AddContacts
     },
     ContactDetails: {
-        screen: ContactDetails,
+        screen: ContactDetails
+    },
     LspExplanation: {
         screen: LspExplanation
     },

@@ -837,6 +837,7 @@ export default class Receive extends React.Component<
                 onPress={() => InvoicesStore.clearUnified()}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={30}
             />
         );
 
@@ -846,6 +847,7 @@ export default class Receive extends React.Component<
                 onPress={() => this.refs.modal.open()}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={30}
             />
         );
 
@@ -1497,31 +1499,36 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
-                                    {BackendUtils.supportsAMP() && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.secondaryText,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    top: 20
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Receive.ampInvoice'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={ampInvoice}
-                                                onValueChange={() =>
-                                                    this.setState({
-                                                        ampInvoice: !ampInvoice
-                                                    })
-                                                }
-                                            />
-                                        </>
-                                    )}
+                                    {BackendUtils.supportsAMP() &&
+                                        !(
+                                            BackendUtils.supportsLSPs() &&
+                                            settings?.enableLSP
+                                        ) && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.secondaryText,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        top: 20
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Receive.ampInvoice'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={ampInvoice}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            ampInvoice:
+                                                                !ampInvoice
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )}
 
                                     <View style={styles.button}>
                                         <Button
