@@ -436,9 +436,9 @@ export default class ChannelsStore {
                     // handle error
                     if (
                         error.toString() &&
-                        error.toString().includes('already') &&
-                        !connectPeerOnly
+                        error.toString().includes('already')
                     ) {
+                        if (!connectPeerOnly) this.channelRequest = request;
                         resolve(true);
                     } else {
                         this.errorMsgPeer = error.toString();
