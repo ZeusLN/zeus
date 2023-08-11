@@ -80,7 +80,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 onPress={() =>
                     navigation.navigate('AddNotes', { getRPreimage: noteKey })
                 }
-                style={{ marginTop: -6, alignSelf: 'center', marginRight: 6 }}
+                style={{ marginTop: -6, alignSelf: 'center', marginRight: 14 }}
             >
                 <EditNotes height={40} width={40} />
             </TouchableOpacity>
