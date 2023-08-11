@@ -407,8 +407,10 @@ export default class ChannelsStore {
     @action
     public connectPeer = async (
         request: OpenChannelRequest,
-        perm?: boolean
+        perm?: boolean,
+        connectPeerOnly?: boolean
     ) => {
+        this.channelRequest = undefined;
         this.connectingToPeer = true;
 
         return await new Promise((resolve, reject) => {
@@ -423,7 +425,7 @@ export default class ChannelsStore {
                     this.errorPeerConnect = false;
                     this.connectingToPeer = false;
                     this.errorMsgPeer = null;
-                    this.channelRequest = request;
+                    if (!connectPeerOnly) this.channelRequest = request;
                     this.peerSuccess = true;
                     resolve(true);
                 })
@@ -434,9 +436,9 @@ export default class ChannelsStore {
                     // handle error
                     if (
                         error.toString() &&
-                        error.toString().includes('already')
+                        error.toString().includes('already') &&
+                        !connectPeerOnly
                     ) {
-                        this.channelRequest = request;
                         resolve(true);
                     } else {
                         this.errorMsgPeer = error.toString();
