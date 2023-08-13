@@ -582,6 +582,9 @@ export const LNDHUB_AUTH_MODES = [
     { key: 'Alby', value: 'Alby' }
 ];
 
+const DEFAULT_LSP_MAINNET = 'https://lsp-preview.lnolymp.us';
+const DEFAULT_LSP_TESTNET = 'https://testnet-lsp.lnolymp.us';
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -636,8 +639,8 @@ export default class SettingsStore {
         bimodalPathfinding: false,
         // LSP
         enableLSP: true,
-        lspMainnet: 'https://lsp-preview.lnolymp.us',
-        lspTestnet: 'https://testnet-lsp.lnolymp.us',
+        lspMainnet: DEFAULT_LSP_MAINNET,
+        lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: ''
     };
     @observable public posStatus: string = 'unselected';
@@ -824,6 +827,14 @@ export default class SettingsStore {
                     this.settings.fiatEnabled = false;
                 } else if (this.settings.fiatEnabled == null) {
                     this.settings.fiatEnabled = true;
+                }
+
+                // set default LSPs if not defined
+                if (!this.settings.lspMainnet) {
+                    this.settings.lspMainnet = DEFAULT_LSP_MAINNET;
+                }
+                if (!this.settings.lspTestnet) {
+                    this.settings.lspTestnet = DEFAULT_LSP_TESTNET;
                 }
 
                 const node: any =
