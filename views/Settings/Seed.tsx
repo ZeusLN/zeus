@@ -86,7 +86,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         showModal: false
     };
 
-    componentDidMount() {
+    UNSAFE_componentWillMount() {
         // make sure we have latest settings and the seed phrase is accessible
         this.props.SettingsStore.getSettings();
     }
@@ -116,7 +116,9 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         }
                     }}
                     rightComponent={
-                        understood ? DangerouslyCopySeed : undefined
+                        understood && seedPhrase
+                            ? DangerouslyCopySeed
+                            : undefined
                     }
                     navigation={navigation}
                 />
