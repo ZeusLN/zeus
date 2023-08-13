@@ -327,9 +327,7 @@ export default class ChannelsStore {
                                 pending.channel.forceClose = true;
                                 pending.channel.closing_txid =
                                     pending.closing_txid;
-                                const a = new Channel(pending.channel);
-                                console.log('a', a);
-                                return a;
+                                return new Channel(pending.channel);
                             }
                         );
                     const waitCloseChannels = data.waiting_close_channels.map(
