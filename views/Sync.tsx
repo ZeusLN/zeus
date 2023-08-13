@@ -24,6 +24,7 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
         const { navigation, SyncStore } = this.props;
         const { bestBlockHeight, currentBlockHeight, numBlocksUntilSynced } =
             SyncStore;
+
         return (
             <Screen>
                 <Header
@@ -43,10 +44,12 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                             value={
                                 currentBlockHeight && bestBlockHeight
                                     ? Number(
-                                          (currentBlockHeight /
-                                              bestBlockHeight) *
-                                              100
-                                      )
+                                          Math.floor(
+                                              (currentBlockHeight /
+                                                  bestBlockHeight) *
+                                                  1000
+                                          ) / 1000
+                                      ) * 100
                                     : 0
                             }
                             radius={120}
@@ -89,7 +92,7 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                             value={bestBlockHeight}
                         />
                     )}
-                    {numBlocksUntilSynced && (
+                    {numBlocksUntilSynced && numBlocksUntilSynced > 0 && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Sync.numBlocksUntilSynced'

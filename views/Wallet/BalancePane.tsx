@@ -213,17 +213,20 @@ export default class BalancePane extends React.PureComponent<
                                             }}
                                         >
                                             <LinearProgress
-                                                value={Number(
-                                                    currentBlockHeight /
-                                                        bestBlockHeight
-                                                )}
+                                                value={
+                                                    Math.floor(
+                                                        (currentBlockHeight /
+                                                            bestBlockHeight) *
+                                                            100
+                                                    ) / 100
+                                                }
                                                 variant="determinate"
                                                 color={themeColor('highlight')}
                                                 trackColor={themeColor(
                                                     'secondaryBackground'
                                                 )}
                                                 style={{
-                                                    width: '80%'
+                                                    width: '84%'
                                                 }}
                                             />
                                             <Text
@@ -234,13 +237,11 @@ export default class BalancePane extends React.PureComponent<
                                                     marginLeft: 14
                                                 }}
                                             >
-                                                {`~${Number(
+                                                {`${Math.floor(
                                                     (currentBlockHeight /
                                                         bestBlockHeight) *
                                                         100
-                                                )
-                                                    .toFixed(0)
-                                                    .toString()}%`}
+                                                ).toString()}%`}
                                             </Text>
                                         </View>
                                     )}
