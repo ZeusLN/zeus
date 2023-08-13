@@ -647,6 +647,8 @@
     "views.Settings.EmbeddedNode.resetExpressGraphSyncOnStartup.subtitle": "Force a new download of the express graph sync data on startup.",
     "views.Settings.EmbeddedNode.bimodalPathfinding": "Bimodal Pathfinding",
     "views.Settings.EmbeddedNode.bimodalPathfinding.subtitle": "Use the bimodal probability estimator, instead of the default apriori estimator, when attempting to make payments. Restart the app to take effect.",
+    "views.Settings.EmbeddedNode.rescan": "Rescan wallet",
+    "views.Settings.EmbeddedNode.rescan.subtitle": "Rescan the wallet for wallet transactions. Restart the app to take effect. Will be unset upon completion.",
     "views.Settings.EmbeddedNode.resetMissionControl": "Reset payment routing profile",
     "views.Settings.EmbeddedNode.resetMissionControl.subtitle": "This will reset the mission control state. Can be helpful if you are having issues finding routes while making payments.",
     "views.Settings.EmbeddedNode.exportAllChannelBackups": "Export channels backup",

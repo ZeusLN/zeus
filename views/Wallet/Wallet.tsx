@@ -287,9 +287,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             connect,
             posStatus,
             walletPassword,
-            embeddedLndNetwork
+            embeddedLndNetwork,
+            updateSettings
         } = SettingsStore;
-        const { fiatEnabled, pos } = settings;
+        const { fiatEnabled, pos, rescan } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
 
         if (pos && pos.squareEnabled && posStatus === 'active')
@@ -301,7 +302,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
-                await initializeLnd(embeddedLndNetwork === 'Testnet');
+                await initializeLnd(embeddedLndNetwork === 'Testnet', rescan);
                 if (expressGraphSyncEnabled) await expressGraphSync();
                 await startLnd(walletPassword);
             }
@@ -310,6 +311,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             await BalanceStore.getCombinedBalance();
             if (BackendUtils.supportsChannelManagement())
                 ChannelsStore.getChannels();
+            if (rescan) {
+                await updateSettings({
+                    rescan: false
+                });
+            }
         } else if (implementation === 'lndhub') {
             if (connecting) {
                 await login({ login: username, password }).then(async () => {

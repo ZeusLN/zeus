@@ -93,6 +93,7 @@ export interface Settings {
     expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
     bimodalPathfinding: boolean;
+    rescan: boolean;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -637,6 +638,7 @@ export default class SettingsStore {
         resetExpressGraphSyncOnStartup: false,
         // embedded node
         bimodalPathfinding: false,
+        rescan: false,
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,

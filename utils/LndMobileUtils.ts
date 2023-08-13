@@ -62,7 +62,7 @@ export function checkLndStreamErrorResponse(
     return null;
 }
 
-const writeLndConfig = async (isTestnet?: boolean) => {
+const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
     const { writeConfig } = lndMobile.index;
 
     const config = `[Application Options]
@@ -72,6 +72,7 @@ const writeLndConfig = async (isTestnet?: boolean) => {
     accept-keysend=1
     tlsdisableautofill=1
     maxpendingchannels=1000
+    ${rescan ? 'reset-wallet-transactions=true' : ''}
     
     [db]
     db.no-graph-cache=false
@@ -164,10 +165,10 @@ export async function expressGraphSync() {
     return;
 }
 
-export async function initializeLnd(isTestnet?: boolean) {
+export async function initializeLnd(isTestnet?: boolean, rescan?: boolean) {
     const { initialize } = lndMobile.index;
 
-    await writeLndConfig(isTestnet);
+    await writeLndConfig(isTestnet, rescan);
     await initialize();
 }
 
