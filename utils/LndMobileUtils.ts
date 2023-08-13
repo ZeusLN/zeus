@@ -132,26 +132,33 @@ const writeLndConfig = async (isTestnet?: boolean) => {
 };
 
 export async function expressGraphSync() {
-    if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
-        log.d('Clearing speedloader files');
-        try {
-            // TODO(hsjoberg): LndMobileTools should be injected
-            await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderLastrunFile();
-            await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderDgraphDirectory();
-        } catch (error) {
-            log.e('Gossip files deletion failed', [error]);
-        }
-    }
     if (stores.settingsStore.embeddedLndNetwork === 'Mainnet') {
+        const start = new Date();
         stores.syncStore.setExpressGraphSyncStatus(true);
-        // check connection type and whether user has allowed EGS on mobile
-        const connectionState = stores.settingsStore?.settings
-            ?.expressGraphSyncMobile
-            ? { type: 'wifi' }
-            : await NetInfo.fetch();
-        console.log('~~starting gossip', connectionState.type);
-        const gossipStatus = await gossipSync(connectionState.type);
-        console.log('~~gossipStatus', gossipStatus);
+        if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
+            log.d('Clearing speedloader files');
+            try {
+                await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderLastrunFile();
+                await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderDgraphDirectory();
+            } catch (error) {
+                log.e('Gossip files deletion failed', [error]);
+            }
+        }
+
+        try {
+            // check connection type and whether user has allowed EGS on mobile
+            const connectionState = stores.settingsStore?.settings
+                ?.expressGraphSyncMobile
+                ? { type: 'wifi' }
+                : await NetInfo.fetch();
+            const gossipStatus = await gossipSync(connectionState.type);
+            const completionTime =
+                (new Date().getTime() - start.getTime()) / 1000 + 's';
+            console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
+        } catch (e) {
+            log.e('GossipSync exception!', [e]);
+        }
+
         stores.syncStore.setExpressGraphSyncStatus(false);
     }
     return;
