@@ -754,5 +754,5 @@
     "views.LspExplanation.text2": "Once the channel is set up, you'll only have to pay normal network fees until your channel exhausts its capacity.",
     "views.LspExplanation.buttonText": "Learn more about liquidity",
     "views.LspExplanationRouting.text1": "In order to provide you with some privacy and improve payment performance, the Lightning Service Provider (LSP) will do some heavy lifting for you with a technique called invoice wrapping. The fee is nominal; it's typically just a few satoshis.",
-    "views.LspExplanationRouting.text2": "You can turn off the LSP entirely and save on these fees by navigating to Settings > Lightning Service Provider (LSP), but you will sacfrifice these privacy and payment performance gains."
+    "views.LspExplanationRouting.text2": "You can turn off the LSP entirely and save on these fees by navigating to Settings > Lightning Service Provider (LSP), but you will sacrifice these privacy and payment performance gains."
 }
