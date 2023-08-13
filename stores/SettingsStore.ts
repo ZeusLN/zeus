@@ -810,8 +810,8 @@ export default class SettingsStore {
     }
 
     @action
-    public async getSettings() {
-        this.loading = true;
+    public async getSettings(silentUpdate: boolean = false) {
+        if (!silentUpdate) this.loading = true;
         try {
             // Retrieve the settings
             const settings = await EncryptedStorage.getItem(STORAGE_KEY);
@@ -868,7 +868,7 @@ export default class SettingsStore {
         } catch (error) {
             console.error('Could not load settings', error);
         } finally {
-            this.loading = false;
+            if (!silentUpdate) this.loading = false;
         }
 
         return this.settings;
@@ -892,8 +892,9 @@ export default class SettingsStore {
         };
 
         await this.setSettings(JSON.stringify(newSettings));
-        this.settings = newSettings;
-        return this.settings;
+        // ensure we get the enhanced settings set
+        const settings = await this.getSettings(true);
+        return settings;
     };
 
     // LNDHub
