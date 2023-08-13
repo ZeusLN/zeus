@@ -86,6 +86,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         showModal: false
     };
 
+    componentDidMount() {
+        // make sure we have latest settings and the seed phrase is accessible
+        this.props.SettingsStore.getSettings();
+    }
+
     render() {
         const { navigation, SettingsStore } = this.props;
         const { understood, showModal } = this.state;
@@ -269,17 +274,18 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                     flexDirection: 'row'
                                 }}
                             >
-                                {seedPhrase.map(
-                                    (word: string, index: number) => {
-                                        return (
-                                            <MnemonicWord
-                                                index={index}
-                                                word={word}
-                                                key={`mnemonic-${index}`}
-                                            />
-                                        );
-                                    }
-                                )}
+                                {seedPhrase &&
+                                    seedPhrase.map(
+                                        (word: string, index: number) => {
+                                            return (
+                                                <MnemonicWord
+                                                    index={index}
+                                                    word={word}
+                                                    key={`mnemonic-${index}`}
+                                                />
+                                            );
+                                        }
+                                    )}
                             </View>
                         </ScrollView>
                         <View
