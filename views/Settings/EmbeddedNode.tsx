@@ -28,6 +28,7 @@ interface EmbeddedNodeState {
     expressGraphSyncMobile: boolean | undefined;
     resetExpressGraphSyncOnStartup: boolean | undefined;
     bimodalPathfinding: boolean | undefined;
+    rescan: boolean | undefined;
     resetMissionControlSuccess: boolean | undefined;
     channelBackupCopied: boolean | undefined;
 }
@@ -44,7 +45,8 @@ export default class EmbeddedNode extends React.Component<
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: false,
         resetMissionControlSuccess: false,
-        channelBackupCopied: false
+        channelBackupCopied: false,
+        rescan: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -56,7 +58,8 @@ export default class EmbeddedNode extends React.Component<
             expressGraphSyncMobile: settings.expressGraphSyncMobile,
             resetExpressGraphSyncOnStartup:
                 settings.resetExpressGraphSyncOnStartup,
-            bimodalPathfinding: settings.bimodalPathfinding
+            bimodalPathfinding: settings.bimodalPathfinding,
+            rescan: settings.rescan
         });
     }
 
@@ -68,7 +71,8 @@ export default class EmbeddedNode extends React.Component<
             resetExpressGraphSyncOnStartup,
             bimodalPathfinding,
             resetMissionControlSuccess,
-            channelBackupCopied
+            channelBackupCopied,
+            rescan
         } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
 
@@ -325,6 +329,59 @@ export default class EmbeddedNode extends React.Component<
                                 >
                                     {localeString(
                                         'views.Settings.EmbeddedNode.bimodalPathfinding.subtitle'
+                                    )}
+                                </Text>
+                            </View>
+                        </>
+                        <>
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: 'transparent'
+                                }}
+                            >
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.rescan'
+                                    )}
+                                </ListItem.Title>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    <Switch
+                                        value={rescan}
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                rescan: !rescan
+                                            });
+                                            await updateSettings({
+                                                rescan: !rescan
+                                            });
+                                        }}
+                                    />
+                                </View>
+                            </ListItem>
+                            <View
+                                style={{
+                                    margin: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.rescan.subtitle'
                                     )}
                                 </Text>
                             </View>
