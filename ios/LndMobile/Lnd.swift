@@ -98,6 +98,7 @@ open class Lnd {
     "PendingChannels": { bytes, cb in LndmobilePendingChannels(bytes, cb) },
     "ClosedChannels": { bytes, cb in LndmobileClosedChannels(bytes, cb) },
     "ExportAllChannelBackups": { bytes, cb in LndmobileExportAllChannelBackups(bytes, cb) },
+    "RestoreChannelBackups": { bytes, cb in LndmobileRestoreChannelBackups(bytes, cb) },
     "VerifyChanBackup": { bytes, cb in LndmobileVerifyChanBackup(bytes, cb) },
     "GetChanInfo": { bytes, cb in LndmobileGetChanInfo(bytes, cb) },
     "AbandonChannel": { bytes, cb in LndmobileAbandonChannel(bytes, cb) },

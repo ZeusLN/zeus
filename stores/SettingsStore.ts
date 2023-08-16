@@ -89,11 +89,13 @@ export interface Settings {
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
     // Embedded node
+    automaticChannelBackups: boolean;
     expressGraphSync: boolean;
     expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
     bimodalPathfinding: boolean;
     rescan: boolean;
+    recovery: boolean;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -632,13 +634,14 @@ export default class SettingsStore {
         fiatEnabled: false,
         fiat: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
-        // EGS
+        // embedded node
+        automaticChannelBackups: true,
         expressGraphSync: false,
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
-        // embedded node
         bimodalPathfinding: false,
         rescan: false,
+        recovery: false,
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
@@ -837,6 +840,11 @@ export default class SettingsStore {
                 }
                 if (!this.settings.lspTestnet) {
                     this.settings.lspTestnet = DEFAULT_LSP_TESTNET;
+                }
+
+                // default automatic channel backups to on
+                if (this.settings.automaticChannelBackups !== false) {
+                    this.settings.automaticChannelBackups = true;
                 }
 
                 const node: any =

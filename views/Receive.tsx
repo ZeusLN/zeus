@@ -372,14 +372,6 @@ export default class Receive extends React.Component<
                 onChainAddress?: string;
             }) => {
                 this.subscribeInvoice(rHash, onChainAddress);
-
-                // TODO LSP conditions
-                if (
-                    BackendUtils.supportsLSPs() &&
-                    this.props.SettingsStore.settings?.enableLSP
-                ) {
-                    this.props.LSPStore.initChannelAcceptor();
-                }
             }
         );
     };
@@ -1565,13 +1557,6 @@ export default class Receive extends React.Component<
                                                             rHash,
                                                             onChainAddress
                                                         );
-
-                                                        if (
-                                                            BackendUtils.supportsLSPs() &&
-                                                            settings?.enableLSP
-                                                        ) {
-                                                            this.props.LSPStore.initChannelAcceptor();
-                                                        }
                                                     }
                                                 );
                                             }}
