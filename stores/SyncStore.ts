@@ -10,6 +10,7 @@ import SettingsStore from './SettingsStore';
 
 export default class SyncStore {
     @observable public isSyncing: boolean = false;
+    @observable public syncStatusUpdatesPaused: boolean = false;
     @observable public isInExpressGraphSync: boolean = false;
     @observable public bestBlockHeight: number;
     @observable public initialKnownBlockHeight: number;
@@ -58,9 +59,20 @@ export default class SyncStore {
     };
 
     @action
-    public startSyncing = () => {
+    public pauseSyncingUpates = () => {
+        this.syncStatusUpdatesPaused = true;
+    };
+
+    @action
+    public resumeSyncingUpates = () => {
+        this.syncStatusUpdatesPaused = false;
+        this.startSyncing(true);
+    };
+
+    @action
+    public startSyncing = (skipWait?: boolean) => {
         this.isSyncing = true;
-        sleep(6000);
+        if (!skipWait) sleep(6000);
 
         ReactNativeBlobUtil.fetch(
             'get',
@@ -78,7 +90,10 @@ export default class SyncStore {
                     // initial fetch
                     await this.getNodeInfo().then(() => this.setSyncInfo(true));
 
-                    while (this.numBlocksUntilSynced > 0) {
+                    while (
+                        this.numBlocksUntilSynced > 0 &&
+                        !this.syncStatusUpdatesPaused
+                    ) {
                         sleep(2000);
                         await this.getNodeInfo().then(() => this.setSyncInfo());
                     }

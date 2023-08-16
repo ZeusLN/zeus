@@ -23,6 +23,7 @@ import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
+import SyncStore from '../../stores/SyncStore';
 import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
@@ -33,13 +34,14 @@ interface ActivityProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
+    SyncStore: SyncStore;
 }
 
 interface ActivityState {
     selectedPaymentForOrder: any;
 }
 
-@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore')
+@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore', 'SyncStore')
 @observer
 export default class Activity extends React.PureComponent<
     ActivityProps,
@@ -53,12 +55,19 @@ export default class Activity extends React.PureComponent<
     };
 
     async UNSAFE_componentWillMount() {
-        const { ActivityStore, SettingsStore } = this.props;
+        const { ActivityStore, SettingsStore, SyncStore } = this.props;
         const { getActivityAndFilter, getFilters } = ActivityStore;
         const filters = await getFilters();
         await getActivityAndFilter(filters);
         if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribeEvents();
+        }
+
+        // pause syncing updates if necessary
+        const { isSyncing, syncStatusUpdatesPaused, pauseSyncingUpates } =
+            SyncStore;
+        if (isSyncing && !syncStatusUpdatesPaused) {
+            pauseSyncingUpates();
         }
     }
 

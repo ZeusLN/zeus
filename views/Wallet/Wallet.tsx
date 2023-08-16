@@ -283,7 +283,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             PosStore,
             FiatStore,
             LSPStore,
-            ChannelBackupStore
+            ChannelBackupStore,
+            SyncStore
         } = this.props;
         const {
             settings,
@@ -299,6 +300,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             embeddedLndNetwork,
             updateSettings
         } = SettingsStore;
+        const { isSyncing, syncStatusUpdatesPaused, resumeSyncingUpates } =
+            SyncStore;
         const { fiatEnabled, pos, rescan, recovery } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
 
@@ -341,6 +344,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 await updateSettings({
                     recovery: false
                 });
+            }
+
+            if (isSyncing && syncStatusUpdatesPaused) {
+                resumeSyncingUpates();
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {
