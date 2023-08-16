@@ -43,6 +43,8 @@ import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import ModalStore from '../../stores/ModalStore';
 import SyncStore from '../../stores/SyncStore';
+import LSPStore from '../../stores/LSPStore';
+import ChannelBackupStore from '../../stores/ChannelBackupStore';
 
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
@@ -57,6 +59,7 @@ import {
     startLnd,
     expressGraphSync
 } from '../../utils/LndMobileUtils';
+
 interface WalletProps {
     enterSetup: any;
     exitTransaction: any;
@@ -71,6 +74,8 @@ interface WalletProps {
     UTXOsStore: UTXOsStore;
     ModalStore: ModalStore;
     SyncStore: SyncStore;
+    LSPStore: LSPStore;
+    ChannelBackupStore: ChannelBackupStore;
 }
 
 interface WalletState {
@@ -88,7 +93,9 @@ interface WalletState {
     'PosStore',
     'UTXOsStore',
     'ModalStore',
-    'SyncStore'
+    'SyncStore',
+    'LSPStore',
+    'ChannelBackupStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -274,7 +281,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore,
             SettingsStore,
             PosStore,
-            FiatStore
+            FiatStore,
+            LSPStore,
+            ChannelBackupStore
         } = this.props;
         const {
             settings,
@@ -290,7 +299,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             embeddedLndNetwork,
             updateSettings
         } = SettingsStore;
-        const { fiatEnabled, pos, rescan } = settings;
+        const { fiatEnabled, pos, rescan, recovery } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
 
         if (pos && pos.squareEnabled && posStatus === 'active')
@@ -306,6 +315,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (expressGraphSyncEnabled) await expressGraphSync();
                 await startLnd(walletPassword);
             }
+            if (SettingsStore.settings.automaticChannelBackups)
+                ChannelBackupStore.initSubscribeChannelEvents();
+            if (
+                BackendUtils.supportsLSPs() &&
+                SettingsStore.settings.enableLSP
+            ) {
+                LSPStore.initChannelAcceptor();
+            }
             NodeInfoStore.getNodeInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance();
@@ -314,6 +331,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (rescan) {
                 await updateSettings({
                     rescan: false
+                });
+            }
+            if (recovery) {
+                try {
+                    await ChannelBackupStore.recoverStaticChannelBackup();
+                } catch (e) {}
+
+                await updateSettings({
+                    recovery: false
                 });
             }
         } else if (implementation === 'lndhub') {

@@ -1441,6 +1441,15 @@ export default class NodeConfiguration extends React.Component<
                                                     seed,
                                                     randomBase64
                                                 }: any = response;
+
+                                                if (recoveryCipherSeed) {
+                                                    this.props.SettingsStore.updateSettings(
+                                                        {
+                                                            recovery: true
+                                                        }
+                                                    );
+                                                }
+
                                                 if (
                                                     wallet &&
                                                     wallet.admin_macaroon

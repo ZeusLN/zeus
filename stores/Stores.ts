@@ -17,6 +17,7 @@ import ModalStore from './ModalStore';
 import NotesStore from './NotesStore';
 import SyncStore from './SyncStore';
 import LSPStore from './LSPStore';
+import ChannelBackupStore from './ChannelBackupStore';
 
 class Stores {
     public channelsStore: ChannelsStore;
@@ -38,6 +39,7 @@ class Stores {
     public notesStore: NotesStore;
     public syncStore: SyncStore;
     public lspStore: LSPStore;
+    public channelBackupStore: ChannelBackupStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
@@ -46,12 +48,15 @@ class Stores {
         this.channelsStore = new ChannelsStore(this.settingsStore);
         this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
         this.lspStore = new LSPStore(this.settingsStore);
+        this.channelBackupStore = new ChannelBackupStore(
+            this.nodeInfoStore,
+            this.settingsStore
+        );
         this.invoicesStore = new InvoicesStore(
             this.settingsStore,
             this.lspStore,
             this.channelsStore
         );
-        this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
         this.transactionsStore = new TransactionsStore(this.settingsStore);
         this.balanceStore = new BalanceStore(this.settingsStore);
         this.unitsStore = new UnitsStore(this.settingsStore, this.fiatStore);
