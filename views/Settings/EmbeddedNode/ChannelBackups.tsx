@@ -403,6 +403,13 @@ export default class ChannelBackups extends React.Component<
                                             );
                                         }
                                     }}
+                                    containerStyle={{
+                                        borderColor: themeColor('delete')
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('delete')
+                                    }}
+                                    secondary
                                 />
                             </View>
                             <View
