@@ -89,7 +89,7 @@ export interface Settings {
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
     // Embedded node
-    automaticChannelBackups: boolean;
+    automaticDisasterRecoveryBackup: boolean;
     expressGraphSync: boolean;
     expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
@@ -665,7 +665,7 @@ export default class SettingsStore {
         fiat: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
         // embedded node
-        automaticChannelBackups: true,
+        automaticDisasterRecoveryBackup: true,
         expressGraphSync: false,
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
@@ -873,8 +873,8 @@ export default class SettingsStore {
                 }
 
                 // default automatic channel backups to on
-                if (this.settings.automaticChannelBackups !== false) {
-                    this.settings.automaticChannelBackups = true;
+                if (this.settings.automaticDisasterRecoveryBackup !== false) {
+                    this.settings.automaticDisasterRecoveryBackup = true;
                 }
 
                 // migrate locale to ISO 639-1

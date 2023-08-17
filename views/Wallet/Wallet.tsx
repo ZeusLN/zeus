@@ -318,7 +318,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (expressGraphSyncEnabled) await expressGraphSync();
                 await startLnd(walletPassword);
             }
-            if (SettingsStore.settings.automaticChannelBackups)
+            if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                 ChannelBackupStore.initSubscribeChannelEvents();
             if (
                 BackendUtils.supportsLSPs() &&

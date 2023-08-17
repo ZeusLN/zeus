@@ -942,7 +942,7 @@ export default class NodeConfiguration extends React.Component<
                                         }}
                                     >
                                         {`${localeString(
-                                            'views.Settings.AddEditNode.channelBackupsBase64'
+                                            'views.Settings.AddEditNode.disasterRecoveryBase64'
                                         )} (${localeString(
                                             'general.optional'
                                         )})`}

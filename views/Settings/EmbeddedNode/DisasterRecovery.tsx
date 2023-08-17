@@ -20,39 +20,39 @@ import { exportAllChannelBackups } from '../../../lndmobile/channel';
 import stores from '../../../stores/Stores';
 import KeyValue from '../../../components/KeyValue';
 
-interface ChannelBackupsProps {
+interface DisasterRecoveryProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface ChannelBackupsState {
-    automaticChannelBackups: boolean | undefined;
-    channelBackupCopied: boolean | undefined;
-    channelBackupRecovered: boolean | undefined;
-    channelBackupRecoveredError: boolean | undefined;
-    channelBackupRecoveredErrorMessage: string;
-    channelBackupOlympus: boolean | undefined;
-    channelBackupOlympusError: boolean | undefined;
-    lastChannelBackupStatus: string;
-    lastChannelBackupTime: string;
+interface DisasterRecoveryState {
+    automaticDisasterRecoveryBackup: boolean | undefined;
+    disasterRecoveryCopied: boolean | undefined;
+    disasterRecoveryFileRecovered: boolean | undefined;
+    disasterRecoveryFileRecoveredError: boolean | undefined;
+    disasterRecoveryFileRecoveredErrorMessage: string;
+    disasterRecoveryBackupOlympus: boolean | undefined;
+    disasterRecoveryBackupOlympusError: boolean | undefined;
+    lastDisasterRecoveryBackupStatus: string;
+    lastDisasterRecoveryBackupTime: string;
 }
 
 @inject('SettingsStore')
 @observer
-export default class ChannelBackups extends React.Component<
-    ChannelBackupsProps,
-    ChannelBackupsState
+export default class DisasterRecovery extends React.Component<
+    DisasterRecoveryProps,
+    DisasterRecoveryState
 > {
     state = {
-        automaticChannelBackups: true,
-        channelBackupCopied: false,
-        channelBackupRecovered: false,
-        channelBackupRecoveredError: false,
-        channelBackupRecoveredErrorMessage: '',
-        channelBackupOlympus: false,
-        channelBackupOlympusError: false,
-        lastChannelBackupStatus: '',
-        lastChannelBackupTime: ''
+        automaticDisasterRecoveryBackup: true,
+        disasterRecoveryCopied: false,
+        disasterRecoveryFileRecovered: false,
+        disasterRecoveryFileRecoveredError: false,
+        disasterRecoveryFileRecoveredErrorMessage: '',
+        disasterRecoveryBackupOlympus: false,
+        disasterRecoveryBackupOlympusError: false,
+        lastDisasterRecoveryBackupStatus: '',
+        lastDisasterRecoveryBackupTime: ''
     };
 
     UNSAFE_componentWillMount() {
@@ -60,60 +60,61 @@ export default class ChannelBackups extends React.Component<
         const { settings } = SettingsStore;
 
         this.setState({
-            automaticChannelBackups: settings.automaticChannelBackups
+            automaticDisasterRecoveryBackup:
+                settings.automaticDisasterRecoveryBackup
         });
 
         this.getLastBackupStatus();
     }
 
     getLastBackupStatus = async () => {
-        const lastChannelBackupStatus =
+        const lastDisasterRecoveryBackupStatus =
             (await EncryptedStorage.getItem('LAST_CHANNEL_BACKUP_STATUS')) ||
             '';
-        const lastChannelBackupTime =
+        const lastDisasterRecoveryBackupTime =
             (await EncryptedStorage.getItem('LAST_CHANNEL_BACKUP_TIME')) || '';
 
         this.setState({
-            lastChannelBackupStatus,
-            lastChannelBackupTime
+            lastDisasterRecoveryBackupStatus,
+            lastDisasterRecoveryBackupTime
         });
     };
 
     render() {
         const { navigation, SettingsStore } = this.props;
         const {
-            automaticChannelBackups,
-            channelBackupCopied,
-            channelBackupOlympus,
-            channelBackupOlympusError,
-            channelBackupRecovered,
-            channelBackupRecoveredError,
-            channelBackupRecoveredErrorMessage,
-            lastChannelBackupStatus,
-            lastChannelBackupTime
+            automaticDisasterRecoveryBackup,
+            disasterRecoveryCopied,
+            disasterRecoveryBackupOlympus,
+            disasterRecoveryBackupOlympusError,
+            disasterRecoveryFileRecovered,
+            disasterRecoveryFileRecoveredError,
+            disasterRecoveryFileRecoveredErrorMessage,
+            lastDisasterRecoveryBackupStatus,
+            lastDisasterRecoveryBackupTime
         } = this.state;
         const { updateSettings }: any = SettingsStore;
 
         const setChannelBackupRecoveredError = () => {
             this.setState({
-                channelBackupRecoveredError: true
+                disasterRecoveryFileRecoveredError: true
             });
 
             setTimeout(() => {
                 this.setState({
-                    channelBackupRecoveredError: false
+                    disasterRecoveryFileRecoveredError: false
                 });
             }, 5000);
         };
 
         const setChannelBackupRecoveredErrorMessage = (error: string) => {
             this.setState({
-                channelBackupRecoveredErrorMessage: error
+                disasterRecoveryFileRecoveredErrorMessage: error
             });
 
             setTimeout(() => {
                 this.setState({
-                    channelBackupRecoveredErrorMessage: ''
+                    disasterRecoveryFileRecoveredErrorMessage: ''
                 });
             }, 5000);
         };
@@ -125,7 +126,7 @@ export default class ChannelBackups extends React.Component<
                         leftComponent="Back"
                         centerComponent={{
                             text: localeString(
-                                'views.Settings.EmbeddedNode.ChannelBackups.title'
+                                'views.Settings.EmbeddedNode.DisasterRecovery.title'
                             ),
                             style: {
                                 color: themeColor('text'),
@@ -136,14 +137,14 @@ export default class ChannelBackups extends React.Component<
                     />
                     <ScrollView>
                         <>
-                            {lastChannelBackupStatus && (
+                            {lastDisasterRecoveryBackupStatus && (
                                 <View style={{ margin: 10 }}>
                                     <KeyValue
                                         keyValue={localeString(
-                                            'views.Settings.EmbeddedNode.ChannelBackups.lastStatus'
+                                            'views.Settings.EmbeddedNode.DisasterRecovery.lastStatus'
                                         )}
                                         value={
-                                            lastChannelBackupStatus ===
+                                            lastDisasterRecoveryBackupStatus ===
                                             'SUCCESS'
                                                 ? localeString(
                                                       'general.success'
@@ -151,7 +152,7 @@ export default class ChannelBackups extends React.Component<
                                                 : localeString('general.error')
                                         }
                                         color={
-                                            lastChannelBackupStatus ===
+                                            lastDisasterRecoveryBackupStatus ===
                                             'SUCCESS'
                                                 ? 'green'
                                                 : 'red'
@@ -159,9 +160,9 @@ export default class ChannelBackups extends React.Component<
                                     />
                                     <KeyValue
                                         keyValue={localeString(
-                                            'views.Settings.EmbeddedNode.ChannelBackups.lastTime'
+                                            'views.Settings.EmbeddedNode.DisasterRecovery.lastTime'
                                         )}
-                                        value={lastChannelBackupTime}
+                                        value={lastDisasterRecoveryBackupTime}
                                     />
                                 </View>
                             )}
@@ -178,7 +179,7 @@ export default class ChannelBackups extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.EmbeddedNode.automaticChannelBackups'
+                                        'views.Settings.EmbeddedNode.automaticDisasterRecoveryBackup'
                                     )}
                                 </ListItem.Title>
                                 <View
@@ -189,15 +190,15 @@ export default class ChannelBackups extends React.Component<
                                     }}
                                 >
                                     <Switch
-                                        value={automaticChannelBackups}
+                                        value={automaticDisasterRecoveryBackup}
                                         onValueChange={async () => {
                                             this.setState({
-                                                automaticChannelBackups:
-                                                    !automaticChannelBackups
+                                                automaticDisasterRecoveryBackup:
+                                                    !automaticDisasterRecoveryBackup
                                             });
                                             await updateSettings({
-                                                automaticChannelBackups:
-                                                    !automaticChannelBackups
+                                                automaticDisasterRecoveryBackup:
+                                                    !automaticDisasterRecoveryBackup
                                             });
                                         }}
                                     />
@@ -214,7 +215,7 @@ export default class ChannelBackups extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.EmbeddedNode.automaticChannelBackups.subtitle'
+                                        'views.Settings.EmbeddedNode.automaticDisasterRecoveryBackup.subtitle'
                                     )}
                                 </Text>
                             </View>
@@ -223,12 +224,12 @@ export default class ChannelBackups extends React.Component<
                             <View style={{ margin: 10 }}>
                                 <Button
                                     title={
-                                        channelBackupCopied
+                                        disasterRecoveryCopied
                                             ? localeString(
                                                   'components.CopyButton.copied'
                                               )
                                             : localeString(
-                                                  'views.Settings.EmbeddedNode.exportAllChannelBackups'
+                                                  'views.Settings.EmbeddedNode.clipboardDisasterRecovery'
                                               )
                                     }
                                     onPress={async () => {
@@ -253,13 +254,13 @@ export default class ChannelBackups extends React.Component<
                                                     );
 
                                                     this.setState({
-                                                        channelBackupCopied:
+                                                        disasterRecoveryCopied:
                                                             true
                                                     });
 
                                                     setTimeout(() => {
                                                         this.setState({
-                                                            channelBackupCopied:
+                                                            disasterRecoveryCopied:
                                                                 false
                                                         });
                                                     }, 5000);
@@ -267,7 +268,7 @@ export default class ChannelBackups extends React.Component<
                                             }
                                         } catch (e) {
                                             console.log(
-                                                'Error on exportAllChannelBackups:',
+                                                'Error on clipboardDisasterRecovery:',
                                                 e
                                             );
                                         }
@@ -285,7 +286,7 @@ export default class ChannelBackups extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.EmbeddedNode.exportAllChannelBackups.subtitle1'
+                                        'views.Settings.EmbeddedNode.clipboardDisasterRecovery.subtitle1'
                                     )}
                                 </Text>
                             </View>
@@ -300,7 +301,7 @@ export default class ChannelBackups extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.EmbeddedNode.exportAllChannelBackups.subtitle2'
+                                        'views.Settings.EmbeddedNode.clipboardDisasterRecovery.subtitle2'
                                     )}
                                 </Text>
                             </View>
@@ -309,12 +310,12 @@ export default class ChannelBackups extends React.Component<
                             <View style={{ margin: 10 }}>
                                 <Button
                                     title={
-                                        channelBackupOlympusError
+                                        disasterRecoveryBackupOlympusError
                                             ? localeString('general.error')
-                                            : channelBackupOlympus
+                                            : disasterRecoveryBackupOlympus
                                             ? localeString('general.success')
                                             : localeString(
-                                                  'views.Settings.EmbeddedNode.exportAllChannelBackupsOlympus'
+                                                  'views.Settings.EmbeddedNode.exportDisasterRecoveryOlympus'
                                               )
                                     }
                                     onPress={async () => {
@@ -322,24 +323,27 @@ export default class ChannelBackups extends React.Component<
                                             await stores.channelBackupStore.backupChannels();
 
                                             this.setState({
-                                                channelBackupOlympus: true
+                                                disasterRecoveryBackupOlympus:
+                                                    true
                                             });
 
                                             setTimeout(() => {
                                                 this.setState({
-                                                    channelBackupOlympus: false
+                                                    disasterRecoveryBackupOlympus:
+                                                        false
                                                 });
                                             }, 5000);
 
                                             this.getLastBackupStatus();
                                         } catch (e) {
                                             this.setState({
-                                                channelBackupOlympusError: true
+                                                disasterRecoveryBackupOlympusError:
+                                                    true
                                             });
 
                                             setTimeout(() => {
                                                 this.setState({
-                                                    channelBackupOlympusError:
+                                                    disasterRecoveryBackupOlympusError:
                                                         false
                                                 });
                                             }, 5000);
@@ -360,7 +364,7 @@ export default class ChannelBackups extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.EmbeddedNode.exportAllChannelBackupsOlympus.subtitle'
+                                        'views.Settings.EmbeddedNode.exportDisasterRecoveryOlympus.subtitle'
                                     )}
                                 </Text>
                             </View>
@@ -369,14 +373,14 @@ export default class ChannelBackups extends React.Component<
                             <View style={{ margin: 10 }}>
                                 <Button
                                     title={
-                                        channelBackupRecoveredErrorMessage
-                                            ? channelBackupRecoveredErrorMessage
-                                            : channelBackupRecoveredError
+                                        disasterRecoveryFileRecoveredErrorMessage
+                                            ? disasterRecoveryFileRecoveredErrorMessage
+                                            : disasterRecoveryFileRecoveredError
                                             ? localeString('general.error')
-                                            : channelBackupRecovered
+                                            : disasterRecoveryFileRecovered
                                             ? localeString('general.success')
                                             : localeString(
-                                                  'views.Settings.EmbeddedNode.recoverChannelBackupsOlympus'
+                                                  'views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus'
                                               )
                                     }
                                     onPress={async () => {
@@ -385,12 +389,13 @@ export default class ChannelBackups extends React.Component<
                                                 await stores.channelBackupStore.recoverStaticChannelBackup();
                                             if (backup && created_at) {
                                                 this.setState({
-                                                    channelBackupRecovered: true
+                                                    disasterRecoveryFileRecovered:
+                                                        true
                                                 });
 
                                                 setTimeout(() => {
                                                     this.setState({
-                                                        channelBackupRecovered:
+                                                        disasterRecoveryFileRecovered:
                                                             false
                                                     });
                                                 }, 5000);
@@ -423,7 +428,7 @@ export default class ChannelBackups extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.EmbeddedNode.recoverChannelBackupsOlympus.subtitle1'
+                                        'views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus.subtitle1'
                                     )}
                                 </Text>
                             </View>
@@ -438,7 +443,7 @@ export default class ChannelBackups extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.EmbeddedNode.recoverChannelBackupsOlympus.subtitle2'
+                                        'views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus.subtitle2'
                                     )}
                                 </Text>
                             </View>
