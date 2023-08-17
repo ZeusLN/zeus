@@ -228,7 +228,7 @@ export function themeColor(themeString: string): any {
         background: '#FF6200',
         secondary: '#141414',
         separator: '#141414',
-        secondaryText: '#FFFFFF'
+        secondaryText: '#E6E6E6'
     };
 
     const Mint: { [key: string]: any } = {
