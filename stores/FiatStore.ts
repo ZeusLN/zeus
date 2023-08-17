@@ -9,6 +9,7 @@ interface CurrencyDisplayRules {
     symbol: string;
     space: boolean;
     rtl: boolean;
+    separatorSwap: boolean;
 }
 export default class FiatStore {
     @observable public fiatRates:
@@ -342,36 +343,33 @@ export default class FiatStore {
             const fiatEntry = this.fiatRates.filter(
                 (entry) => entry.code === fiat
             )[0];
-            const rate = sats
-                ? (fiatEntry &&
-                      new BigNumber(fiatEntry.rate).div(SATS_PER_BTC)) ||
-                  0
-                : (fiatEntry && fiatEntry.rate) || 0;
+            const rate = (fiatEntry && fiatEntry.rate) || 0;
             const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
                 fiatEntry && fiatEntry.code
             );
+
+            const moscowTime = new BigNumber(1)
+                .div(rate)
+                .multipliedBy(SATS_PER_BTC)
+                .toFixed(0);
 
             const formattedRate = separatorSwap
                 ? this.numberWithDecimals(rate)
                 : this.numberWithCommas(rate);
 
-            if (rtl) {
-                if (sats) {
-                    return `${formattedRate}${
-                        space ? ' ' : ''
-                    }${symbol} sat/${fiat}`;
-                }
+            const formattedMoscow = separatorSwap
+                ? this.numberWithDecimals(moscowTime)
+                : this.numberWithCommas(moscowTime);
 
+            if (sats) {
+                return `${formattedMoscow} sats = 1 ${fiat}`;
+            }
+
+            if (rtl) {
                 return `${formattedRate}${
                     space ? ' ' : ''
                 }${symbol} BTC/${fiat}`;
             } else {
-                if (sats) {
-                    return `${symbol}${
-                        space ? ' ' : ''
-                    }${formattedRate} sat/${fiat}`;
-                }
-
                 return `${symbol}${
                     space ? ' ' : ''
                 }${formattedRate} BTC/${fiat}`;
