@@ -46,7 +46,7 @@ export default class EmbeddedNode extends React.Component<
         const { updateSettings, embeddedLndNetwork, settings }: any =
             SettingsStore;
         const {
-            automaticChannelBackups,
+            automaticDisasterRecoveryBackup,
             bimodalPathfinding,
             expressGraphSync,
             expressGraphSyncMobile
@@ -74,7 +74,7 @@ export default class EmbeddedNode extends React.Component<
                                 backgroundColor: 'transparent'
                             }}
                             onPress={() =>
-                                navigation.navigate('ChannelBackups')
+                                navigation.navigate('DisasterRecovery')
                             }
                         >
                             <ListItem.Content>
@@ -85,7 +85,7 @@ export default class EmbeddedNode extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.EmbeddedNode.ChannelBackups.title'
+                                        'views.Settings.EmbeddedNode.DisasterRecovery.title'
                                     )}
                                 </ListItem.Title>
                                 <ListItem.Title
@@ -94,8 +94,11 @@ export default class EmbeddedNode extends React.Component<
                                         fontFamily: 'Lato-Regular'
                                     }}
                                 >
-                                    {localeString('general.automatic')}:{' '}
-                                    {automaticChannelBackups
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.DisasterRecovery.automaticBackups'
+                                    )}
+                                    :{' '}
+                                    {automaticDisasterRecoveryBackup
                                         ? localeString('views.Settings.enabled')
                                         : localeString(
                                               'views.Settings.disabled'

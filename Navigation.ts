@@ -55,7 +55,7 @@ import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
-import ChannelBackups from './views/Settings/EmbeddedNode/ChannelBackups';
+import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
 import Pathfinding from './views/Settings/EmbeddedNode/Pathfinding';
 import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
 
@@ -298,8 +298,8 @@ const AppScenes = {
     EmbeddedNodeSettings: {
         screen: EmbeddedNode
     },
-    ChannelBackups: {
-        screen: ChannelBackups
+    DisasterRecovery: {
+        screen: DisasterRecovery
     },
     Pathfinding: {
         screen: Pathfinding
