@@ -920,6 +920,7 @@ export default class Receive extends React.Component<
                                                 )}
                                                 expanded
                                                 textBottom
+                                                truncateLongValue
                                             />
                                         )}
                                     {selectedIndex == 1 &&
@@ -933,6 +934,7 @@ export default class Receive extends React.Component<
                                                 )}
                                                 expanded
                                                 textBottom
+                                                truncateLongValue
                                             />
                                         )}
                                     {selectedIndex == 2 &&
@@ -946,6 +948,7 @@ export default class Receive extends React.Component<
                                                 )}
                                                 expanded
                                                 textBottom
+                                                truncateLongValue
                                             />
                                         )}
                                     {(belowDustLimit ||
@@ -958,6 +961,7 @@ export default class Receive extends React.Component<
                                             )}
                                             expanded
                                             textBottom
+                                            truncateLongValue
                                         />
                                     )}
                                     <View
