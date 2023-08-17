@@ -261,13 +261,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     async refresh() {
-        const { NodeInfoStore, BalanceStore, ChannelsStore, SettingsStore } =
-            this.props;
+        const {
+            NodeInfoStore,
+            BalanceStore,
+            ChannelsStore,
+            ChannelBackupStore,
+            LSPStore,
+            SettingsStore
+        } = this.props;
 
         if (SettingsStore.connecting) {
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
+            LSPStore.reset();
+            ChannelBackupStore.reset();
         }
 
         this.getSettingsAndNavigate();
@@ -328,7 +336,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
             NodeInfoStore.getNodeInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
-            await BalanceStore.getCombinedBalance();
+            await BalanceStore.getCombinedBalance(false);
             if (BackendUtils.supportsChannelManagement())
                 ChannelsStore.getChannels();
             if (rescan) {

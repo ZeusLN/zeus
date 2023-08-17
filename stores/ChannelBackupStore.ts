@@ -30,6 +30,11 @@ export default class ChannelBackupStore {
         this.settingsStore = settingsStore;
     }
 
+    @action
+    public reset = () => {
+        this.channelEventsSubscription = null;
+    };
+
     logBackupStatus = async (status: string) => {
         await EncryptedStorage.setItem('LAST_CHANNEL_BACKUP_STATUS', status);
         await EncryptedStorage.setItem(
@@ -213,8 +218,7 @@ export default class ChannelBackupStore {
             if (olderThanThreeDays) this.backupChannels();
         }
         if (!time && !status) this.backupChannels();
-        if (this.channelEventsSubscription)
-            delete this.channelEventsSubscription;
+        if (this.channelEventsSubscription) return;
         this.channelEventsSubscription = LndMobileEventEmitter.addListener(
             'SubscribeChannelEvents',
             async (event: any) => {
