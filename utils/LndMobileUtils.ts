@@ -212,7 +212,6 @@ export async function startLnd(walletPassword: string) {
                     res(true);
                 } else if (state.state === lnrpc.WalletState.SERVER_ACTIVE) {
                     log.d('Got lnrpc.WalletState.SERVER_ACTIVE');
-                    stores.syncStore.startSyncing();
                     res(true);
                 } else {
                     log.d('Got unknown lnrpc.WalletState', [state.state]);
