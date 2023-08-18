@@ -169,6 +169,16 @@ export default class Receive extends React.Component<
 
         const amount: string = navigation.getParam('amount');
         const autoGenerate: boolean = navigation.getParam('autoGenerate');
+        const autoGenerateOnChain: boolean = navigation.getParam(
+            'autoGenerateOnChain'
+        );
+        const selectedIndex: number = navigation.getParam('selectedIndex');
+
+        if (selectedIndex) {
+            this.setState({
+                selectedIndex
+            });
+        }
 
         const { expiry, routeHints, ampInvoice, addressType } = this.state;
 
@@ -249,7 +259,7 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (autoGenerate)
+        if (autoGenerate) {
             this.autoGenerateInvoice(
                 getSatAmount(amount),
                 memo,
@@ -258,6 +268,11 @@ export default class Receive extends React.Component<
                 ampInvoice,
                 addressType
             );
+        }
+
+        if (autoGenerateOnChain) {
+            this.autoGenerateOnChainAddress();
+        }
     }
 
     async UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -379,6 +394,16 @@ export default class Receive extends React.Component<
         );
     };
 
+    autoGenerateOnChainAddress = () => {
+        const { InvoicesStore } = this.props;
+        const { addressType } = this.state;
+        const { getNewAddress } = InvoicesStore;
+
+        getNewAddress({ type: addressType }).then((onChainAddress: string) => {
+            this.subscribeInvoice(undefined, onChainAddress);
+        });
+    };
+
     disableNfc = () => {
         NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
         NfcManager.setEventListener(NfcEvents.SessionClosed, null);
@@ -486,7 +511,7 @@ export default class Receive extends React.Component<
             .catch();
     };
 
-    subscribeInvoice = async (rHash: string, onChainAddress?: string) => {
+    subscribeInvoice = async (rHash?: string, onChainAddress?: string) => {
         const { InvoicesStore, PosStore, SettingsStore, NodeInfoStore } =
             this.props;
         const { orderId, orderTotal, orderTip, exchangeRate, rate, value } =
@@ -501,50 +526,54 @@ export default class Receive extends React.Component<
                 : 0;
 
         if (implementation === 'embedded-lnd') {
-            this.listener = LndMobileEventEmitter.addListener(
-                'SubscribeInvoices',
-                (e: any) => {
-                    try {
-                        const error = checkLndStreamErrorResponse(
-                            'SubscribeInvoices',
-                            e
-                        );
-                        if (error === 'EOF') {
-                            return;
-                        } else if (error) {
-                            console.error('Got error from SubscribeInvoices', [
-                                error
-                            ]);
-                            return;
-                        }
+            if (rHash) {
+                this.listener = LndMobileEventEmitter.addListener(
+                    'SubscribeInvoices',
+                    (e: any) => {
+                        try {
+                            const error = checkLndStreamErrorResponse(
+                                'SubscribeInvoices',
+                                e
+                            );
+                            if (error === 'EOF') {
+                                return;
+                            } else if (error) {
+                                console.error(
+                                    'Got error from SubscribeInvoices',
+                                    [error]
+                                );
+                                return;
+                            }
 
-                        const invoice = lndMobile.wallet.decodeInvoiceResult(
-                            e.data
-                        );
+                            const invoice =
+                                lndMobile.wallet.decodeInvoiceResult(e.data);
 
-                        if (
-                            invoice.settled &&
-                            Base64Utils.bytesToHexString(invoice.r_hash) ===
-                                rHash
-                        ) {
-                            setWatchedInvoicePaid(Number(invoice.amt_paid_sat));
-                            if (orderId)
-                                PosStore.recordPayment({
-                                    orderId,
-                                    orderTotal,
-                                    orderTip,
-                                    exchangeRate,
-                                    rate,
-                                    type: 'ln',
-                                    tx: invoice.payment_request
-                                });
-                            this.listener = null;
+                            if (
+                                invoice.settled &&
+                                Base64Utils.bytesToHexString(invoice.r_hash) ===
+                                    rHash
+                            ) {
+                                setWatchedInvoicePaid(
+                                    Number(invoice.amt_paid_sat)
+                                );
+                                if (orderId)
+                                    PosStore.recordPayment({
+                                        orderId,
+                                        orderTotal,
+                                        orderTip,
+                                        exchangeRate,
+                                        rate,
+                                        type: 'ln',
+                                        tx: invoice.payment_request
+                                    });
+                                this.listener = null;
+                            }
+                        } catch (error) {
+                            console.error(error);
                         }
-                    } catch (error) {
-                        console.error(error);
                     }
-                }
-            );
+                );
+            }
 
             if (onChainAddress) {
                 this.listenerSecondary = LndMobileEventEmitter.addListener(
@@ -604,34 +633,36 @@ export default class Receive extends React.Component<
 
         if (implementation === 'lightning-node-connect') {
             const { LncModule } = NativeModules;
-            const eventName = BackendUtils.subscribeInvoice(rHash);
-            const eventEmitter = new NativeEventEmitter(LncModule);
-            this.listener = eventEmitter.addListener(
-                eventName,
-                (event: any) => {
-                    if (event.result) {
-                        try {
-                            const result = JSON.parse(event.result);
-                            if (result.settled) {
-                                setWatchedInvoicePaid(result.amt_paid_sat);
-                                if (orderId)
-                                    PosStore.recordPayment({
-                                        orderId,
-                                        orderTotal,
-                                        orderTip,
-                                        exchangeRate,
-                                        rate,
-                                        type: 'ln',
-                                        tx: result.payment_request
-                                    });
-                                this.listener = null;
+            if (rHash) {
+                const eventName = BackendUtils.subscribeInvoice(rHash);
+                const eventEmitter = new NativeEventEmitter(LncModule);
+                this.listener = eventEmitter.addListener(
+                    eventName,
+                    (event: any) => {
+                        if (event.result) {
+                            try {
+                                const result = JSON.parse(event.result);
+                                if (result.settled) {
+                                    setWatchedInvoicePaid(result.amt_paid_sat);
+                                    if (orderId)
+                                        PosStore.recordPayment({
+                                            orderId,
+                                            orderTotal,
+                                            orderTip,
+                                            exchangeRate,
+                                            rate,
+                                            type: 'ln',
+                                            tx: result.payment_request
+                                        });
+                                    this.listener = null;
+                                }
+                            } catch (error) {
+                                console.error(error);
                             }
-                        } catch (error) {
-                            console.error(error);
                         }
                     }
-                }
-            );
+                );
+            }
 
             if (onChainAddress) {
                 const eventName2 = BackendUtils.subscribeTransactions();
@@ -673,38 +704,41 @@ export default class Receive extends React.Component<
         }
 
         if (implementation === 'lnd') {
-            this.lnInterval = setInterval(() => {
-                // only fetch the last 10 invoices
-                BackendUtils.getInvoices({ limit: 10 }).then(
-                    (response: any) => {
-                        const invoices = response.invoices;
-                        for (let i = 0; i < invoices.length; i++) {
-                            const result = invoices[i];
-                            if (
-                                result.r_hash
-                                    .replace(/\+/g, '-')
-                                    .replace(/\//g, '_') === rHash &&
-                                Number(result.amt_paid_sat) >= Number(value) &&
-                                Number(result.amt_paid_sat) !== 0
-                            ) {
-                                setWatchedInvoicePaid(result.amt_paid_sat);
-                                if (orderId)
-                                    PosStore.recordPayment({
-                                        orderId,
-                                        orderTotal,
-                                        orderTip,
-                                        exchangeRate,
-                                        rate,
-                                        type: 'ln',
-                                        tx: result.payment_request
-                                    });
-                                this.clearIntervals();
-                                break;
+            if (rHash) {
+                this.lnInterval = setInterval(() => {
+                    // only fetch the last 10 invoices
+                    BackendUtils.getInvoices({ limit: 10 }).then(
+                        (response: any) => {
+                            const invoices = response.invoices;
+                            for (let i = 0; i < invoices.length; i++) {
+                                const result = invoices[i];
+                                if (
+                                    result.r_hash
+                                        .replace(/\+/g, '-')
+                                        .replace(/\//g, '_') === rHash &&
+                                    Number(result.amt_paid_sat) >=
+                                        Number(value) &&
+                                    Number(result.amt_paid_sat) !== 0
+                                ) {
+                                    setWatchedInvoicePaid(result.amt_paid_sat);
+                                    if (orderId)
+                                        PosStore.recordPayment({
+                                            orderId,
+                                            orderTotal,
+                                            orderTip,
+                                            exchangeRate,
+                                            rate,
+                                            type: 'ln',
+                                            tx: result.payment_request
+                                        });
+                                    this.clearIntervals();
+                                    break;
+                                }
                             }
                         }
-                    }
-                );
-            }, 5000);
+                    );
+                }, 5000);
+            }
 
             // this is workaround that manually calls your transactions every 30 secs
             if (onChainAddress) {
@@ -1227,7 +1261,7 @@ export default class Receive extends React.Component<
                                         )}
                                     {selectedIndex == 2 &&
                                         !belowDustLimit &&
-                                        haveUnifiedInvoice && (
+                                        btcAddress && (
                                             <CollapsedQR
                                                 value={btcAddress}
                                                 copyValue={btcAddressCopyValue}
@@ -1238,18 +1272,19 @@ export default class Receive extends React.Component<
                                                 textBottom
                                             />
                                         )}
-                                    {(belowDustLimit ||
-                                        !haveUnifiedInvoice) && (
-                                        <CollapsedQR
-                                            value={lnInvoice}
-                                            copyValue={lnInvoiceCopyValue}
-                                            copyText={localeString(
-                                                'views.Receive.copyAddress'
-                                            )}
-                                            expanded
-                                            textBottom
-                                        />
-                                    )}
+                                    {selectedIndex !== 2 &&
+                                        (belowDustLimit ||
+                                            !haveUnifiedInvoice) && (
+                                            <CollapsedQR
+                                                value={lnInvoice}
+                                                copyValue={lnInvoiceCopyValue}
+                                                copyText={localeString(
+                                                    'views.Receive.copyAddress'
+                                                )}
+                                                expanded
+                                                textBottom
+                                            />
+                                        )}
                                     <View
                                         style={[
                                             styles.button,
