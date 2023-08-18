@@ -97,6 +97,7 @@ interface ReceiveState {
     // LSP
     needInbound: boolean;
     belowMinAmount: boolean;
+    enableLSP: boolean;
 }
 
 @inject(
@@ -134,7 +135,8 @@ export default class Receive extends React.Component<
         rate: 0,
         // LSP
         needInbound: false,
-        belowMinAmount: false
+        belowMinAmount: false,
+        enableLSP: true
     };
 
     async UNSAFE_componentWillMount() {
@@ -149,7 +151,8 @@ export default class Receive extends React.Component<
             memo: settings?.invoices?.memo || '',
             expiry: settings?.invoices?.expiry || '3600',
             routeHints: settings?.invoices?.routeHints || false,
-            ampInvoice: settings?.invoices?.ampInvoice || false
+            ampInvoice: settings?.invoices?.ampInvoice || false,
+            enableLSP: settings?.enableLSP || true
         });
 
         const lnOnly =
@@ -790,7 +793,8 @@ export default class Receive extends React.Component<
             ampInvoice,
             routeHints,
             needInbound,
-            belowMinAmount
+            belowMinAmount,
+            enableLSP
         } = this.state;
         const { zeroConfFee, showLspSettings } = LSPStore;
         const { getAmount } = UnitsStore;
@@ -806,7 +810,8 @@ export default class Receive extends React.Component<
             watchedInvoicePaidAmt,
             clearUnified
         } = InvoicesStore;
-        const { implementation, posStatus, settings } = SettingsStore;
+        const { implementation, posStatus, settings, updateSettings } =
+            SettingsStore;
         const loading = SettingsStore.loading || InvoicesStore.loading;
         const address = onChainAddress;
 
@@ -1350,7 +1355,7 @@ export default class Receive extends React.Component<
                                             let belowMinAmount = false;
                                             if (
                                                 BackendUtils.supportsLSPs() &&
-                                                settings?.enableLSP &&
+                                                enableLSP &&
                                                 satAmount != '0' &&
                                                 new BigNumber(satAmount).gt(
                                                     this.props.ChannelsStore
@@ -1465,6 +1470,57 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
+                                    {BackendUtils.supportsLSPs() && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.secondaryText,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    top: 20
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LSP.enableLSP'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={enableLSP}
+                                                onValueChange={async () => {
+                                                    this.setState({
+                                                        enableLSP: !enableLSP
+                                                    });
+                                                    await updateSettings({
+                                                        enableLSP: !enableLSP
+                                                    });
+                                                }}
+                                            />
+                                            {enableLSP && (
+                                                <View
+                                                    style={{
+                                                        margin: 10
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'Lato-Regular',
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontSize: 15
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Receive.lspSwitchExplainer'
+                                                        )}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </>
+                                    )}
+
                                     {BackendUtils.isLNDBased() && (
                                         <>
                                             <Text
@@ -1494,7 +1550,7 @@ export default class Receive extends React.Component<
                                     {BackendUtils.supportsAMP() &&
                                         !(
                                             BackendUtils.supportsLSPs() &&
-                                            settings?.enableLSP
+                                            enableLSP
                                         ) && (
                                             <>
                                                 <Text

@@ -476,6 +476,7 @@
     "views.Receive.lspExplainer": "LSP will take the following amount as a setup fee:",
     "views.Receive.lspExplainerRouting": "LSP will take the following amount as a fee:",
     "views.Receive.goToLspSettings": "Go to LSP Settings",
+    "views.Receive.lspSwitchExplainer": "The LSP will wrap your invoices, making it easier to receive payments while protecting your privacy.",
     "views.Send.title": "Send",
     "views.Send.lnPayment": "Lightning payment request",
     "views.Send.btcAddress": "Bitcoin address",
