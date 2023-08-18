@@ -495,7 +495,7 @@ export const addInvoice = async (
             memo,
             expiry: Long.fromValue(expiry),
             private: is_private,
-            min_hop_hints: 6,
+            min_hop_hints: is_private ? 6 : 0,
             is_amp
         }
     });
