@@ -46,7 +46,10 @@ export default class OnchainSwipeableRow extends Component<
             this.close();
 
             if (text === localeString('general.receive')) {
-                this.props.navigation.navigate('Receive', { selectedIndex: 1 });
+                this.props.navigation.navigate('Receive', {
+                    selectedIndex: 2,
+                    autoGenerateOnChain: true
+                });
             } else if (text === localeString('general.coins')) {
                 this.props.navigation.navigate('CoinControl');
             } else if (text === localeString('general.send')) {
