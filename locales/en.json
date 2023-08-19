@@ -674,6 +674,8 @@
     "views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus": "Initiate disaster recovery from Olympus",
     "views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus.subtitle1": "Manually download recovery data from the Olympus backup service and trigger a recovery.",
     "views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus.subtitle2": "Note that this will close out all your channels and recover their balances to your on-chain wallet once settled.",
+    "views.Settings.EmbeddedNode.LNDLogs.title": "LND Logs",
+    "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Copy logs to clipboard",
     "views.Settings.LSP.enableLSP": "Enable Lightning Service Provider (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "The LSP will get you connected to the Lightning network by opening up payment channels for you.",
     "views.Settings.LSP.lspAccessKey": "LSP Access Key (if needed)",
