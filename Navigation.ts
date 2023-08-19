@@ -58,6 +58,7 @@ import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
 import Pathfinding from './views/Settings/EmbeddedNode/Pathfinding';
 import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
+import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -306,6 +307,9 @@ const AppScenes = {
     },
     ExpressGraphSync: {
         screen: ExpressGraphSync
+    },
+    LNDLogs: {
+        screen: LNDLogs
     },
     LSPSettings: {
         screen: LSP
