@@ -369,6 +369,7 @@ export default class Receive extends React.Component<
         addressType?: string
     ) => {
         const { InvoicesStore } = this.props;
+        const { enableLSP } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
 
         createUnifiedInvoice(
@@ -376,7 +377,7 @@ export default class Receive extends React.Component<
             amount || '0',
             expiry || '3600',
             undefined,
-            ampInvoice || false,
+            enableLSP ? false : ampInvoice || false,
             routeHints || false,
             BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
@@ -1631,7 +1632,9 @@ export default class Receive extends React.Component<
                                                     satAmount.toString() || '0',
                                                     expiry,
                                                     lnurl,
-                                                    ampInvoice,
+                                                    enableLSP
+                                                        ? false
+                                                        : ampInvoice || false,
                                                     routeHints,
                                                     BackendUtils.supportsAddressTypeSelection()
                                                         ? addressType
