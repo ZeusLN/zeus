@@ -1,8 +1,20 @@
 import * as React from 'react';
-import { Text, View, Image, StyleSheet } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
+import {
+    Text,
+    View,
+    Image,
+    StyleSheet,
+    TouchableOpacity,
+    Modal
+} from 'react-native';
+import { Header, Icon, Divider } from 'react-native-elements';
 import Button from '../components/Button';
 import Screen from '../components/Screen';
+
+import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
+import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
+import KeySecurity from '../assets/images/SVG/Key Security.svg';
+import VerifiedAccount from '../assets/images/SVG/Verified Account.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -21,6 +33,7 @@ interface ContactItem {
 }
 interface ContactDetailsState {
     contact: ContactItem;
+    isModalVisible: boolean;
 }
 export default class ContactDetails extends React.Component<
     ContactDetailsProps,
@@ -34,19 +47,41 @@ export default class ContactDetails extends React.Component<
         );
 
         this.state = {
-            contact
+            contact,
+            isModalVisible: false
         };
     }
-    render() {
+    toggleModal = () => {
+        this.setState((prevState) => ({
+            isModalVisible: !prevState.isModalVisible
+        }));
+    };
+    sendAddress = (address: string) => {
+        const { navigation } = this.props;
         const { contact } = this.state;
+        navigation.navigate('Send', {
+            destination: address,
+            contactName: contact.name
+        });
+    };
+    render() {
+        const { contact, isModalVisible } = this.state;
         const { navigation } = this.props;
         const BackButton = () => (
             <Icon
                 name="arrow-back"
                 onPress={() => {
-                    navigation.navigate('Settings', {
-                        refresh: true
-                    });
+                    navigation.goBack();
+                }}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+        const QRButton = () => (
+            <Icon
+                name="qr-code"
+                onPress={() => {
+                    navigation.navigate('QR');
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
@@ -56,6 +91,7 @@ export default class ContactDetails extends React.Component<
             <Screen>
                 <Header
                     leftComponent={<BackButton />}
+                    rightComponent={<QRButton />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -98,25 +134,246 @@ export default class ContactDetails extends React.Component<
                     >
                         {contact.description}
                     </Text>
-                    <Text style={styles.contactFields}>
-                        {contact.lnAddress[0]}
-                    </Text>
-                    <Text style={styles.contactFields}>
-                        {contact.onchainAddress[0]}
-                    </Text>
-                    <Text style={styles.contactFields}>{contact.nip05[0]}</Text>
-                    <Text style={styles.contactFields}>
-                        {contact.nostrNpub[0]}
-                    </Text>
+                    <Modal
+                        transparent={true}
+                        animationType="slide"
+                        visible={isModalVisible}
+                    >
+                        <View style={styles.centeredView}>
+                            <View
+                                style={{
+                                    ...styles.modal,
+                                    backgroundColor: themeColor('background')
+                                }}
+                            >
+                                {isModalVisible && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text'),
+                                                fontSize: 25
+                                            }}
+                                        >
+                                            Select Address to use
+                                        </Text>
+
+                                        {contact.lnAddress &&
+                                            contact.lnAddress.length > 0 && (
+                                                <>
+                                                    {contact.lnAddress.map(
+                                                        (address, index) => (
+                                                            <TouchableOpacity
+                                                                key={index}
+                                                                onPress={() =>
+                                                                    this.sendAddress(
+                                                                        address
+                                                                    )
+                                                                }
+                                                            >
+                                                                {address !==
+                                                                    contact
+                                                                        .lnAddress[0] && (
+                                                                    <Divider
+                                                                        orientation="horizontal"
+                                                                        style={{
+                                                                            marginTop: 20
+                                                                        }}
+                                                                    />
+                                                                )}
+
+                                                                {contact
+                                                                    .lnAddress
+                                                                    .length >=
+                                                                    1 && (
+                                                                    <Text
+                                                                        style={{
+                                                                            color: themeColor(
+                                                                                'text'
+                                                                            ),
+                                                                            fontSize: 16,
+                                                                            fontWeight:
+                                                                                'bold',
+                                                                            marginTop: 12,
+                                                                            marginBottom: 4
+                                                                        }}
+                                                                    >
+                                                                        Lightning
+                                                                        Address:
+                                                                    </Text>
+                                                                )}
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'text'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {address.length >
+                                                                    15
+                                                                        ? address.substr(
+                                                                              0,
+                                                                              15
+                                                                          ) +
+                                                                          '...' +
+                                                                          address.substr(
+                                                                              address.length -
+                                                                                  15
+                                                                          )
+                                                                        : address}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        )
+                                                    )}
+                                                </>
+                                            )}
+
+                                        {contact.onchainAddress &&
+                                            contact.onchainAddress.length >
+                                                0 && (
+                                                <>
+                                                    {contact.onchainAddress.map(
+                                                        (address, index) => (
+                                                            <TouchableOpacity
+                                                                key={index}
+                                                                onPress={() =>
+                                                                    this.sendAddress(
+                                                                        address
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Divider
+                                                                    orientation="horizontal"
+                                                                    style={{
+                                                                        marginTop: 20
+                                                                    }}
+                                                                />
+                                                                {contact
+                                                                    .onchainAddress
+                                                                    .length >=
+                                                                    1 && (
+                                                                    <Text
+                                                                        style={{
+                                                                            color: themeColor(
+                                                                                'text'
+                                                                            ),
+                                                                            fontSize: 16,
+                                                                            fontWeight:
+                                                                                'bold',
+                                                                            marginTop: 12,
+                                                                            marginBottom: 4
+                                                                        }}
+                                                                    >
+                                                                        On-chain
+                                                                        Address:
+                                                                    </Text>
+                                                                )}
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'text'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {address.length >
+                                                                    15
+                                                                        ? address.substr(
+                                                                              0,
+                                                                              15
+                                                                          ) +
+                                                                          '...' +
+                                                                          address.substr(
+                                                                              address.length -
+                                                                                  15
+                                                                          )
+                                                                        : address}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        )
+                                                    )}
+                                                </>
+                                            )}
+                                        <View
+                                            style={{
+                                                ...styles.button,
+                                                marginTop: 14
+                                            }}
+                                        >
+                                            <Button
+                                                title="CANCEL"
+                                                onPress={() =>
+                                                    this.setState({
+                                                        isModalVisible: false
+                                                    })
+                                                }
+                                                secondary
+                                            />
+                                        </View>
+                                    </>
+                                )}
+                            </View>
+                        </View>
+                    </Modal>
+
+                    <View>
+                        {contact.lnAddress[0] && (
+                            <View style={styles.contactRow}>
+                                <LightningBolt />
+                                <Text style={styles.contactFields}>
+                                    {`${contact.lnAddress[0].substring(
+                                        0,
+                                        5
+                                    )}...${contact.lnAddress[0].substring(
+                                        contact.lnAddress[0].length - 5
+                                    )}`}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                    {contact.onchainAddress[0] && (
+                        <View style={styles.contactRow}>
+                            <BitcoinIcon />
+                            <Text style={styles.contactFields}>
+                                {`${contact.onchainAddress[0].substring(
+                                    0,
+                                    5
+                                )}...${contact.onchainAddress[0].substring(
+                                    contact.onchainAddress[0].length - 5
+                                )}`}
+                            </Text>
+                        </View>
+                    )}
+                    {contact.nip05[0] && (
+                        <View style={styles.contactRow}>
+                            <VerifiedAccount />
+                            <Text style={styles.contactFields}>
+                                {contact.nip05[0]}
+                            </Text>
+                        </View>
+                    )}
+                    {contact.nostrNpub[0] && (
+                        <View style={styles.contactRow}>
+                            <View>
+                                <KeySecurity />
+                            </View>
+                            <Text style={styles.contactFields}>
+                                {contact.nostrNpub[0]}
+                                {`${contact.nostrNpub[0].substring(
+                                    0,
+                                    6
+                                )}...${contact.nostrNpub[0].substring(
+                                    contact.nostrNpub[0].length - 6
+                                )}`}
+                            </Text>
+                        </View>
+                    )}
                 </View>
                 <Button
                     containerStyle={{ position: 'absolute', bottom: 30 }}
                     buttonStyle={{ padding: 18 }}
                     title="MAKE PAYMENT"
                     onPress={() => {
-                        navigation.navigate('Send', {
-                            destination: contact.onchainAddress[0]
-                        });
+                        this.toggleModal();
                     }}
                 />
             </Screen>
@@ -125,9 +382,41 @@ export default class ContactDetails extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    centeredView: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 22
+    },
+    modal: {
+        margin: 20,
+        borderRadius: 20,
+        padding: 35,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5
+    },
+    text: {
+        fontFamily: 'Lato-Regular'
+    },
+    button: {
+        paddingTop: 10,
+        paddingBottom: 10
+    },
+    contactRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginRight: 10
+    },
     contactFields: {
         fontSize: 20,
         marginBottom: 4,
+        marginLeft: 4,
         color: themeColor('chain')
     }
 });
