@@ -36,6 +36,7 @@ interface Contact {
     name: string;
     description: string;
     photo: string | null;
+    isFavourite: boolean;
 }
 
 interface AddContactsState {
@@ -48,6 +49,7 @@ interface AddContactsState {
     description: string;
     photo: string | null;
     showExtraFieldModal: boolean;
+    isFavourite: boolean;
 }
 
 export default class AddContacts extends React.Component<
@@ -65,7 +67,8 @@ export default class AddContacts extends React.Component<
             name: '',
             description: '',
             photo: null,
-            showExtraFieldModal: false
+            showExtraFieldModal: false,
+            isFavourite: false
         };
     }
 
@@ -84,7 +87,8 @@ export default class AddContacts extends React.Component<
             nostrNpub,
             name,
             description,
-            photo
+            photo,
+            isFavourite
         } = this.state;
         try {
             // Create a new contact object
@@ -95,7 +99,8 @@ export default class AddContacts extends React.Component<
                 nostrNpub,
                 name,
                 description,
-                photo
+                photo,
+                isFavourite
             };
 
             // Retrieve existing contacts from storage
@@ -171,8 +176,8 @@ export default class AddContacts extends React.Component<
                 translateKey: '',
                 value: 'onchainAddress'
             },
-            { key: 'NIP 05', translateKey: '', value: 'nip05' },
-            { key: 'NOSTR Npub', translateKey: '', value: 'nostrNpub' }
+            { key: 'NIP-05', translateKey: '', value: 'nip05' },
+            { key: 'Nostr npub', translateKey: '', value: 'nostrNpub' }
         ];
 
         const BackButton = () => (
@@ -441,7 +446,7 @@ export default class AddContacts extends React.Component<
                                 });
                             }}
                             value={nip05[0]}
-                            placeholder="NIP 05"
+                            placeholder="NIP-05"
                             placeholderTextColor={themeColor('secondaryText')}
                             numberOfLines={1}
                             style={styles.textInput}
@@ -467,7 +472,7 @@ export default class AddContacts extends React.Component<
                                             });
                                         }}
                                         value={address}
-                                        placeholder="NIP 05"
+                                        placeholder="NIP-05"
                                         placeholderTextColor={themeColor(
                                             'secondaryText'
                                         )}
@@ -494,7 +499,7 @@ export default class AddContacts extends React.Component<
                                 });
                             }}
                             value={nostrNpub[0]}
-                            placeholder="NOSTR Npub"
+                            placeholder="Nostr npub"
                             placeholderTextColor={themeColor('secondaryText')}
                             numberOfLines={1}
                             style={styles.textInput}
@@ -522,7 +527,7 @@ export default class AddContacts extends React.Component<
                                             });
                                         }}
                                         value={address}
-                                        placeholder="NOSTR Npub"
+                                        placeholder="Nostr npub"
                                         placeholderTextColor={themeColor(
                                             'secondaryText'
                                         )}
