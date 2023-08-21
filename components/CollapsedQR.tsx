@@ -8,10 +8,38 @@ import Button from './../components/Button';
 import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
+import Touchable from './Touchable';
 
 const logo = require('../assets/images/Launcher.png');
 
 let simulation: any;
+
+interface ValueTextProps {
+    value: string;
+    truncateLongValue?: boolean;
+}
+
+function ValueText({ value, truncateLongValue }: ValueTextProps) {
+    const [state, setState] = React.useState<{
+        numberOfValueLines: number | undefined;
+    }>({ numberOfValueLines: truncateLongValue ? 3 : undefined });
+    return truncateLongValue ? (
+        <Touchable
+            touch={() =>
+                setState({
+                    numberOfValueLines: state.numberOfValueLines ? undefined : 3
+                })
+            }
+            highlight={false}
+        >
+            <Text style={styles.value} numberOfLines={state.numberOfValueLines}>
+                {value}
+            </Text>
+        </Touchable>
+    ) : (
+        <Text style={styles.value}>{value}</Text>
+    );
+}
 
 interface CollapsedQRProps {
     value: string;
@@ -22,6 +50,7 @@ interface CollapsedQRProps {
     hideText?: boolean;
     expanded?: boolean;
     textBottom?: boolean;
+    truncateLongValue?: boolean;
 }
 
 interface CollapsedQRState {
@@ -87,7 +116,8 @@ export default class CollapsedQR extends React.Component<
             collapseText,
             hideText,
             expanded,
-            textBottom
+            textBottom,
+            truncateLongValue
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
@@ -95,15 +125,10 @@ export default class CollapsedQR extends React.Component<
         return (
             <React.Fragment>
                 {!hideText && !textBottom && (
-                    <Text
-                        style={{
-                            ...styles.value,
-                            color: themeColor('secondaryText'),
-                            fontFamily: 'Lato-Regular'
-                        }}
-                    >
-                        {value}
-                    </Text>
+                    <ValueText
+                        value={value}
+                        truncateLongValue={truncateLongValue}
+                    />
                 )}
                 {!collapsed && value && (
                     <View style={styles.qrPadding}>
@@ -115,15 +140,10 @@ export default class CollapsedQR extends React.Component<
                     </View>
                 )}
                 {!hideText && textBottom && (
-                    <Text
-                        style={{
-                            ...styles.value,
-                            color: themeColor('secondaryText'),
-                            fontFamily: 'Lato-Regular'
-                        }}
-                    >
-                        {value}
-                    </Text>
+                    <ValueText
+                        value={value}
+                        truncateLongValue={truncateLongValue}
+                    />
                 )}
                 {!expanded && (
                     <Button
@@ -174,7 +194,9 @@ export default class CollapsedQR extends React.Component<
 const styles = StyleSheet.create({
     value: {
         marginBottom: 15,
-        paddingLeft: 20
+        paddingLeft: 20,
+        color: themeColor('secondaryText'),
+        fontFamily: 'Lato-Regular'
     },
     qrPadding: {
         backgroundColor: 'white',

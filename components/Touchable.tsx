@@ -5,7 +5,7 @@ interface TouchableProps {
     touch: () => void;
     highlight: boolean;
     children: JSX.Element;
-    style: any;
+    style?: any;
 }
 
 export default function Touchable({
