@@ -103,6 +103,11 @@ const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
             ? 'neutrino.assertfilterheader=230000:1308d5cfc6462f877a5587fd77d7c1ab029d45e58d5175aaf8c264cee9bde760'
             : ''
     }
+    ${
+        !isTestnet
+            ? 'neutrino.assertfilterheader=660000:08312375fabc082b17fa8ee88443feb350c19a34bb7483f94f7478fa4ad33032'
+            : ''
+    }
     neutrino.feeurl=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
     neutrino.broadcasttimeout=11s
     neutrino.persistfilters=true
