@@ -6,6 +6,8 @@ import TransactionRequest from '../models/TransactionRequest';
 import SettingsStore from './SettingsStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
+import ErrorUtils from '../utils/ErrorUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 import { lnrpc } from '../proto/lightning';
 
@@ -339,7 +341,8 @@ export default class TransactionsStore {
         this.loading = false;
         this.error_msg =
             typeof err === 'string'
-                ? err
-                : err.message || 'Error sending payment';
+                ? ErrorUtils.errorToUserFriendly(err)
+                : ErrorUtils.errorToUserFriendly(err.message) ||
+                  localeString('error.sendingPayment');
     };
 }
