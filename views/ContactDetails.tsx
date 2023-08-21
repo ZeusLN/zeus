@@ -32,6 +32,7 @@ interface ContactItem {
     description: string;
     photo: string | null;
     isFavourite: boolean;
+    id: string;
 }
 interface ContactDetailsState {
     contact: ContactItem;
@@ -78,7 +79,7 @@ export default class ContactDetails extends React.Component<
 
                 // Find the index of the contact with the same name
                 const contactIndex = existingContacts.findIndex(
-                    (contact) => contact.name === updatedContact.name
+                    (contact) => contact.id === updatedContact.id
                 );
 
                 if (contactIndex !== -1) {
