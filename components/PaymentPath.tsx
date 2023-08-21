@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 import Amount from './Amount';
 import KeyValue from './KeyValue';
@@ -169,7 +170,9 @@ export default function PaymentPath(props: PaymentPathProps) {
 
                         <View style={{ marginLeft: 50, marginBottom: 15 }}>
                             <KeyValue
-                                keyValue={'Forwarded'}
+                                keyValue={localeString(
+                                    'models.Payment.forwarded'
+                                )}
                                 value={
                                     <Amount sats={hop.forwarded} toggleable />
                                 }
@@ -177,7 +180,7 @@ export default function PaymentPath(props: PaymentPathProps) {
                             />
 
                             <KeyValue
-                                keyValue={'Fee'}
+                                keyValue={localeString('models.Payment.fee')}
                                 value={<Amount sats={hop.fee} toggleable />}
                                 sensitive
                             />
