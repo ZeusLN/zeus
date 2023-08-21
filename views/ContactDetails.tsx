@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     Modal
 } from 'react-native';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import { Header, Icon, Divider } from 'react-native-elements';
 import Button from '../components/Button';
 import Screen from '../components/Screen';
@@ -30,6 +31,7 @@ interface ContactItem {
     name: string;
     description: string;
     photo: string | null;
+    isFavourite: boolean;
 }
 interface ContactDetailsState {
     contact: ContactItem;
@@ -64,6 +66,54 @@ export default class ContactDetails extends React.Component<
             contactName: contact.name
         });
     };
+    saveUpdatedContact = async (updatedContact: ContactItem) => {
+        try {
+            const contactsString = await EncryptedStorage.getItem(
+                'zeus-contacts'
+            );
+
+            if (contactsString) {
+                const existingContacts: ContactItem[] =
+                    JSON.parse(contactsString);
+
+                // Find the index of the contact with the same name
+                const contactIndex = existingContacts.findIndex(
+                    (contact) => contact.name === updatedContact.name
+                );
+
+                if (contactIndex !== -1) {
+                    // Update the contact in the array
+                    existingContacts[contactIndex] = updatedContact;
+
+                    // Save the updated contacts back to storage
+                    await EncryptedStorage.setItem(
+                        'zeus-contacts',
+                        JSON.stringify(existingContacts)
+                    );
+
+                    console.log('Contact updated successfully!');
+                }
+            }
+        } catch (error) {
+            console.log('Error updating contact:', error);
+        }
+    };
+    toggleFavorite = () => {
+        const { contact } = this.state;
+
+        // Toggle the isFavourite field
+        const updatedContact = {
+            ...contact,
+            isFavourite: !contact.isFavourite
+        };
+
+        // Save the updated contact
+        this.saveUpdatedContact(updatedContact);
+
+        // Update the state to reflect the changes
+        this.setState({ contact: updatedContact });
+    };
+
     render() {
         const { contact, isModalVisible } = this.state;
         const { navigation } = this.props;
@@ -77,12 +127,10 @@ export default class ContactDetails extends React.Component<
                 underlayColor="transparent"
             />
         );
-        const QRButton = () => (
+        const StarButton = () => (
             <Icon
-                name="qr-code"
-                onPress={() => {
-                    navigation.navigate('QR');
-                }}
+                name={contact.isFavourite ? 'star' : 'star-outline'}
+                onPress={this.toggleFavorite}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -91,7 +139,7 @@ export default class ContactDetails extends React.Component<
             <Screen>
                 <Header
                     leftComponent={<BackButton />}
-                    rightComponent={<QRButton />}
+                    rightComponent={<StarButton />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -155,7 +203,7 @@ export default class ContactDetails extends React.Component<
                                                 fontSize: 25
                                             }}
                                         >
-                                            Select Address to use
+                                            Select address to use
                                         </Text>
 
                                         {contact.lnAddress &&
@@ -165,11 +213,17 @@ export default class ContactDetails extends React.Component<
                                                         (address, index) => (
                                                             <TouchableOpacity
                                                                 key={index}
-                                                                onPress={() =>
+                                                                onPress={() => {
                                                                     this.sendAddress(
                                                                         address
-                                                                    )
-                                                                }
+                                                                    );
+                                                                    this.setState(
+                                                                        {
+                                                                            isModalVisible:
+                                                                                false
+                                                                        }
+                                                                    );
+                                                                }}
                                                             >
                                                                 {address !==
                                                                     contact
@@ -236,11 +290,17 @@ export default class ContactDetails extends React.Component<
                                                         (address, index) => (
                                                             <TouchableOpacity
                                                                 key={index}
-                                                                onPress={() =>
+                                                                onPress={() => {
                                                                     this.sendAddress(
                                                                         address
-                                                                    )
-                                                                }
+                                                                    );
+                                                                    this.setState(
+                                                                        {
+                                                                            isModalVisible:
+                                                                                false
+                                                                        }
+                                                                    );
+                                                                }}
                                                             >
                                                                 <Divider
                                                                     orientation="horizontal"
