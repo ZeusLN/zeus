@@ -6,20 +6,23 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Image
+    Image,
+    Modal,
+    Text,
+    TextInput
 } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Header, Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
-import Temp from '../../assets/images/SVG/Lock.svg';
+import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
+import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
+import KeySecurity from '../../assets/images/SVG/Key Security.svg';
+import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import { themeColor } from '../../utils/ThemeUtils';
 import Button from '../../components/Button';
-import DropdownSetting from '../../components/DropdownSetting';
-
-import TextInput from '../../components/TextInput';
 
 interface AddContactsProps {
     navigation: any;
@@ -44,6 +47,7 @@ interface AddContactsState {
     name: string;
     description: string;
     photo: string | null;
+    showExtraFieldModal: boolean;
 }
 
 export default class AddContacts extends React.Component<
@@ -60,7 +64,8 @@ export default class AddContacts extends React.Component<
             nostrNpub: [''],
             name: '',
             description: '',
-            photo: null
+            photo: null,
+            showExtraFieldModal: false
         };
     }
 
@@ -71,6 +76,7 @@ export default class AddContacts extends React.Component<
     };
 
     saveContact = async () => {
+        // await EncryptedStorage.clear();
         const {
             lnAddress,
             onchainAddress,
@@ -159,15 +165,14 @@ export default class AddContacts extends React.Component<
             description
         } = this.state;
         const dropdownValues = [
-            { key: '', translateKey: '', value: '' },
-            { key: 'lnAddress', translateKey: '', value: 'lnAddress' },
+            { key: 'LN address', translateKey: '', value: 'lnAddress' },
             {
-                key: 'onchainAddress',
+                key: 'Onchain address',
                 translateKey: '',
                 value: 'onchainAddress'
             },
-            { key: 'nip05', translateKey: '', value: 'nip05' },
-            { key: 'nostrNpub', translateKey: '', value: 'nostrNpub' }
+            { key: 'NIP 05', translateKey: '', value: 'nip05' },
+            { key: 'NOSTR Npub', translateKey: '', value: 'nostrNpub' }
         ];
 
         const BackButton = () => (
@@ -231,7 +236,7 @@ export default class AddContacts extends React.Component<
                     >
                         <View
                             style={{
-                                backgroundColor: 'white',
+                                backgroundColor: themeColor('secondaryText'),
                                 marginTop: 40,
                                 width: 136,
                                 height: 136,
@@ -249,6 +254,7 @@ export default class AddContacts extends React.Component<
                             )}
                         </View>
                     </View>
+
                     <View
                         style={{
                             alignSelf: 'center',
@@ -261,14 +267,17 @@ export default class AddContacts extends React.Component<
                             }}
                             value={name}
                             placeholder="Name*"
-                            style={{ backgroundColor: themeColor('primary') }}
+                            placeholderTextColor={themeColor('secondaryText')}
+                            style={styles.textInput}
                         />
                     </View>
                     <Divider
                         orientation="horizontal"
-                        style={{ marginTop: 14 }}
+                        style={{ marginTop: 6 }}
                     />
-                    <View style={{ alignSelf: 'center', marginTop: 14 }}>
+                    <View
+                        style={{ alignContent: 'center', alignSelf: 'center' }}
+                    >
                         <TextInput
                             onChangeText={(text: string) => {
                                 this.setState({ description: text });
@@ -276,19 +285,45 @@ export default class AddContacts extends React.Component<
                             value={description}
                             multiline
                             placeholder="Description (max 120)"
-                            style={{
-                                paddingHorizontal: 20,
-                                marginHorizontal: 30
-                            }}
+                            placeholderTextColor={themeColor('secondaryText')}
+                            style={styles.textInput}
                         />
                     </View>
+                    <Modal
+                        animationType="slide"
+                        transparent={true}
+                        visible={this.state.showExtraFieldModal}
+                        onRequestClose={() =>
+                            this.setState({ showExtraFieldModal: false })
+                        }
+                    >
+                        <View style={styles.modalContainer}>
+                            <View style={styles.modalCenter}>
+                                {dropdownValues.map((value, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        onPress={() => {
+                                            this.setState({
+                                                showExtraFieldModal: false
+                                            });
+                                            this.addExtraField(value.value);
+                                        }}
+                                    >
+                                        <Text style={styles.modalItem}>
+                                            {value.key}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                    </Modal>
                     <Divider
                         orientation="horizontal"
-                        style={{ marginTop: 16 }}
+                        style={{ marginTop: 14 }}
                     />
                     <View style={styles.inputContainer}>
-                        <View>
-                            <Temp stroke={themeColor('text')} />
+                        <View style={styles.icons}>
+                            <LightningBolt />
                         </View>
                         <TextInput
                             onChangeText={(text) => {
@@ -298,7 +333,8 @@ export default class AddContacts extends React.Component<
                             }}
                             value={lnAddress[0]}
                             placeholder="LN address"
-                            style={styles.inputField}
+                            placeholderTextColor={themeColor('secondaryText')}
+                            style={styles.textInput}
                         />
                     </View>
                     {lnAddress.slice(1).map((address, index) => (
@@ -308,8 +344,8 @@ export default class AddContacts extends React.Component<
                                 style={{ marginTop: 16 }}
                             />
                             <View key={index} style={styles.inputContainer}>
-                                <View>
-                                    <Temp stroke={themeColor('text')} />
+                                <View style={styles.icons}>
+                                    <LightningBolt />
                                 </View>
                                 <View>
                                     <TextInput
@@ -324,7 +360,10 @@ export default class AddContacts extends React.Component<
                                         }}
                                         value={address}
                                         placeholder="LN address"
-                                        style={styles.inputField}
+                                        placeholderTextColor={themeColor(
+                                            'secondaryText'
+                                        )}
+                                        style={styles.textInput}
                                     />
                                 </View>
                             </View>
@@ -335,8 +374,8 @@ export default class AddContacts extends React.Component<
                         style={{ marginTop: 10 }}
                     />
                     <View style={styles.inputContainer}>
-                        <View>
-                            <Temp stroke={themeColor('text')} />
+                        <View style={styles.icons}>
+                            <BitcoinIcon />
                         </View>
                         <TextInput
                             onChangeText={(text) => {
@@ -348,8 +387,9 @@ export default class AddContacts extends React.Component<
                             }}
                             value={onchainAddress[0]}
                             placeholder="Onchain address"
+                            placeholderTextColor={themeColor('secondaryText')}
+                            style={styles.textInput}
                             numberOfLines={1}
-                            style={styles.inputField}
                         />
                     </View>
                     {onchainAddress.slice(1).map((address, index) => (
@@ -359,8 +399,8 @@ export default class AddContacts extends React.Component<
                                 style={{ marginTop: 16 }}
                             />
                             <View key={index} style={styles.inputContainer}>
-                                <View>
-                                    <Temp stroke={themeColor('text')} />
+                                <View style={styles.icons}>
+                                    <BitcoinIcon />
                                 </View>
                                 <View>
                                     <TextInput
@@ -375,7 +415,10 @@ export default class AddContacts extends React.Component<
                                         }}
                                         value={address}
                                         placeholder="Onchain address"
-                                        style={styles.inputField}
+                                        placeholderTextColor={themeColor(
+                                            'secondaryText'
+                                        )}
+                                        style={styles.textInput}
                                     />
                                 </View>
                             </View>
@@ -386,8 +429,8 @@ export default class AddContacts extends React.Component<
                         style={{ marginTop: 10 }}
                     />
                     <View style={styles.inputContainer}>
-                        <View>
-                            <Temp stroke={themeColor('text')} />
+                        <View style={styles.icons}>
+                            <VerifiedAccount />
                         </View>
                         <TextInput
                             onChangeText={(text) => {
@@ -399,8 +442,9 @@ export default class AddContacts extends React.Component<
                             }}
                             value={nip05[0]}
                             placeholder="NIP 05"
+                            placeholderTextColor={themeColor('secondaryText')}
                             numberOfLines={1}
-                            style={styles.inputField}
+                            style={styles.textInput}
                         />
                     </View>
                     {nip05.slice(1).map((address, index) => (
@@ -410,8 +454,8 @@ export default class AddContacts extends React.Component<
                                 style={{ marginTop: 16 }}
                             />
                             <View key={index} style={styles.inputContainer}>
-                                <View>
-                                    <Temp stroke={themeColor('text')} />
+                                <View style={styles.icons}>
+                                    <VerifiedAccount />
                                 </View>
                                 <View>
                                     <TextInput
@@ -424,7 +468,10 @@ export default class AddContacts extends React.Component<
                                         }}
                                         value={address}
                                         placeholder="NIP 05"
-                                        style={styles.inputField}
+                                        placeholderTextColor={themeColor(
+                                            'secondaryText'
+                                        )}
+                                        style={styles.textInput}
                                     />
                                 </View>
                             </View>
@@ -435,8 +482,8 @@ export default class AddContacts extends React.Component<
                         style={{ marginTop: 10 }}
                     />
                     <View style={styles.inputContainer}>
-                        <View>
-                            <Temp stroke={themeColor('text')} />
+                        <View style={styles.icons}>
+                            <KeySecurity />
                         </View>
                         <TextInput
                             onChangeText={(text) => {
@@ -448,8 +495,9 @@ export default class AddContacts extends React.Component<
                             }}
                             value={nostrNpub[0]}
                             placeholder="NOSTR Npub"
+                            placeholderTextColor={themeColor('secondaryText')}
                             numberOfLines={1}
-                            style={styles.inputField}
+                            style={styles.textInput}
                         />
                     </View>
                     {nostrNpub.slice(1).map((address, index) => (
@@ -459,8 +507,8 @@ export default class AddContacts extends React.Component<
                                 style={{ marginTop: 16 }}
                             />
                             <View key={index} style={styles.inputContainer}>
-                                <View>
-                                    <Temp stroke={themeColor('text')} />
+                                <View style={styles.icons}>
+                                    <KeySecurity />
                                 </View>
                                 <View>
                                     <TextInput
@@ -475,7 +523,10 @@ export default class AddContacts extends React.Component<
                                         }}
                                         value={address}
                                         placeholder="NOSTR Npub"
-                                        style={styles.inputField}
+                                        placeholderTextColor={themeColor(
+                                            'secondaryText'
+                                        )}
+                                        style={styles.textInput}
                                     />
                                 </View>
                             </View>
@@ -485,11 +536,20 @@ export default class AddContacts extends React.Component<
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
                     />
-                    <DropdownSetting
-                        selectedValue={''}
-                        onValueChange={this.addExtraField}
-                        values={dropdownValues}
-                    />
+                    <TouchableOpacity
+                        onPress={() =>
+                            this.setState({ showExtraFieldModal: true })
+                        }
+                        style={{
+                            alignSelf: 'center',
+                            marginTop: 30,
+                            marginBottom: 20
+                        }}
+                    >
+                        <Text style={styles.addExtraFieldText}>
+                            add extra field
+                        </Text>
+                    </TouchableOpacity>
                     <Button
                         title="Save Contact"
                         buttonStyle={{ padding: 14 }}
@@ -507,14 +567,45 @@ export default class AddContacts extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    modalCenter: {
+        width: '80%',
+        backgroundColor: 'white',
+        padding: 14
+    },
+    modalItem: {
+        paddingVertical: 10,
+        fontSize: 16,
+        color: themeColor('secondary')
+    },
+    addExtraFieldText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: themeColor('text')
+    },
     inputContainer: {
-        marginTop: 4,
-        marginLeft: 14,
+        marginLeft: 24,
         flexDirection: 'row',
         alignItems: 'center'
     },
-    inputField: {
-        marginLeft: 8
+    icons: {
+        paddingRight: 14,
+        top: 4,
+        width: 26,
+        height: 26,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    textInput: {
+        fontSize: 20,
+        width: '100%',
+        fontFamily: 'Lato-Regular',
+        top: 5,
+        color: themeColor('text')
     },
     photo: {
         alignSelf: 'center',
