@@ -327,9 +327,7 @@ export default class ChannelsStore {
                                 pending.channel.forceClose = true;
                                 pending.channel.closing_txid =
                                     pending.closing_txid;
-                                const a = new Channel(pending.channel);
-                                console.log('a', a);
-                                return a;
+                                return new Channel(pending.channel);
                             }
                         );
                     const waitCloseChannels = data.waiting_close_channels.map(
@@ -436,9 +434,14 @@ export default class ChannelsStore {
                     // handle error
                     if (
                         error.toString() &&
-                        error.toString().includes('already') &&
-                        !connectPeerOnly
+                        error.toString().includes('already')
                     ) {
+                        if (!connectPeerOnly) {
+                            this.channelRequest = request;
+                        } else {
+                            this.errorMsgPeer = error.toString();
+                            this.errorPeerConnect = true;
+                        }
                         resolve(true);
                     } else {
                         this.errorMsgPeer = error.toString();

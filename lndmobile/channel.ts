@@ -262,6 +262,27 @@ export const exportAllChannelBackups =
 /**
  * @throws
  */
+export const restoreChannelBackups = async (
+    channels_backup_base64: string
+): Promise<lnrpc.RestoreBackupResponse> => {
+    const response = await sendCommand<
+        lnrpc.IRestoreChanBackupRequest,
+        lnrpc.RestoreChanBackupRequest,
+        lnrpc.RestoreBackupResponse
+    >({
+        request: lnrpc.RestoreChanBackupRequest,
+        response: lnrpc.RestoreBackupResponse,
+        method: 'RestoreChannelBackups',
+        options: {
+            multi_chan_backup: base64.toByteArray(channels_backup_base64)
+        }
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
 export const verifyChanBackup = async (
     channels_backup_base64: string
 ): Promise<lnrpc.VerifyChanBackupResponse> => {

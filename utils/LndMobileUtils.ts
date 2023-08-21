@@ -62,7 +62,7 @@ export function checkLndStreamErrorResponse(
     return null;
 }
 
-const writeLndConfig = async (isTestnet?: boolean) => {
+const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
     const { writeConfig } = lndMobile.index;
 
     const config = `[Application Options]
@@ -72,6 +72,7 @@ const writeLndConfig = async (isTestnet?: boolean) => {
     accept-keysend=1
     tlsdisableautofill=1
     maxpendingchannels=1000
+    ${rescan ? 'reset-wallet-transactions=true' : ''}
     
     [db]
     db.no-graph-cache=false
@@ -96,6 +97,7 @@ const writeLndConfig = async (isTestnet?: boolean) => {
             ? 'btcd-testnet.lightning.computer'
             : 'btcd-mainnet.lightning.computer'
     }
+    ${!isTestnet ? 'neutrino.addpeer=noad.sathoarder.com' : ''}
     ${
         !isTestnet
             ? 'neutrino.assertfilterheader=230000:1308d5cfc6462f877a5587fd77d7c1ab029d45e58d5175aaf8c264cee9bde760'
@@ -131,35 +133,42 @@ const writeLndConfig = async (isTestnet?: boolean) => {
 };
 
 export async function expressGraphSync() {
-    if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
-        log.d('Clearing speedloader files');
-        try {
-            // TODO(hsjoberg): LndMobileTools should be injected
-            await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderLastrunFile();
-            await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderDgraphDirectory();
-        } catch (error) {
-            log.e('Gossip files deletion failed', [error]);
-        }
-    }
     if (stores.settingsStore.embeddedLndNetwork === 'Mainnet') {
+        const start = new Date();
         stores.syncStore.setExpressGraphSyncStatus(true);
-        // check connection type and whether user has allowed EGS on mobile
-        const connectionState = stores.settingsStore?.settings
-            ?.expressGraphSyncMobile
-            ? { type: 'wifi' }
-            : await NetInfo.fetch();
-        console.log('~~starting gossip', connectionState.type);
-        const gossipStatus = await gossipSync(connectionState.type);
-        console.log('~~gossipStatus', gossipStatus);
+        if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
+            log.d('Clearing speedloader files');
+            try {
+                await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderLastrunFile();
+                await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderDgraphDirectory();
+            } catch (error) {
+                log.e('Gossip files deletion failed', [error]);
+            }
+        }
+
+        try {
+            // check connection type and whether user has allowed EGS on mobile
+            const connectionState = stores.settingsStore?.settings
+                ?.expressGraphSyncMobile
+                ? { type: 'wifi' }
+                : await NetInfo.fetch();
+            const gossipStatus = await gossipSync(connectionState.type);
+            const completionTime =
+                (new Date().getTime() - start.getTime()) / 1000 + 's';
+            console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
+        } catch (e) {
+            log.e('GossipSync exception!', [e]);
+        }
+
         stores.syncStore.setExpressGraphSyncStatus(false);
     }
     return;
 }
 
-export async function initializeLnd(isTestnet?: boolean) {
+export async function initializeLnd(isTestnet?: boolean, rescan?: boolean) {
     const { initialize } = lndMobile.index;
 
-    await writeLndConfig(isTestnet);
+    await writeLndConfig(isTestnet, rescan);
     await initialize();
 }
 
@@ -203,7 +212,6 @@ export async function startLnd(walletPassword: string) {
                     res(true);
                 } else if (state.state === lnrpc.WalletState.SERVER_ACTIVE) {
                     log.d('Got lnrpc.WalletState.SERVER_ACTIVE');
-                    stores.syncStore.startSyncing();
                     res(true);
                 } else {
                     log.d('Got unknown lnrpc.WalletState', [state.state]);

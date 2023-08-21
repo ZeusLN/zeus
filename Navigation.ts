@@ -52,8 +52,13 @@ import PointOfSaleRecon from './views/Settings/PointOfSaleRecon';
 import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
-import EmbeddedNode from './views/Settings/EmbeddedNode';
 import LSP from './views/Settings/LSP';
+//Embedded Node
+import EmbeddedNode from './views/Settings/EmbeddedNode';
+import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
+import Pathfinding from './views/Settings/EmbeddedNode/Pathfinding';
+import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
+import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -304,6 +309,18 @@ const AppScenes = {
     },
     EmbeddedNodeSettings: {
         screen: EmbeddedNode
+    },
+    DisasterRecovery: {
+        screen: DisasterRecovery
+    },
+    Pathfinding: {
+        screen: Pathfinding
+    },
+    ExpressGraphSync: {
+        screen: ExpressGraphSync
+    },
+    LNDLogs: {
+        screen: LNDLogs
     },
     LSPSettings: {
         screen: LSP

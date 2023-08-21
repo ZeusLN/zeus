@@ -43,6 +43,8 @@ import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import ModalStore from '../../stores/ModalStore';
 import SyncStore from '../../stores/SyncStore';
+import LSPStore from '../../stores/LSPStore';
+import ChannelBackupStore from '../../stores/ChannelBackupStore';
 
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
@@ -57,6 +59,7 @@ import {
     startLnd,
     expressGraphSync
 } from '../../utils/LndMobileUtils';
+
 interface WalletProps {
     enterSetup: any;
     exitTransaction: any;
@@ -71,6 +74,8 @@ interface WalletProps {
     UTXOsStore: UTXOsStore;
     ModalStore: ModalStore;
     SyncStore: SyncStore;
+    LSPStore: LSPStore;
+    ChannelBackupStore: ChannelBackupStore;
 }
 
 interface WalletState {
@@ -88,7 +93,9 @@ interface WalletState {
     'PosStore',
     'UTXOsStore',
     'ModalStore',
-    'SyncStore'
+    'SyncStore',
+    'LSPStore',
+    'ChannelBackupStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -254,13 +261,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     async refresh() {
-        const { NodeInfoStore, BalanceStore, ChannelsStore, SettingsStore } =
-            this.props;
+        const {
+            NodeInfoStore,
+            BalanceStore,
+            ChannelsStore,
+            ChannelBackupStore,
+            LSPStore,
+            SettingsStore
+        } = this.props;
 
         if (SettingsStore.connecting) {
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
+            LSPStore.reset();
+            ChannelBackupStore.reset();
         }
 
         this.getSettingsAndNavigate();
@@ -274,7 +289,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore,
             SettingsStore,
             PosStore,
-            FiatStore
+            FiatStore,
+            LSPStore,
+            ChannelBackupStore,
+            SyncStore
         } = this.props;
         const {
             settings,
@@ -287,9 +305,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             connect,
             posStatus,
             walletPassword,
-            embeddedLndNetwork
+            embeddedLndNetwork,
+            updateSettings
         } = SettingsStore;
-        const { fiatEnabled, pos } = settings;
+        const { isSyncing, syncStatusUpdatesPaused, resumeSyncingUpates } =
+            SyncStore;
+        const { fiatEnabled, pos, rescan, recovery } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
 
         if (pos && pos.squareEnabled && posStatus === 'active')
@@ -301,15 +322,41 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
-                await initializeLnd(embeddedLndNetwork === 'Testnet');
+                await initializeLnd(embeddedLndNetwork === 'Testnet', rescan);
                 if (expressGraphSyncEnabled) await expressGraphSync();
                 await startLnd(walletPassword);
             }
+            if (SettingsStore.settings.automaticDisasterRecoveryBackup)
+                ChannelBackupStore.initSubscribeChannelEvents();
+            if (
+                BackendUtils.supportsLSPs() &&
+                SettingsStore.settings.enableLSP
+            ) {
+                LSPStore.initChannelAcceptor();
+            }
             NodeInfoStore.getNodeInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
-            await BalanceStore.getCombinedBalance();
+            await BalanceStore.getCombinedBalance(false);
             if (BackendUtils.supportsChannelManagement())
                 ChannelsStore.getChannels();
+            if (rescan) {
+                await updateSettings({
+                    rescan: false
+                });
+            }
+            if (recovery) {
+                try {
+                    await ChannelBackupStore.recoverStaticChannelBackup();
+                } catch (e) {}
+
+                await updateSettings({
+                    recovery: false
+                });
+            }
+
+            if (isSyncing && syncStatusUpdatesPaused) {
+                resumeSyncingUpates();
+            }
         } else if (implementation === 'lndhub') {
             if (connecting) {
                 await login({ login: username, password }).then(async () => {

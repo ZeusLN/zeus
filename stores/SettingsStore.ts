@@ -89,10 +89,13 @@ export interface Settings {
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
     // Embedded node
+    automaticDisasterRecoveryBackup: boolean;
     expressGraphSync: boolean;
     expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
     bimodalPathfinding: boolean;
+    rescan: boolean;
+    recovery: boolean;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -138,35 +141,65 @@ export const LNC_MAILBOX_KEYS = [
 ];
 
 export const LOCALE_KEYS = [
-    { key: 'English', value: 'English' },
-    { key: 'Español', value: 'Español' },
-    { key: 'Português', value: 'Português' },
-    { key: 'Français', value: 'Français' },
-    { key: 'Čeština', value: 'Čeština' },
-    { key: 'Slovenčina', value: 'Slovenčina' },
-    { key: 'Deutsch', value: 'Deutsch' },
-    { key: 'Polski', value: 'Polski' },
-    { key: 'Türkçe', value: 'Türkçe' },
-    { key: 'magyar nyelv', value: 'magyar nyelv' },
-    { key: '简化字', value: '简化字' },
-    { key: 'Nederlands', value: 'Nederlands' },
-    { key: 'Bokmål', value: 'Bokmål' },
-    { key: 'Svenska', value: 'Svenska' },
-    { key: 'ภาษาไทย', value: 'ภาษาไทย' },
-    { key: 'украї́нська мо́ва', value: 'украї́нська мо́ва' },
-    { key: 'Limba română', value: 'Limba română' },
-    // in progress
-    { key: 'Ελληνικά', value: 'Ελληνικά' },
-    { key: 'زبان فارسي', value: 'زبان فارسي' },
-    { key: 'Slovenski jezik', value: 'Slovenski jezik' },
-    { key: 'русский язык', value: 'русский язык' },
-    { key: 'Suomen kieli', value: 'Suomen kieli' },
-    { key: 'Italiano', value: 'Italiano' },
-    { key: 'Tiếng Việt', value: 'Tiếng Việt' },
-    { key: '日本語', value: '日本語' },
-    { key: 'עִבְרִית', value: 'עִבְרִית' },
-    { key: 'Hrvatski', value: 'Hrvatski' }
+    { key: 'en', value: 'English' },
+    { key: 'es', value: 'Español' },
+    { key: 'pt', value: 'Português' },
+    { key: 'fr', value: 'Français' },
+    { key: 'cs', value: 'Čeština' },
+    { key: 'sk', value: 'Slovenčina' },
+    { key: 'de', value: 'Deutsch' },
+    { key: 'pl', value: 'Polski' },
+    { key: 'tr', value: 'Türkçe' },
+    { key: 'hu', value: 'magyar nyelv' },
+    { key: 'zh', value: '简化字' },
+    { key: 'nl', value: 'Nederlands' },
+    { key: 'nb', value: 'Bokmål' },
+    { key: 'sv', value: 'Svenska' },
+    { key: 'th', value: 'ภาษาไทย' },
+    { key: 'uk', value: 'украї́нська мо́ва' },
+    { key: 'ro', value: 'Limba română' },
+    { key: 'el', value: 'Ελληνικά' },
+    { key: 'fa', value: 'زبان فارسي' },
+    { key: 'sl', value: 'Slovenski jezik' },
+    { key: 'ru', value: 'русский язык' },
+    { key: 'fi', value: 'Suomen kieli' },
+    { key: 'it', value: 'Italiano' },
+    { key: 'vi', value: 'Tiếng Việt' },
+    { key: 'jp', value: '日本語' },
+    { key: 'he', value: 'עִבְרִית' },
+    { key: 'hr', value: 'Hrvatski' }
 ];
+
+// this mapping is only for migration and does not need to be updated when new languages are added
+const localeMigrationMapping: { [oldLocale: string]: string } = {
+    English: 'en',
+    Español: 'es',
+    Português: 'pt',
+    Français: 'fr',
+    Čeština: 'cs',
+    Slovenčina: 'sk',
+    Deutsch: 'de',
+    Polski: 'pl',
+    Türkçe: 'tr',
+    'magyar nyelv': 'hu',
+    简化字: 'zh',
+    Nederlands: 'nl',
+    Bokmål: 'nb',
+    Svenska: 'sv',
+    ภาษาไทย: 'th',
+    'украї́нська мо́ва': 'uk',
+    'Limba română': 'ro',
+    Ελληνικά: 'el',
+    'زبان فارسي': 'fa',
+    'Slovenski jezik': 'sl',
+    'русский язык': 'ru',
+    'Suomen kieli': 'fi',
+    Italiano: 'it',
+    'Tiếng Việt': 'vi',
+    日本語: 'jp',
+    עִבְרִית: 'he',
+    Hrvatski: 'hr'
+};
 
 export const CURRENCY_KEYS = [
     {
@@ -582,6 +615,9 @@ export const LNDHUB_AUTH_MODES = [
     { key: 'Alby', value: 'Alby' }
 ];
 
+const DEFAULT_LSP_MAINNET = 'https://lsp-preview.lnolymp.us';
+const DEFAULT_LSP_TESTNET = 'https://testnet-lsp.lnolymp.us';
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -628,16 +664,18 @@ export default class SettingsStore {
         fiatEnabled: false,
         fiat: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
-        // EGS
+        // embedded node
+        automaticDisasterRecoveryBackup: true,
         expressGraphSync: false,
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
-        // embedded node
         bimodalPathfinding: false,
+        rescan: false,
+        recovery: false,
         // LSP
         enableLSP: true,
-        lspMainnet: 'https://lsp-preview.lnolymp.us',
-        lspTestnet: 'https://testnet-lsp.lnolymp.us',
+        lspMainnet: DEFAULT_LSP_MAINNET,
+        lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: ''
     };
     @observable public posStatus: string = 'unselected';
@@ -807,8 +845,8 @@ export default class SettingsStore {
     }
 
     @action
-    public async getSettings() {
-        this.loading = true;
+    public async getSettings(silentUpdate: boolean = false) {
+        if (!silentUpdate) this.loading = true;
         try {
             // Retrieve the settings
             const settings = await EncryptedStorage.getItem(STORAGE_KEY);
@@ -824,6 +862,28 @@ export default class SettingsStore {
                     this.settings.fiatEnabled = false;
                 } else if (this.settings.fiatEnabled == null) {
                     this.settings.fiatEnabled = true;
+                }
+
+                // set default LSPs if not defined
+                if (!this.settings.lspMainnet) {
+                    this.settings.lspMainnet = DEFAULT_LSP_MAINNET;
+                }
+                if (!this.settings.lspTestnet) {
+                    this.settings.lspTestnet = DEFAULT_LSP_TESTNET;
+                }
+
+                // default automatic channel backups to on
+                if (this.settings.automaticDisasterRecoveryBackup !== false) {
+                    this.settings.automaticDisasterRecoveryBackup = true;
+                }
+
+                // migrate locale to ISO 639-1
+                if (
+                    this.settings.locale != null &&
+                    localeMigrationMapping[this.settings.locale]
+                ) {
+                    this.settings.locale =
+                        localeMigrationMapping[this.settings.locale];
                 }
 
                 const node: any =
@@ -857,7 +917,7 @@ export default class SettingsStore {
         } catch (error) {
             console.error('Could not load settings', error);
         } finally {
-            this.loading = false;
+            if (!silentUpdate) this.loading = false;
         }
 
         return this.settings;
@@ -881,8 +941,9 @@ export default class SettingsStore {
         };
 
         await this.setSettings(JSON.stringify(newSettings));
-        this.settings = newSettings;
-        return this.settings;
+        // ensure we get the enhanced settings set
+        const settings = await this.getSettings(true);
+        return settings;
     };
 
     // LNDHub

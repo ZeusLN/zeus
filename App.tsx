@@ -31,6 +31,7 @@ export default class App extends React.PureComponent {
                 NotesStore={Stores.notesStore}
                 SyncStore={Stores.syncStore}
                 LSPStore={Stores.lspStore}
+                ChannelBackupStore={Stores.channelBackupStore}
             >
                 <AppContainer>
                     <GestureHandlerRootView style={{ flex: 1 }}>

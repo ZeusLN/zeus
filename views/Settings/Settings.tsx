@@ -11,7 +11,6 @@ import { inject, observer } from 'mobx-react';
 
 import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
-import AccountIcon from '../../assets/images/SVG/Wallet2.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
 import SecurityIcon from '../../assets/images/SVG/Lock.svg';
@@ -39,6 +38,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import { version } from '../../package.json';
@@ -46,6 +46,7 @@ import { version } from '../../package.json';
 interface SettingsProps {
     navigation: any;
     SettingsStore: SettingsStore;
+    SyncStore: SyncStore;
     UnitsStore: UnitsStore;
 }
 
@@ -54,7 +55,7 @@ interface SettingsState {
     easterEggCount: number;
 }
 
-@inject('SettingsStore', 'UnitsStore')
+@inject('SettingsStore', 'SyncStore', 'UnitsStore')
 @observer
 export default class Settings extends React.Component<
     SettingsProps,
@@ -66,10 +67,19 @@ export default class Settings extends React.Component<
     };
 
     componentDidMount() {
+        const { SettingsStore, SyncStore, navigation } = this.props;
+
         // triggers when loaded from navigation or back action
-        this.props.navigation.addListener('didFocus', () => {
-            this.props.SettingsStore.getSettings();
+        navigation.addListener('didFocus', () => {
+            SettingsStore.getSettings();
         });
+
+        // pause syncing updates if necessary
+        const { isSyncing, syncStatusUpdatesPaused, pauseSyncingUpates } =
+            SyncStore;
+        if (isSyncing && !syncStatusUpdatesPaused) {
+            pauseSyncingUpates();
+        }
     }
 
     render() {

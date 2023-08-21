@@ -942,7 +942,7 @@ export default class NodeConfiguration extends React.Component<
                                         }}
                                     >
                                         {`${localeString(
-                                            'views.Settings.AddEditNode.channelBackupsBase64'
+                                            'views.Settings.AddEditNode.disasterRecoveryBase64'
                                         )} (${localeString(
                                             'general.optional'
                                         )})`}
@@ -1441,6 +1441,15 @@ export default class NodeConfiguration extends React.Component<
                                                     seed,
                                                     randomBase64
                                                 }: any = response;
+
+                                                if (recoveryCipherSeed) {
+                                                    this.props.SettingsStore.updateSettings(
+                                                        {
+                                                            recovery: true
+                                                        }
+                                                    );
+                                                }
+
                                                 if (
                                                     wallet &&
                                                     wallet.admin_macaroon

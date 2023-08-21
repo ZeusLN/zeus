@@ -51,6 +51,7 @@ import {
     decodeChannelAcceptRequest,
     decodeChannelEvent,
     exportAllChannelBackups,
+    restoreChannelBackups,
     abandonChannel,
     getChanInfo,
     closedChannels
@@ -242,6 +243,9 @@ export interface ILndMobileInjections {
         subscribeChannelEvents: () => Promise<string>;
         decodeChannelEvent: (data: string) => lnrpc.ChannelEventUpdate;
         exportAllChannelBackups: () => Promise<lnrpc.ChanBackupSnapshot>;
+        restoreChannelBackups: (
+            data: Uint8Array
+        ) => Promise<lnrpc.RestoreBackupResponse>;
         abandonChannel: (
             fundingTxId: string,
             outputIndex: number
@@ -376,6 +380,7 @@ export default {
         subscribeChannelEvents,
         decodeChannelEvent,
         exportAllChannelBackups,
+        restoreChannelBackups,
         abandonChannel,
         channelAcceptor,
         decodeChannelAcceptRequest,
