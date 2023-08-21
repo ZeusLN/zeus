@@ -18,6 +18,7 @@ interface ContactItem {
     name: string;
     description: string;
     photo: string | null;
+    isFavourite: boolean;
 }
 
 interface ContactsSettingsState {
@@ -185,6 +186,13 @@ export default class ContactsSettings extends React.Component<
             />
         );
 
+        const favoriteContacts = filteredContacts.filter(
+            (contact) => contact.isFavourite
+        );
+        const nonFavoriteContacts = filteredContacts.filter(
+            (contact) => !contact.isFavourite
+        );
+
         return (
             <View
                 style={{
@@ -214,7 +222,7 @@ export default class ContactsSettings extends React.Component<
                                 style={{ marginTop: 14 }}
                             />
                             <SearchBar
-                                placeholder="NOSTR Npub, NIP05, LN address, Onchain address"
+                                placeholder="Nostr npub, NIP-05, LN address, Onchain address"
                                 onChangeText={this.updateSearch}
                                 value={this.state.search}
                                 inputStyle={{
@@ -270,18 +278,46 @@ export default class ContactsSettings extends React.Component<
                         />
                     )}
 
-                    <View style={{ margin: 28 }}>
-                        <Text
+                    {/* Render favorite contacts */}
+                    {favoriteContacts.length > 0 && (
+                        <View style={{ margin: 28 }}>
+                            <Text
+                                style={{
+                                    fontSize: 16,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                FAVOURITES ({favoriteContacts.length})
+                            </Text>
+                        </View>
+                    )}
+                    <FlatList
+                        data={favoriteContacts}
+                        renderItem={this.renderContactItem}
+                        keyExtractor={(item, index) => index.toString()}
+                    />
+
+                    {/* Render non-favorite contacts */}
+                    {nonFavoriteContacts.length > 0 && (
+                        <View
                             style={{
-                                fontSize: 18,
-                                color: themeColor('secondaryText')
+                                margin: 28,
+                                marginTop:
+                                    favoriteContacts.length === 0 ? 28 : 10
                             }}
                         >
-                            Contacts ({filteredContacts.length})
-                        </Text>
-                    </View>
+                            <Text
+                                style={{
+                                    fontSize: 16,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                CONTACTS ({nonFavoriteContacts.length})
+                            </Text>
+                        </View>
+                    )}
                     <FlatList
-                        data={filteredContacts}
+                        data={nonFavoriteContacts}
                         renderItem={this.renderContactItem}
                         keyExtractor={(item, index) => index.toString()}
                     />
