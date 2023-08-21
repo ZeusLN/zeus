@@ -90,12 +90,13 @@ const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
     
     [Neutrino]
     neutrino.addpeer=${
-        isTestnet ? 'testnet.blixtwallet.com' : 'node.blixtwallet.com'
-    }
-    neutrino.addpeer=${
         isTestnet
             ? 'btcd-testnet.lightning.computer'
             : 'btcd-mainnet.lightning.computer'
+    }
+    neutrino.addpeer=${isTestnet ? 'testnet.lnolymp.us' : 'node.lnolymp.us'}
+    neutrino.addpeer=${
+        isTestnet ? 'testnet.blixtwallet.com' : 'node.blixtwallet.com'
     }
     ${!isTestnet ? 'neutrino.addpeer=noad.sathoarder.com' : ''}
     ${
