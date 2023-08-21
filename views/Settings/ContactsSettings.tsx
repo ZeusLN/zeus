@@ -102,7 +102,12 @@ export default class ContactsSettings extends React.Component<
                         }}
                     >
                         {item.lnAddress.length === 1
-                            ? item.lnAddress
+                            ? item.lnAddress[0].length > 15
+                                ? `${item.lnAddress[0].slice(
+                                      0,
+                                      4
+                                  )}...${item.lnAddress[0].slice(-4)}`
+                                : item.lnAddress
                             : 'multiple addresses'}
                     </Text>
                 </View>
@@ -149,12 +154,23 @@ export default class ContactsSettings extends React.Component<
             <TouchableOpacity
                 onPress={() => navigation.navigate('AddContacts')}
             >
-                <AddIcon
-                    fill={themeColor('text')}
-                    width="25"
-                    height="25"
-                    style={{ alignSelf: 'center' }}
-                />
+                <View
+                    style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 25,
+                        backgroundColor: themeColor('chain'),
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <AddIcon
+                        fill={themeColor('background')}
+                        width={12}
+                        height={12}
+                        style={{ alignSelf: 'center' }}
+                    />
+                </View>
             </TouchableOpacity>
         );
         const PayButton = ({ navigation }: { navigation: any }) => (
@@ -255,7 +271,12 @@ export default class ContactsSettings extends React.Component<
                     )}
 
                     <View style={{ margin: 28 }}>
-                        <Text style={{ fontSize: 18 }}>
+                        <Text
+                            style={{
+                                fontSize: 18,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
                             Contacts ({filteredContacts.length})
                         </Text>
                     </View>
