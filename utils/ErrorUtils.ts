@@ -4,7 +4,14 @@ const userFriendlyErrors: any = {
     'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")':
         'error.torBootstrap',
     'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")':
-        'error.torBootstrap'
+        'error.torBootstrap',
+    FAILURE_REASON_TIMEOUT: 'error.failureReasonTimeout',
+    FAILURE_REASON_NO_ROUTE: 'error.failureReasonNoRoute',
+    FAILURE_REASON_ERROR: 'error.failureReasonError',
+    FAILURE_REASON_INCORRECT_PAYMENT_DETAILS:
+        'error.failureReasonIncorrectPaymentDetails',
+    FAILURE_REASON_INSUFFICIENT_BALANCE:
+        'error.failureReasonInsufficientBalance'
 };
 
 class ErrorUtils {
