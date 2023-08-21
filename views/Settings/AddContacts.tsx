@@ -11,6 +11,7 @@ import {
     Text,
     TextInput
 } from 'react-native';
+import { v4 as uuidv4 } from 'uuid';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Header, Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -80,6 +81,7 @@ export default class AddContacts extends React.Component<
 
     saveContact = async () => {
         // await EncryptedStorage.clear();
+        const contactId = uuidv4();
         const {
             lnAddress,
             onchainAddress,
@@ -93,6 +95,7 @@ export default class AddContacts extends React.Component<
         try {
             // Create a new contact object
             const newContact: Contact = {
+                id: contactId,
                 lnAddress,
                 onchainAddress,
                 nip05,
