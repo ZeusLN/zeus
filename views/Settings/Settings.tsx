@@ -11,7 +11,6 @@ import { inject, observer } from 'mobx-react';
 
 import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
-import AccountIcon from '../../assets/images/SVG/Wallet2.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
 import SecurityIcon from '../../assets/images/SVG/Lock.svg';
