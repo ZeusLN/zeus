@@ -122,102 +122,92 @@ export default class ChannelPicker extends React.Component<
                         <View
                             style={{
                                 ...styles.modal,
-                                backgroundColor: themeColor('background')
+                                backgroundColor: themeColor('secondary')
                             }}
                         >
-                            {showChannelModal && (
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            fontSize: 25
-                                        }}
-                                    >
-                                        {localeString(
-                                            'components.ChannelPicker.modal.title'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            paddingTop: 20,
-                                            paddingBottom: 20
-                                        }}
-                                    >
-                                        {localeString(
-                                            'components.ChannelPicker.modal.description'
-                                        )}
-                                    </Text>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text'),
+                                    fontSize: 25
+                                }}
+                            >
+                                {localeString(
+                                    'components.ChannelPicker.modal.title'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text'),
+                                    paddingTop: 20,
+                                    paddingBottom: 20
+                                }}
+                            >
+                                {localeString(
+                                    'components.ChannelPicker.modal.description'
+                                )}
+                            </Text>
 
-                                    <FlatList
-                                        data={channels}
-                                        renderItem={(item) =>
-                                            this.renderItem(item)
-                                        }
-                                        onEndReachedThreshold={50}
-                                        refreshing={loading}
-                                        onRefresh={() => getChannels()}
-                                    />
+                            <FlatList
+                                data={channels}
+                                renderItem={(item) => this.renderItem(item)}
+                                onEndReachedThreshold={50}
+                                refreshing={loading}
+                                onRefresh={() => getChannels()}
+                            />
 
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={localeString(
-                                                'components.ChannelPicker.modal.set'
-                                            )}
-                                            onPress={() => {
-                                                const { channelSelected }: any =
-                                                    this.state;
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'components.ChannelPicker.modal.set'
+                                    )}
+                                    onPress={() => {
+                                        const { channelSelected }: any =
+                                            this.state;
 
-                                                if (channelSelected) {
-                                                    const displayName =
-                                                        channelSelected.alias ||
-                                                        (nodes[
-                                                            channelSelected
-                                                                .remote_pubkey
-                                                        ] &&
-                                                            nodes[
-                                                                channelSelected
-                                                                    .remote_pubkey
-                                                            ].alias) ||
-                                                        (channelSelected &&
-                                                            channelSelected.remote_pubkey) ||
-                                                        (channelSelected &&
-                                                            channelSelected.channelId);
-
-                                                    this.setState({
-                                                        showChannelModal: false,
-                                                        valueSet: displayName
-                                                    });
-
-                                                    onValueChange(
+                                        if (channelSelected) {
+                                            const displayName =
+                                                channelSelected.alias ||
+                                                (nodes[
+                                                    channelSelected
+                                                        .remote_pubkey
+                                                ] &&
+                                                    nodes[
                                                         channelSelected
-                                                    );
-                                                } else {
-                                                    this.setState({
-                                                        showChannelModal: false
-                                                    });
-                                                }
-                                            }}
-                                        />
-                                    </View>
+                                                            .remote_pubkey
+                                                    ].alias) ||
+                                                (channelSelected &&
+                                                    channelSelected.remote_pubkey) ||
+                                                (channelSelected &&
+                                                    channelSelected.channelId);
 
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={localeString(
-                                                'general.cancel'
-                                            )}
-                                            onPress={() =>
-                                                this.setState({
-                                                    showChannelModal: false
-                                                })
-                                            }
-                                            secondary
-                                        />
-                                    </View>
-                                </>
-                            )}
+                                            this.setState({
+                                                showChannelModal: false,
+                                                valueSet: displayName
+                                            });
+
+                                            onValueChange(channelSelected);
+                                        } else {
+                                            this.setState({
+                                                showChannelModal: false
+                                            });
+                                        }
+                                    }}
+                                />
+                            </View>
+
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString('general.cancel')}
+                                    onPress={() =>
+                                        this.setState({
+                                            showChannelModal: false
+                                        })
+                                    }
+                                    secondary
+                                />
+                            </View>
                         </View>
                     </View>
                 </Modal>
