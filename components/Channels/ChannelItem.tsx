@@ -54,13 +54,17 @@ export function ChannelItem({
                 padding: 16,
                 justifyContent: 'space-around',
                 borderBottomColor: themeColor('secondary'),
-                borderBottomWidth: noBorder ? 0 : 1
+                borderBottomWidth: noBorder ? 0 : 1,
+                backgroundColor: selected ? themeColor('background') : undefined
             }}
         >
             <Row justify="space-between">
                 {title && (
                     <View style={{ flex: 1, paddingRight: 10 }}>
-                        <Body color={selected ? 'highlight' : 'text'}>
+                        <Body
+                            color={selected ? 'highlight' : 'text'}
+                            bold={selected}
+                        >
                             {PrivacyUtils.sensitiveValue(title)}
                         </Body>
                     </View>
