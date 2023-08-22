@@ -615,8 +615,8 @@ export const LNDHUB_AUTH_MODES = [
     { key: 'Alby', value: 'Alby' }
 ];
 
-const DEFAULT_LSP_MAINNET = 'https://lsp-preview.lnolymp.us';
-const DEFAULT_LSP_TESTNET = 'https://testnet-lsp.lnolymp.us';
+const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
+const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
 
 const STORAGE_KEY = 'zeus-settings';
 
