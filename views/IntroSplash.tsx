@@ -169,9 +169,19 @@ export default class IntroSplash extends React.Component<
                                         setConnectingStatus,
                                         updateSettings
                                     } = SettingsStore;
-                                    const response = await createLndWallet(
-                                        undefined
-                                    );
+
+                                    let response;
+                                    try {
+                                        response = await createLndWallet(
+                                            undefined
+                                        );
+                                    } catch (e) {
+                                        this.setState({
+                                            error: true,
+                                            creatingWallet: false
+                                        });
+                                    }
+
                                     const { wallet, seed, randomBase64 }: any =
                                         response;
                                     if (wallet && wallet.admin_macaroon) {

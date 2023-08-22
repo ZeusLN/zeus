@@ -396,7 +396,7 @@
     "views.Intro.carousel3.text": "Make (almost) instant, low fee, bitcoin payments using the lightning network.",
     "views.Intro.carousel4.title": "Control the lightning",
     "views.Intro.carousel4.text": "Go beyond a basic bitcoin wallet and manage your lightning channels, liquidity, and so much more.",
-    "views.Intro.errorCreatingWallet": "Error creating wallet",
+    "views.Intro.errorCreatingWallet": "Error creating wallet. Restart the app and try again.",
     "views.OpenChannel.openChannel": "Open Channel",
     "views.OpenChannel.connectPeer": "Connect Peer",
     "views.OpenChannel.importText": "Detected the following Node URI in your clipboard",

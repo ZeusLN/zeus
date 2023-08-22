@@ -1429,13 +1429,24 @@ export default class NodeConfiguration extends React.Component<
                                                     creatingWallet: true
                                                 });
 
-                                                const response =
-                                                    await createLndWallet(
-                                                        recoveryCipherSeed,
-                                                        undefined,
-                                                        undefined,
-                                                        channelBackupsBase64
-                                                    );
+                                                let response;
+
+                                                try {
+                                                    response =
+                                                        await createLndWallet(
+                                                            recoveryCipherSeed,
+                                                            undefined,
+                                                            undefined,
+                                                            channelBackupsBase64
+                                                        );
+                                                } catch (e) {
+                                                    this.setState({
+                                                        creatingWallet: false,
+                                                        errorCreatingWallet:
+                                                            true
+                                                    });
+                                                }
+
                                                 const {
                                                     wallet,
                                                     seed,
