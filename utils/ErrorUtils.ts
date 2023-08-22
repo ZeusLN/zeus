@@ -14,17 +14,14 @@ const userFriendlyErrors: any = {
         'error.failureReasonInsufficientBalance'
 };
 
-class ErrorUtils {
-    errorToUserFriendly = (error: string, localize = true) => {
-        if (localize) {
-            const localeString = require('./LocaleUtils').localeString;
-            return localeString(userFriendlyErrors[error]) || error;
-        } else {
-            const EN = require('../locales/en.json');
-            return EN[userFriendlyErrors[error]] || error;
-        }
-    };
-}
+const errorToUserFriendly = (error: string, localize = true) => {
+    if (localize) {
+        const localeString = require('./LocaleUtils').localeString;
+        return localeString(userFriendlyErrors[error]) || error;
+    } else {
+        const EN = require('../locales/en.json');
+        return EN[userFriendlyErrors[error]] || error;
+    }
+};
 
-const errorUtils = new ErrorUtils();
-export default errorUtils;
+export { errorToUserFriendly };

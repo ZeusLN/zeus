@@ -1,8 +1,8 @@
 import { action, observable } from 'mobx';
-import NodeInfo from './../models/NodeInfo';
+import NodeInfo from '../models/NodeInfo';
 import SettingsStore from './SettingsStore';
-import ErrorUtils from './../utils/ErrorUtils';
-import BackendUtils from './../utils/BackendUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 export default class NodeInfoStore {
     @observable public loading = false;
@@ -61,9 +61,7 @@ export default class NodeInfoStore {
             })
             .catch((error: any) => {
                 // handle error
-                this.errorMsg = ErrorUtils.errorToUserFriendly(
-                    error.toString()
-                );
+                this.errorMsg = errorToUserFriendly(error.toString());
                 this.getNodeInfoError();
             });
     };
@@ -85,9 +83,7 @@ export default class NodeInfoStore {
                     return;
                 }
                 // handle error
-                this.errorMsg = ErrorUtils.errorToUserFriendly(
-                    error.toString()
-                );
+                this.errorMsg = errorToUserFriendly(error.toString());
                 this.getNodeInfoError();
             });
     };
