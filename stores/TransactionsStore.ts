@@ -6,7 +6,7 @@ import TransactionRequest from '../models/TransactionRequest';
 import SettingsStore from './SettingsStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
-import ErrorUtils from '../utils/ErrorUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 import { lnrpc } from '../proto/lightning';
@@ -323,13 +323,16 @@ export default class TransactionsStore {
             this.error = true;
             this.payment_error =
                 (implementation === 'embedded-lnd'
-                    ? lnrpc.PaymentFailureReason[result.failure_reason]
-                    : result.failure_reason) || result.payment_error;
+                    ? errorToUserFriendly(
+                          lnrpc.PaymentFailureReason[result.failure_reason]
+                      )
+                    : errorToUserFriendly(result.failure_reason)) ||
+                errorToUserFriendly(result.payment_error);
         }
         // lndhub
         if (result.error) {
             this.error = true;
-            this.error_msg = result.message;
+            this.error_msg = errorToUserFriendly(result.message);
         } else {
             this.status = result.status || 'complete';
         }
@@ -341,8 +344,8 @@ export default class TransactionsStore {
         this.loading = false;
         this.error_msg =
             typeof err === 'string'
-                ? ErrorUtils.errorToUserFriendly(err)
-                : ErrorUtils.errorToUserFriendly(err.message) ||
+                ? errorToUserFriendly(err)
+                : errorToUserFriendly(err.message) ||
                   localeString('error.sendingPayment');
     };
 }
