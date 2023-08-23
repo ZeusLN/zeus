@@ -23,6 +23,8 @@ import KeySecurity from '../../assets/images/SVG/Key Security.svg';
 import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import { themeColor } from '../../utils/ThemeUtils';
+import AddressUtils from '../../utils/AddressUtils';
+
 import Button from '../../components/Button';
 
 interface AddContactsProps {
@@ -51,6 +53,10 @@ interface AddContactsState {
     photo: string | null;
     showExtraFieldModal: boolean;
     isFavourite: boolean;
+    isValidOnchainAddress: boolean;
+    isValidLightningAddress: boolean;
+    isValidNIP05: boolean;
+    isValidNpub: boolean;
 }
 
 export default class AddContacts extends React.Component<
@@ -69,7 +75,11 @@ export default class AddContacts extends React.Component<
             description: '',
             photo: null,
             showExtraFieldModal: false,
-            isFavourite: false
+            isFavourite: false,
+            isValidOnchainAddress: true,
+            isValidLightningAddress: true,
+            isValidNIP05: true,
+            isValidNpub: true
         };
     }
 
@@ -162,6 +172,33 @@ export default class AddContacts extends React.Component<
         );
     };
 
+    onChangeOnchainAddress = (text: string) => {
+        const isValid = AddressUtils.isValidBitcoinAddress(text, true); // Pass true for testnet
+        this.setState({
+            isValidOnchainAddress: isValid
+        });
+    };
+    onChangeLightningAddress = (text: string) => {
+        const isValid =
+            AddressUtils.isValidLightningPaymentRequest(text) ||
+            AddressUtils.isValidLightningAddress(text);
+        this.setState({
+            isValidLightningAddress: isValid
+        });
+    };
+    onChangeNIP05 = (text: string) => {
+        const isValid = AddressUtils.isValidLightningAddress(text);
+        this.setState({
+            isValidNIP05: isValid
+        });
+    };
+    onChangeNpub = (text: string) => {
+        const isValid = AddressUtils.isValidNpub(text);
+        this.setState({
+            isValidNpub: isValid
+        });
+    };
+
     render() {
         const { navigation } = this.props;
         const {
@@ -170,7 +207,11 @@ export default class AddContacts extends React.Component<
             nip05,
             nostrNpub,
             name,
-            description
+            description,
+            isValidOnchainAddress,
+            isValidLightningAddress,
+            isValidNIP05,
+            isValidNpub
         } = this.state;
         const dropdownValues = [
             { key: 'LN address', translateKey: '', value: 'lnAddress' },
@@ -327,7 +368,10 @@ export default class AddContacts extends React.Component<
                     </Modal>
                     <Divider
                         orientation="horizontal"
-                        style={{ marginTop: 14 }}
+                        style={{
+                            marginTop: 14
+                        }}
+                        color={!isValidLightningAddress && 'red'}
                     />
                     <View style={styles.inputContainer}>
                         <View style={styles.icons}>
@@ -335,14 +379,23 @@ export default class AddContacts extends React.Component<
                         </View>
                         <TextInput
                             onChangeText={(text) => {
+                                this.onChangeLightningAddress(text);
                                 const updatedAddresses = [...lnAddress];
                                 updatedAddresses[0] = text;
                                 this.setState({ lnAddress: updatedAddresses });
+                                if (text === '') {
+                                    this.setState({
+                                        isValidLightningAddress: true
+                                    });
+                                }
                             }}
                             value={lnAddress[0]}
                             placeholder="LN address"
                             placeholderTextColor={themeColor('secondaryText')}
-                            style={styles.textInput}
+                            style={[
+                                styles.textInput
+                                // !isValidLightningAddress && styles.invalidInput
+                            ]}
                         />
                     </View>
                     {lnAddress.slice(1).map((address, index) => (
@@ -350,6 +403,7 @@ export default class AddContacts extends React.Component<
                             <Divider
                                 orientation="horizontal"
                                 style={{ marginTop: 16 }}
+                                color={!isValidLightningAddress && 'red'}
                             />
                             <View key={index} style={styles.inputContainer}>
                                 <View style={styles.icons}>
@@ -358,6 +412,7 @@ export default class AddContacts extends React.Component<
                                 <View>
                                     <TextInput
                                         onChangeText={(text) => {
+                                            this.onChangeLightningAddress(text);
                                             const updatedAddresses = [
                                                 ...lnAddress
                                             ];
@@ -365,6 +420,12 @@ export default class AddContacts extends React.Component<
                                             this.setState({
                                                 lnAddress: updatedAddresses
                                             });
+                                            if (text === '') {
+                                                this.setState({
+                                                    isValidLightningAddress:
+                                                        true
+                                                });
+                                            }
                                         }}
                                         value={address}
                                         placeholder="LN address"
@@ -379,7 +440,14 @@ export default class AddContacts extends React.Component<
                     ))}
                     <Divider
                         orientation="horizontal"
-                        style={{ marginTop: 10 }}
+                        style={{
+                            marginTop: 10
+                        }}
+                        color={
+                            (!isValidOnchainAddress ||
+                                !isValidLightningAddress) &&
+                            'red'
+                        }
                     />
                     <View style={styles.inputContainer}>
                         <View style={styles.icons}>
@@ -387,16 +455,22 @@ export default class AddContacts extends React.Component<
                         </View>
                         <TextInput
                             onChangeText={(text) => {
+                                this.onChangeOnchainAddress(text);
                                 const updatedAddresses = [...onchainAddress];
                                 updatedAddresses[0] = text;
                                 this.setState({
                                     onchainAddress: updatedAddresses
                                 });
+                                if (text === '') {
+                                    this.setState({
+                                        isValidOnchainAddress: true
+                                    });
+                                }
                             }}
                             value={onchainAddress[0]}
                             placeholder="Onchain address"
                             placeholderTextColor={themeColor('secondaryText')}
-                            style={styles.textInput}
+                            style={[styles.textInput]}
                             numberOfLines={1}
                         />
                     </View>
@@ -405,6 +479,11 @@ export default class AddContacts extends React.Component<
                             <Divider
                                 orientation="horizontal"
                                 style={{ marginTop: 16 }}
+                                color={
+                                    (!isValidOnchainAddress ||
+                                        !isValidLightningAddress) &&
+                                    'red'
+                                }
                             />
                             <View key={index} style={styles.inputContainer}>
                                 <View style={styles.icons}>
@@ -413,6 +492,7 @@ export default class AddContacts extends React.Component<
                                 <View>
                                     <TextInput
                                         onChangeText={(text) => {
+                                            this.onChangeOnchainAddress(text);
                                             const updatedAddresses = [
                                                 ...onchainAddress
                                             ];
@@ -420,6 +500,11 @@ export default class AddContacts extends React.Component<
                                             this.setState({
                                                 onchainAddress: updatedAddresses
                                             });
+                                            if (text === '') {
+                                                this.setState({
+                                                    isValidOnchainAddress: true
+                                                });
+                                            }
                                         }}
                                         value={address}
                                         placeholder="Onchain address"
@@ -435,6 +520,9 @@ export default class AddContacts extends React.Component<
                     <Divider
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
+                        color={
+                            (!isValidOnchainAddress || !isValidNIP05) && 'red'
+                        }
                     />
                     <View style={styles.inputContainer}>
                         <View style={styles.icons}>
@@ -442,11 +530,17 @@ export default class AddContacts extends React.Component<
                         </View>
                         <TextInput
                             onChangeText={(text) => {
+                                this.onChangeNIP05(text);
                                 const updatedAddresses = [...nip05];
                                 updatedAddresses[0] = text;
                                 this.setState({
                                     nip05: updatedAddresses
                                 });
+                                if (text === '') {
+                                    this.setState({
+                                        isValidNIP05: true
+                                    });
+                                }
                             }}
                             value={nip05[0]}
                             placeholder="NIP-05"
@@ -468,11 +562,17 @@ export default class AddContacts extends React.Component<
                                 <View>
                                     <TextInput
                                         onChangeText={(text) => {
+                                            this.onChangeNIP05(text);
                                             const updatedAddresses = [...nip05];
                                             updatedAddresses[index + 1] = text;
                                             this.setState({
                                                 nip05: updatedAddresses
                                             });
+                                            if (text === '') {
+                                                this.setState({
+                                                    isValidNIP05: true
+                                                });
+                                            }
                                         }}
                                         value={address}
                                         placeholder="NIP-05"
@@ -488,6 +588,7 @@ export default class AddContacts extends React.Component<
                     <Divider
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
+                        color={(!isValidNIP05 || !isValidNpub) && 'red'}
                     />
                     <View style={styles.inputContainer}>
                         <View style={styles.icons}>
@@ -495,11 +596,17 @@ export default class AddContacts extends React.Component<
                         </View>
                         <TextInput
                             onChangeText={(text) => {
+                                this.onChangeNpub(text);
                                 const updatedAddresses = [...nostrNpub];
                                 updatedAddresses[0] = text;
                                 this.setState({
                                     nostrNpub: updatedAddresses
                                 });
+                                if (text === '') {
+                                    this.setState({
+                                        isValidNpub: true
+                                    });
+                                }
                             }}
                             value={nostrNpub[0]}
                             placeholder="Nostr npub"
@@ -521,6 +628,7 @@ export default class AddContacts extends React.Component<
                                 <View>
                                     <TextInput
                                         onChangeText={(text) => {
+                                            this.onChangeNpub(text);
                                             const updatedAddresses = [
                                                 ...nostrNpub
                                             ];
@@ -528,6 +636,11 @@ export default class AddContacts extends React.Component<
                                             this.setState({
                                                 nostrNpub: updatedAddresses
                                             });
+                                            if (text === '') {
+                                                this.setState({
+                                                    isValidNpub: true
+                                                });
+                                            }
                                         }}
                                         value={address}
                                         placeholder="Nostr npub"
@@ -543,6 +656,7 @@ export default class AddContacts extends React.Component<
                     <Divider
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
+                        color={!isValidNpub && 'red'}
                     />
                     <TouchableOpacity
                         onPress={() =>
@@ -565,8 +679,15 @@ export default class AddContacts extends React.Component<
                             this.saveContact();
                         }}
                         containerStyle={{
-                            bottom: 0
+                            bottom: 0,
+                            opacity:
+                                isValidOnchainAddress && isValidLightningAddress
+                                    ? 1
+                                    : 0.5
                         }}
+                        disabled={
+                            !isValidOnchainAddress || !isValidLightningAddress
+                        }
                     />
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -599,6 +720,9 @@ const styles = StyleSheet.create({
         marginLeft: 24,
         flexDirection: 'row',
         alignItems: 'center'
+    },
+    invalidInput: {
+        color: 'red'
     },
     icons: {
         paddingRight: 14,

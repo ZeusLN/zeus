@@ -24,6 +24,9 @@ const lightningAddress =
 
 const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 
+/* npub */
+const npubFormat = /^npub1[0-9a-z]{58}$/;
+
 export const CUSTODIAL_LNDHUBS = [
     'https://lndhub.io',
     'https://lndhub.herokuapp.com',
@@ -143,6 +146,8 @@ class AddressUtils {
         lndHubAddress.test(input) || blueWalletAddress.test(input);
 
     isValidLightningAddress = (input: string) => lightningAddress.test(input);
+
+    isValidNpub = (input: string) => npubFormat.test(input);
 }
 
 const addressUtils = new AddressUtils();
