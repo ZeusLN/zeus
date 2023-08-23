@@ -479,4 +479,36 @@ describe('AddressUtils', () => {
             });
         });
     });
+    describe('isValidNpub', () => {
+        it('validates npub properly', () => {
+            expect(
+                AddressUtils.isValidNpub(
+                    'npub18sqwdw687krnx0d23qa6a4mq38743xx5nfd3f9h5yts39srcl8qsf6k5jy'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidNpub(
+                    'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidNpub(
+                    'npub1hlgjrgmhwd257thnarjjfc8rxlemlpfwk4wdjejw9jgp298sv0nsq3mr2u'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidNpub(
+                    'npub1h87dwd37896498f2236h54f274f524f4'
+                )
+            ).toBeFalsy();
+            expect(
+                AddressUtils.isValidNpub(
+                    'bc463495cb345634cbc63498b65c34786bc538746b3cb47cb34875398c4b476'
+                )
+            ).toBeFalsy();
+            expect(
+                AddressUtils.isValidNpub('njkd7d484jffj4f4n37n4c7c3n4c7n34c38')
+            ).toBeFalsy();
+        });
+    });
 });
