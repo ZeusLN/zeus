@@ -20,7 +20,7 @@ interface RouteHint {
 export default class Invoice extends BaseModel {
     public route_hints: Array<RouteHint>;
     public fallback_addr: string;
-    public r_hash: string;
+    public r_hash: any;
     public settle_date: string;
     public expiry: string;
     public memo: string;
@@ -179,6 +179,14 @@ export default class Invoice extends BaseModel {
             : DateTimeUtils.listFormattedDateShort(
                   this.expires_at || this.creation_date || this.timestamp || 0
               );
+    }
+
+    @computed public get getFormattedRhash(): string {
+        return typeof this.r_hash === 'string'
+            ? this.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
+            : this.r_hash.data
+            ? Base64Utils.bytesToHexString(this.r_hash.data)
+            : Base64Utils.bytesToHexString(this.r_hash);
     }
 
     @computed public get getDate(): string | number | Date {
