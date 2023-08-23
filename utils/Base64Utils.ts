@@ -97,6 +97,19 @@ class Base64Utils {
         }
         return result;
     };
+
+    // from https://coolaj86.com/articles/unicode-string-to-a-utf-8-typed-array-buffer-in-javascript/
+    unicodeStringToUint8Array = (s: string) => {
+        const escstr = encodeURIComponent(s);
+        const binstr = escstr.replace(/%([0-9A-F]{2})/g, function (_, p1) {
+            return String.fromCharCode(('0x' + p1) as any);
+        });
+        const ua = new Uint8Array(binstr.length);
+        Array.prototype.forEach.call(binstr, function (ch, i) {
+            ua[i] = ch.charCodeAt(0);
+        });
+        return ua;
+    };
 }
 
 const base64Utils = new Base64Utils();

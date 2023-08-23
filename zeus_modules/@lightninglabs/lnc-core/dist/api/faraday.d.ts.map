@@ -1,0 +1,1 @@
+{"version":3,"file":"faraday.d.ts","sourceRoot":"","sources":["../../lib/api/faraday.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,aAAa,EAAE,MAAM,gCAAgC,CAAC;AAG/D;;GAEG;AACH,cAAM,UAAU;IACZ,aAAa,EAAE,aAAa,CAAC;gBAEjB,SAAS,EAAE,QAAQ,EAAE,GAAG,EAAE,GAAG;CAG5C;AAED,eAAe,UAAU,CAAC"}

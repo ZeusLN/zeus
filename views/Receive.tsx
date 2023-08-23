@@ -27,6 +27,7 @@ import handleAnything from '../utils/handleAnything';
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
 
+import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
 import Button from '../components/Button';
 import CollapsedQR from '../components/CollapsedQR';
@@ -43,27 +44,39 @@ import {
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 
+import ChannelsStore from '../stores/ChannelsStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import PosStore from '../stores/PosStore';
 import SettingsStore from '../stores/SettingsStore';
+import LSPStore from '../stores/LSPStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
+import Base64Utils from '../utils/Base64Utils';
 import NFCUtils from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
+
+import lndMobile from '../lndmobile/LndMobileInjection';
+import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
+import {
+    checkLndStreamErrorResponse,
+    LndMobileEventEmitter
+} from '../utils/LndMobileUtils';
 
 interface ReceiveProps {
     exitSetup: any;
     navigation: any;
+    ChannelsStore: ChannelsStore;
     InvoicesStore: InvoicesStore;
     PosStore: PosStore;
     ModalStore: ModalStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
+    LSPStore: LSPStore;
 }
 
 interface ReceiveState {
@@ -81,14 +94,20 @@ interface ReceiveState {
     orderTip: string;
     exchangeRate: string;
     rate: number;
+    // LSP
+    needInbound: boolean;
+    belowMinAmount: boolean;
+    enableLSP: boolean;
 }
 
 @inject(
+    'ChannelsStore',
     'InvoicesStore',
     'SettingsStore',
     'UnitsStore',
     'PosStore',
-    'NodeInfoStore'
+    'NodeInfoStore',
+    'LSPStore'
 )
 @observer
 export default class Receive extends React.Component<
@@ -113,7 +132,11 @@ export default class Receive extends React.Component<
         orderTip: '',
         orderTotal: '',
         exchangeRate: '',
-        rate: 0
+        rate: 0,
+        // LSP
+        needInbound: false,
+        belowMinAmount: false,
+        enableLSP: true
     };
 
     async UNSAFE_componentWillMount() {
@@ -128,7 +151,8 @@ export default class Receive extends React.Component<
             memo: settings?.invoices?.memo || '',
             expiry: settings?.invoices?.expiry || '3600',
             routeHints: settings?.invoices?.routeHints || false,
-            ampInvoice: settings?.invoices?.ampInvoice || false
+            ampInvoice: settings?.invoices?.ampInvoice || false,
+            enableLSP: settings?.enableLSP || true
         });
 
         const lnOnly =
@@ -145,6 +169,16 @@ export default class Receive extends React.Component<
 
         const amount: string = navigation.getParam('amount');
         const autoGenerate: boolean = navigation.getParam('autoGenerate');
+        const autoGenerateOnChain: boolean = navigation.getParam(
+            'autoGenerateOnChain'
+        );
+        const selectedIndex: number = navigation.getParam('selectedIndex');
+
+        if (selectedIndex) {
+            this.setState({
+                selectedIndex
+            });
+        }
 
         const { expiry, routeHints, ampInvoice, addressType } = this.state;
 
@@ -168,17 +202,54 @@ export default class Receive extends React.Component<
 
         if (lnurl) {
             this.props.UnitsStore.resetUnits();
+            let needInbound = false;
+            let belowMinAmount = false;
+            if (
+                BackendUtils.supportsLSPs() &&
+                settings?.enableLSP &&
+                new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
+                    this.props.ChannelsStore.totalInbound
+                )
+            ) {
+                needInbound = true;
+                if (
+                    new BigNumber(
+                        getSatAmount(lnurl.maxWithdrawable / 1000)
+                    ).lt(50000)
+                ) {
+                    belowMinAmount = true;
+                }
+            }
             this.setState({
                 memo: lnurl.defaultDescription,
                 value: (lnurl.maxWithdrawable / 1000).toString(),
-                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000)
+                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000),
+                needInbound,
+                belowMinAmount
             });
         }
 
         if (amount) {
+            let needInbound = false;
+            let belowMinAmount = false;
+            if (
+                BackendUtils.supportsLSPs() &&
+                settings?.enableLSP &&
+                getSatAmount(amount) != '0' &&
+                new BigNumber(getSatAmount(amount)).gt(
+                    this.props.ChannelsStore.totalInbound
+                )
+            ) {
+                needInbound = true;
+                if (new BigNumber(getSatAmount(amount)).lt(50000)) {
+                    belowMinAmount = true;
+                }
+            }
             this.setState({
                 value: amount,
-                satAmount: getSatAmount(amount)
+                satAmount: getSatAmount(amount),
+                needInbound,
+                belowMinAmount
             });
         }
 
@@ -188,7 +259,7 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (autoGenerate)
+        if (autoGenerate) {
             this.autoGenerateInvoice(
                 getSatAmount(amount),
                 memo,
@@ -197,11 +268,17 @@ export default class Receive extends React.Component<
                 ampInvoice,
                 addressType
             );
+        }
+
+        if (autoGenerateOnChain) {
+            this.autoGenerateOnChainAddress();
+        }
     }
 
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation, InvoicesStore } = nextProps;
+    async UNSAFE_componentWillReceiveProps(nextProps: any) {
+        const { navigation, InvoicesStore, SettingsStore } = nextProps;
         const { reset } = InvoicesStore;
+        const { settings } = SettingsStore;
 
         reset();
         const amount: string = navigation.getParam('amount');
@@ -209,17 +286,54 @@ export default class Receive extends React.Component<
             navigation.getParam('lnurlParams');
 
         if (amount) {
+            let needInbound = false;
+            let belowMinAmount = false;
+            if (
+                BackendUtils.supportsLSPs() &&
+                settings?.enableLSP &&
+                getSatAmount(amount) != '0' &&
+                new BigNumber(getSatAmount(amount)).gt(
+                    this.props.ChannelsStore.totalInbound
+                )
+            ) {
+                needInbound = true;
+                if (new BigNumber(getSatAmount(amount)).lt(50000)) {
+                    belowMinAmount = true;
+                }
+            }
             this.setState({
                 value: amount,
-                satAmount: getSatAmount(amount)
+                satAmount: getSatAmount(amount),
+                needInbound,
+                belowMinAmount
             });
         }
 
         if (lnurl) {
+            let needInbound = false;
+            let belowMinAmount = false;
+            if (
+                BackendUtils.supportsLSPs() &&
+                settings?.enableLSP &&
+                new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
+                    this.props.ChannelsStore.totalInbound
+                )
+            ) {
+                needInbound = true;
+                if (
+                    new BigNumber(
+                        getSatAmount(lnurl.maxWithdrawable / 1000)
+                    ).lt(50000)
+                ) {
+                    belowMinAmount = true;
+                }
+            }
             this.setState({
                 memo: lnurl.defaultDescription,
                 value: (lnurl.maxWithdrawable / 1000).toString(),
-                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000)
+                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000),
+                needInbound,
+                belowMinAmount
             });
         }
     }
@@ -255,6 +369,7 @@ export default class Receive extends React.Component<
         addressType?: string
     ) => {
         const { InvoicesStore } = this.props;
+        const { enableLSP } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
 
         createUnifiedInvoice(
@@ -262,7 +377,7 @@ export default class Receive extends React.Component<
             amount || '0',
             expiry || '3600',
             undefined,
-            ampInvoice || false,
+            enableLSP ? false : ampInvoice || false,
             routeHints || false,
             BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
@@ -278,6 +393,16 @@ export default class Receive extends React.Component<
                 this.subscribeInvoice(rHash, onChainAddress);
             }
         );
+    };
+
+    autoGenerateOnChainAddress = () => {
+        const { InvoicesStore } = this.props;
+        const { addressType } = this.state;
+        const { getNewAddress } = InvoicesStore;
+
+        getNewAddress({ type: addressType }).then((onChainAddress: string) => {
+            this.subscribeInvoice(undefined, onChainAddress);
+        });
     };
 
     disableNfc = () => {
@@ -387,7 +512,7 @@ export default class Receive extends React.Component<
             .catch();
     };
 
-    subscribeInvoice = (rHash: string, onChainAddress?: string) => {
+    subscribeInvoice = async (rHash?: string, onChainAddress?: string) => {
         const { InvoicesStore, PosStore, SettingsStore, NodeInfoStore } =
             this.props;
         const { orderId, orderTotal, orderTip, exchangeRate, rate, value } =
@@ -401,18 +526,37 @@ export default class Receive extends React.Component<
                 ? 1
                 : 0;
 
-        if (implementation === 'lightning-node-connect') {
-            const { LncModule } = NativeModules;
-            const eventName = BackendUtils.subscribeInvoice(rHash);
-            const eventEmitter = new NativeEventEmitter(LncModule);
-            this.listener = eventEmitter.addListener(
-                eventName,
-                (event: any) => {
-                    if (event.result) {
+        if (implementation === 'embedded-lnd') {
+            if (rHash) {
+                this.listener = LndMobileEventEmitter.addListener(
+                    'SubscribeInvoices',
+                    (e: any) => {
                         try {
-                            const result = JSON.parse(event.result);
-                            if (result.settled) {
-                                setWatchedInvoicePaid(result.amt_paid_sat);
+                            const error = checkLndStreamErrorResponse(
+                                'SubscribeInvoices',
+                                e
+                            );
+                            if (error === 'EOF') {
+                                return;
+                            } else if (error) {
+                                console.error(
+                                    'Got error from SubscribeInvoices',
+                                    [error]
+                                );
+                                return;
+                            }
+
+                            const invoice =
+                                lndMobile.wallet.decodeInvoiceResult(e.data);
+
+                            if (
+                                invoice.settled &&
+                                Base64Utils.bytesToHexString(invoice.r_hash) ===
+                                    rHash
+                            ) {
+                                setWatchedInvoicePaid(
+                                    Number(invoice.amt_paid_sat)
+                                );
                                 if (orderId)
                                     PosStore.recordPayment({
                                         orderId,
@@ -421,7 +565,7 @@ export default class Receive extends React.Component<
                                         exchangeRate,
                                         rate,
                                         type: 'ln',
-                                        tx: result.payment_request
+                                        tx: invoice.payment_request
                                     });
                                 this.listener = null;
                             }
@@ -429,8 +573,97 @@ export default class Receive extends React.Component<
                             console.error(error);
                         }
                     }
-                }
-            );
+                );
+            }
+
+            if (onChainAddress) {
+                this.listenerSecondary = LndMobileEventEmitter.addListener(
+                    'SubscribeTransactions',
+                    (e: any) => {
+                        try {
+                            const error = checkLndStreamErrorResponse(
+                                'SubscribeTransactions',
+                                e
+                            );
+                            if (error === 'EOF') {
+                                return;
+                            } else if (error) {
+                                console.error(
+                                    'Got error from SubscribeTransactions',
+                                    [error]
+                                );
+                                return;
+                            }
+
+                            const transaction =
+                                decodeSubscribeTransactionsResult(e.data);
+                            if (
+                                onChainAddress &&
+                                transaction.dest_addresses.includes(
+                                    onChainAddress
+                                ) &&
+                                transaction.num_confirmations >
+                                    numConfPreference &&
+                                Number(transaction.amount) >= Number(value)
+                            ) {
+                                setWatchedInvoicePaid(
+                                    Number(transaction.amount)
+                                );
+                                if (orderId)
+                                    PosStore.recordPayment({
+                                        orderId,
+                                        orderTotal,
+                                        orderTip,
+                                        exchangeRate,
+                                        rate,
+                                        type: 'onchain',
+                                        tx: transaction.tx_hash
+                                    });
+                                this.listenerSecondary = null;
+                            }
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    }
+                );
+            }
+
+            await lndMobile.wallet.subscribeInvoices();
+            await lndMobile.onchain.subscribeTransactions();
+        }
+
+        if (implementation === 'lightning-node-connect') {
+            const { LncModule } = NativeModules;
+            if (rHash) {
+                const eventName = BackendUtils.subscribeInvoice(rHash);
+                const eventEmitter = new NativeEventEmitter(LncModule);
+                this.listener = eventEmitter.addListener(
+                    eventName,
+                    (event: any) => {
+                        if (event.result) {
+                            try {
+                                const result = JSON.parse(event.result);
+                                if (result.settled) {
+                                    setWatchedInvoicePaid(result.amt_paid_sat);
+                                    if (orderId)
+                                        PosStore.recordPayment({
+                                            orderId,
+                                            orderTotal,
+                                            orderTip,
+                                            exchangeRate,
+                                            rate,
+                                            type: 'ln',
+                                            tx: result.payment_request
+                                        });
+                                    this.listener = null;
+                                }
+                            } catch (error) {
+                                console.error(error);
+                            }
+                        }
+                    }
+                );
+            }
 
             if (onChainAddress) {
                 const eventName2 = BackendUtils.subscribeTransactions();
@@ -472,38 +705,41 @@ export default class Receive extends React.Component<
         }
 
         if (implementation === 'lnd') {
-            this.lnInterval = setInterval(() => {
-                // only fetch the last 10 invoices
-                BackendUtils.getInvoices({ limit: 10 }).then(
-                    (response: any) => {
-                        const invoices = response.invoices;
-                        for (let i = 0; i < invoices.length; i++) {
-                            const result = invoices[i];
-                            if (
-                                result.r_hash
-                                    .replace(/\+/g, '-')
-                                    .replace(/\//g, '_') === rHash &&
-                                Number(result.amt_paid_sat) >= Number(value) &&
-                                Number(result.amt_paid_sat) !== 0
-                            ) {
-                                setWatchedInvoicePaid(result.amt_paid_sat);
-                                if (orderId)
-                                    PosStore.recordPayment({
-                                        orderId,
-                                        orderTotal,
-                                        orderTip,
-                                        exchangeRate,
-                                        rate,
-                                        type: 'ln',
-                                        tx: result.payment_request
-                                    });
-                                this.clearIntervals();
-                                break;
+            if (rHash) {
+                this.lnInterval = setInterval(() => {
+                    // only fetch the last 10 invoices
+                    BackendUtils.getInvoices({ limit: 10 }).then(
+                        (response: any) => {
+                            const invoices = response.invoices;
+                            for (let i = 0; i < invoices.length; i++) {
+                                const result = invoices[i];
+                                if (
+                                    result.r_hash
+                                        .replace(/\+/g, '-')
+                                        .replace(/\//g, '_') === rHash &&
+                                    Number(result.amt_paid_sat) >=
+                                        Number(value) &&
+                                    Number(result.amt_paid_sat) !== 0
+                                ) {
+                                    setWatchedInvoicePaid(result.amt_paid_sat);
+                                    if (orderId)
+                                        PosStore.recordPayment({
+                                            orderId,
+                                            orderTotal,
+                                            orderTip,
+                                            exchangeRate,
+                                            rate,
+                                            type: 'ln',
+                                            tx: result.payment_request
+                                        });
+                                    this.clearIntervals();
+                                    break;
+                                }
                             }
                         }
-                    }
-                );
-            }, 5000);
+                    );
+                }, 5000);
+            }
 
             // this is workaround that manually calls your transactions every 30 secs
             if (onChainAddress) {
@@ -575,8 +811,13 @@ export default class Receive extends React.Component<
     };
 
     render() {
-        const { InvoicesStore, SettingsStore, UnitsStore, navigation } =
-            this.props;
+        const {
+            InvoicesStore,
+            SettingsStore,
+            UnitsStore,
+            LSPStore,
+            navigation
+        } = this.props;
         const {
             selectedIndex,
             addressType,
@@ -585,8 +826,12 @@ export default class Receive extends React.Component<
             satAmount,
             expiry,
             ampInvoice,
-            routeHints
+            routeHints,
+            needInbound,
+            belowMinAmount,
+            enableLSP
         } = this.state;
+        const { zeroConfFee, showLspSettings } = LSPStore;
         const { getAmount } = UnitsStore;
 
         const {
@@ -596,14 +841,16 @@ export default class Receive extends React.Component<
             payment_request_amt,
             creatingInvoice,
             creatingInvoiceError,
-            error_msg,
             watchedInvoicePaid,
             watchedInvoicePaidAmt,
             clearUnified
         } = InvoicesStore;
-        const { implementation, posStatus, settings } = SettingsStore;
+        const { implementation, posStatus, settings, updateSettings } =
+            SettingsStore;
         const loading = SettingsStore.loading || InvoicesStore.loading;
         const address = onChainAddress;
+
+        const error_msg = LSPStore.error_msg || InvoicesStore.error_msg;
 
         const lnOnly =
             settings &&
@@ -622,6 +869,7 @@ export default class Receive extends React.Component<
                 onPress={() => InvoicesStore.clearUnified()}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={30}
             />
         );
 
@@ -631,6 +879,7 @@ export default class Receive extends React.Component<
                 onPress={() => this.refs.modal.open()}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={30}
             />
         );
 
@@ -822,6 +1071,19 @@ export default class Receive extends React.Component<
                     )}
                     {error_msg && <ErrorMessage message={error_msg} />}
 
+                    {showLspSettings && (
+                        <View style={{ margin: 10 }}>
+                            <Button
+                                title={localeString(
+                                    'views.Receive.goToLspSettings'
+                                )}
+                                onPress={() =>
+                                    navigation.navigate('LSPSettings')
+                                }
+                            />
+                        </View>
+                    )}
+
                     {watchedInvoicePaid ? (
                         <View
                             style={{
@@ -908,6 +1170,96 @@ export default class Receive extends React.Component<
                                     <LoadingIndicator />
                                 </View>
                             )}
+                            {haveInvoice &&
+                                enableLSP &&
+                                satAmount === '0' &&
+                                selectedIndex !== 2 && (
+                                    <View
+                                        style={{
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            borderRadius: 10,
+                                            top: 10,
+                                            margin: 10,
+                                            padding: 15,
+                                            borderWidth: 0.5
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                fontFamily: 'Lato-Bold',
+                                                color: themeColor('text'),
+                                                fontSize: 15
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.lspZeroAmt'
+                                            )}
+                                        </Text>
+                                    </View>
+                                )}
+                            {haveInvoice &&
+                                !!zeroConfFee &&
+                                (selectedIndex == 0 || selectedIndex == 1) && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                new BigNumber(zeroConfFee).gt(
+                                                    1000
+                                                )
+                                                    ? 'LspExplanation'
+                                                    : 'LspExplanationRouting'
+                                            )
+                                        }
+                                    >
+                                        <View
+                                            style={{
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderRadius: 10,
+                                                top: 10,
+                                                margin: 10,
+                                                padding: 15,
+                                                borderWidth: 0.5
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    fontFamily: 'Lato-Bold',
+                                                    color: themeColor('text'),
+                                                    marginBottom: 5
+                                                }}
+                                            >
+                                                {localeString(
+                                                    new BigNumber(
+                                                        zeroConfFee
+                                                    ).gt(1000)
+                                                        ? 'views.Receive.lspExplainer'
+                                                        : 'views.Receive.lspExplainerRouting'
+                                                )}
+                                            </Text>
+                                            <Amount
+                                                sats={zeroConfFee}
+                                                fixedUnits="sats"
+                                            />
+                                            <Text
+                                                style={{
+                                                    fontFamily: 'Lato-Bold',
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontSize: 15,
+                                                    top: 5,
+                                                    textAlign: 'right'
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'general.tapToLearnMore'
+                                                )}
+                                            </Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
                             {haveInvoice && !creatingInvoiceError && (
                                 <View style={{ marginTop: 10 }}>
                                     {selectedIndex == 0 &&
@@ -939,7 +1291,7 @@ export default class Receive extends React.Component<
                                         )}
                                     {selectedIndex == 2 &&
                                         !belowDustLimit &&
-                                        haveUnifiedInvoice && (
+                                        btcAddress && (
                                             <CollapsedQR
                                                 value={btcAddress}
                                                 copyValue={btcAddressCopyValue}
@@ -951,19 +1303,20 @@ export default class Receive extends React.Component<
                                                 truncateLongValue
                                             />
                                         )}
-                                    {(belowDustLimit ||
-                                        !haveUnifiedInvoice) && (
-                                        <CollapsedQR
-                                            value={lnInvoice}
-                                            copyValue={lnInvoiceCopyValue}
-                                            copyText={localeString(
-                                                'views.Receive.copyAddress'
-                                            )}
-                                            expanded
-                                            textBottom
-                                            truncateLongValue
-                                        />
-                                    )}
+                                    {selectedIndex !== 2 &&
+                                        (belowDustLimit ||
+                                            !haveUnifiedInvoice) && (
+                                            <CollapsedQR
+                                                value={lnInvoice}
+                                                copyValue={lnInvoiceCopyValue}
+                                                copyText={localeString(
+                                                    'views.Receive.copyAddress'
+                                                )}
+                                                expanded
+                                                textBottom
+                                                truncateLongValue
+                                            />
+                                        )}
                                     <View
                                         style={[
                                             styles.button,
@@ -1065,12 +1418,97 @@ export default class Receive extends React.Component<
                                             amount: string,
                                             satAmount: string | number
                                         ) => {
+                                            let needInbound = false;
+                                            let belowMinAmount = false;
+                                            if (
+                                                BackendUtils.supportsLSPs() &&
+                                                enableLSP &&
+                                                satAmount != '0' &&
+                                                new BigNumber(satAmount).gt(
+                                                    this.props.ChannelsStore
+                                                        .totalInbound
+                                                )
+                                            ) {
+                                                needInbound = true;
+                                                if (
+                                                    new BigNumber(satAmount).lt(
+                                                        50000
+                                                    )
+                                                ) {
+                                                    belowMinAmount = true;
+                                                }
+                                            }
                                             this.setState({
                                                 value: amount,
-                                                satAmount
+                                                satAmount,
+                                                needInbound,
+                                                belowMinAmount
                                             });
                                         }}
                                     />
+
+                                    {needInbound && (
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'LspExplanation'
+                                                )
+                                            }
+                                        >
+                                            <View
+                                                style={{
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderRadius: 10,
+                                                    borderColor:
+                                                        themeColor('highlight'),
+                                                    padding: 15,
+                                                    borderWidth: 0.5,
+                                                    top: 5,
+                                                    marginBottom: 20
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontFamily: 'Lato-Bold',
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontSize: 15
+                                                    }}
+                                                >
+                                                    {belowMinAmount &&
+                                                    this.props.ChannelsStore
+                                                        .channels.length === 0
+                                                        ? localeString(
+                                                              'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+                                                          )
+                                                        : belowMinAmount
+                                                        ? localeString(
+                                                              'views.Wallet.KeypadPane.lspExplainerBelowMin'
+                                                          )
+                                                        : localeString(
+                                                              'views.Wallet.KeypadPane.lspExplainer'
+                                                          )}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        fontFamily: 'Lato-Bold',
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontSize: 15,
+                                                        top: 5,
+                                                        textAlign: 'right'
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'general.tapToLearnMore'
+                                                    )}
+                                                </Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
 
                                     {implementation !== 'lndhub' && (
                                         <>
@@ -1096,6 +1534,57 @@ export default class Receive extends React.Component<
                                                     })
                                                 }
                                             />
+                                        </>
+                                    )}
+
+                                    {BackendUtils.supportsLSPs() && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.secondaryText,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    top: 20
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LSP.enableLSP'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={enableLSP}
+                                                onValueChange={async () => {
+                                                    this.setState({
+                                                        enableLSP: !enableLSP
+                                                    });
+                                                    await updateSettings({
+                                                        enableLSP: !enableLSP
+                                                    });
+                                                }}
+                                            />
+                                            {enableLSP && (
+                                                <View
+                                                    style={{
+                                                        margin: 10
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'Lato-Regular',
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontSize: 15
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Receive.lspSwitchExplainer'
+                                                        )}
+                                                    </Text>
+                                                </View>
+                                            )}
                                         </>
                                     )}
 
@@ -1125,31 +1614,36 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
-                                    {BackendUtils.supportsAMP() && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.secondaryText,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    top: 20
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Receive.ampInvoice'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={ampInvoice}
-                                                onValueChange={() =>
-                                                    this.setState({
-                                                        ampInvoice: !ampInvoice
-                                                    })
-                                                }
-                                            />
-                                        </>
-                                    )}
+                                    {BackendUtils.supportsAMP() &&
+                                        !(
+                                            BackendUtils.supportsLSPs() &&
+                                            enableLSP
+                                        ) && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.secondaryText,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        top: 20
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Receive.ampInvoice'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={ampInvoice}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            ampInvoice:
+                                                                !ampInvoice
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )}
 
                                     <View style={styles.button}>
                                         <Button
@@ -1169,7 +1663,9 @@ export default class Receive extends React.Component<
                                                     satAmount.toString() || '0',
                                                     expiry,
                                                     lnurl,
-                                                    ampInvoice,
+                                                    enableLSP
+                                                        ? false
+                                                        : ampInvoice || false,
                                                     routeHints,
                                                     BackendUtils.supportsAddressTypeSelection()
                                                         ? addressType
@@ -1189,6 +1685,7 @@ export default class Receive extends React.Component<
                                                     }
                                                 );
                                             }}
+                                            disabled={belowMinAmount}
                                         />
                                     </View>
                                 </>

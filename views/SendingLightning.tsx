@@ -70,7 +70,10 @@ export default class SendingLightning extends React.Component<
         } = TransactionsStore;
         const { storedNotes } = this.state;
         const success =
-            payment_route || status === 'complete' || status === 'SUCCEEDED';
+            payment_route ||
+            status === 'complete' ||
+            status === 'SUCCEEDED' ||
+            status === 2;
 
         const inTransit = status === 'IN_FLIGHT';
 

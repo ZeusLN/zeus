@@ -22,6 +22,7 @@ interface OnchainSwipeableRowProps {
     navigation: any;
     value?: string;
     amount?: string;
+    locked?: boolean;
 }
 
 export default class OnchainSwipeableRow extends Component<
@@ -45,7 +46,10 @@ export default class OnchainSwipeableRow extends Component<
             this.close();
 
             if (text === localeString('general.receive')) {
-                this.props.navigation.navigate('Receive', { selectedIndex: 1 });
+                this.props.navigation.navigate('Receive', {
+                    selectedIndex: 2,
+                    autoGenerateOnChain: true
+                });
             } else if (text === localeString('general.coins')) {
                 this.props.navigation.navigate('CoinControl');
             } else if (text === localeString('general.send')) {
@@ -100,7 +104,7 @@ export default class OnchainSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: BackendUtils.supportsRouting() ? 200 : 135,
+                width: BackendUtils.supportsCoinControl() ? 200 : 135,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
@@ -143,7 +147,18 @@ export default class OnchainSwipeableRow extends Component<
     };
 
     render() {
-        const { children, value } = this.props;
+        const { children, value, locked } = this.props;
+        if (locked && value) {
+            return (
+                <TouchableOpacity
+                    onPress={() => this.sendToAddress()}
+                    activeOpacity={1}
+                >
+                    {children}
+                </TouchableOpacity>
+            );
+        }
+        if (locked) return children;
         return (
             <Swipeable
                 ref={this.updateRef}

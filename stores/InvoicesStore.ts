@@ -1,14 +1,19 @@
 import url from 'url';
 import { action, observable, reaction } from 'mobx';
+import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
 import hashjs from 'hash.js';
-import Invoice from './../models/Invoice';
+
+import Invoice from '../models/Invoice';
 import SettingsStore from './SettingsStore';
-import BackendUtils from './../utils/BackendUtils';
-import { localeString } from './../utils/LocaleUtils';
+import LSPStore from './LSPStore';
+import BackendUtils from '../utils/BackendUtils';
+import Base64Utils from '../utils/Base64Utils';
+import { localeString } from '../utils/LocaleUtils';
+import ChannelsStore from './ChannelsStore';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -28,14 +33,22 @@ export default class InvoicesStore {
     @observable watchedInvoicePaid = false;
     @observable watchedInvoicePaidAmt: number | string | null = null;
     settingsStore: SettingsStore;
+    lspStore: LSPStore;
+    channelsStore: ChannelsStore;
 
     // lnd
     @observable loadingFeeEstimate = false;
     @observable feeEstimate: number | null;
     @observable successProbability: number | null;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(
+        settingsStore: SettingsStore,
+        lspStore: LSPStore,
+        channelsStore: ChannelsStore
+    ) {
         this.settingsStore = settingsStore;
+        this.lspStore = lspStore;
+        this.channelsStore = channelsStore;
 
         reaction(
             () => this.pay_req,
@@ -155,7 +168,7 @@ export default class InvoicesStore {
     };
 
     @action
-    public createInvoice = (
+    public createInvoice = async (
         memo: string,
         value: string,
         expiry = '3600',
@@ -170,6 +183,8 @@ export default class InvoicesStore {
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
+        this.lspStore.reset();
+
         const req: any = {
             memo,
             value,
@@ -179,8 +194,54 @@ export default class InvoicesStore {
         if (ampInvoice) req.is_amp = true;
         if (routeHints) req.private = true;
 
+        if (
+            BackendUtils.supportsLSPs() &&
+            this.settingsStore.settings?.enableLSP &&
+            value &&
+            value !== '0'
+        ) {
+            await this.lspStore.getLSPInfo().then(async (result) => {
+                const info: any = result;
+                const method = info.connection_methods[0];
+
+                try {
+                    await this.channelsStore.connectPeer(
+                        {
+                            host: `${method.address}:${method.port}`,
+                            node_pubkey_string: info.pubkey,
+                            local_funding_amount: ''
+                        },
+                        false,
+                        true
+                    );
+                } catch (e) {}
+
+                await this.lspStore.getZeroConfFee(
+                    Number(new BigNumber(value).times(1000))
+                );
+            });
+
+            if (new BigNumber(value).gt(this.lspStore.zeroConfFee || 0)) {
+                req.value = new BigNumber(value).minus(
+                    this.lspStore.zeroConfFee || 0
+                );
+            } else if (
+                this.lspStore.zeroConfFee &&
+                new BigNumber(this.lspStore.zeroConfFee).gt(1000)
+            ) {
+                this.error_msg = localeString(
+                    'stores.InvoicesStore.lspNewChannelNeeded'
+                );
+            }
+        }
+
+        if (this.lspStore.error) {
+            this.creatingInvoice = false;
+            return;
+        }
+
         return BackendUtils.createInvoice(req)
-            .then((data: any) => {
+            .then(async (data: any) => {
                 if (data.error) {
                     this.creatingInvoiceError = true;
                     if (!unified) this.creatingInvoice = false;
@@ -201,6 +262,7 @@ export default class InvoicesStore {
                 const invoice = new Invoice(data);
                 if (!unified) this.payment_request = invoice.getPaymentRequest;
                 this.payment_request_amt = value;
+
                 if (!unified) this.creatingInvoice = false;
 
                 if (lnurl) {
@@ -247,7 +309,25 @@ export default class InvoicesStore {
                 const formattedRhash =
                     typeof invoice.r_hash === 'string'
                         ? invoice.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
-                        : '';
+                        : invoice.r_hash.data
+                        ? Base64Utils.bytesToHexString(invoice.r_hash.data)
+                        : Base64Utils.bytesToHexString(invoice.r_hash);
+
+                if (
+                    BackendUtils.supportsLSPs() &&
+                    this.settingsStore.settings?.enableLSP &&
+                    value !== '0'
+                ) {
+                    return await this.lspStore
+                        .getZeroConfInvoice(invoice.getPaymentRequest)
+                        .then((response: any) => {
+                            const jit_bolt11: string = response;
+                            return {
+                                rHash: formattedRhash,
+                                paymentRequest: jit_bolt11
+                            };
+                        });
+                }
 
                 return {
                     rHash: formattedRhash,
@@ -272,8 +352,10 @@ export default class InvoicesStore {
 
     @action
     public getNewAddress = (params: any) => {
-        if (!params.unified) this.creatingInvoice = true;
-        this.error_msg = null;
+        if (!params.unified) {
+            this.creatingInvoice = true;
+            this.error_msg = null;
+        }
         this.onChainAddress = null;
         return BackendUtils.getNewAddress(params)
             .then((data: any) => {

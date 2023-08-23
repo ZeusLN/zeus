@@ -157,7 +157,8 @@ export default class ChannelView extends React.Component<
             pendingClose,
             forceClose,
             pendingOpen,
-            closing
+            closing,
+            zero_conf
         } = channel;
         const privateChannel = channel.private;
 
@@ -173,16 +174,16 @@ export default class ChannelView extends React.Component<
         const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
 
         const EditFees = () => (
-            <View style={{ top: -3 }}>
-                <Edit
-                    onPress={() => navigation.navigate('SetFees', { channel })}
-                    fill={themeColor('text')}
-                />
-            </View>
+            <TouchableOpacity
+                onPress={() => navigation.navigate('SetFees', { channel })}
+                style={{ top: -5 }}
+            >
+                <Edit fill={themeColor('text')} height={38} width={38} />
+            </TouchableOpacity>
         );
 
         const KeySend = () => (
-            <Share
+            <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('Send', {
                         destination: remotePubkey,
@@ -190,12 +191,16 @@ export default class ChannelView extends React.Component<
                         isValid: true
                     })
                 }
-                fill={themeColor('text')}
-            />
+            >
+                <Share fill={themeColor('text')} height={30} width={30} />
+            </TouchableOpacity>
         );
 
         const centerComponent = () => {
-            if (editableFees) {
+            if (
+                editableFees &&
+                this.props.SettingsStore.implementation !== 'embedded-lnd'
+            ) {
                 return <EditFees />;
             }
             return null;
@@ -274,6 +279,23 @@ export default class ChannelView extends React.Component<
                                 ? localeString('views.Channel.active')
                                 : localeString('views.Channel.inactive')}
                         </Text>
+                        {zero_conf && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.zeroConf'
+                                )}
+                                value={localeString('general.true')}
+                            />
+                        )}
+                        <KeyValue
+                            keyValue={localeString('views.Channel.unannounced')}
+                            value={
+                                privateChannel
+                                    ? localeString('general.true')
+                                    : localeString('general.false')
+                            }
+                            color={privateChannel ? 'green' : '#808000'}
+                        />
                         {chain_hash && (
                             <KeyValue
                                 keyValue={localeString(
@@ -521,7 +543,6 @@ export default class ChannelView extends React.Component<
                                 commit_fee={commit_fee}
                                 commit_weight={commit_weight}
                                 csv_delay={csv_delay}
-                                privateChannel={privateChannel}
                             />
                         )}
                         {BackendUtils.supportsBumpFee() && bumpable && (

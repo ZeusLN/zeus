@@ -40,9 +40,7 @@ export default class ExternalLinkModal extends React.Component<
                     paddingRight: 24,
                     height: 580
                 }}
-                swipeToClose={false}
-                backButtonClose={false}
-                backdropPressToClose={false}
+                onClosed={() => toggleExternalLinkModal(false)}
                 position="bottom"
                 ref="modal"
             >
