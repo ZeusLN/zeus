@@ -1171,6 +1171,34 @@ export default class Receive extends React.Component<
                                 </View>
                             )}
                             {haveInvoice &&
+                                enableLSP &&
+                                satAmount === '0' &&
+                                selectedIndex !== 2 && (
+                                    <View
+                                        style={{
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            borderRadius: 10,
+                                            top: 10,
+                                            margin: 10,
+                                            padding: 15,
+                                            borderWidth: 0.5
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                fontFamily: 'Lato-Bold',
+                                                color: themeColor('text'),
+                                                fontSize: 15
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.lspZeroAmt'
+                                            )}
+                                        </Text>
+                                    </View>
+                                )}
+                            {haveInvoice &&
                                 !!zeroConfFee &&
                                 (selectedIndex == 0 || selectedIndex == 1) && (
                                     <TouchableOpacity
