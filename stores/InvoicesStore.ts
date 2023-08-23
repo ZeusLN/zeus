@@ -244,13 +244,8 @@ export default class InvoicesStore {
                         });
                 }
 
-                const formattedRhash =
-                    typeof invoice.r_hash === 'string'
-                        ? invoice.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
-                        : '';
-
                 return {
-                    rHash: formattedRhash,
+                    rHash: invoice.getFormattedRhash,
                     paymentRequest: invoice.getPaymentRequest
                 };
             })
