@@ -104,7 +104,9 @@ export default function TextInput(props: TextInputProps) {
                 style={{
                     ...textInputStyle,
                     ...styles.input,
-                    color: themeColor('text')
+                    color: locked
+                        ? themeColor('secondaryText')
+                        : themeColor('text')
                 }}
                 placeholderTextColor={
                     placeholderTextColor || themeColor('secondaryText')
