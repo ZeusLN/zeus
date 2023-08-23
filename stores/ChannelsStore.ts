@@ -411,6 +411,13 @@ export default class ChannelsStore {
         this.channelRequest = undefined;
         this.connectingToPeer = true;
 
+        if (!request.host) {
+            return await new Promise((resolve) => {
+                this.channelRequest = request;
+                resolve(true);
+            });
+        }
+
         return await new Promise((resolve, reject) => {
             BackendUtils.connectPeer({
                 addr: {
