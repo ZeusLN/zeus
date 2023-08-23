@@ -87,7 +87,6 @@ import {
     walletrpc
 } from './../proto/lightning';
 import { WorkInfo } from './LndMobile';
-import { checkScheduledGossipSyncWorkStatus } from '../lndmobile/scheduled-gossip-sync';
 
 export interface ILndMobileInjections {
     index: {
@@ -324,9 +323,6 @@ export interface ILndMobileInjections {
     scheduledSync: {
         checkScheduledSyncWorkStatus: () => Promise<WorkInfo>;
     };
-    scheduledGossipSync: {
-        checkScheduledGossipSyncWorkStatus: () => Promise<WorkInfo>;
-    };
 }
 
 export default {
@@ -414,8 +410,5 @@ export default {
     },
     scheduledSync: {
         checkScheduledSyncWorkStatus
-    },
-    scheduledGossipSync: {
-        checkScheduledGossipSyncWorkStatus
     }
 } as ILndMobileInjections;
