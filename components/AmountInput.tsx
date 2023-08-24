@@ -136,20 +136,14 @@ export default class AmountInput extends React.Component<
 
         return (
             <React.Fragment>
-                {title && (
-                    <TouchableOpacity
-                        onPress={() => !locked && this.onChangeUnits()}
-                    >
-                        <Text
-                            style={{
-                                fontFamily: 'Lato-Regular',
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {title}
-                        </Text>
-                    </TouchableOpacity>
-                )}
+                <Text
+                    style={{
+                        fontFamily: 'Lato-Regular',
+                        color: themeColor('secondaryText')
+                    }}
+                >
+                    {title}
+                </Text>
                 <Row>
                     <TextInput
                         keyboardType="numeric"
@@ -176,7 +170,6 @@ export default class AmountInput extends React.Component<
                                   units === 'fiat' &&
                                   getSymbol().symbol
                         }
-                        toggleUnits={() => !locked && this.onChangeUnits()}
                         style={{ width: '85%' }}
                     />
                     <TouchableOpacity
@@ -191,31 +184,27 @@ export default class AmountInput extends React.Component<
                     </TouchableOpacity>
                 </Row>
                 {!hideConversion && (
-                    <TouchableOpacity
-                        onPress={() => !locked && this.onChangeUnits()}
-                    >
-                        <View style={{ marginBottom: 10 }}>
-                            {fiatEnabled && units !== 'fiat' && (
-                                <Amount sats={satAmount} fixedUnits="fiat" />
-                            )}
-                            {fiatEnabled && (
-                                <Text
-                                    style={{
-                                        fontFamily: 'Lato-Regular',
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {getRate(units === 'sats')}
-                                </Text>
-                            )}
-                            {units !== 'sats' && (
-                                <Amount sats={satAmount} fixedUnits="sats" />
-                            )}
-                            {units !== 'BTC' && (
-                                <Amount sats={satAmount} fixedUnits="BTC" />
-                            )}
-                        </View>
-                    </TouchableOpacity>
+                    <View style={{ marginBottom: 10 }}>
+                        {fiatEnabled && units !== 'fiat' && (
+                            <Amount sats={satAmount} fixedUnits="fiat" />
+                        )}
+                        {fiatEnabled && (
+                            <Text
+                                style={{
+                                    fontFamily: 'Lato-Regular',
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {getRate(units === 'sats')}
+                            </Text>
+                        )}
+                        {units !== 'sats' && (
+                            <Amount sats={satAmount} fixedUnits="sats" />
+                        )}
+                        {units !== 'BTC' && (
+                            <Amount sats={satAmount} fixedUnits="BTC" />
+                        )}
+                    </View>
                 )}
             </React.Fragment>
         );
