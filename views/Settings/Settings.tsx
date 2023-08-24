@@ -70,6 +70,8 @@ export default class Settings extends React.Component<
     UNSAFE_componentDidMount() {
         const { SettingsStore, SyncStore, navigation } = this.props;
 
+        SettingsStore.getSettings();
+
         // triggers when loaded from navigation or back action
         navigation.addListener('didFocus', () => {
             SettingsStore.getSettings();

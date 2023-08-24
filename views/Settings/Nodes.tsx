@@ -5,7 +5,6 @@ import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
-import LoadingIndicator from '../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 
@@ -43,6 +42,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     };
 
     UNSAFE_componentWillMount() {
+        this.refreshSettings();
+
         this.props.navigation.addListener('didFocus', () => {
             this.refreshSettings();
         });
@@ -253,7 +254,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         iconOnly
                     />
                 )}
-                {loading && <LoadingIndicator />}
             </Screen>
         );
     }
