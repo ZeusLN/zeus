@@ -2,6 +2,8 @@ import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
+import NavigationService from '../../NavigationService';
+
 import Button from '../Button';
 import ModalBox from '../ModalBox';
 
@@ -19,8 +21,13 @@ interface InfoModalProps {
 export default class InfoModal extends React.Component<InfoModalProps, {}> {
     render() {
         const { ModalStore } = this.props;
-        const { showInfoModal, infoModalText, infoModalLink, toggleInfoModal } =
-            ModalStore;
+        const {
+            showInfoModal,
+            infoModalText,
+            infoModalLink,
+            infoModalNav,
+            toggleInfoModal
+        } = ModalStore;
 
         return (
             <ModalBox
@@ -78,7 +85,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                             ))}
 
                         <View style={styles.buttons}>
-                            {infoModalLink && (
+                            {(infoModalLink || infoModalNav) && (
                                 <View
                                     style={{
                                         ...styles.button,
@@ -90,8 +97,13 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                             'general.learnMore'
                                         )}
                                         onPress={() => {
-                                            UrlUtils.goToUrl(infoModalLink);
                                             toggleInfoModal();
+                                            if (infoModalLink)
+                                                UrlUtils.goToUrl(infoModalLink);
+                                            if (infoModalNav)
+                                                NavigationService.navigate(
+                                                    infoModalNav
+                                                );
                                         }}
                                         tertiary
                                     ></Button>

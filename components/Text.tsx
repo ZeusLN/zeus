@@ -13,13 +13,15 @@ interface TextProps {
     children: string;
     infoText?: string | Array<string>;
     infoLink?: string;
+    infoNav?: string;
 }
 
 @inject('ModalStore')
 @observer
 export default class ZeusText extends React.Component<TextProps, {}> {
     render() {
-        const { children, style, infoText, infoLink, ModalStore } = this.props;
+        const { children, style, infoText, infoLink, infoNav, ModalStore } =
+            this.props;
         const { toggleInfoModal } = ModalStore;
 
         const CoreText = () => (
@@ -50,7 +52,7 @@ export default class ZeusText extends React.Component<TextProps, {}> {
         if (infoText) {
             return (
                 <TouchableOpacity
-                    onPress={() => toggleInfoModal(infoText, infoLink)}
+                    onPress={() => toggleInfoModal(infoText, infoLink, infoNav)}
                 >
                     <CoreText />
                 </TouchableOpacity>
