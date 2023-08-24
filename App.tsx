@@ -6,6 +6,7 @@ import Navigation from './Navigation';
 import { AppContainer } from './components/layout/AppContainer';
 import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
+import InfoModal from './components/Modals/InfoModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default class App extends React.PureComponent {
@@ -38,6 +39,7 @@ export default class App extends React.PureComponent {
                         <Navigation />
                         <ExternalLinkModal />
                         <AndroidNfcModal />
+                        <InfoModal />
                     </GestureHandlerRootView>
                 </AppContainer>
             </Provider>

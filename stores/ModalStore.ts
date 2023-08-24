@@ -3,14 +3,24 @@ import { action, observable } from 'mobx';
 export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
     @observable public showAndroidNfcModal: boolean = false;
+    @observable public showInfoModal: boolean = false;
     @observable public modalUrl: string;
     @observable public clipboardValue: string;
+    @observable public infoModalText: string | Array<string> | undefined;
+    @observable public infoModalLink: string | undefined;
     @observable public onPress: () => void;
 
     /* External Link Modal */
     @action
     public toggleExternalLinkModal = (status: boolean) => {
         this.showExternalLinkModal = status;
+    };
+
+    @action
+    public toggleInfoModal = (text?: string | Array<string>, link?: string) => {
+        this.showInfoModal = text ? true : false;
+        this.infoModalText = text;
+        this.infoModalLink = link;
     };
 
     @action
@@ -42,6 +52,12 @@ export default class ModalStore {
         }
         if (this.showAndroidNfcModal) {
             this.showAndroidNfcModal = false;
+            return true;
+        }
+        if (this.showInfoModal) {
+            this.showInfoModal = false;
+            this.infoModalText = '';
+            this.infoModalLink = '';
             return true;
         }
         return false;
