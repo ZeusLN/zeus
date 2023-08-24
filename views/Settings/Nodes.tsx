@@ -42,9 +42,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         loading: false
     };
 
-    componentDidMount() {
-        this.refreshSettings();
-
+    UNSAFE_componentWillMount() {
         this.props.navigation.addListener('didFocus', () => {
             this.refreshSettings();
         });
