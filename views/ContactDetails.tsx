@@ -208,7 +208,8 @@ export default class ContactDetails extends React.Component<
                                         </Text>
 
                                         {contact.lnAddress &&
-                                            contact.lnAddress.length > 0 && (
+                                            contact.lnAddress.length > 0 &&
+                                            contact.lnAddress[0] !== '' && (
                                                 <>
                                                     {contact.lnAddress.map(
                                                         (address, index) => (
@@ -239,8 +240,8 @@ export default class ContactDetails extends React.Component<
 
                                                                 {contact
                                                                     .lnAddress
-                                                                    .length >=
-                                                                    1 && (
+                                                                    .length >
+                                                                    0 && (
                                                                     <Text
                                                                         style={{
                                                                             color: themeColor(
@@ -284,8 +285,9 @@ export default class ContactDetails extends React.Component<
                                             )}
 
                                         {contact.onchainAddress &&
-                                            contact.onchainAddress.length >
-                                                0 && (
+                                            contact.onchainAddress.length > 0 &&
+                                            contact.onchainAddress[0] !==
+                                                '' && (
                                                 <>
                                                     {contact.onchainAddress.map(
                                                         (address, index) => (
@@ -303,16 +305,23 @@ export default class ContactDetails extends React.Component<
                                                                     );
                                                                 }}
                                                             >
-                                                                <Divider
-                                                                    orientation="horizontal"
-                                                                    style={{
-                                                                        marginTop: 20
-                                                                    }}
-                                                                />
+                                                                {(contact
+                                                                    .lnAddress[0] !==
+                                                                    '' ||
+                                                                    address !==
+                                                                        contact
+                                                                            .onchainAddress[0]) && (
+                                                                    <Divider
+                                                                        orientation="horizontal"
+                                                                        style={{
+                                                                            marginTop: 20
+                                                                        }}
+                                                                    />
+                                                                )}
                                                                 {contact
                                                                     .onchainAddress
-                                                                    .length >=
-                                                                    1 && (
+                                                                    .length >
+                                                                    0 && (
                                                                     <Text
                                                                         style={{
                                                                             color: themeColor(
@@ -434,7 +443,26 @@ export default class ContactDetails extends React.Component<
                     buttonStyle={{ padding: 18 }}
                     title="MAKE PAYMENT"
                     onPress={() => {
-                        this.toggleModal();
+                        if (
+                            (contact.lnAddress.length === 1 &&
+                                contact.lnAddress[0] !== '') ||
+                            (contact.onchainAddress.length === 1 &&
+                                contact.onchainAddress[0] !== '')
+                        ) {
+                            if (
+                                contact.lnAddress.length === 1 &&
+                                contact.lnAddress[0] !== ''
+                            ) {
+                                this.sendAddress(contact.lnAddress[0]);
+                            } else if (
+                                contact.onchainAddress.length === 1 &&
+                                contact.onchainAddress[0] !== ''
+                            ) {
+                                this.sendAddress(contact.onchainAddress[0]);
+                            }
+                        } else {
+                            this.toggleModal();
+                        }
                     }}
                 />
             </Screen>
