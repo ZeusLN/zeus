@@ -16,7 +16,6 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import { Header, Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 
-import Scan from '../../assets/images/SVG/Scan.svg';
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../../assets/images/SVG/Key Security.svg';
@@ -236,11 +235,6 @@ export default class AddContacts extends React.Component<
                 underlayColor="transparent"
             />
         );
-        const ScanBadge = ({ navigation }: { navigation: any }) => (
-            <TouchableOpacity onPress={() => navigation.navigate('')}>
-                <Scan fill={themeColor('text')} />
-            </TouchableOpacity>
-        );
         const AddPhotos = () => (
             <TouchableOpacity onPress={this.selectPhoto}>
                 <AddIcon
@@ -271,11 +265,6 @@ export default class AddContacts extends React.Component<
                         containerStyle={{
                             borderBottomWidth: 0
                         }}
-                        rightComponent={
-                            <View style={{ marginTop: 1 }}>
-                                <ScanBadge navigation={navigation} />
-                            </View>
-                        }
                     />
                     <View
                         style={{
@@ -318,6 +307,7 @@ export default class AddContacts extends React.Component<
                             placeholder="Name*"
                             placeholderTextColor={themeColor('secondaryText')}
                             style={styles.textInput}
+                            autoCapitalize="none"
                         />
                     </View>
                     <Divider
@@ -336,6 +326,7 @@ export default class AddContacts extends React.Component<
                             placeholder="Description (max 120)"
                             placeholderTextColor={themeColor('secondaryText')}
                             style={styles.textInput}
+                            autoCapitalize="none"
                         />
                     </View>
                     <Modal
@@ -392,10 +383,8 @@ export default class AddContacts extends React.Component<
                             value={lnAddress[0]}
                             placeholder="LN address"
                             placeholderTextColor={themeColor('secondaryText')}
-                            style={[
-                                styles.textInput
-                                // !isValidLightningAddress && styles.invalidInput
-                            ]}
+                            style={[styles.textInput]}
+                            autoCapitalize="none"
                         />
                     </View>
                     {lnAddress.slice(1).map((address, index) => (
@@ -433,6 +422,7 @@ export default class AddContacts extends React.Component<
                                             'secondaryText'
                                         )}
                                         style={styles.textInput}
+                                        autoCapitalize="none"
                                     />
                                 </View>
                             </View>
@@ -472,6 +462,7 @@ export default class AddContacts extends React.Component<
                             placeholderTextColor={themeColor('secondaryText')}
                             style={[styles.textInput]}
                             numberOfLines={1}
+                            autoCapitalize="none"
                         />
                     </View>
                     {onchainAddress.slice(1).map((address, index) => (
@@ -512,6 +503,7 @@ export default class AddContacts extends React.Component<
                                             'secondaryText'
                                         )}
                                         style={styles.textInput}
+                                        autoCapitalize="none"
                                     />
                                 </View>
                             </View>
@@ -547,6 +539,7 @@ export default class AddContacts extends React.Component<
                             placeholderTextColor={themeColor('secondaryText')}
                             numberOfLines={1}
                             style={styles.textInput}
+                            autoCapitalize="none"
                         />
                     </View>
                     {nip05.slice(1).map((address, index) => (
@@ -580,6 +573,7 @@ export default class AddContacts extends React.Component<
                                             'secondaryText'
                                         )}
                                         style={styles.textInput}
+                                        autoCapitalize="none"
                                     />
                                 </View>
                             </View>
@@ -613,6 +607,7 @@ export default class AddContacts extends React.Component<
                             placeholderTextColor={themeColor('secondaryText')}
                             numberOfLines={1}
                             style={styles.textInput}
+                            autoCapitalize="none"
                         />
                     </View>
                     {nostrNpub.slice(1).map((address, index) => (
@@ -648,6 +643,7 @@ export default class AddContacts extends React.Component<
                                             'secondaryText'
                                         )}
                                         style={styles.textInput}
+                                        autoCapitalize="none"
                                     />
                                 </View>
                             </View>
