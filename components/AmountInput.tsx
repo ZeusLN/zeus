@@ -12,6 +12,9 @@ import Stores from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore from '../stores/SettingsStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import { Row } from './layout/Row';
+
+import ExchangeSVG from '../assets/images/SVG/Exchange.svg';
 
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
@@ -147,33 +150,46 @@ export default class AmountInput extends React.Component<
                         </Text>
                     </TouchableOpacity>
                 )}
-                <TextInput
-                    keyboardType="numeric"
-                    placeholder={'0'}
-                    value={amount}
-                    onChangeText={(text: string) => {
-                        const satAmount = getSatAmount(text);
-                        onAmountChange(text, satAmount);
-                        this.setState({ satAmount });
-                    }}
-                    locked={locked}
-                    prefix={
-                        units !== 'sats' &&
-                        (units === 'BTC'
-                            ? '₿'
-                            : !getSymbol().rtl
-                            ? getSymbol().symbol
-                            : null)
-                    }
-                    suffix={
-                        units === 'sats'
-                            ? units
-                            : getSymbol().rtl &&
-                              units === 'fiat' &&
-                              getSymbol().symbol
-                    }
-                    toggleUnits={() => !locked && this.onChangeUnits()}
-                />
+                <Row>
+                    <TextInput
+                        keyboardType="numeric"
+                        placeholder={'0'}
+                        value={amount}
+                        onChangeText={(text: string) => {
+                            const satAmount = getSatAmount(text);
+                            onAmountChange(text, satAmount);
+                            this.setState({ satAmount });
+                        }}
+                        locked={locked}
+                        prefix={
+                            units !== 'sats' &&
+                            (units === 'BTC'
+                                ? '₿'
+                                : !getSymbol().rtl
+                                ? getSymbol().symbol
+                                : null)
+                        }
+                        suffix={
+                            units === 'sats'
+                                ? units
+                                : getSymbol().rtl &&
+                                  units === 'fiat' &&
+                                  getSymbol().symbol
+                        }
+                        toggleUnits={() => !locked && this.onChangeUnits()}
+                        style={{ width: '85%' }}
+                    />
+                    <TouchableOpacity
+                        onPress={() => !locked && this.onChangeUnits()}
+                        style={{ margin: 8 }}
+                    >
+                        <ExchangeSVG
+                            fill={themeColor('text')}
+                            width="48"
+                            height="48"
+                        />
+                    </TouchableOpacity>
+                </Row>
                 {!hideConversion && (
                     <TouchableOpacity
                         onPress={() => !locked && this.onChangeUnits()}
