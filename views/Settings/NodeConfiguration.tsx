@@ -1563,40 +1563,46 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {!creatingWallet && (
-                        <View style={{ ...styles.button, marginTop: 20 }}>
-                            <Button
-                                title={
-                                    saved
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.nodeSaved'
-                                          )
-                                        : localeString(
-                                              'views.Settings.AddEditNode.saveNode'
-                                          )
-                                }
-                                onPress={() => {
-                                    if (
-                                        !saved &&
-                                        !certVerification &&
-                                        !enableTor &&
-                                        implementation !==
-                                            'lightning-node-connect' &&
-                                        implementation !== 'embedded-lnd'
-                                    ) {
-                                        this.setState({ showCertModal: true });
-                                    } else {
-                                        this.saveNodeConfiguration();
+                    {!creatingWallet &&
+                        !(
+                            implementation === 'embedded-lnd' &&
+                            !embeddedLndNetwork
+                        ) && (
+                            <View style={{ ...styles.button, marginTop: 20 }}>
+                                <Button
+                                    title={
+                                        saved
+                                            ? localeString(
+                                                  'views.Settings.AddEditNode.nodeSaved'
+                                              )
+                                            : localeString(
+                                                  'views.Settings.AddEditNode.saveNode'
+                                              )
                                     }
-                                }}
-                                // disable save button if no creds passed
-                                disabled={
-                                    implementation === 'lndhub' &&
-                                    !(username && password)
-                                }
-                            />
-                        </View>
-                    )}
+                                    onPress={() => {
+                                        if (
+                                            !saved &&
+                                            !certVerification &&
+                                            !enableTor &&
+                                            implementation !==
+                                                'lightning-node-connect' &&
+                                            implementation !== 'embedded-lnd'
+                                        ) {
+                                            this.setState({
+                                                showCertModal: true
+                                            });
+                                        } else {
+                                            this.saveNodeConfiguration();
+                                        }
+                                    }}
+                                    // disable save button if no creds passed
+                                    disabled={
+                                        implementation === 'lndhub' &&
+                                        !(username && password)
+                                    }
+                                />
+                            </View>
+                        )}
 
                     {creatingWallet && <LoadingIndicator />}
 
