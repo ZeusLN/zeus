@@ -142,6 +142,14 @@ export default class ChannelsStore {
         this.resetOpenChannel();
         this.nodes = {};
         this.channels = [];
+        this.pendingChannels = [];
+        this.closedChannels = [];
+        this.enrichedChannels = [];
+        this.enrichedPendingChannels = [];
+        this.enrichedClosedChannels = [];
+        this.filteredChannels = [];
+        this.filteredPendingChannels = [];
+        this.filteredClosedChannels = [];
         this.largestChannelSats = 0;
         this.totalOutbound = 0;
         this.totalInbound = 0;
