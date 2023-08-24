@@ -44,6 +44,15 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
     componentDidMount() {
         this.refreshSettings();
+
+        this.props.navigation.addListener('didFocus', () => {
+            this.refreshSettings();
+        });
+    }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('didFocus');
     }
 
     UNSAFE_componentWillReceiveProps = () => {
