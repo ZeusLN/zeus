@@ -3,6 +3,7 @@ import { Provider } from 'mobx-react';
 
 import Stores from './stores/Stores';
 import Navigation from './Navigation';
+import NavigationService from './NavigationService';
 import { AppContainer } from './components/layout/AppContainer';
 import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
@@ -36,7 +37,13 @@ export default class App extends React.PureComponent {
             >
                 <AppContainer>
                     <GestureHandlerRootView style={{ flex: 1 }}>
-                        <Navigation />
+                        <Navigation
+                            ref={(navigatorRef) => {
+                                NavigationService.setTopLevelNavigator(
+                                    navigatorRef
+                                );
+                            }}
+                        />
                         <ExternalLinkModal />
                         <AndroidNfcModal />
                         <InfoModal />

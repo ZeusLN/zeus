@@ -8,6 +8,7 @@ export default class ModalStore {
     @observable public clipboardValue: string;
     @observable public infoModalText: string | Array<string> | undefined;
     @observable public infoModalLink: string | undefined;
+    @observable public infoModalNav: string | undefined;
     @observable public onPress: () => void;
 
     /* External Link Modal */
@@ -17,10 +18,15 @@ export default class ModalStore {
     };
 
     @action
-    public toggleInfoModal = (text?: string | Array<string>, link?: string) => {
+    public toggleInfoModal = (
+        text?: string | Array<string>,
+        link?: string,
+        nav?: string
+    ) => {
         this.showInfoModal = text ? true : false;
         this.infoModalText = text;
         this.infoModalLink = link;
+        this.infoModalNav = nav;
     };
 
     @action
@@ -58,6 +64,7 @@ export default class ModalStore {
             this.showInfoModal = false;
             this.infoModalText = '';
             this.infoModalLink = '';
+            this.infoModalNav = '';
             return true;
         }
         return false;

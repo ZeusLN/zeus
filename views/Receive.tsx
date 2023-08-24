@@ -1550,6 +1550,7 @@ export default class Receive extends React.Component<
                                                 infoText={localeString(
                                                     'views.Receive.lspSwitchExplainer'
                                                 )}
+                                                infoNav="LspExplanation"
                                             >
                                                 {localeString(
                                                     'views.Settings.LSP.enableLSP'
