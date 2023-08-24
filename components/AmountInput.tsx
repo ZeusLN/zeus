@@ -185,9 +185,6 @@ export default class AmountInput extends React.Component<
                 </Row>
                 {!hideConversion && (
                     <View style={{ marginBottom: 10 }}>
-                        {fiatEnabled && units !== 'fiat' && (
-                            <Amount sats={satAmount} fixedUnits="fiat" />
-                        )}
                         {fiatEnabled && (
                             <Text
                                 style={{
@@ -198,11 +195,14 @@ export default class AmountInput extends React.Component<
                                 {getRate(units === 'sats')}
                             </Text>
                         )}
-                        {units !== 'sats' && (
-                            <Amount sats={satAmount} fixedUnits="sats" />
+                        {fiatEnabled && units !== 'fiat' && (
+                            <Amount sats={satAmount} fixedUnits="fiat" />
                         )}
                         {units !== 'BTC' && (
                             <Amount sats={satAmount} fixedUnits="BTC" />
+                        )}
+                        {units !== 'sats' && (
+                            <Amount sats={satAmount} fixedUnits="sats" />
                         )}
                     </View>
                 )}
