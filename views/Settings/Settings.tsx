@@ -67,7 +67,7 @@ export default class Settings extends React.Component<
         easterEggCount: 0
     };
 
-    componentDidMount() {
+    UNSAFE_componentDidMount() {
         const { SettingsStore, SyncStore, navigation } = this.props;
 
         // triggers when loaded from navigation or back action
@@ -81,6 +81,11 @@ export default class Settings extends React.Component<
         if (isSyncing && !syncStatusUpdatesPaused) {
             pauseSyncingUpates();
         }
+    }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('didFocus');
     }
 
     render() {
