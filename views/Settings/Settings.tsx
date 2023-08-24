@@ -86,7 +86,7 @@ export default class Settings extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { showHiddenSettings, easterEggCount } = this.state;
-        const { implementation, settings } = SettingsStore;
+        const { implementation, settings, seedPhrase } = SettingsStore;
 
         const selectedNode: any =
             (settings &&
@@ -264,36 +264,46 @@ export default class Settings extends React.Component<
                         >
                             {implementation === 'embedded-lnd' && (
                                 <>
-                                    <TouchableOpacity
-                                        style={styles.columnField}
-                                        onPress={() =>
-                                            navigation.navigate('Seed')
-                                        }
-                                    >
-                                        <KeyIcon
-                                            fill={themeColor('text')}
-                                            style={{
-                                                marginLeft: 4,
-                                                marginTop: 2
-                                            }}
-                                            width={130}
-                                        />
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.Seed.title'
-                                            )}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon />
-                                        </View>
-                                    </TouchableOpacity>
+                                    {seedPhrase && (
+                                        <>
+                                            <TouchableOpacity
+                                                style={styles.columnField}
+                                                onPress={() =>
+                                                    navigation.navigate('Seed')
+                                                }
+                                            >
+                                                <KeyIcon
+                                                    fill={themeColor('text')}
+                                                    style={{
+                                                        marginLeft: 4,
+                                                        marginTop: 2
+                                                    }}
+                                                    width={130}
+                                                />
+                                                <Text
+                                                    style={{
+                                                        ...styles.columnText,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.Seed.title'
+                                                    )}
+                                                </Text>
+                                                <View
+                                                    style={styles.ForwardArrow}
+                                                >
+                                                    <ForwardIcon />
+                                                </View>
+                                            </TouchableOpacity>
 
-                                    <View style={styles.separationLine} />
+                                            <View
+                                                style={styles.separationLine}
+                                            />
+                                        </>
+                                    )}
 
                                     <TouchableOpacity
                                         style={styles.columnField}
