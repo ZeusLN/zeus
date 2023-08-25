@@ -33,7 +33,10 @@ import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
-import { ErrorMessage } from '../components/SuccessErrorMessage';
+import {
+    WarningMessage,
+    ErrorMessage
+} from '../components/SuccessErrorMessage';
 import Header from '../components/Header';
 import Screen from '../components/Screen';
 import Switch from '../components/Switch';
@@ -308,7 +311,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (utxos && utxos.length > 0) {
             request = {
                 addr: destination,
-                sat_per_byte: fee,
+                sat_per_vbyte: fee,
                 amount: satAmount.toString(),
                 target_conf: Number(confirmationTarget),
                 utxos,
@@ -317,7 +320,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         } else {
             request = {
                 addr: destination,
-                sat_per_byte: fee,
+                sat_per_vbyte: fee,
                 amount: satAmount.toString(),
                 target_conf: Number(confirmationTarget),
                 spend_unconfirmed: true
@@ -397,7 +400,11 @@ export default class Send extends React.Component<SendProps, SendState> {
             loading,
             preventUnitReset
         } = this.state;
-        const { confirmedBlockchainBalance } = BalanceStore;
+        const {
+            confirmedBlockchainBalance,
+            unconfirmedBlockchainBalance,
+            lightningBalance
+        } = BalanceStore;
         const { implementation, settings } = SettingsStore;
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
@@ -447,6 +454,31 @@ export default class Send extends React.Component<SendProps, SendState> {
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
+                    {!!destination &&
+                        transactionType === 'On-chain' &&
+                        BackendUtils.supportsOnchainSends() &&
+                        confirmedBlockchainBalance === 0 &&
+                        unconfirmedBlockchainBalance === 0 && (
+                            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.Send.noOnchainBalance'
+                                    )}
+                                />
+                            </View>
+                        )}
+                    {!!destination &&
+                        (transactionType === 'Lightning' ||
+                            transactionType === 'Keysend') &&
+                        lightningBalance === 0 && (
+                            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.Send.noLightningBalance'
+                                    )}
+                                />
+                            </View>
+                        )}
                     <Text
                         style={{
                             ...styles.secondaryText,
@@ -554,7 +586,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {localeString('views.Send.feeSats')}:
+                                    {localeString('views.Send.feeSatsVbyte')}:
                                 </Text>
                                 {enableMempoolRates ? (
                                     <TouchableWithoutFeedback

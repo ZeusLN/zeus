@@ -36,6 +36,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import BalanceStore from './../stores/BalanceStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import ModalStore from './../stores/ModalStore';
+import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
 import UTXOsStore from './../stores/UTXOsStore';
 
@@ -47,6 +48,7 @@ interface OpenChannelProps {
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     ModalStore: ModalStore;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UTXOsStore: UTXOsStore;
 }
@@ -57,19 +59,21 @@ interface OpenChannelState {
     satAmount: string | number;
     min_confs: number;
     spend_unconfirmed: boolean;
-    sat_per_byte: string;
+    sat_per_vbyte: string;
     privateChannel: boolean;
     scidAlias: boolean;
     host: string;
     suggestImport: string;
     utxos: Array<string>;
     utxoBalance: number;
+    connectPeerOnly: boolean;
 }
 
 @inject(
     'BalanceStore',
     'ChannelsStore',
     'ModalStore',
+    'NodeInfoStore',
     'SettingsStore',
     'UTXOsStore'
 )
@@ -86,13 +90,14 @@ export default class OpenChannel extends React.Component<
             satAmount: '',
             min_confs: 1,
             spend_unconfirmed: false,
-            sat_per_byte: '2',
+            sat_per_vbyte: '2',
             privateChannel: true,
             scidAlias: true,
             host: '',
             suggestImport: '',
             utxos: [],
-            utxoBalance: 0
+            utxoBalance: 0,
+            connectPeerOnly: false
         };
     }
 
@@ -225,12 +230,12 @@ export default class OpenChannel extends React.Component<
     };
 
     setFee = (text: string) => {
-        this.setState({ sat_per_byte: text });
+        this.setState({ sat_per_vbyte: text });
     };
 
-    handleOnNavigateBack = (sat_per_byte: string) => {
+    handleOnNavigateBack = (sat_per_vbyte: string) => {
         this.setState({
-            sat_per_byte
+            sat_per_vbyte
         });
     };
 
@@ -238,6 +243,7 @@ export default class OpenChannel extends React.Component<
         const {
             ChannelsStore,
             BalanceStore,
+            NodeInfoStore,
             UTXOsStore,
             SettingsStore,
             navigation
@@ -248,13 +254,14 @@ export default class OpenChannel extends React.Component<
             satAmount,
             min_confs,
             host,
-            sat_per_byte,
+            sat_per_vbyte,
             suggestImport,
             utxoBalance,
             privateChannel,
-            scidAlias
+            scidAlias,
+            connectPeerOnly
         } = this.state;
-        const { implementation, settings } = SettingsStore;
+        const { settings } = SettingsStore;
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
@@ -281,13 +288,30 @@ export default class OpenChannel extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    centerComponent={{
-                        text: localeString('views.OpenChannel.openChannel'),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
-                        }
-                    }}
+                    centerComponent={
+                        <View style={{ top: 5 }}>
+                            <View style={{ top: -9, width: '100%' }}>
+                                <Button
+                                    onPress={() =>
+                                        this.setState({
+                                            connectPeerOnly: !connectPeerOnly
+                                        })
+                                    }
+                                    title={
+                                        connectPeerOnly
+                                            ? localeString(
+                                                  'views.OpenChannel.connectPeer'
+                                              )
+                                            : localeString(
+                                                  'views.OpenChannel.openChannel'
+                                              )
+                                    }
+                                    noUppercase
+                                    buttonStyle={{ alignSelf: 'center' }}
+                                />
+                            </View>
+                        </View>
+                    }
                     rightComponent={ScanButton}
                     navigation={navigation}
                 />
@@ -391,176 +415,236 @@ export default class OpenChannel extends React.Component<
                             locked={openingChannel}
                         />
 
-                        <AmountInput
-                            amount={local_funding_amount}
-                            title={localeString('views.OpenChannel.localAmt')}
-                            onAmountChange={(
-                                amount: string,
-                                satAmount: string | number
-                            ) => {
-                                this.setState({
-                                    local_funding_amount: amount,
-                                    satAmount
-                                });
-                            }}
-                            hideConversion={local_funding_amount === 'all'}
-                        />
-
-                        {local_funding_amount === 'all' && (
-                            <View style={{ marginBottom: 20 }}>
-                                <Amount
-                                    sats={
-                                        utxoBalance > 0
-                                            ? utxoBalance
-                                            : confirmedBlockchainBalance
-                                    }
-                                    toggleable
-                                />
-                            </View>
-                        )}
-
-                        <Text
-                            style={{
-                                ...styles.secondaryText,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString('views.OpenChannel.numConf')}
-                        </Text>
-                        <TextInput
-                            keyboardType="numeric"
-                            placeholder={'1'}
-                            value={min_confs.toString()}
-                            onChangeText={(text: string) => {
-                                const newMinConfs = Number(text);
-                                this.setState({
-                                    min_confs: newMinConfs,
-                                    spend_unconfirmed: newMinConfs === 0
-                                });
-                            }}
-                            locked={openingChannel}
-                        />
-
-                        <>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.OpenChannel.satsPerVbyte')}
-                            </Text>
-                            {enableMempoolRates ? (
-                                <TouchableWithoutFeedback
-                                    onPress={() =>
-                                        navigation.navigate('EditFee', {
-                                            onNavigateBack:
-                                                this.handleOnNavigateBack
-                                        })
-                                    }
-                                >
-                                    <View
-                                        style={{
-                                            ...styles.editFeeBox,
-
-                                            borderColor:
-                                                'rgba(255, 217, 63, .6)',
-                                            borderWidth: 3
+                        {!(connectingToPeer || openingChannel) &&
+                            !node_pubkey_string &&
+                            !host && (
+                                <View style={{ margin: 10, marginBottom: 25 }}>
+                                    <Button
+                                        title={
+                                            connectPeerOnly
+                                                ? localeString(
+                                                      'views.OpenChannel.peerToOlympus'
+                                                  )
+                                                : localeString(
+                                                      'views.OpenChannel.openChannelToOlympus'
+                                                  )
+                                        }
+                                        onPress={() => {
+                                            if (
+                                                NodeInfoStore.nodeInfo.isTestNet
+                                            ) {
+                                                this.setState({
+                                                    node_pubkey_string:
+                                                        '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
+                                                    host: '139.144.22.237:9735'
+                                                });
+                                            } else {
+                                                this.setState({
+                                                    node_pubkey_string:
+                                                        '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
+                                                    host: '45.79.192.236:9735'
+                                                });
+                                            }
                                         }}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text'),
-                                                fontSize: 18
-                                            }}
-                                        >
-                                            {sat_per_byte}
-                                        </Text>
-                                    </View>
-                                </TouchableWithoutFeedback>
-                            ) : (
-                                <TextInput
-                                    keyboardType="numeric"
-                                    placeholder={'2'}
-                                    value={sat_per_byte}
-                                    onChangeText={(text: string) =>
+                                    />
+                                </View>
+                            )}
+
+                        {!connectPeerOnly && (
+                            <>
+                                <AmountInput
+                                    amount={local_funding_amount}
+                                    title={localeString(
+                                        'views.OpenChannel.localAmt'
+                                    )}
+                                    onAmountChange={(
+                                        amount: string,
+                                        satAmount: string | number
+                                    ) => {
                                         this.setState({
-                                            sat_per_byte: text
-                                        })
+                                            local_funding_amount: amount,
+                                            satAmount
+                                        });
+                                    }}
+                                    hideConversion={
+                                        local_funding_amount === 'all'
                                     }
                                 />
-                            )}
-                        </>
 
-                        {BackendUtils.supportsCoinControl() &&
-                            implementation !== 'lnd' && (
-                                <UTXOPicker
-                                    onValueChange={this.selectUTXOs}
-                                    UTXOsStore={UTXOsStore}
-                                />
-                            )}
-
-                        <>
-                            <Text
-                                style={{
-                                    top: 20,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString(
-                                    'views.OpenChannel.announceChannel'
+                                {local_funding_amount === 'all' && (
+                                    <View style={{ marginBottom: 20 }}>
+                                        <Amount
+                                            sats={
+                                                utxoBalance > 0
+                                                    ? utxoBalance
+                                                    : confirmedBlockchainBalance
+                                            }
+                                            toggleable
+                                        />
+                                    </View>
                                 )}
-                            </Text>
-                            <Switch
-                                value={!privateChannel}
-                                onValueChange={() =>
-                                    this.setState({
-                                        privateChannel: !privateChannel
-                                    })
-                                }
-                            />
-                        </>
 
-                        {BackendUtils.isLNDBased() && (
-                            <>
                                 <Text
                                     style={{
-                                        top: 20,
+                                        ...styles.secondaryText,
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {localeString(
-                                        'views.OpenChannel.scidAlias'
-                                    )}
+                                    {localeString('views.OpenChannel.numConf')}
                                 </Text>
-                                <Switch
-                                    value={scidAlias}
-                                    onValueChange={() =>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={'1'}
+                                    value={min_confs.toString()}
+                                    onChangeText={(text: string) => {
+                                        const newMinConfs = Number(text);
                                         this.setState({
-                                            scidAlias: !scidAlias
-                                        })
-                                    }
+                                            min_confs: newMinConfs,
+                                            spend_unconfirmed: newMinConfs === 0
+                                        });
+                                    }}
+                                    locked={openingChannel}
                                 />
+
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.secondaryText,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.OpenChannel.satsPerVbyte'
+                                        )}
+                                    </Text>
+                                    {enableMempoolRates ? (
+                                        <TouchableWithoutFeedback
+                                            onPress={() =>
+                                                navigation.navigate('EditFee', {
+                                                    onNavigateBack:
+                                                        this
+                                                            .handleOnNavigateBack
+                                                })
+                                            }
+                                        >
+                                            <View
+                                                style={{
+                                                    ...styles.editFeeBox,
+
+                                                    borderColor:
+                                                        'rgba(255, 217, 63, .6)',
+                                                    borderWidth: 3
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontSize: 18
+                                                    }}
+                                                >
+                                                    {sat_per_vbyte}
+                                                </Text>
+                                            </View>
+                                        </TouchableWithoutFeedback>
+                                    ) : (
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder={'2'}
+                                            value={sat_per_vbyte}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    sat_per_vbyte: text
+                                                })
+                                            }
+                                        />
+                                    )}
+                                </>
+
+                                {BackendUtils.supportsCoinControl() &&
+                                    !BackendUtils.isLNDBased() && (
+                                        <UTXOPicker
+                                            onValueChange={this.selectUTXOs}
+                                            UTXOsStore={UTXOsStore}
+                                        />
+                                    )}
+
+                                <>
+                                    <Text
+                                        style={{
+                                            top: 20,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.OpenChannel.announceChannel'
+                                        )}
+                                    </Text>
+                                    <Switch
+                                        value={!privateChannel}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                privateChannel: !privateChannel
+                                            })
+                                        }
+                                    />
+                                </>
+
+                                {BackendUtils.isLNDBased() && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                top: 20,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.OpenChannel.scidAlias'
+                                            )}
+                                        </Text>
+                                        <Switch
+                                            value={scidAlias}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    scidAlias: !scidAlias
+                                                })
+                                            }
+                                        />
+                                    </>
+                                )}
                             </>
                         )}
 
                         <View style={{ ...styles.button, paddingTop: 20 }}>
                             <Button
-                                title={localeString(
-                                    'views.OpenChannel.openChannel'
-                                )}
+                                title={
+                                    connectPeerOnly
+                                        ? localeString(
+                                              'views.OpenChannel.connectPeer'
+                                          )
+                                        : localeString(
+                                              'views.OpenChannel.openChannel'
+                                          )
+                                }
                                 icon={{
                                     name: 'swap-horiz',
                                     size: 25,
                                     color: 'white'
                                 }}
                                 onPress={() =>
-                                    connectPeer({
-                                        ...this.state,
-                                        local_funding_amount:
-                                            satAmount.toString()
-                                    })
+                                    connectPeer(
+                                        {
+                                            ...this.state,
+                                            local_funding_amount:
+                                                satAmount.toString()
+                                        },
+                                        false,
+                                        connectPeerOnly
+                                    )
                                 }
                             />
                         </View>

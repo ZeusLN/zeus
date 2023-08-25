@@ -229,7 +229,7 @@ export default class LND {
     sendCoins = (data: any) =>
         this.postRequest('/v1/transactions', {
             addr: data.addr,
-            sat_per_byte: data.sat_per_byte,
+            sat_per_vbyte: data.sat_per_vbyte,
             amount: data.amount,
             spend_unconfirmed: data.spend_unconfirmed
         });
@@ -257,7 +257,7 @@ export default class LND {
             local_funding_amount: data.local_funding_amount,
             min_confs: data.min_confs,
             node_pubkey_string: data.node_pubkey_string,
-            sat_per_byte: data.sat_per_byte,
+            sat_per_vbyte: data.sat_per_vbyte,
             spend_unconfirmed: data.spend_unconfirmed
         });
     openChannelStream = (data: OpenChannelRequest) =>
@@ -279,7 +279,7 @@ export default class LND {
             return this.deleteRequest(
                 `/v1/channels/${urlParams && urlParams[0]}/${
                     urlParams && urlParams[1]
-                }?force=${urlParams && urlParams[2]}&sat_per_byte=${
+                }?force=${urlParams && urlParams[2]}&sat_per_vbyte=${
                     urlParams && urlParams[3]
                 }`
             );
@@ -392,5 +392,7 @@ export default class LND {
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
+    supportsLSPs = () => false;
+    supportsNetworkInfo = () => false;
     isLNDBased = () => true;
 }

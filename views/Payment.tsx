@@ -83,7 +83,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 onPress={() =>
                     navigation.navigate('AddNotes', { payment_hash: noteKey })
                 }
-                style={{ marginTop: -12 }}
+                style={{ marginTop: -6 }}
             >
                 <EditNotes height={40} width={40} />
             </TouchableOpacity>

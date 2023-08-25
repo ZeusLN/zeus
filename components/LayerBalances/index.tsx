@@ -28,6 +28,7 @@ interface LayerBalancesProps {
     value?: string;
     amount?: string;
     lightning?: string;
+    locked?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -63,12 +64,17 @@ const SwipeableRow = ({
     navigation,
     value,
     amount,
-    lightning
+    lightning,
+    locked
 }: {
     item: DataRow;
     index: number;
     navigation: any;
     selectMode: boolean;
+    value?: string;
+    amount?: string;
+    lightning?: string;
+    locked?: boolean;
 }) => {
     if (index === 1) {
         return (
@@ -76,6 +82,7 @@ const SwipeableRow = ({
                 navigation={navigation}
                 value={value}
                 amount={amount}
+                locked={locked}
             >
                 <Row item={item} />
             </OnchainSwipeableRow>
@@ -83,7 +90,11 @@ const SwipeableRow = ({
     }
 
     return (
-        <LightningSwipeableRow navigation={navigation} lightning={lightning}>
+        <LightningSwipeableRow
+            navigation={navigation}
+            lightning={lightning}
+            locked={locked}
+        >
             <Row item={item} />
         </LightningSwipeableRow>
     );
@@ -99,7 +110,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             value,
             amount,
             lightning,
-            onRefresh
+            onRefresh,
+            locked
         } = this.props;
 
         const { totalBlockchainBalance, lightningBalance } = BalanceStore;
@@ -144,6 +156,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                             value={value}
                             amount={amount}
                             lightning={lightning}
+                            locked={locked}
                         />
                     )}
                     keyExtractor={(_item, index) => `message ${index}`}

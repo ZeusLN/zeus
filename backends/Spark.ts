@@ -177,7 +177,7 @@ export default class Spark {
     sendCoins = (data: TransactionRequest) =>
         this.rpc('withdraw', {
             desination: data.addr,
-            feerate: `${Number(data.sat_per_byte) * 1000}perkb`,
+            feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
             satoshi: data.amount
         });
     getMyNodeInfo = () => this.rpc('getinfo');
@@ -220,7 +220,7 @@ export default class Spark {
         this.rpc('fundchannel', {
             id: data.node_pubkey_string,
             amount: data.satoshis,
-            feerate: `${Number(data.sat_per_byte) * 1000}perkb`,
+            feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
             announce: !data.privateChannel
         }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
@@ -371,5 +371,7 @@ export default class Spark {
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
+    supportsLSPs = () => false;
+    supportsNetworkInfo = () => false;
     isLNDBased = () => false;
 }

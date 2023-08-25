@@ -23,33 +23,42 @@ import BalancePane from './BalancePane';
 import KeypadPane from './KeypadPane';
 import PosPane from './PosPane';
 
-import Button from './../../components/Button';
-import LayerBalances from './../../components/LayerBalances';
-import LoadingIndicator from './../../components/LoadingIndicator';
-import Screen from './../../components/Screen';
+import Button from '../../components/Button';
+import LayerBalances from '../../components/LayerBalances';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 
-import BackendUtils from './../../utils/BackendUtils';
-import LinkingUtils from './../../utils/LinkingUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import LinkingUtils from '../../utils/LinkingUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import BalanceStore from './../../stores/BalanceStore';
-import ChannelsStore from './../../stores/ChannelsStore';
-import FiatStore from './../../stores/FiatStore';
-import NodeInfoStore from './../../stores/NodeInfoStore';
-import PosStore from './../../stores/PosStore';
-import SettingsStore, { Settings } from './../../stores/SettingsStore';
-import UnitsStore from './../../stores/UnitsStore';
-import UTXOsStore from './../../stores/UTXOsStore';
-import ModalStore from './../../stores/ModalStore';
+import BalanceStore from '../../stores/BalanceStore';
+import ChannelsStore from '../../stores/ChannelsStore';
+import FiatStore from '../../stores/FiatStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import PosStore from '../../stores/PosStore';
+import SettingsStore, { Settings } from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
+import UTXOsStore from '../../stores/UTXOsStore';
+import ModalStore from '../../stores/ModalStore';
+import SyncStore from '../../stores/SyncStore';
+import LSPStore from '../../stores/LSPStore';
+import ChannelBackupStore from '../../stores/ChannelBackupStore';
 
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
-import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
-import CaretUp from './../../assets/images/SVG/Caret Up.svg';
-import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
-import POS from './../../assets/images/SVG/POS.svg';
-import Temple from './../../assets/images/SVG/Temple.svg';
-import WordLogo from './../../assets/images/SVG/Word Logo.svg';
+import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
+import CaretUp from '../../assets/images/SVG/Caret Up.svg';
+import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
+import POS from '../../assets/images/SVG/POS.svg';
+import Temple from '../../assets/images/SVG/Temple.svg';
+import WordLogo from '../../assets/images/SVG/Word Logo.svg';
+
+import {
+    initializeLnd,
+    startLnd,
+    expressGraphSync
+} from '../../utils/LndMobileUtils';
 
 interface WalletProps {
     enterSetup: any;
@@ -64,6 +73,9 @@ interface WalletProps {
     PosStore: PosStore;
     UTXOsStore: UTXOsStore;
     ModalStore: ModalStore;
+    SyncStore: SyncStore;
+    LSPStore: LSPStore;
+    ChannelBackupStore: ChannelBackupStore;
 }
 
 interface WalletState {
@@ -80,7 +92,10 @@ interface WalletState {
     'FiatStore',
     'PosStore',
     'UTXOsStore',
-    'ModalStore'
+    'ModalStore',
+    'SyncStore',
+    'LSPStore',
+    'ChannelBackupStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -202,7 +217,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
     };
 
-    startListeners() {
+    async startListeners() {
         Linking.addEventListener('url', this.handleOpenURL);
     }
 
@@ -246,13 +261,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     async refresh() {
-        const { NodeInfoStore, BalanceStore, ChannelsStore, SettingsStore } =
-            this.props;
+        const {
+            NodeInfoStore,
+            BalanceStore,
+            ChannelsStore,
+            ChannelBackupStore,
+            LSPStore,
+            SettingsStore
+        } = this.props;
 
         if (SettingsStore.connecting) {
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
+            LSPStore.reset();
+            ChannelBackupStore.reset();
         }
 
         this.getSettingsAndNavigate();
@@ -266,7 +289,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore,
             SettingsStore,
             PosStore,
-            FiatStore
+            FiatStore,
+            LSPStore,
+            ChannelBackupStore,
+            SyncStore
         } = this.props;
         const {
             settings,
@@ -277,9 +303,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             connecting,
             setConnectingStatus,
             connect,
-            posStatus
+            posStatus,
+            walletPassword,
+            embeddedLndNetwork,
+            updateSettings
         } = SettingsStore;
-        const { fiatEnabled, pos } = settings;
+        const { isSyncing, syncStatusUpdatesPaused, resumeSyncingUpates } =
+            SyncStore;
+        const { fiatEnabled, pos, rescan, recovery } = settings;
+        const expressGraphSyncEnabled = settings.expressGraphSync;
 
         if (pos && pos.squareEnabled && posStatus === 'active')
             PosStore.getOrders();
@@ -288,7 +320,44 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             FiatStore.getFiatRates();
         }
 
-        if (implementation === 'lndhub') {
+        if (implementation === 'embedded-lnd') {
+            if (connecting) {
+                await initializeLnd(embeddedLndNetwork === 'Testnet', rescan);
+                if (expressGraphSyncEnabled) await expressGraphSync();
+                await startLnd(walletPassword);
+            }
+            if (SettingsStore.settings.automaticDisasterRecoveryBackup)
+                ChannelBackupStore.initSubscribeChannelEvents();
+            if (
+                BackendUtils.supportsLSPs() &&
+                SettingsStore.settings.enableLSP
+            ) {
+                LSPStore.initChannelAcceptor();
+            }
+            NodeInfoStore.getNodeInfo();
+            if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
+            await BalanceStore.getCombinedBalance(false);
+            if (BackendUtils.supportsChannelManagement())
+                ChannelsStore.getChannels();
+            if (rescan) {
+                await updateSettings({
+                    rescan: false
+                });
+            }
+            if (recovery) {
+                try {
+                    await ChannelBackupStore.recoverStaticChannelBackup();
+                } catch (e) {}
+
+                await updateSettings({
+                    recovery: false
+                });
+            }
+
+            if (isSyncing && syncStatusUpdatesPaused) {
+                resumeSyncingUpates();
+            }
+        } else if (implementation === 'lndhub') {
             if (connecting) {
                 await login({ login: username, password }).then(async () => {
                     BalanceStore.getLightningBalance(true);
@@ -346,8 +415,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UnitsStore,
             BalanceStore,
             SettingsStore,
+            SyncStore,
             navigation
         } = this.props;
+        const { isSyncing, isInExpressGraphSync } = SyncStore;
         const { nodeInfo } = NodeInfoStore;
         const error = NodeInfoStore.error || SettingsStore.error;
         const {
@@ -374,6 +445,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         UnitsStore={UnitsStore}
                         BalanceStore={BalanceStore}
                         SettingsStore={SettingsStore}
+                        SyncStore={SyncStore}
                     />
 
                     {error && (
@@ -400,6 +472,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 UnitsStore={UnitsStore}
                                 SettingsStore={SettingsStore}
                                 onRefresh={() => this.refresh()}
+                                locked={isSyncing}
                             />
 
                             <Animated.View
@@ -479,6 +552,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             initialRouteName={
                                 squareEnabled && posStatus === 'active'
                                     ? 'POS'
+                                    : isSyncing
+                                    ? 'Balance'
                                     : (settings.display &&
                                           settings.display.defaultView) ||
                                       'Keypad'
@@ -486,6 +561,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             backBehavior="none"
                             screenOptions={({ route }) => ({
                                 tabBarIcon: ({ color }) => {
+                                    if (isSyncing && route.name === 'Keypad') {
+                                        return;
+                                    }
                                     if (route.name === 'Keypad') {
                                         return (
                                             <Bitcoin height={20} fill={color} />
@@ -526,19 +604,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             )}
                             {posStatus !== 'active' && (
                                 <>
-                                    {!error ? (
+                                    {!error && !isSyncing && (
                                         <Tab.Screen
                                             name="Keypad"
                                             component={KeypadScreen}
                                         />
-                                    ) : (
-                                        <Tab.Screen
-                                            name={'  '}
-                                            component={BalanceScreen}
-                                        />
                                     )}
                                     {BackendUtils.supportsChannelManagement() &&
-                                        !error && (
+                                        !error &&
+                                        !isSyncing && (
                                             <Tab.Screen
                                                 name={localeString(
                                                     'views.Wallet.Wallet.channels'
@@ -576,10 +650,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     padding: 8
                                 }}
                             >
-                                {settings.nodes && loggedIn
-                                    ? localeString(
-                                          'views.Wallet.Wallet.connecting'
-                                      )
+                                {settings.nodes && loggedIn && implementation
+                                    ? implementation === 'embedded-lnd'
+                                        ? isInExpressGraphSync
+                                            ? localeString(
+                                                  'views.Wallet.Wallet.expressGraphSync'
+                                              )
+                                            : localeString(
+                                                  'views.Wallet.Wallet.startingNode'
+                                              )
+                                        : localeString(
+                                              'views.Wallet.Wallet.connecting'
+                                          )
                                     : localeString(
                                           'views.Wallet.Wallet.startingUp'
                                       )}

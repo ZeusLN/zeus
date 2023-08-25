@@ -5,7 +5,6 @@ import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
-import LoadingIndicator from '../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 
@@ -42,8 +41,17 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         loading: false
     };
 
-    componentDidMount() {
+    UNSAFE_componentWillMount() {
         this.refreshSettings();
+
+        this.props.navigation.addListener('didFocus', () => {
+            this.refreshSettings();
+        });
+    }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('didFocus');
     }
 
     UNSAFE_componentWillReceiveProps = () => {
@@ -107,6 +115,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 }
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={30}
             />
         );
 
@@ -127,92 +136,107 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 {!!nodes && nodes.length > 0 && (
                     <FlatList
                         data={nodes}
-                        renderItem={({ item, index }) => (
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                                onPress={async () => {
-                                    const currentImplementation =
-                                        implementation;
-                                    await updateSettings({
-                                        nodes,
-                                        selectedNode: index
-                                    }).then(() => {
-                                        if (
-                                            currentImplementation ===
-                                            'lightning-node-connect'
-                                        ) {
-                                            BackendUtils.disconnect();
-                                        }
-                                        BalanceStore.reset();
-                                        NodeInfoStore.reset();
-                                        ChannelsStore.reset();
-                                        setConnectingStatus(true);
-                                        navigation.navigate('Wallet', {
-                                            refresh: true
-                                        });
-                                    });
-                                }}
-                            >
-                                <NodeIdenticon
-                                    selectedNode={item}
-                                    width={35}
-                                    rounded
-                                />
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontFamily: 'Lato-Regular'
-                                        }}
-                                    >
-                                        {NodeTitle(item, 32)}
-                                    </ListItem.Title>
-                                    <ListItem.Subtitle
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'Lato-Regular'
-                                        }}
-                                    >
-                                        {selectedNode === index ||
-                                        (!selectedNode && index === 0)
-                                            ? `Active | ${
-                                                  implementationDisplayValue[
-                                                      item.implementation
-                                                  ]
-                                              }`
-                                            : `${
-                                                  implementationDisplayValue[
-                                                      item.implementation
-                                                  ]
-                                              }`}
-                                    </ListItem.Subtitle>
-                                </ListItem.Content>
-                                <Button
-                                    title=""
-                                    icon={{
-                                        name: 'settings',
-                                        size: 25,
-                                        color: themeColor('text')
+                        renderItem={({
+                            item,
+                            index
+                        }: {
+                            item: any;
+                            index: number;
+                        }) => {
+                            let nodeSubtitle = '';
+                            if (
+                                selectedNode === index ||
+                                (!selectedNode && index === 0)
+                            ) {
+                                nodeSubtitle = 'Active | ';
+                            }
+
+                            nodeSubtitle +=
+                                implementationDisplayValue[item.implementation];
+
+                            if (item.embeddedLndNetwork) {
+                                nodeSubtitle += ` (${item.embeddedLndNetwork})`;
+                            }
+
+                            return (
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
                                     }}
-                                    onPress={() =>
-                                        navigation.navigate(
-                                            'NodeConfiguration',
-                                            {
-                                                node: item,
-                                                index,
-                                                active: selectedNode === index,
-                                                saved: true
+                                    onPress={async () => {
+                                        const currentImplementation =
+                                            implementation;
+                                        await updateSettings({
+                                            nodes,
+                                            selectedNode: index
+                                        }).then(() => {
+                                            if (
+                                                currentImplementation ===
+                                                'lightning-node-connect'
+                                            ) {
+                                                BackendUtils.disconnect();
                                             }
-                                        )
-                                    }
-                                    iconOnly
-                                    adaptiveWidth
-                                />
-                            </ListItem>
-                        )}
+                                            BalanceStore.reset();
+                                            NodeInfoStore.reset();
+                                            ChannelsStore.reset();
+                                            setConnectingStatus(true);
+                                            navigation.navigate('Wallet', {
+                                                refresh: true
+                                            });
+                                        });
+                                    }}
+                                >
+                                    <NodeIdenticon
+                                        selectedNode={item}
+                                        width={35}
+                                        rounded
+                                    />
+                                    <ListItem.Content>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontFamily: 'Lato-Regular'
+                                            }}
+                                        >
+                                            {NodeTitle(item, 32)}
+                                        </ListItem.Title>
+                                        <ListItem.Subtitle
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily: 'Lato-Regular'
+                                            }}
+                                        >
+                                            {nodeSubtitle}
+                                        </ListItem.Subtitle>
+                                    </ListItem.Content>
+                                    <Button
+                                        title=""
+                                        icon={{
+                                            name: 'settings',
+                                            size: 25,
+                                            color: themeColor('text')
+                                        }}
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'NodeConfiguration',
+                                                {
+                                                    node: item,
+                                                    index,
+                                                    active:
+                                                        selectedNode === index,
+                                                    saved: true
+                                                }
+                                            )
+                                        }
+                                        iconOnly
+                                        adaptiveWidth
+                                    />
+                                </ListItem>
+                            );
+                        }}
                         refreshing={loading}
                         keyExtractor={(item, index) => `${item.host}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
@@ -230,7 +254,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         iconOnly
                     />
                 )}
-                {loading && <LoadingIndicator />}
             </Screen>
         );
     }

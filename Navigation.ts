@@ -22,6 +22,7 @@ import Invoice from './views/Invoice';
 
 import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
+import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
@@ -51,6 +52,13 @@ import PointOfSaleRecon from './views/Settings/PointOfSaleRecon';
 import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
+import LSP from './views/Settings/LSP';
+//Embedded Node
+import EmbeddedNode from './views/Settings/EmbeddedNode';
+import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
+import Pathfinding from './views/Settings/EmbeddedNode/Pathfinding';
+import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
+import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -76,6 +84,14 @@ import Intro from './views/Intro';
 import IntroSplash from './views/IntroSplash';
 
 import EditFee from './views/EditFee';
+
+// Embedded LND
+import Seed from './views/Settings/Seed';
+import Sync from './views/Sync';
+import LspExplanationFees from './views/Explanations/LspExplanationFees';
+import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
+import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
+import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
 
 const AppScenes = {
     Wallet: {
@@ -201,6 +217,9 @@ const AppScenes = {
     SendingLightning: {
         screen: SendingLightning
     },
+    NetworkInfo: {
+        screen: NetworkInfo
+    },
     NodeInfo: {
         screen: NodeInfo
     },
@@ -258,6 +277,12 @@ const AppScenes = {
     InvoicesSettings: {
         screen: InvoicesSettings
     },
+    Seed: {
+        screen: Seed
+    },
+    Sync: {
+        screen: Sync
+    },
     BumpFee: {
         screen: BumpFee
     },
@@ -266,6 +291,36 @@ const AppScenes = {
     },
     AddNotes: {
         screen: AddNotes
+    },
+    LspExplanationFees: {
+        screen: LspExplanationFees
+    },
+    LspExplanationRouting: {
+        screen: LspExplanationRouting
+    },
+    LspExplanationWrappedInvoices: {
+        screen: LspExplanationWrappedInvoices
+    },
+    LspExplanationOverview: {
+        screen: LspExplanationOverview
+    },
+    EmbeddedNodeSettings: {
+        screen: EmbeddedNode
+    },
+    DisasterRecovery: {
+        screen: DisasterRecovery
+    },
+    Pathfinding: {
+        screen: Pathfinding
+    },
+    ExpressGraphSync: {
+        screen: ExpressGraphSync
+    },
+    LNDLogs: {
+        screen: LNDLogs
+    },
+    LSPSettings: {
+        screen: LSP
     }
 };
 

@@ -60,6 +60,7 @@ export default class ChannelsStore {
     @observable public filteredChannels: Array<Channel> = [];
     @observable public filteredPendingChannels: Array<Channel> = [];
     @observable public filteredClosedChannels: Array<Channel> = [];
+    @observable public filterOptions: Array<string> = [];
     @observable public sort = {
         param: 'channelCapacity',
         dir: 'DESC',
@@ -141,6 +142,14 @@ export default class ChannelsStore {
         this.resetOpenChannel();
         this.nodes = {};
         this.channels = [];
+        this.pendingChannels = [];
+        this.closedChannels = [];
+        this.enrichedChannels = [];
+        this.enrichedPendingChannels = [];
+        this.enrichedClosedChannels = [];
+        this.filteredChannels = [];
+        this.filteredPendingChannels = [];
+        this.filteredClosedChannels = [];
         this.largestChannelSats = 0;
         this.totalOutbound = 0;
         this.totalInbound = 0;
@@ -165,21 +174,36 @@ export default class ChannelsStore {
     };
 
     @action
+    setFilterOptions = (options: string[]) => {
+        this.filterOptions = options;
+        this.filterChannels();
+        this.filterPendingChannels();
+        this.filterClosedChannels();
+    };
+
+    @action
     filter = (channels: Array<Channel>) => {
         const query = this.search;
-        const filtered = channels.filter(
-            (channel: Channel) =>
-                channel.alias
-                    ?.toLocaleLowerCase()
-                    .includes(query.toLocaleLowerCase()) ||
-                channel.remotePubkey
-                    .toLocaleLowerCase()
-                    .includes(query.toLocaleLowerCase()) ||
-                channel.channelId
-                    .toLocaleLowerCase()
-                    .includes(query.toLocaleLowerCase())
-        );
-
+        const filtered = channels
+            .filter(
+                (channel: Channel) =>
+                    channel.alias
+                        ?.toLocaleLowerCase()
+                        .includes(query.toLocaleLowerCase()) ||
+                    channel.remotePubkey
+                        .toLocaleLowerCase()
+                        .includes(query.toLocaleLowerCase()) ||
+                    channel.channelId
+                        .toLocaleLowerCase()
+                        .includes(query.toLocaleLowerCase())
+            )
+            .filter(
+                (channel: Channel) =>
+                    this.filterOptions?.length === 0 ||
+                    this.filterOptions?.includes(
+                        channel.private ? 'unannounced' : 'announced'
+                    )
+            );
         const sorted = filtered.sort((a: any, b: any) => {
             if (this.sort.type === 'numeric') {
                 return Number(a[this.sort.param]) < Number(b[this.sort.param])
@@ -403,44 +427,67 @@ export default class ChannelsStore {
     };
 
     @action
-    public connectPeer = (request: OpenChannelRequest) => {
+    public connectPeer = async (
+        request: OpenChannelRequest,
+        perm?: boolean,
+        connectPeerOnly?: boolean
+    ) => {
+        this.channelRequest = undefined;
         this.connectingToPeer = true;
 
-        BackendUtils.connectPeer({
-            addr: {
-                pubkey: request.node_pubkey_string,
-                host: request.host
-            }
-        })
-            .then(() => {
-                this.errorPeerConnect = false;
-                this.connectingToPeer = false;
-                this.errorMsgPeer = null;
+        if (!request.host) {
+            return await new Promise((resolve) => {
                 this.channelRequest = request;
-                this.peerSuccess = true;
-            })
-            .catch((error: any) => {
-                // handle error
-                this.errorMsgPeer = error.toString();
-                this.errorPeerConnect = true;
-                this.connectingToPeer = false;
-                this.peerSuccess = false;
-                this.channelSuccess = false;
-
-                if (
-                    this.errorMsgPeer &&
-                    this.errorMsgPeer.includes('already')
-                ) {
-                    this.channelRequest = request;
-                }
+                resolve(true);
             });
+        }
+
+        return await new Promise((resolve, reject) => {
+            BackendUtils.connectPeer({
+                addr: {
+                    pubkey: request.node_pubkey_string,
+                    host: request.host
+                },
+                perm
+            })
+                .then(() => {
+                    this.errorPeerConnect = false;
+                    this.connectingToPeer = false;
+                    this.errorMsgPeer = null;
+                    if (!connectPeerOnly) this.channelRequest = request;
+                    this.peerSuccess = true;
+                    resolve(true);
+                })
+                .catch((error: any) => {
+                    this.connectingToPeer = false;
+                    this.peerSuccess = false;
+                    this.channelSuccess = false;
+                    // handle error
+                    if (
+                        error.toString() &&
+                        error.toString().includes('already')
+                    ) {
+                        if (!connectPeerOnly) {
+                            this.channelRequest = request;
+                        } else {
+                            this.errorMsgPeer = error.toString();
+                            this.errorPeerConnect = true;
+                        }
+                        resolve(true);
+                    } else {
+                        this.errorMsgPeer = error.toString();
+                        this.errorPeerConnect = true;
+                        reject(this.errorMsgPeer);
+                    }
+                });
+        });
     };
 
     openChannelLNDCoinControl = (request: OpenChannelRequest) => {
         const { utxos } = request;
         const inputs: any = [];
         const outputs: any = {};
-        const sat_per_byte = request.sat_per_byte;
+        const sat_per_vbyte = request.sat_per_vbyte;
 
         if (utxos) {
             utxos.forEach((input) => {
@@ -454,7 +501,7 @@ export default class ChannelsStore {
         const node_pubkey = Base64Utils.hexToBase64(request.node_pubkey_string);
 
         delete request.node_pubkey_string;
-        delete request.sat_per_byte;
+        delete request.sat_per_vbyte;
 
         const pending_chan_id = randomBytes(32).toString('base64');
 
@@ -483,7 +530,7 @@ export default class ChannelsStore {
                         inputs,
                         outputs
                     },
-                    sat_per_vbyte: Number(sat_per_byte),
+                    sat_per_vbyte: Number(sat_per_vbyte),
                     spend_unconfirmed:
                         openChanRequest.min_confs &&
                         openChanRequest.min_confs === 0

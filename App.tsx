@@ -1,10 +1,14 @@
 import * as React from 'react';
 import { Provider } from 'mobx-react';
+
 import Stores from './stores/Stores';
 import Navigation from './Navigation';
+import NavigationService from './NavigationService';
 import { AppContainer } from './components/layout/AppContainer';
 import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
+import InfoModal from './components/Modals/InfoModal';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default class App extends React.PureComponent {
     render() {
@@ -26,12 +30,24 @@ export default class App extends React.PureComponent {
                 ActivityStore={Stores.activityStore}
                 PosStore={Stores.posStore}
                 ModalStore={Stores.modalStore}
-                NotesStore={Stores.NotesStore}
+                NotesStore={Stores.notesStore}
+                SyncStore={Stores.syncStore}
+                LSPStore={Stores.lspStore}
+                ChannelBackupStore={Stores.channelBackupStore}
             >
                 <AppContainer>
-                    <Navigation />
-                    <ExternalLinkModal />
-                    <AndroidNfcModal />
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                        <Navigation
+                            ref={(navigatorRef) => {
+                                NavigationService.setTopLevelNavigator(
+                                    navigatorRef
+                                );
+                            }}
+                        />
+                        <ExternalLinkModal />
+                        <AndroidNfcModal />
+                        <InfoModal />
+                    </GestureHandlerRootView>
                 </AppContainer>
             </Provider>
         );

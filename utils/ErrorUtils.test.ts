@@ -1,18 +1,15 @@
-import ErrorUtils from './ErrorUtils';
+import { errorToUserFriendly } from './ErrorUtils';
 
 describe('ErrorUtils', () => {
     describe('errorToUserFriendly', () => {
         it('Turns error message to user friendly values', () => {
             expect(
-                ErrorUtils.errorToUserFriendly(
-                    'Error: SOCKS: Connection refused',
-                    false
-                )
+                errorToUserFriendly('Error: SOCKS: Connection refused', false)
             ).toEqual(
                 'Host unreachable. Try restarting your node or its Tor process.'
             );
             expect(
-                ErrorUtils.errorToUserFriendly(
+                errorToUserFriendly(
                     'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")',
                     false
                 )
@@ -20,7 +17,7 @@ describe('ErrorUtils', () => {
                 'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.'
             );
             expect(
-                ErrorUtils.errorToUserFriendly(
+                errorToUserFriendly(
                     'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")',
                     false
                 )
@@ -30,9 +27,9 @@ describe('ErrorUtils', () => {
         });
 
         it('Returns inputted error if no match found', () => {
-            expect(
-                ErrorUtils.errorToUserFriendly('Random message', false)
-            ).toEqual('Random message');
+            expect(errorToUserFriendly('Random message', false)).toEqual(
+                'Random message'
+            );
         });
     });
 });

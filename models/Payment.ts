@@ -2,8 +2,9 @@ import { computed } from 'mobx';
 import bolt11 from 'bolt11';
 
 import BaseModel from './BaseModel';
-import DateTimeUtils from './../utils/DateTimeUtils';
-import { localeString } from './../utils/LocaleUtils';
+import DateTimeUtils from '../utils/DateTimeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { lnrpc } from '../proto/lightning';
 
 export default class Payment extends BaseModel {
     payment_hash: string;
@@ -118,7 +119,10 @@ export default class Payment extends BaseModel {
         this.htlcs &&
             this.htlcs.forEach((htlc: any) => {
                 const route: any[] = [];
-                if (htlc.status === 'SUCCEEDED') {
+                if (
+                    htlc.status === 'SUCCEEDED' ||
+                    htlc.status === lnrpc.HTLCAttempt.HTLCStatus['SUCCEEDED']
+                ) {
                     htlc.route.hops &&
                         htlc.route.hops.forEach((hop: any) => {
                             const pubKey = hop.pub_key;

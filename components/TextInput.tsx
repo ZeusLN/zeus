@@ -64,6 +64,52 @@ export default function TextInput(props: TextInputProps) {
               height: 60
           };
 
+    const Prefix = () => (
+        <Text
+            style={
+                toggleUnits
+                    ? {
+                          ...styles.unit,
+                          padding: toggleUnits ? 5 : 0,
+                          marginRight: 5,
+                          color: themeColor('text'),
+                          backgroundColor: themeColor('background')
+                      }
+                    : {
+                          ...styles.unit,
+                          padding: toggleUnits ? 5 : 0,
+                          marginRight: 5,
+                          color: themeColor('text')
+                      }
+            }
+        >
+            {prefix}
+        </Text>
+    );
+
+    const Suffix = () => (
+        <Text
+            style={
+                toggleUnits
+                    ? {
+                          ...styles.unit,
+                          padding: toggleUnits ? 5 : 0,
+                          right: right || 45,
+                          color: themeColor('text'),
+                          backgroundColor: themeColor('background')
+                      }
+                    : {
+                          ...styles.unit,
+                          padding: toggleUnits ? 5 : 0,
+                          right: right || 45,
+                          color: themeColor('text')
+                      }
+            }
+        >
+            {suffix}
+        </Text>
+    );
+
     return (
         <View
             style={{
@@ -73,29 +119,17 @@ export default function TextInput(props: TextInputProps) {
                 backgroundColor: themeColor('secondary')
             }}
         >
-            {prefix && (
-                <TouchableOpacity onPress={() => toggleUnits && toggleUnits()}>
-                    <Text
-                        style={
-                            toggleUnits
-                                ? {
-                                      ...styles.unit,
-                                      marginRight: 5,
-                                      color: themeColor('text'),
-                                      backgroundColor: themeColor('background')
-                                  }
-                                : {
-                                      ...styles.unit,
-                                      marginRight: 5,
-                                      color: themeColor('text')
-                                  }
-                        }
+            {prefix ? (
+                toggleUnits ? (
+                    <TouchableOpacity
                         onPress={() => toggleUnits && toggleUnits()}
                     >
-                        {prefix}
-                    </Text>
-                </TouchableOpacity>
-            )}
+                        <Prefix />
+                    </TouchableOpacity>
+                ) : (
+                    <Prefix />
+                )
+            ) : null}
             <TextInputRN
                 placeholder={placeholder}
                 value={value}
@@ -104,7 +138,9 @@ export default function TextInput(props: TextInputProps) {
                 style={{
                     ...textInputStyle,
                     ...styles.input,
-                    color: themeColor('text')
+                    color: locked
+                        ? themeColor('secondaryText')
+                        : themeColor('text')
                 }}
                 placeholderTextColor={
                     placeholderTextColor || themeColor('secondaryText')
@@ -118,29 +154,17 @@ export default function TextInput(props: TextInputProps) {
                 secureTextEntry={secureTextEntry}
                 onPressIn={onPressIn}
             />
-            {suffix && (
-                <TouchableOpacity onPress={() => toggleUnits && toggleUnits()}>
-                    <Text
-                        style={
-                            toggleUnits
-                                ? {
-                                      ...styles.unit,
-                                      right: right || 45,
-                                      color: themeColor('text'),
-                                      backgroundColor: themeColor('background')
-                                  }
-                                : {
-                                      ...styles.unit,
-                                      right: right || 45,
-                                      color: themeColor('text')
-                                  }
-                        }
+            {suffix ? (
+                toggleUnits ? (
+                    <TouchableOpacity
                         onPress={() => toggleUnits && toggleUnits()}
                     >
-                        {suffix}
-                    </Text>
-                </TouchableOpacity>
-            )}
+                        <Suffix />
+                    </TouchableOpacity>
+                ) : (
+                    <Suffix />
+                )
+            ) : null}
         </View>
     );
 }
@@ -157,13 +181,11 @@ const styles = StyleSheet.create({
     },
     unit: {
         fontSize: 20,
-        borderRadius: 6,
-        padding: 5
+        borderRadius: 6
     },
     input: {
         fontSize: 20,
         width: '100%',
-        fontFamily: 'Lato-Regular',
-        top: 3
+        fontFamily: 'Lato-Regular'
     }
 });
