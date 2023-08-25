@@ -174,8 +174,6 @@ export default class BalancePane extends React.PureComponent<
                                         backgroundColor:
                                             themeColor('secondary'),
                                         borderRadius: 10,
-                                        width: '90%',
-                                        top: 10,
                                         margin: 20,
                                         padding: 15,
                                         borderWidth: 0.5
@@ -208,8 +206,9 @@ export default class BalancePane extends React.PureComponent<
                                                 marginTop: 30,
                                                 flex: 1,
                                                 flexDirection: 'row',
-                                                flexWrap: 'wrap',
-                                                width: '100%'
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                minWidth: '100%'
                                             }}
                                         >
                                             <LinearProgress
@@ -226,7 +225,8 @@ export default class BalancePane extends React.PureComponent<
                                                     'secondaryBackground'
                                                 )}
                                                 style={{
-                                                    width: '84%'
+                                                    flex: 1,
+                                                    flexDirection: 'row'
                                                 }}
                                             />
                                             <Text
@@ -234,7 +234,8 @@ export default class BalancePane extends React.PureComponent<
                                                     fontFamily: 'Lato-Bold',
                                                     color: themeColor('text'),
                                                     marginTop: -8,
-                                                    marginLeft: 14
+                                                    marginLeft: 14,
+                                                    height: 40
                                                 }}
                                             >
                                                 {`${Math.floor(
