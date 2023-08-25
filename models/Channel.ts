@@ -34,6 +34,7 @@ export default class Channel extends BaseModel {
     local_chan_reserve_sat?: string;
     remote_chan_reserve_sat?: string;
     zero_conf?: boolean;
+    commitment_type?: string;
     // c-lightning
     @observable
     state: string;
