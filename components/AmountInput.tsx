@@ -13,7 +13,8 @@ import FiatStore from '../stores/FiatStore';
 import SettingsStore from '../stores/SettingsStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 
-import ExchangeSVG from '../assets/images/SVG/Exchange.svg';
+import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
+import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';
 
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
@@ -176,13 +177,21 @@ export default class AmountInput extends React.Component<
                     />
                     <TouchableOpacity
                         onPress={() => !locked && this.onChangeUnits()}
-                        style={{ marginTop: 16, marginLeft: 8, marginRight: 2 }}
+                        style={{ marginTop: 22, marginLeft: 15 }}
                     >
-                        <ExchangeSVG
-                            fill={themeColor('text')}
-                            width="45"
-                            height="45"
-                        />
+                        {fiatEnabled && units !== 'fiat' ? (
+                            <ExchangeFiatSVG
+                                fill={themeColor('text')}
+                                width="35"
+                                height="35"
+                            />
+                        ) : (
+                            <ExchangeBitcoinSVG
+                                fill={themeColor('text')}
+                                width="35"
+                                height="35"
+                            />
+                        )}
                     </TouchableOpacity>
                 </View>
                 {!hideConversion && (
