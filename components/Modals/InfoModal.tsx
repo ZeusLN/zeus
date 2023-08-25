@@ -72,8 +72,9 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                         )}
 
                         {Array.isArray(infoModalText) &&
-                            infoModalText.map((text: string) => (
+                            infoModalText.map((text: string, index: number) => (
                                 <Text
+                                    key={index}
                                     style={{
                                         fontFamily: 'Lato-Regular',
                                         fontSize: 20,
