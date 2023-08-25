@@ -185,5 +185,6 @@ export default class EmbeddedLND extends LND {
     supportsBumpFee = () => true;
     supportsLSPs = () => true;
     supportsNetworkInfo = () => true;
+    supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     isLNDBased = () => true;
 }

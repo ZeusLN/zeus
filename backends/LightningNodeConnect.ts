@@ -348,5 +348,6 @@ export default class LightningNodeConnect {
     supportsBumpFee = () => true;
     supportsLSPs = () => false;
     supportsNetworkInfo = () => false;
+    supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     isLNDBased = () => true;
 }
