@@ -11,7 +11,6 @@ import Invoice from '../models/Invoice';
 import SettingsStore from './SettingsStore';
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
-import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
 import ChannelsStore from './ChannelsStore';
 
