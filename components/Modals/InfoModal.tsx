@@ -51,7 +51,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                             backgroundColor: 'white',
                             borderRadius: 30,
                             padding: 30,
-                            alignItems: 'center',
+                            width: '100%',
                             shadowColor: '#000',
                             shadowOffset: {
                                 width: 0,
