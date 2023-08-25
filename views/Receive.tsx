@@ -1207,7 +1207,7 @@ export default class Receive extends React.Component<
                                                 new BigNumber(zeroConfFee).gt(
                                                     1000
                                                 )
-                                                    ? 'LspExplanation'
+                                                    ? 'LspExplanationFees'
                                                     : 'LspExplanationRouting'
                                             )
                                         }
@@ -1451,7 +1451,7 @@ export default class Receive extends React.Component<
                                         <TouchableOpacity
                                             onPress={() =>
                                                 navigation.navigate(
-                                                    'LspExplanation'
+                                                    'LspExplanationFees'
                                                 )
                                             }
                                         >
@@ -1547,10 +1547,15 @@ export default class Receive extends React.Component<
                                                     ),
                                                     top: 20
                                                 }}
-                                                infoText={localeString(
-                                                    'views.Receive.lspSwitchExplainer'
-                                                )}
-                                                infoNav="LspExplanation"
+                                                infoText={[
+                                                    localeString(
+                                                        'views.Receive.lspSwitchExplainer1'
+                                                    ),
+                                                    localeString(
+                                                        'views.Receive.lspSwitchExplainer2'
+                                                    )
+                                                ]}
+                                                infoNav="LspExplanationOverview"
                                             >
                                                 {localeString(
                                                     'views.Settings.LSP.enableLSP'

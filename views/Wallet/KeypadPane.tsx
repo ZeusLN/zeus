@@ -227,7 +227,9 @@ export default class KeypadPane extends React.PureComponent<
 
                 {needInbound && (
                     <TouchableOpacity
-                        onPress={() => navigation.navigate('LspExplanation')}
+                        onPress={() =>
+                            navigation.navigate('LspExplanationFees')
+                        }
                     >
                         <View
                             style={{

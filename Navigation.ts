@@ -88,8 +88,10 @@ import EditFee from './views/EditFee';
 // Embedded LND
 import Seed from './views/Settings/Seed';
 import Sync from './views/Sync';
-import LspExplanation from './views/LspExplanation';
-import LspExplanationRouting from './views/LspExplanationRouting';
+import LspExplanationFees from './views/Explanations/LspExplanationFees';
+import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
+import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
+import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
 
 const AppScenes = {
     Wallet: {
@@ -290,11 +292,17 @@ const AppScenes = {
     AddNotes: {
         screen: AddNotes
     },
-    LspExplanation: {
-        screen: LspExplanation
+    LspExplanationFees: {
+        screen: LspExplanationFees
     },
     LspExplanationRouting: {
         screen: LspExplanationRouting
+    },
+    LspExplanationWrappedInvoices: {
+        screen: LspExplanationWrappedInvoices
+    },
+    LspExplanationOverview: {
+        screen: LspExplanationOverview
     },
     EmbeddedNodeSettings: {
         screen: EmbeddedNode
