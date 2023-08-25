@@ -70,14 +70,14 @@ export default function TextInput(props: TextInputProps) {
                 toggleUnits
                     ? {
                           ...styles.unit,
-                          padding: toggleUnits ? 5 : 0,
+                          paddingLeft: 5,
+                          paddingRight: 5,
                           marginRight: 5,
                           color: themeColor('text'),
                           backgroundColor: themeColor('background')
                       }
                     : {
                           ...styles.unit,
-                          padding: toggleUnits ? 5 : 0,
                           marginRight: 5,
                           color: themeColor('text')
                       }
@@ -93,14 +93,14 @@ export default function TextInput(props: TextInputProps) {
                 toggleUnits
                     ? {
                           ...styles.unit,
-                          padding: toggleUnits ? 5 : 0,
+                          paddingLeft: 5,
+                          paddingRight: 5,
                           right: right || 45,
                           color: themeColor('text'),
                           backgroundColor: themeColor('background')
                       }
                     : {
                           ...styles.unit,
-                          padding: toggleUnits ? 5 : 0,
                           right: right || 45,
                           color: themeColor('text')
                       }
@@ -176,7 +176,8 @@ const styles = StyleSheet.create({
         top: 10,
         borderRadius: 6,
         marginBottom: 20,
-        padding: 10,
+        paddingLeft: 10,
+        paddingRight: 10,
         overflow: 'hidden'
     },
     unit: {

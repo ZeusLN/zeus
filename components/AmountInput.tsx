@@ -12,7 +12,6 @@ import Stores from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore from '../stores/SettingsStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
-import { Row } from './layout/Row';
 
 import ExchangeSVG from '../assets/images/SVG/Exchange.svg';
 
@@ -144,7 +143,7 @@ export default class AmountInput extends React.Component<
                 >
                     {title}
                 </Text>
-                <Row>
+                <View style={{ display: 'flex', flexDirection: 'row' }}>
                     <TextInput
                         keyboardType="numeric"
                         placeholder={'0'}
@@ -170,11 +169,14 @@ export default class AmountInput extends React.Component<
                                   units === 'fiat' &&
                                   getSymbol().symbol
                         }
-                        style={{ width: '85%' }}
+                        style={{
+                            flex: 1,
+                            flexDirection: 'row'
+                        }}
                     />
                     <TouchableOpacity
                         onPress={() => !locked && this.onChangeUnits()}
-                        style={{ margin: 8 }}
+                        style={{ marginTop: 14, marginLeft: 20 }}
                     >
                         <ExchangeSVG
                             fill={themeColor('text')}
@@ -182,7 +184,7 @@ export default class AmountInput extends React.Component<
                             height="48"
                         />
                     </TouchableOpacity>
-                </Row>
+                </View>
                 {!hideConversion && (
                     <View style={{ marginBottom: 10 }}>
                         {fiatEnabled && (
