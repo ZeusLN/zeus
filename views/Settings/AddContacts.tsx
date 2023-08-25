@@ -87,6 +87,11 @@ export default class AddContacts extends React.Component<
             [field]: [...prevState[field], '']
         }));
     };
+    removeExtraField = (field, index) => {
+        const updatedAddresses = [...this.state[field]];
+        updatedAddresses.splice(index + 1, 1); // Remove the element at index
+        this.setState({ [field]: updatedAddresses });
+    };
 
     saveContact = async () => {
         // await EncryptedStorage.clear();
@@ -425,6 +430,20 @@ export default class AddContacts extends React.Component<
                                         autoCapitalize="none"
                                     />
                                 </View>
+                                <TouchableOpacity style={styles.deleteIcon}>
+                                    <Icon
+                                        name="close"
+                                        onPress={() =>
+                                            this.removeExtraField(
+                                                'lnAddress',
+                                                index
+                                            )
+                                        }
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={16}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         </>
                     ))}
@@ -506,6 +525,20 @@ export default class AddContacts extends React.Component<
                                         autoCapitalize="none"
                                     />
                                 </View>
+                                <TouchableOpacity style={styles.deleteIcon}>
+                                    <Icon
+                                        name="close"
+                                        onPress={() =>
+                                            this.removeExtraField(
+                                                'onchainAddress',
+                                                index
+                                            )
+                                        }
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={16}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         </>
                     ))}
@@ -576,6 +609,20 @@ export default class AddContacts extends React.Component<
                                         autoCapitalize="none"
                                     />
                                 </View>
+                                <TouchableOpacity style={styles.deleteIcon}>
+                                    <Icon
+                                        name="close"
+                                        onPress={() =>
+                                            this.removeExtraField(
+                                                'nip05',
+                                                index
+                                            )
+                                        }
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={16}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         </>
                     ))}
@@ -646,6 +693,20 @@ export default class AddContacts extends React.Component<
                                         autoCapitalize="none"
                                     />
                                 </View>
+                                <TouchableOpacity style={styles.deleteIcon}>
+                                    <Icon
+                                        name="close"
+                                        onPress={() =>
+                                            this.removeExtraField(
+                                                'nostrNpub',
+                                                index
+                                            )
+                                        }
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={16}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         </>
                     ))}
@@ -727,6 +788,11 @@ const styles = StyleSheet.create({
         height: 26,
         alignItems: 'center',
         justifyContent: 'center'
+    },
+    deleteIcon: {
+        position: 'absolute',
+        right: 20,
+        top: 20
     },
     textInput: {
         fontSize: 20,
