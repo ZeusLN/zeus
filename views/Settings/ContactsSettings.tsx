@@ -5,6 +5,7 @@ import AddIcon from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import { themeColor } from '../../utils/ThemeUtils';
+import Screen from '../../components/Screen';
 
 interface ContactsSettingsProps {
     navigation: any;
@@ -56,7 +57,11 @@ export default class ContactsSettings extends React.Component<
                 );
                 if (contactsString) {
                     const contacts: ContactItem[] = JSON.parse(contactsString);
-                    this.setState({ contacts });
+                    // Sort the contacts array alphabetically by name
+                    const sortedContacts = contacts.sort((a, b) =>
+                        a.name.localeCompare(b.name)
+                    );
+                    this.setState({ contacts: sortedContacts });
                 }
             } catch (error) {
                 console.log('Error loading contacts:', error);
@@ -102,13 +107,26 @@ export default class ContactsSettings extends React.Component<
                             color: themeColor('secondaryText')
                         }}
                     >
-                        {item.lnAddress.length === 1
+                        {item.lnAddress &&
+                        item.lnAddress.length === 1 &&
+                        item.lnAddress[0] !== ''
                             ? item.lnAddress[0].length > 15
                                 ? `${item.lnAddress[0].slice(
                                       0,
                                       4
                                   )}...${item.lnAddress[0].slice(-4)}`
-                                : item.lnAddress
+                                : item.lnAddress[0]
+                            : item.lnAddress.length > 1
+                            ? 'multiple addresses'
+                            : item.onchainAddress &&
+                              item.onchainAddress.length === 1 &&
+                              item.onchainAddress !== ''
+                            ? item.onchainAddress.length > 15
+                                ? `${item.onchainAddress.slice(
+                                      0,
+                                      4
+                                  )}...${item.onchainAddress.slice(-4)}`
+                                : item.onchainAddress
                             : 'multiple addresses'}
                     </Text>
                 </View>
@@ -143,9 +161,7 @@ export default class ContactsSettings extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => {
-                    navigation.navigate('Settings', {
-                        refresh: true
-                    });
+                    navigation.goBack();
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
@@ -194,7 +210,7 @@ export default class ContactsSettings extends React.Component<
         );
 
         return (
-            <View
+            <Screen
                 style={{
                     flex: 1,
                     backgroundColor: themeColor('background')
@@ -322,7 +338,7 @@ export default class ContactsSettings extends React.Component<
                         keyExtractor={(item, index) => index.toString()}
                     />
                 </View>
-            </View>
+            </Screen>
         );
     }
 }
