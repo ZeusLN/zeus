@@ -154,7 +154,7 @@ export default class Receive extends React.Component<
             expiry: settings?.invoices?.expiry || '3600',
             routeHints: settings?.invoices?.routeHints || false,
             ampInvoice: settings?.invoices?.ampInvoice || false,
-            enableLSP: settings?.enableLSP || true
+            enableLSP: settings?.enableLSP
         });
 
         const lnOnly =
