@@ -176,12 +176,12 @@ export default class AmountInput extends React.Component<
                     />
                     <TouchableOpacity
                         onPress={() => !locked && this.onChangeUnits()}
-                        style={{ marginTop: 14, marginLeft: 20 }}
+                        style={{ marginTop: 16, marginLeft: 8, marginRight: 2 }}
                     >
                         <ExchangeSVG
                             fill={themeColor('text')}
-                            width="48"
-                            height="48"
+                            width="45"
+                            height="45"
                         />
                     </TouchableOpacity>
                 </View>
