@@ -7,6 +7,7 @@ import { localeString } from './../utils/LocaleUtils';
 interface CopyButtonProps {
     title?: string;
     copyValue: string;
+    icon?: any;
 }
 
 interface CopyButtonState {
@@ -50,7 +51,7 @@ export default class CopyButton extends React.Component<
 
     render() {
         const { copied } = this.state;
-        const { title } = this.props;
+        const { title, icon } = this.props;
 
         const buttonTitle = copied
             ? localeString('components.CopyButton.copied')
@@ -59,10 +60,14 @@ export default class CopyButton extends React.Component<
         return (
             <Button
                 title={buttonTitle}
-                icon={{
-                    name: 'content-copy',
-                    size: 25
-                }}
+                icon={
+                    icon && !copied
+                        ? icon
+                        : {
+                              name: 'content-copy',
+                              size: 25
+                          }
+                }
                 containerStyle={{
                     marginTop: 10,
                     marginBottom: Platform.OS === 'android' ? 0 : 20

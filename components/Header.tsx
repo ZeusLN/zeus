@@ -23,6 +23,7 @@ function ZeusHeader(props: HeaderProps) {
             }}
             color={themeColor('text')}
             underlayColor="transparent"
+            size={35}
         />
     );
 
@@ -35,6 +36,7 @@ function ZeusHeader(props: HeaderProps) {
             }}
             color={themeColor('text')}
             underlayColor="transparent"
+            size={35}
         />
     );
 

@@ -32,7 +32,6 @@ interface FeeBreakdownProps {
     commit_weight?: number;
     commit_fee?: number;
     csv_delay?: number;
-    privateChannel?: boolean;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore')
@@ -55,8 +54,7 @@ export default class FeeBreakdown extends React.Component<
             total_satoshis_sent,
             commit_weight,
             commit_fee,
-            csv_delay,
-            privateChannel
+            csv_delay
         } = this.props;
         const { loading, chanInfo } = ChannelsStore;
         const { nodeInfo, testnet } = NodeInfoStore;
@@ -318,15 +316,6 @@ export default class FeeBreakdown extends React.Component<
                                     ? localeString('views.Channel.yourNode')
                                     : peerDisplay
                             }
-                        />
-                        <KeyValue
-                            keyValue={localeString('views.Channel.unannounced')}
-                            value={
-                                privateChannel
-                                    ? localeString('general.true')
-                                    : localeString('general.false')
-                            }
-                            color={privateChannel ? 'green' : '#808000'}
                         />
 
                         {commit_fee && (

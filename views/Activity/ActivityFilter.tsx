@@ -268,6 +268,7 @@ export default class ActivityFilter extends React.Component<
                 onPress={async () => await ActivityStore.resetFilters()}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={30}
             />
         );
 

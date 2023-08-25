@@ -24,6 +24,7 @@ import Send from './../../assets/images/SVG/Send.svg';
 interface LightningSwipeableRowProps {
     navigation: any;
     lightning?: string;
+    locked?: boolean;
 }
 
 export default class LightningSwipeableRow extends Component<
@@ -145,7 +146,18 @@ export default class LightningSwipeableRow extends Component<
     };
 
     render() {
-        const { children, lightning } = this.props;
+        const { children, lightning, locked } = this.props;
+        if (locked && lightning) {
+            return (
+                <TouchableOpacity
+                    onPress={() => this.fetchLnInvoice()}
+                    activeOpacity={1}
+                >
+                    {children}
+                </TouchableOpacity>
+            );
+        }
+        if (locked) return children;
         return (
             <Swipeable
                 ref={this.updateRef}

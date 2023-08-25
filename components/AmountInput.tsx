@@ -12,6 +12,9 @@ import Stores from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore from '../stores/SettingsStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import { Row } from './layout/Row';
+
+import ExchangeSVG from '../assets/images/SVG/Exchange.svg';
 
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
@@ -133,73 +136,75 @@ export default class AmountInput extends React.Component<
 
         return (
             <React.Fragment>
-                {title && (
-                    <TouchableOpacity
-                        onPress={() => !locked && this.onChangeUnits()}
-                    >
-                        <Text
-                            style={{
-                                fontFamily: 'Lato-Regular',
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {title}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-                <TextInput
-                    keyboardType="numeric"
-                    placeholder={'0'}
-                    value={amount}
-                    onChangeText={(text: string) => {
-                        const satAmount = getSatAmount(text);
-                        onAmountChange(text, satAmount);
-                        this.setState({ satAmount });
+                <Text
+                    style={{
+                        fontFamily: 'Lato-Regular',
+                        color: themeColor('secondaryText')
                     }}
-                    locked={locked}
-                    prefix={
-                        units !== 'sats' &&
-                        (units === 'BTC'
-                            ? '₿'
-                            : !getSymbol().rtl
-                            ? getSymbol().symbol
-                            : null)
-                    }
-                    suffix={
-                        units === 'sats'
-                            ? units
-                            : getSymbol().rtl &&
-                              units === 'fiat' &&
-                              getSymbol().symbol
-                    }
-                    toggleUnits={() => !locked && this.onChangeUnits()}
-                />
-                {!hideConversion && (
+                >
+                    {title}
+                </Text>
+                <Row>
+                    <TextInput
+                        keyboardType="numeric"
+                        placeholder={'0'}
+                        value={amount}
+                        onChangeText={(text: string) => {
+                            const satAmount = getSatAmount(text);
+                            onAmountChange(text, satAmount);
+                            this.setState({ satAmount });
+                        }}
+                        locked={locked}
+                        prefix={
+                            units !== 'sats' &&
+                            (units === 'BTC'
+                                ? '₿'
+                                : !getSymbol().rtl
+                                ? getSymbol().symbol
+                                : null)
+                        }
+                        suffix={
+                            units === 'sats'
+                                ? units
+                                : getSymbol().rtl &&
+                                  units === 'fiat' &&
+                                  getSymbol().symbol
+                        }
+                        style={{ width: '85%' }}
+                    />
                     <TouchableOpacity
                         onPress={() => !locked && this.onChangeUnits()}
+                        style={{ margin: 8 }}
                     >
-                        <View style={{ marginBottom: 10 }}>
-                            {fiatEnabled && units !== 'fiat' && (
-                                <Amount sats={satAmount} fixedUnits="fiat" />
-                            )}
-                            {fiatEnabled && (
-                                <Text
-                                    style={{
-                                        fontFamily: 'Lato-Regular',
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {getRate(units === 'sats')}
-                                </Text>
-                            )}
-                            {units !== 'sats' && (
-                                <Amount sats={satAmount} fixedUnits="sats" />
-                            )}
-                            {units !== 'BTC' && (
-                                <Amount sats={satAmount} fixedUnits="BTC" />
-                            )}
-                        </View>
+                        <ExchangeSVG
+                            fill={themeColor('text')}
+                            width="48"
+                            height="48"
+                        />
                     </TouchableOpacity>
+                </Row>
+                {!hideConversion && (
+                    <View style={{ marginBottom: 10 }}>
+                        {fiatEnabled && (
+                            <Text
+                                style={{
+                                    fontFamily: 'Lato-Regular',
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {getRate(units === 'sats')}
+                            </Text>
+                        )}
+                        {fiatEnabled && units !== 'fiat' && (
+                            <Amount sats={satAmount} fixedUnits="fiat" />
+                        )}
+                        {units !== 'BTC' && (
+                            <Amount sats={satAmount} fixedUnits="BTC" />
+                        )}
+                        {units !== 'sats' && (
+                            <Amount sats={satAmount} fixedUnits="sats" />
+                        )}
+                    </View>
                 )}
             </React.Fragment>
         );
