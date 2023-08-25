@@ -1,11 +1,14 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 
-import Screen from '../components/Screen';
-import Header from '../components/Header';
+import NavigationService from '../../NavigationService';
 
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LspExplanationProps {
     navigation: any;
@@ -53,6 +56,12 @@ export default class LspExplanation extends React.PureComponent<
                     >
                         {localeString('views.LspExplanationRouting.text2')}
                     </Text>
+                    <Button
+                        title={localeString('views.LspExplanation.buttonText2')}
+                        onPress={() =>
+                            NavigationService.navigate('LspExplanationOverview')
+                        }
+                    />
                 </View>
             </Screen>
         );

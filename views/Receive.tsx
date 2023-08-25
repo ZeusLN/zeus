@@ -5,7 +5,6 @@ import {
     NativeModules,
     ScrollView,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
     Platform
@@ -42,6 +41,7 @@ import {
     ErrorMessage
 } from '../components/SuccessErrorMessage';
 import Switch from '../components/Switch';
+import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 
 import ChannelsStore from '../stores/ChannelsStore';
@@ -378,7 +378,7 @@ export default class Receive extends React.Component<
             expiry || '3600',
             undefined,
             enableLSP ? false : ampInvoice || false,
-            routeHints || false,
+            enableLSP ? false : routeHints || false,
             BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
                 : undefined
@@ -1207,7 +1207,7 @@ export default class Receive extends React.Component<
                                                 new BigNumber(zeroConfFee).gt(
                                                     1000
                                                 )
-                                                    ? 'LspExplanation'
+                                                    ? 'LspExplanationFees'
                                                     : 'LspExplanationRouting'
                                             )
                                         }
@@ -1451,7 +1451,7 @@ export default class Receive extends React.Component<
                                         <TouchableOpacity
                                             onPress={() =>
                                                 navigation.navigate(
-                                                    'LspExplanation'
+                                                    'LspExplanationFees'
                                                 )
                                             }
                                         >
@@ -1547,6 +1547,15 @@ export default class Receive extends React.Component<
                                                     ),
                                                     top: 20
                                                 }}
+                                                infoText={[
+                                                    localeString(
+                                                        'views.Receive.lspSwitchExplainer1'
+                                                    ),
+                                                    localeString(
+                                                        'views.Receive.lspSwitchExplainer2'
+                                                    )
+                                                ]}
+                                                infoNav="LspExplanationOverview"
                                             >
                                                 {localeString(
                                                     'views.Settings.LSP.enableLSP'
@@ -1563,56 +1572,47 @@ export default class Receive extends React.Component<
                                                     });
                                                 }}
                                             />
-                                            {enableLSP && (
-                                                <View
-                                                    style={{
-                                                        margin: 10
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            fontFamily:
-                                                                'Lato-Regular',
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            fontSize: 15
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.Receive.lspSwitchExplainer'
-                                                        )}
-                                                    </Text>
-                                                </View>
-                                            )}
                                         </>
                                     )}
 
-                                    {BackendUtils.isLNDBased() && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.secondaryText,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    top: 20
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Receive.routeHints'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={routeHints}
-                                                onValueChange={() =>
-                                                    this.setState({
-                                                        routeHints: !routeHints
-                                                    })
-                                                }
-                                            />
-                                        </>
-                                    )}
+                                    {BackendUtils.isLNDBased() &&
+                                        !(
+                                            BackendUtils.supportsLSPs() &&
+                                            enableLSP
+                                        ) && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.secondaryText,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        top: 20
+                                                    }}
+                                                    infoText={[
+                                                        localeString(
+                                                            'views.Receive.routeHintSwitchExplainer1'
+                                                        ),
+                                                        localeString(
+                                                            'views.Receive.routeHintSwitchExplainer2'
+                                                        )
+                                                    ]}
+                                                >
+                                                    {localeString(
+                                                        'views.Receive.routeHints'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={routeHints}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            routeHints:
+                                                                !routeHints
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )}
 
                                     {BackendUtils.supportsAMP() &&
                                         !(
@@ -1628,6 +1628,15 @@ export default class Receive extends React.Component<
                                                         ),
                                                         top: 20
                                                     }}
+                                                    infoText={[
+                                                        localeString(
+                                                            'views.Receive.ampSwitchExplainer1'
+                                                        ),
+                                                        localeString(
+                                                            'views.Receive.ampSwitchExplainer2'
+                                                        )
+                                                    ]}
+                                                    infoLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
                                                 >
                                                     {localeString(
                                                         'views.Receive.ampInvoice'
