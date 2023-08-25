@@ -140,5 +140,6 @@ export default class LndHub extends LND {
     supportsBumpFee = () => false;
     supportsLSPs = () => false;
     supportsNetworkInfo = () => false;
+    supportsSimpleTaprootChannels = () => false;
     isLNDBased = () => false;
 }
