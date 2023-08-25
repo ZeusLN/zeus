@@ -306,13 +306,6 @@ export default class InvoicesStore {
                         });
                 }
 
-                const formattedRhash =
-                    typeof invoice.r_hash === 'string'
-                        ? invoice.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
-                        : invoice.r_hash.data
-                        ? Base64Utils.bytesToHexString(invoice.r_hash.data)
-                        : Base64Utils.bytesToHexString(invoice.r_hash);
-
                 if (
                     BackendUtils.supportsLSPs() &&
                     this.settingsStore.settings?.enableLSP &&
@@ -323,14 +316,14 @@ export default class InvoicesStore {
                         .then((response: any) => {
                             const jit_bolt11: string = response;
                             return {
-                                rHash: formattedRhash,
+                                rHash: invoice.getFormattedRhash,
                                 paymentRequest: jit_bolt11
                             };
                         });
                 }
 
                 return {
-                    rHash: formattedRhash,
+                    rHash: invoice.getFormattedRhash,
                     paymentRequest: invoice.getPaymentRequest
                 };
             })

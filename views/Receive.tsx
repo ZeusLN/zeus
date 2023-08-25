@@ -44,6 +44,8 @@ import Switch from '../components/Switch';
 import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 
+import Invoice from '../models/Invoice';
+
 import ChannelsStore from '../stores/ChannelsStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
@@ -795,6 +797,42 @@ export default class Receive extends React.Component<
                         }
                     });
                 }, 7000);
+            }
+        }
+
+        if (implementation === 'lndhub') {
+            if (rHash) {
+                this.lnInterval = setInterval(() => {
+                    // only fetch the last 10 invoices
+                    BackendUtils.getInvoices({ limit: 10 }).then(
+                        (response: any) => {
+                            const invoices = response.invoices;
+                            for (let i = 0; i < invoices.length; i++) {
+                                const result = new Invoice(invoices[i]);
+                                if (
+                                    result.getFormattedRhash === rHash &&
+                                    result.ispaid &&
+                                    Number(result.amt) >= Number(value) &&
+                                    Number(result.amt) !== 0
+                                ) {
+                                    setWatchedInvoicePaid(result.amt);
+                                    if (orderId)
+                                        PosStore.recordPayment({
+                                            orderId,
+                                            orderTotal,
+                                            orderTip,
+                                            exchangeRate,
+                                            rate,
+                                            type: 'ln',
+                                            tx: result.payment_request
+                                        });
+                                    this.clearIntervals();
+                                    break;
+                                }
+                            }
+                        }
+                    );
+                }, 5000);
             }
         }
     };
