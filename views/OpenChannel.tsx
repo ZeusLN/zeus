@@ -321,6 +321,7 @@ export default class OpenChannel extends React.Component<
                         flex: 1
                     }}
                     keyboardShouldPersistTaps="handled"
+                    ref="_scrollView"
                 >
                     {!!suggestImport && (
                         <View style={styles.clipboardImport}>
@@ -697,7 +698,11 @@ export default class OpenChannel extends React.Component<
                                     size: 25,
                                     color: 'white'
                                 }}
-                                onPress={() =>
+                                onPress={() => {
+                                    this.refs._scrollView.scrollTo({
+                                        y: 0,
+                                        animated: true
+                                    });
                                     connectPeer(
                                         {
                                             ...this.state,
@@ -706,8 +711,8 @@ export default class OpenChannel extends React.Component<
                                         },
                                         false,
                                         connectPeerOnly
-                                    )
-                                }
+                                    );
+                                }}
                             />
                         </View>
 
