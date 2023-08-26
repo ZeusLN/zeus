@@ -212,6 +212,7 @@
     "views.OpenChannel.simpleTaprootChannel": "Simple Taproot Channel",
     "views.OpenChannel.openChannelToOlympus": "Open channel to Olympus",
     "views.OpenChannel.peerToOlympus": "Peer to Olympus",
+    "views.OpenChannel.fundMax": "Use all possible funds",
     "views.Wallet.BalancePane.sync.title": "Finishing sync",
     "views.Wallet.BalancePane.sync.text": "Hang on tight! You will be ready to use Zeus soon.",
     "views.Wallet.BalancePane.backup.title": "Back up your funds",
