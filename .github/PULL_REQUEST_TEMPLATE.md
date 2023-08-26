@@ -35,12 +35,13 @@ I have tested this PR on the following platforms (please specify OS version and 
 
 I have tested this PR with the following types of nodes (please specify node version and API version where appropriate):
 
+- [ ] Embedded LND
 - [ ] LND (REST)
 - [ ] LND (Lightning Node Connect)
 - [ ] Core Lightning (c-lightning-REST)
-- [ ] Core Lightning (Spark)
 - [ ] Eclair
 - [ ] LndHub
+- [ ] [DEPRECATED] Core Lightning (Spark)
 
 ### Locales
 - [ ] I’ve added new locale text that requires translations
