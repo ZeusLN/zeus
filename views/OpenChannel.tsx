@@ -12,12 +12,14 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 
-import Amount from './../components/Amount';
-import AmountInput from './../components/AmountInput';
-import Button from './../components/Button';
+import Amount from '../components/Amount';
+import AmountInput from '../components/AmountInput';
+import Button from '../components/Button';
 import Header from '../components/Header';
-import LightningIndicator from './../components/LightningIndicator';
-import Screen from './../components/Screen';
+import KeyValue from '../components/KeyValue';
+import LightningIndicator from '../components/LightningIndicator';
+import { Row } from '../components/layout/Row';
+import Screen from '../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
@@ -33,13 +35,15 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-import BalanceStore from './../stores/BalanceStore';
-import ChannelsStore from './../stores/ChannelsStore';
-import ModalStore from './../stores/ModalStore';
-import NodeInfoStore from './../stores/NodeInfoStore';
-import SettingsStore from './../stores/SettingsStore';
-import UTXOsStore from './../stores/UTXOsStore';
+import BalanceStore from '../stores/BalanceStore';
+import ChannelsStore from '../stores/ChannelsStore';
+import ModalStore from '../stores/ModalStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
+import SettingsStore from '../stores/SettingsStore';
+import UTXOsStore from '../stores/UTXOsStore';
 
+import CaretDown from '../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 
 interface OpenChannelProps {
@@ -69,6 +73,7 @@ interface OpenChannelState {
     utxos: Array<string>;
     utxoBalance: number;
     connectPeerOnly: boolean;
+    advancedSettingsToggle: boolean;
 }
 
 @inject(
@@ -101,7 +106,8 @@ export default class OpenChannel extends React.Component<
             suggestImport: '',
             utxos: [],
             utxoBalance: 0,
-            connectPeerOnly: false
+            connectPeerOnly: false,
+            advancedSettingsToggle: false
         };
     }
 
@@ -260,7 +266,8 @@ export default class OpenChannel extends React.Component<
             privateChannel,
             scidAlias,
             simpleTaprootChannel,
-            connectPeerOnly
+            connectPeerOnly,
+            advancedSettingsToggle
         } = this.state;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
@@ -529,28 +536,6 @@ export default class OpenChannel extends React.Component<
                                     </View>
                                 )}
 
-                                <Text
-                                    style={{
-                                        ...styles.secondaryText,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString('views.OpenChannel.numConf')}
-                                </Text>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    placeholder={'1'}
-                                    value={min_confs.toString()}
-                                    onChangeText={(text: string) => {
-                                        const newMinConfs = Number(text);
-                                        this.setState({
-                                            min_confs: newMinConfs,
-                                            spend_unconfirmed: newMinConfs === 0
-                                        });
-                                    }}
-                                    locked={openingChannel}
-                                />
-
                                 <>
                                     <Text
                                         style={{
@@ -608,75 +593,150 @@ export default class OpenChannel extends React.Component<
                                     )}
                                 </>
 
-                                <>
-                                    <Text
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        this.setState({
+                                            advancedSettingsToggle:
+                                                !advancedSettingsToggle
+                                        });
+                                    }}
+                                >
+                                    <View
                                         style={{
-                                            top: 20,
-                                            color: themeColor('secondaryText')
+                                            marginTop: 10,
+                                            marginBottom: 10
                                         }}
                                     >
-                                        {localeString(
-                                            'views.OpenChannel.announceChannel'
+                                        <Row justify="space-between">
+                                            <View style={{ width: '95%' }}>
+                                                <KeyValue
+                                                    keyValue={localeString(
+                                                        'general.advancedSettings'
+                                                    )}
+                                                />
+                                            </View>
+                                            {advancedSettingsToggle ? (
+                                                <CaretDown
+                                                    fill={themeColor('text')}
+                                                    width="20"
+                                                    height="20"
+                                                />
+                                            ) : (
+                                                <CaretRight
+                                                    fill={themeColor('text')}
+                                                    width="20"
+                                                    height="20"
+                                                />
+                                            )}
+                                        </Row>
+                                    </View>
+                                </TouchableOpacity>
+
+                                {advancedSettingsToggle && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.OpenChannel.numConf'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder={'1'}
+                                            value={min_confs.toString()}
+                                            onChangeText={(text: string) => {
+                                                const newMinConfs =
+                                                    Number(text);
+                                                this.setState({
+                                                    min_confs: newMinConfs,
+                                                    spend_unconfirmed:
+                                                        newMinConfs === 0
+                                                });
+                                            }}
+                                            locked={openingChannel}
+                                        />
+
+                                        <>
+                                            <Text
+                                                style={{
+                                                    top: 20,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.OpenChannel.announceChannel'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={!privateChannel}
+                                                onValueChange={() =>
+                                                    this.setState({
+                                                        privateChannel:
+                                                            !privateChannel
+                                                    })
+                                                }
+                                            />
+                                        </>
+
+                                        {BackendUtils.isLNDBased() && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        top: 20,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.scidAlias'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={scidAlias}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            scidAlias:
+                                                                !scidAlias
+                                                        })
+                                                    }
+                                                />
+                                            </>
                                         )}
-                                    </Text>
-                                    <Switch
-                                        value={!privateChannel}
-                                        onValueChange={() =>
-                                            this.setState({
-                                                privateChannel: !privateChannel
-                                            })
-                                        }
-                                    />
-                                </>
 
-                                {BackendUtils.isLNDBased() && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                top: 20,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.OpenChannel.scidAlias'
-                                            )}
-                                        </Text>
-                                        <Switch
-                                            value={scidAlias}
-                                            onValueChange={() =>
-                                                this.setState({
-                                                    scidAlias: !scidAlias
-                                                })
-                                            }
-                                        />
-                                    </>
-                                )}
-
-                                {BackendUtils.supportsSimpleTaprootChannels() && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                top: 20,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.OpenChannel.simpleTaprootChannel'
-                                            )}
-                                        </Text>
-                                        <Switch
-                                            value={simpleTaprootChannel}
-                                            onValueChange={() =>
-                                                this.setState({
-                                                    simpleTaprootChannel:
-                                                        !simpleTaprootChannel
-                                                })
-                                            }
-                                        />
+                                        {BackendUtils.supportsSimpleTaprootChannels() && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        top: 20,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.simpleTaprootChannel'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={simpleTaprootChannel}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            simpleTaprootChannel:
+                                                                !simpleTaprootChannel
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )}
                                     </>
                                 )}
                             </>

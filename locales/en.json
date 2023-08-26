@@ -64,6 +64,7 @@
     "general.off": "Off",
     "general.close": "Close",
     "general.learnMore": "Learn more",
+    "general.advancedSettings": "Advanced settings",
     "components.CollapsedQr.show": "Show QR",
     "components.CollapsedQr.hide": "Hide QR",
     "components.CollapsedQr.startNfc": "Start NFC broadcast",
