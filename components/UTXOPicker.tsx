@@ -276,7 +276,8 @@ export default class UTXOPicker extends React.Component<
                                 style={{
                                     ...styles.text,
                                     color: themeColor('text'),
-                                    padding: 10,
+                                    paddingTop: 10,
+                                    paddingLeft: 10,
                                     fontSize: 16
                                 }}
                             >
@@ -289,7 +290,8 @@ export default class UTXOPicker extends React.Component<
                                 style={{
                                     ...styles.text,
                                     color: themeColor('text'),
-                                    padding: 10,
+                                    paddingTop: 10,
+                                    paddingLeft: 10,
                                     fontSize: 16
                                 }}
                             >
