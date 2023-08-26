@@ -126,6 +126,7 @@ const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
     protocol.wumbo-channels=true
     protocol.option-scid-alias=true
     protocol.zero-conf=true
+    protocol.simple-taproot-chans=true
     
     [routerrpc]
     routerrpc.estimator=${

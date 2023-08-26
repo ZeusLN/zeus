@@ -37,6 +37,8 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import Edit from '../../assets/images/SVG/Edit.svg';
 import Share from '../../assets/images/SVG/Share.svg';
 
+import { lnrpc } from '../../proto/lightning';
+
 interface ChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
@@ -302,7 +304,10 @@ export default class ChannelView extends React.Component<
                                 keyValue={localeString(
                                     'views.Channel.commitmentType'
                                 )}
-                                value={commitment_type}
+                                value={
+                                    lnrpc.CommitmentType[commitment_type] ||
+                                    commitment_type
+                                }
                             />
                         )}
                         {chain_hash && (

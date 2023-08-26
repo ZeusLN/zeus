@@ -251,15 +251,29 @@ export default class LND {
     getPayments = () => this.getRequest('/v1/payments');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
     openChannel = (data: OpenChannelRequest) =>
-        this.postRequest('/v1/channels', {
-            private: data.privateChannel,
-            scid_alias: data.scidAlias,
-            local_funding_amount: data.local_funding_amount,
-            min_confs: data.min_confs,
-            node_pubkey_string: data.node_pubkey_string,
-            sat_per_vbyte: data.sat_per_vbyte,
-            spend_unconfirmed: data.spend_unconfirmed
-        });
+        this.postRequest(
+            '/v1/channels',
+            data.simpleTaprootChannel
+                ? {
+                      private: data.privateChannel,
+                      scid_alias: data.scidAlias,
+                      local_funding_amount: data.local_funding_amount,
+                      min_confs: data.min_confs,
+                      node_pubkey_string: data.node_pubkey_string,
+                      sat_per_vbyte: data.sat_per_vbyte,
+                      spend_unconfirmed: data.spend_unconfirmed,
+                      commitment_type: 'SIMPLE_TAPROOT'
+                  }
+                : {
+                      private: data.privateChannel,
+                      scid_alias: data.scidAlias,
+                      local_funding_amount: data.local_funding_amount,
+                      min_confs: data.min_confs,
+                      node_pubkey_string: data.node_pubkey_string,
+                      sat_per_vbyte: data.sat_per_vbyte,
+                      spend_unconfirmed: data.spend_unconfirmed
+                  }
+        );
     openChannelStream = (data: OpenChannelRequest) =>
         this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);

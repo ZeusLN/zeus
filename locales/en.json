@@ -209,6 +209,7 @@
     "views.Wallet.Channels.filters": "Filters",
     "views.OpenChannel.announceChannel": "Announce channel",
     "views.OpenChannel.scidAlias": "Attempt to use SCID alias",
+    "views.OpenChannel.simpleTaprootChannel": "Simple Taproot Channel",
     "views.OpenChannel.openChannelToOlympus": "Open channel to Olympus",
     "views.OpenChannel.peerToOlympus": "Peer to Olympus",
     "views.Wallet.BalancePane.sync.title": "Finishing sync",
