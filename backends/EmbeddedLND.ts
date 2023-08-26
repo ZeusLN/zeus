@@ -69,7 +69,9 @@ export default class EmbeddedLND extends LND {
             data.scidAlias,
             data.min_confs,
             data.spend_unconfirmed,
-            data.simpleTaprootChannel
+            data.simpleTaprootChannel,
+            data.fundMax,
+            data.utxos
         );
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);

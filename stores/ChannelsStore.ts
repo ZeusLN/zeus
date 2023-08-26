@@ -1,5 +1,4 @@
 import { action, observable, reaction } from 'mobx';
-import { randomBytes } from 'react-native-randombytes';
 import BigNumber from 'bignumber.js';
 
 import Channel from './../models/Channel';
@@ -11,7 +10,6 @@ import CloseChannelRequest from './../models/CloseChannelRequest';
 
 import SettingsStore from './SettingsStore';
 
-import Base64Utils from './../utils/Base64Utils';
 import BackendUtils from './../utils/BackendUtils';
 
 interface ChannelInfoIndex {
@@ -484,124 +482,12 @@ export default class ChannelsStore {
         });
     };
 
-    openChannelLNDCoinControl = (request: OpenChannelRequest) => {
-        const { utxos } = request;
-        const inputs: any = [];
-        const outputs: any = {};
-        const sat_per_vbyte = request.sat_per_vbyte;
-
-        if (utxos) {
-            utxos.forEach((input) => {
-                const [txid_str, output_index] = input.split(':');
-                inputs.push({ txid_str, output_index: Number(output_index) });
-            });
-        }
-
-        delete request.utxos;
-
-        const node_pubkey = Base64Utils.hexToBase64(request.node_pubkey_string);
-
-        delete request.node_pubkey_string;
-        delete request.sat_per_vbyte;
-
-        const pending_chan_id = randomBytes(32).toString('base64');
-
-        const openChanRequest = {
-            funding_shim: {
-                psbt_shim: {
-                    no_publish: true,
-                    pending_chan_id
-                }
-            },
-            node_pubkey,
-            ...request
-        };
-
-        BackendUtils.openChannelStream(openChanRequest)
-            .then((data: any) => {
-                const psbt_fund = data.psbt_fund;
-                const { funding_address, funding_amount } = psbt_fund;
-
-                if (funding_address) {
-                    outputs[funding_address] = Number(funding_amount);
-                }
-
-                const fundPsbtRequest = {
-                    raw: {
-                        inputs,
-                        outputs
-                    },
-                    sat_per_vbyte: Number(sat_per_vbyte),
-                    spend_unconfirmed:
-                        openChanRequest.min_confs &&
-                        openChanRequest.min_confs === 0
-                };
-
-                BackendUtils.fundPsbt(fundPsbtRequest)
-                    .then((data: any) => {
-                        const funded_psbt = data.funded_psbt;
-
-                        const openChanRequest = {
-                            funding_shim: {
-                                psbt_shim: {
-                                    base_psbt: funded_psbt
-                                }
-                            },
-                            ...request
-                        };
-
-                        BackendUtils.openChannel(openChanRequest)
-                            .then(() => {
-                                // TODO
-                            })
-                            .catch((error: any) => {
-                                this.errorMsgChannel = error.toString();
-                                this.output_index = null;
-                                this.funding_txid_str = null;
-                                this.errorOpenChannel = true;
-                                this.openingChannel = false;
-                                this.channelRequest = null;
-                                this.peerSuccess = false;
-                                this.channelSuccess = false;
-                            });
-                    })
-                    .catch((error: any) => {
-                        this.errorMsgChannel = error.toString();
-                        this.output_index = null;
-                        this.funding_txid_str = null;
-                        this.errorOpenChannel = true;
-                        this.openingChannel = false;
-                        this.channelRequest = null;
-                        this.peerSuccess = false;
-                        this.channelSuccess = false;
-                    });
-            })
-            .catch((error: any) => {
-                this.errorMsgChannel = error.toString();
-                this.output_index = null;
-                this.funding_txid_str = null;
-                this.errorOpenChannel = true;
-                this.openingChannel = false;
-                this.channelRequest = null;
-                this.peerSuccess = false;
-                this.channelSuccess = false;
-            });
-    };
-
     openChannel = (request: OpenChannelRequest) => {
         delete request.host;
 
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.openingChannel = true;
-
-        if (
-            BackendUtils.isLNDBased() &&
-            request.utxos &&
-            request.utxos.length > 0
-        ) {
-            return this.openChannelLNDCoinControl(request);
-        }
 
         BackendUtils.openChannel(request)
             .then((data: any) => {

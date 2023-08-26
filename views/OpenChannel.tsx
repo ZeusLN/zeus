@@ -56,6 +56,7 @@ interface OpenChannelProps {
 interface OpenChannelState {
     node_pubkey_string: string;
     local_funding_amount: string;
+    fundMax: boolean;
     satAmount: string | number;
     min_confs: number;
     spend_unconfirmed: boolean;
@@ -88,6 +89,7 @@ export default class OpenChannel extends React.Component<
         this.state = {
             node_pubkey_string: '',
             local_funding_amount: '',
+            fundMax: false,
             satAmount: '',
             min_confs: 1,
             spend_unconfirmed: false,
@@ -200,14 +202,9 @@ export default class OpenChannel extends React.Component<
     };
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
-        const { SettingsStore } = this.props;
-        const { implementation } = SettingsStore;
         const newState: any = {};
         newState.utxos = utxos;
         newState.utxoBalance = utxoBalance;
-        if (implementation === 'c-lightning-REST') {
-            newState.local_funding_amount = 'all';
-        }
         this.setState(newState);
     };
 
@@ -253,6 +250,7 @@ export default class OpenChannel extends React.Component<
         const {
             node_pubkey_string,
             local_funding_amount,
+            fundMax,
             satAmount,
             min_confs,
             host,
@@ -264,7 +262,7 @@ export default class OpenChannel extends React.Component<
             simpleTaprootChannel,
             connectPeerOnly
         } = this.state;
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
@@ -455,26 +453,69 @@ export default class OpenChannel extends React.Component<
 
                         {!connectPeerOnly && (
                             <>
-                                <AmountInput
-                                    amount={local_funding_amount}
-                                    title={localeString(
-                                        'views.OpenChannel.localAmt'
-                                    )}
-                                    onAmountChange={(
-                                        amount: string,
-                                        satAmount: string | number
-                                    ) => {
-                                        this.setState({
-                                            local_funding_amount: amount,
-                                            satAmount
-                                        });
-                                    }}
-                                    hideConversion={
-                                        local_funding_amount === 'all'
-                                    }
-                                />
+                                {BackendUtils.supportsCoinControl() && (
+                                    <UTXOPicker
+                                        onValueChange={this.selectUTXOs}
+                                        UTXOsStore={UTXOsStore}
+                                    />
+                                )}
 
-                                {local_funding_amount === 'all' && (
+                                {BackendUtils.isLNDBased() && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                top: 20,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.OpenChannel.fundMax'
+                                            )}
+                                        </Text>
+                                        <Switch
+                                            value={fundMax}
+                                            onValueChange={() => {
+                                                const newValue: boolean =
+                                                    !fundMax;
+                                                this.setState({
+                                                    fundMax: newValue,
+                                                    local_funding_amount:
+                                                        newValue &&
+                                                        implementation ===
+                                                            'c-lightning-REST'
+                                                            ? 'all'
+                                                            : ''
+                                                });
+                                            }}
+                                        />
+                                    </>
+                                )}
+
+                                {!fundMax && (
+                                    <AmountInput
+                                        amount={local_funding_amount}
+                                        title={localeString(
+                                            'views.OpenChannel.localAmt'
+                                        )}
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                local_funding_amount: amount,
+                                                satAmount
+                                            });
+                                        }}
+                                        hideConversion={
+                                            local_funding_amount === 'all'
+                                        }
+                                    />
+                                )}
+
+                                {(local_funding_amount === 'all' ||
+                                    fundMax) && (
                                     <View style={{ marginBottom: 20 }}>
                                         <Amount
                                             sats={
@@ -565,14 +606,6 @@ export default class OpenChannel extends React.Component<
                                         />
                                     )}
                                 </>
-
-                                {BackendUtils.supportsCoinControl() &&
-                                    !BackendUtils.isLNDBased() && (
-                                        <UTXOPicker
-                                            onValueChange={this.selectUTXOs}
-                                            UTXOsStore={UTXOsStore}
-                                        />
-                                    )}
 
                                 <>
                                     <Text

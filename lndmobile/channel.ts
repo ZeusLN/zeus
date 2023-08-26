@@ -20,7 +20,9 @@ export const openChannel = async (
     scidAlias?: boolean,
     min_confs?: number,
     spend_unconfirmed?: boolean,
-    simpleTaprootChannel?: boolean
+    simpleTaprootChannel?: boolean,
+    fund_max?: boolean,
+    utxos?: Array<string>
 ): Promise<lnrpc.ChannelPoint> => {
     const response = await sendCommand<
         lnrpc.IOpenChannelRequest,
@@ -33,7 +35,9 @@ export const openChannel = async (
         options: simpleTaprootChannel
             ? {
                   node_pubkey_string: pubkey,
-                  local_funding_amount: Long.fromValue(amount),
+                  local_funding_amount: amount
+                      ? Long.fromValue(amount)
+                      : undefined,
                   target_conf: fee_rate_sat ? undefined : 2,
                   private: private_channel,
                   sat_per_vbyte: fee_rate_sat
@@ -42,11 +46,23 @@ export const openChannel = async (
                   scid_alias: scidAlias,
                   min_confs,
                   spend_unconfirmed,
+                  fund_max,
+                  outpoints: utxos
+                      ? utxos.map((utxo: string) => {
+                            const [txid_str, output_index] = utxo.split(':');
+                            return {
+                                txid_str,
+                                output_index: Number(output_index)
+                            };
+                        })
+                      : undefined,
                   commitment_type: lnrpc.CommitmentType.SIMPLE_TAPROOT
               }
             : {
                   node_pubkey_string: pubkey,
-                  local_funding_amount: Long.fromValue(amount),
+                  local_funding_amount: amount
+                      ? Long.fromValue(amount)
+                      : undefined,
                   target_conf: fee_rate_sat ? undefined : 2,
                   private: private_channel,
                   sat_per_vbyte: fee_rate_sat
@@ -54,7 +70,17 @@ export const openChannel = async (
                       : undefined,
                   scid_alias: scidAlias,
                   min_confs,
-                  spend_unconfirmed
+                  spend_unconfirmed,
+                  outpoints: utxos
+                      ? utxos.map((utxo: string) => {
+                            const [txid_str, output_index] = utxo.split(':');
+                            return {
+                                txid_str,
+                                output_index: Number(output_index)
+                            };
+                        })
+                      : undefined,
+                  fund_max
               }
     });
     return response;
