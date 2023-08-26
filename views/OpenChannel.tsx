@@ -62,6 +62,7 @@ interface OpenChannelState {
     sat_per_vbyte: string;
     privateChannel: boolean;
     scidAlias: boolean;
+    simpleTaprootChannel: boolean;
     host: string;
     suggestImport: string;
     utxos: Array<string>;
@@ -93,6 +94,7 @@ export default class OpenChannel extends React.Component<
             sat_per_vbyte: '2',
             privateChannel: true,
             scidAlias: true,
+            simpleTaprootChannel: false,
             host: '',
             suggestImport: '',
             utxos: [],
@@ -259,6 +261,7 @@ export default class OpenChannel extends React.Component<
             utxoBalance,
             privateChannel,
             scidAlias,
+            simpleTaprootChannel,
             connectPeerOnly
         } = this.state;
         const { settings } = SettingsStore;
@@ -611,6 +614,32 @@ export default class OpenChannel extends React.Component<
                                             onValueChange={() =>
                                                 this.setState({
                                                     scidAlias: !scidAlias
+                                                })
+                                            }
+                                        />
+                                    </>
+                                )}
+
+                                {BackendUtils.supportsSimpleTaprootChannels() && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                top: 20,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.OpenChannel.simpleTaprootChannel'
+                                            )}
+                                        </Text>
+                                        <Switch
+                                            value={simpleTaprootChannel}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    simpleTaprootChannel:
+                                                        !simpleTaprootChannel
                                                 })
                                             }
                                         />

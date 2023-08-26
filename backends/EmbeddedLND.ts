@@ -68,7 +68,8 @@ export default class EmbeddedLND extends LND {
             data.sat_per_vbyte ? Number(data.sat_per_vbyte) : undefined,
             data.scidAlias,
             data.min_confs,
-            data.spend_unconfirmed
+            data.spend_unconfirmed,
+            data.simpleTaprootChannel
         );
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
@@ -185,6 +186,6 @@ export default class EmbeddedLND extends LND {
     supportsBumpFee = () => true;
     supportsLSPs = () => true;
     supportsNetworkInfo = () => true;
-    supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
+    supportsSimpleTaprootChannels = () => this.supports('v0.16.99');
     isLNDBased = () => true;
 }

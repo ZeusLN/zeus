@@ -432,6 +432,7 @@ export default class ChannelsStore {
         perm?: boolean,
         connectPeerOnly?: boolean
     ) => {
+        this.resetOpenChannel();
         this.channelRequest = undefined;
         this.connectingToPeer = true;
 

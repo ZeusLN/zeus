@@ -141,15 +141,29 @@ export default class LightningNodeConnect {
 
     openChannel = async (data: OpenChannelRequest) =>
         await this.lnc.lnd.lightning
-            .openChannelSync({
-                private: data.privateChannel,
-                scid_alias: data.scidAlias,
-                local_funding_amount: data.local_funding_amount,
-                min_confs: data.min_confs,
-                node_pubkey_string: data.node_pubkey_string,
-                sat_per_vbyte: data.sat_per_vbyte,
-                spend_unconfirmed: data.spend_unconfirmed
-            })
+            .openChannelSync(
+                data.simpleTaprootChannel
+                    ? {
+                          private: data.privateChannel,
+                          scid_alias: data.scidAlias,
+                          local_funding_amount: data.local_funding_amount,
+                          min_confs: data.min_confs,
+                          node_pubkey_string: data.node_pubkey_string,
+                          sat_per_vbyte: data.sat_per_vbyte,
+                          spend_unconfirmed: data.spend_unconfirmed,
+                          commitment_type:
+                              lnrpc.CommitmentType['SIMPLE_TAPROOT']
+                      }
+                    : {
+                          private: data.privateChannel,
+                          scid_alias: data.scidAlias,
+                          local_funding_amount: data.local_funding_amount,
+                          min_confs: data.min_confs,
+                          node_pubkey_string: data.node_pubkey_string,
+                          sat_per_vbyte: data.sat_per_vbyte,
+                          spend_unconfirmed: data.spend_unconfirmed
+                      }
+            )
             .then((data: lnrpc.ChannelPoint) => snakeize(data));
     // TODO add with external accounts
     // openChannelStream = (data: OpenChannelRequest) =>
