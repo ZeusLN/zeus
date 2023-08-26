@@ -227,7 +227,8 @@ export interface ILndMobileInjections {
             feeRateSat?: number,
             scidAlias?: boolean,
             min_confs?: number,
-            spend_unconfirmed?: boolean
+            spend_unconfirmed?: boolean,
+            simpleTaprootChannel?: boolean
         ) => Promise<lnrpc.ChannelPoint>;
         openChannelAll: (
             pubkey: string,

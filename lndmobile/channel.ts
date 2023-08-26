@@ -19,7 +19,8 @@ export const openChannel = async (
     fee_rate_sat?: number,
     scidAlias?: boolean,
     min_confs?: number,
-    spend_unconfirmed?: boolean
+    spend_unconfirmed?: boolean,
+    simpleTaprootChannel?: boolean
 ): Promise<lnrpc.ChannelPoint> => {
     const response = await sendCommand<
         lnrpc.IOpenChannelRequest,
@@ -29,18 +30,32 @@ export const openChannel = async (
         request: lnrpc.OpenChannelRequest,
         response: lnrpc.ChannelPoint,
         method: 'OpenChannelSync',
-        options: {
-            node_pubkey_string: pubkey,
-            local_funding_amount: Long.fromValue(amount),
-            target_conf: fee_rate_sat ? undefined : 2,
-            private: private_channel,
-            sat_per_vbyte: fee_rate_sat
-                ? Long.fromValue(fee_rate_sat)
-                : undefined,
-            scid_alias: scidAlias,
-            min_confs,
-            spend_unconfirmed
-        }
+        options: simpleTaprootChannel
+            ? {
+                  node_pubkey_string: pubkey,
+                  local_funding_amount: Long.fromValue(amount),
+                  target_conf: fee_rate_sat ? undefined : 2,
+                  private: private_channel,
+                  sat_per_vbyte: fee_rate_sat
+                      ? Long.fromValue(fee_rate_sat)
+                      : undefined,
+                  scid_alias: scidAlias,
+                  min_confs,
+                  spend_unconfirmed,
+                  commitment_type: lnrpc.CommitmentType.SIMPLE_TAPROOT
+              }
+            : {
+                  node_pubkey_string: pubkey,
+                  local_funding_amount: Long.fromValue(amount),
+                  target_conf: fee_rate_sat ? undefined : 2,
+                  private: private_channel,
+                  sat_per_vbyte: fee_rate_sat
+                      ? Long.fromValue(fee_rate_sat)
+                      : undefined,
+                  scid_alias: scidAlias,
+                  min_confs,
+                  spend_unconfirmed
+              }
     });
     return response;
 };
