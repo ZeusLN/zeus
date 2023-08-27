@@ -444,22 +444,17 @@ export default class ContactDetails extends React.Component<
                     title="MAKE PAYMENT"
                     onPress={() => {
                         if (
-                            (contact.lnAddress.length === 1 &&
-                                contact.lnAddress[0] !== '') ||
-                            (contact.onchainAddress.length === 1 &&
-                                contact.onchainAddress[0] !== '')
+                            contact.lnAddress.length === 1 &&
+                            contact.lnAddress[0] !== '' &&
+                            contact.onchainAddress[0] === ''
+                        )
+                            this.sendAddress(contact.lnAddress[0]);
+                        else if (
+                            contact.onchainAddress.length === 1 &&
+                            contact.onchainAddress[0] !== '' &&
+                            contact.lnAddress[0] === ''
                         ) {
-                            if (
-                                contact.lnAddress.length === 1 &&
-                                contact.lnAddress[0] !== ''
-                            ) {
-                                this.sendAddress(contact.lnAddress[0]);
-                            } else if (
-                                contact.onchainAddress.length === 1 &&
-                                contact.onchainAddress[0] !== ''
-                            ) {
-                                this.sendAddress(contact.onchainAddress[0]);
-                            }
+                            this.sendAddress(contact.onchainAddress[0]);
                         } else {
                             this.toggleModal();
                         }

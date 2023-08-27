@@ -185,7 +185,8 @@ export default class AddContacts extends React.Component<
     onChangeLightningAddress = (text: string) => {
         const isValid =
             AddressUtils.isValidLightningPaymentRequest(text) ||
-            AddressUtils.isValidLightningAddress(text);
+            AddressUtils.isValidLightningAddress(text) ||
+            AddressUtils.isValidBitcoinAddress(text, true);
         this.setState({
             isValidLightningAddress: isValid
         });
@@ -715,13 +716,15 @@ export default class AddContacts extends React.Component<
                         style={{ marginTop: 10 }}
                         color={!isValidNpub && 'red'}
                     />
+                </ScrollView>
+                {(lnAddress[0] || onchainAddress[0]) && (
                     <TouchableOpacity
                         onPress={() =>
                             this.setState({ showExtraFieldModal: true })
                         }
                         style={{
                             alignSelf: 'center',
-                            marginTop: 30,
+                            marginTop: 10,
                             marginBottom: 20
                         }}
                     >
@@ -729,6 +732,9 @@ export default class AddContacts extends React.Component<
                             add extra field
                         </Text>
                     </TouchableOpacity>
+                )}
+
+                <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
                     <Button
                         title="Save Contact"
                         buttonStyle={{ padding: 14 }}
@@ -736,17 +742,23 @@ export default class AddContacts extends React.Component<
                             this.saveContact();
                         }}
                         containerStyle={{
-                            bottom: 0,
                             opacity:
-                                isValidOnchainAddress && isValidLightningAddress
+                                isValidOnchainAddress &&
+                                isValidLightningAddress &&
+                                isValidNIP05 &&
+                                isValidNpub
                                     ? 1
                                     : 0.5
                         }}
                         disabled={
-                            !isValidOnchainAddress || !isValidLightningAddress
+                            !isValidOnchainAddress ||
+                            !isValidLightningAddress ||
+                            !isValidNIP05 ||
+                            !isValidNpub ||
+                            !(lnAddress[0] || onchainAddress[0])
                         }
                     />
-                </ScrollView>
+                </View>
             </KeyboardAvoidingView>
         );
     }
