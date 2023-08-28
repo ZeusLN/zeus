@@ -57,11 +57,7 @@ export default class ContactsSettings extends React.Component<
                 );
                 if (contactsString) {
                     const contacts: ContactItem[] = JSON.parse(contactsString);
-                    // Sort the contacts array alphabetically by name
-                    const sortedContacts = contacts.sort((a, b) =>
-                        a.name.localeCompare(b.name)
-                    );
-                    this.setState({ contacts: sortedContacts });
+                    this.setState({ contacts });
                 }
             } catch (error) {
                 console.log('Error loading contacts:', error);
