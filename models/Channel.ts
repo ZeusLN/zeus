@@ -1,7 +1,8 @@
 import BigNumber from 'bignumber.js';
 import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
-import { localeString } from './../utils/LocaleUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { lnrpc } from '../proto/lightning';
 
 interface HTLC {
     hash_lock: string;
@@ -107,5 +108,14 @@ export default class Channel extends BaseModel {
     @computed
     public get remotePubkey(): string {
         return this.remote_pubkey || this.remote_node_pub;
+    }
+
+    @computed
+    public get getCommitmentType(): string | undefined {
+        return this.commitment_type
+            ? Number.isNaN(Number(this.commitment_type))
+                ? this.commitment_type
+                : lnrpc.CommitmentType[Number(this.commitment_type)]
+            : undefined;
     }
 }
