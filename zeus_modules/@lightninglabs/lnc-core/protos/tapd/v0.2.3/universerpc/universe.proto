@@ -1,0 +1,449 @@
+syntax = "proto3";
+
+import "taprootassets.proto";
+
+package universerpc;
+
+option go_package = "github.com/lightninglabs/taproot-assets/taprpc/universerpc";
+
+service Universe {
+    /* tapcli: `universe roots`
+    AssetRoots queries for the known Universe roots associated with each known
+    asset. These roots represent the supply/audit state for each known asset.
+    */
+    rpc AssetRoots (AssetRootRequest) returns (AssetRootResponse);
+
+    /* tapcli: `universe roots`
+    QueryAssetRoots attempts to locate the current Universe root for a specific
+    asset. This asset can be identified by its asset ID or group key.
+    */
+    rpc QueryAssetRoots (AssetRootQuery) returns (QueryRootResponse);
+
+    /* tapcli: `universe delete`
+    DeleteAssetRoot deletes the Universe root for a specific asset, including
+    all asoociated universe keys, leaves, and events.
+    */
+    rpc DeleteAssetRoot (DeleteRootQuery) returns (DeleteRootResponse);
+
+    /* tapcli: `universe keys`
+    AssetLeafKeys queries for the set of Universe keys associated with a given
+    asset_id or group_key. Each key takes the form: (outpoint, script_key),
+    where outpoint is an outpoint in the Bitcoin blockcahin that anchors a
+    valid Taproot Asset commitment, and script_key is the script_key of
+    the asset within the Taproot Asset commitment for the given asset_id or
+    group_key.
+    */
+    rpc AssetLeafKeys (ID) returns (AssetLeafKeyResponse);
+
+    /* tapcli: `universe leaves`
+    AssetLeaves queries for the set of asset leaves (the values in the Universe
+    MS-SMT tree) for a given asset_id or group_key. These represents either
+    asset issuance events (they have a genesis witness) or asset transfers that
+    took place on chain. The leaves contain a normal Taproot Asset proof, as
+    well as details for the asset.
+    */
+    rpc AssetLeaves (ID) returns (AssetLeafResponse);
+
+    /* tapcli: `universe proofs query`
+    QueryProof attempts to query for an issuance or transfer proof for a given
+    asset based on its UniverseKey. A UniverseKey is composed of the Universe
+    ID (asset_id/group_key) and also a leaf key (outpoint || script_key). If
+    found, then the issuance proof is returned that includes an inclusion proof
+    to the known Universe root, as well as a Taproot Asset state transition or
+    issuance proof for the said asset.
+    */
+    rpc QueryProof (UniverseKey) returns (AssetProofResponse);
+
+    // TODO(roasbeef): can make generic by being just AssetProof? ^
+    //   * also want flag to give it in raw bytes so can sideload or import
+
+    /* tapcli: `universe proofs insert`
+    InsertProof attempts to insert a new issuance or transfer proof into the
+    Universe tree specified by the UniverseKey. If valid, then the proof is
+    inserted into the database, with a new Universe root returned for the
+    updated asset_id/group_key.
+    */
+    rpc InsertProof (AssetProof) returns (AssetProofResponse);
+
+    // TODO(roasbeef): rename resp to UniverseStateUpdate? ^
+
+    /* tapcli: `universe info`
+    Info returns a set of information about the current state of the Universe.
+    */
+    rpc Info (InfoRequest) returns (InfoResponse);
+
+    /* tapcli: `universe sync`
+    SyncUniverse takes host information for a remote Universe server, then
+    attempts to synchronize either only the set of specified asset_ids, or all
+    assets if none are specified. The sync process will attempt to query for
+    the latest known root for each asset, performing tree based reconciliation
+    to arrive at a new shared root.
+    */
+    rpc SyncUniverse (SyncRequest) returns (SyncResponse);
+
+    // TODO(roasebeef): streaming response, so can give feedback? ^
+
+    /* tapcli: `universe federation list`
+    ListFederationServers lists the set of servers that make up the federation
+    of the local Universe server. This servers are used to push out new proofs,
+    and also periodically call sync new proofs from the remote server.
+    */
+    rpc ListFederationServers (ListFederationServersRequest)
+        returns (ListFederationServersResponse);
+
+    /* tapcli: `universe federation add`
+    AddFederationServer adds a new server to the federation of the local
+    Universe server. Once a server is added, this call can also optionally be
+    used to trigger a sync of the remote server.
+    */
+    rpc AddFederationServer (AddFederationServerRequest)
+        returns (AddFederationServerResponse);
+
+    /* tapcli: `universe federation del`
+    DeleteFederationServer removes a server from the federation of the local
+    Universe server.
+    */
+    rpc DeleteFederationServer (DeleteFederationServerRequest)
+        returns (DeleteFederationServerResponse);
+
+    /* tapcli: `universe stats`
+    UniverseStats returns a set of aggregate statistics for the current state
+    of the Universe. Stats returned include: total number of syncs, total
+    number of proofs, and total number of known assets.
+    */
+    rpc UniverseStats (StatsRequest) returns (StatsResponse);
+
+    /* tapcli `universe stats assets`
+    QueryAssetStats returns a set of statistics for a given set of assets.
+    Stats can be queried for all assets, or based on the: asset ID, name, or
+    asset type. Pagination is supported via the offset and limit params.
+    Results can also be sorted based on any of the main query params.
+    */
+    rpc QueryAssetStats (AssetStatsQuery) returns (UniverseAssetStats);
+
+    /* tapcli `universe stats events`
+    QueryEvents returns the number of sync and proof events for a given time
+    period, grouped by day.
+    */
+    rpc QueryEvents (QueryEventsRequest) returns (QueryEventsResponse);
+}
+
+message AssetRootRequest {
+    // TODO(roasbeef): filter by asset ID, etc?
+}
+
+message MerkleSumNode {
+    // The MS-SMT root hash for the branch node.
+    bytes root_hash = 1;
+
+    // The root sum of the branch node. This is hashed to create the root_hash
+    // along with the left and right siblings. This value represents the total
+    // known supply of the asset.
+    int64 root_sum = 2;
+
+    // TODO(roasbeef): add left and right siblings? then can have full tree
+    // exposed via iterative queries
+}
+
+message ID {
+    oneof id {
+        // The 32-byte asset ID specified as raw bytes (gRPC only).
+        bytes asset_id = 1;
+
+        // The 32-byte asset ID encoded as a hex string (use this for REST).
+        string asset_id_str = 2;
+
+        // The 32-byte asset group key specified as raw bytes (gRPC only).
+        bytes group_key = 3;
+
+        // The 32-byte asset group key encoded as hex string (use this for
+        // REST).
+        string group_key_str = 4;
+    }
+}
+
+message UniverseRoot {
+    ID id = 1;
+
+    // The merkle sum sparse merkle tree root associated with the above
+    // universe ID.
+    MerkleSumNode mssmt_root = 3;
+
+    // The name of the asset.
+    string asset_name = 4;
+}
+
+message AssetRootResponse {
+    // A map of the set of known universe roots for each asset. The key in the
+    // map is the 32-byte asset_id or group key hash.
+    map<string, UniverseRoot> universe_roots = 1;
+}
+
+message AssetRootQuery {
+    // An ID value to uniquely identify a Universe root.
+    ID id = 1;
+}
+
+message QueryRootResponse {
+    // The asset root for the given asset ID or group key.
+    UniverseRoot asset_root = 1;
+}
+
+message DeleteRootQuery {
+    // An ID value to uniquely identify a Universe root.
+    ID id = 1;
+}
+
+message DeleteRootResponse {
+}
+
+message Outpoint {
+    // The output as a hex encoded (and reversed!) string.
+    string hash_str = 1;
+
+    // The index of the output.
+    int32 index = 2;
+}
+
+message AssetKey {
+    // The outpoint of the asset key, either as a single hex encoded string, or
+    // an unrolled outpoint.
+    oneof outpoint {
+        string op_str = 1;
+
+        Outpoint op = 2;
+    }
+
+    // The script key of the asset.
+    oneof script_key {
+        bytes script_key_bytes = 3;
+
+        string script_key_str = 4;
+    }
+}
+
+message AssetLeafKeyResponse {
+    // The set of asset leaf keys for the given asset ID or group key.
+    repeated AssetKey asset_keys = 1;
+}
+
+message AssetLeaf {
+    // The asset included in the leaf.
+    taprpc.Asset asset = 1;
+
+    // TODO(roasbeef): only needed for display? can get from proof below ^
+
+    // The asset issuance proof, which proves that the asset specified above
+    // was issued properly.
+    bytes issuance_proof = 2;
+}
+
+message AssetLeafResponse {
+    // The set of asset leaves for the given asset ID or group key.
+    repeated AssetLeaf leaves = 1;
+}
+
+message UniverseKey {
+    // The ID of the asset to query for.
+    ID id = 1;
+
+    // The asset key to query for.
+    AssetKey leaf_key = 2;
+
+    // TODO(roasbeef): want to be able to eventually do sparse queries? so just
+    // outpoint, then return rest, etc
+}
+
+message AssetProofResponse {
+    // The request original request for the issuance proof.
+    UniverseKey req = 1;
+
+    // The Universe root that includes this asset leaf.
+    UniverseRoot universe_root = 2;
+
+    // An inclusion proof for the asset leaf included below. The value is that
+    // issuance proof itself, with a sum value of the amount of the asset.
+    bytes universe_inclusion_proof = 3;
+
+    // The asset leaf itself, which includes the asset and the issuance proof.
+    AssetLeaf asset_leaf = 4;
+}
+
+message AssetProof {
+    // The ID of the asset to insert the proof for.
+    UniverseKey key = 1;
+
+    // The asset leaf to insert into the Universe tree.
+    AssetLeaf asset_leaf = 4;
+}
+
+message InfoRequest {
+}
+
+message InfoResponse {
+    // A pseudo-random runtime ID for the current instance of the Universe
+    // server, changes with each restart. Mainly used to identify identical
+    // servers when they are exposed under different hostnames/ports.
+    int64 runtime_id = 1;
+
+    // The number of assets known to this Universe server.
+    uint64 num_assets = 2;
+}
+
+enum UniverseSyncMode {
+    // A sync node that indicates that only new asset creation (minting) proofs
+    // should be synced.
+    SYNC_ISSUANCE_ONLY = 0;
+
+    // A syncing mode that indicates that all asset proofs should be synced.
+    // This includes normal transfers as well.
+    SYNC_FULL = 1;
+}
+
+message SyncTarget {
+    ID id = 1;
+}
+
+message SyncRequest {
+    // TODO(roasbeef): accept connection type? so can pass along self-signed
+    // cert, also brontide based RPC handshake
+    string universe_host = 1;
+
+    // The sync mode. This determines what type of proofs are synced.
+    UniverseSyncMode sync_mode = 2;
+
+    // The set of assets to sync. If none are specified, then all assets are
+    // synced.
+    repeated SyncTarget sync_targets = 3;
+}
+
+message SyncedUniverse {
+    // The old Universe root for the synced asset.
+    UniverseRoot old_asset_root = 1;
+
+    // The new Universe root for the synced asset.
+    UniverseRoot new_asset_root = 2;
+
+    // The set of new asset leaves that were synced.
+    repeated AssetLeaf new_asset_leaves = 3;
+}
+
+message StatsRequest {
+}
+
+message SyncResponse {
+    // The set of synced asset Universes.
+    repeated SyncedUniverse synced_universes = 1;
+}
+
+message UniverseFederationServer {
+    string host = 1;
+    int32 id = 2;
+}
+
+message ListFederationServersRequest {
+}
+
+message ListFederationServersResponse {
+    repeated UniverseFederationServer servers = 1;
+}
+
+message AddFederationServerRequest {
+    repeated UniverseFederationServer servers = 1;
+}
+
+message AddFederationServerResponse {
+}
+
+message DeleteFederationServerRequest {
+    repeated UniverseFederationServer servers = 1;
+}
+
+message DeleteFederationServerResponse {
+}
+
+message StatsResponse {
+    int64 num_total_assets = 1;
+    int64 num_total_syncs = 2;
+    int64 num_total_proofs = 3;
+}
+
+enum AssetQuerySort {
+    SORT_BY_NONE = 0;
+
+    SORT_BY_ASSET_NAME = 1;
+
+    SORT_BY_ASSET_ID = 2;
+
+    SORT_BY_ASSET_TYPE = 3;
+
+    SORT_BY_TOTAL_SYNCS = 4;
+
+    SORT_BY_TOTAL_PROOFS = 5;
+
+    SORT_BY_GENESIS_HEIGHT = 6;
+}
+
+enum AssetTypeFilter {
+    FILTER_ASSET_NONE = 0;
+
+    FILTER_ASSET_NORMAL = 1;
+
+    FILTER_ASSET_COLLECTIBLE = 2;
+}
+
+message AssetStatsQuery {
+    string asset_name_filter = 1;
+
+    bytes asset_id_filter = 2;
+
+    AssetTypeFilter asset_type_filter = 3;
+
+    AssetQuerySort sort_by = 4;
+
+    int32 offset = 5;
+
+    int32 limit = 6;
+}
+
+message AssetStatsSnapshot {
+    bytes asset_id = 1;
+
+    bytes group_key = 2;
+
+    string genesis_point = 3;
+
+    int64 total_supply = 4;
+
+    string asset_name = 5;
+
+    taprpc.AssetType asset_type = 6;
+
+    int32 genesis_height = 7;
+
+    int64 genesis_timestamp = 8;
+
+    int64 total_syncs = 9;
+
+    int64 total_proofs = 10;
+}
+
+message UniverseAssetStats {
+    repeated AssetStatsSnapshot asset_stats = 1;
+}
+
+message QueryEventsRequest {
+    int64 start_timestamp = 1;
+    int64 end_timestamp = 2;
+}
+
+message QueryEventsResponse {
+    repeated GroupedUniverseEvents events = 1;
+}
+
+message GroupedUniverseEvents {
+    // The date the events occurred on, formatted as YYYY-MM-DD.
+    string date = 1;
+    uint64 sync_events = 2;
+    uint64 new_proof_events = 3;
+}

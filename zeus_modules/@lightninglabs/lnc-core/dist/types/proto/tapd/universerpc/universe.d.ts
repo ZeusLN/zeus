@@ -17,6 +17,9 @@ export declare enum AssetQuerySort {
     SORT_BY_ASSET_NAME = "SORT_BY_ASSET_NAME",
     SORT_BY_ASSET_ID = "SORT_BY_ASSET_ID",
     SORT_BY_ASSET_TYPE = "SORT_BY_ASSET_TYPE",
+    SORT_BY_TOTAL_SYNCS = "SORT_BY_TOTAL_SYNCS",
+    SORT_BY_TOTAL_PROOFS = "SORT_BY_TOTAL_PROOFS",
+    SORT_BY_GENESIS_HEIGHT = "SORT_BY_GENESIS_HEIGHT",
     UNRECOGNIZED = "UNRECOGNIZED"
 }
 export declare enum AssetTypeFilter {
@@ -39,13 +42,16 @@ export interface MerkleSumNode {
     rootSum: string;
 }
 export interface ID {
-    /** The 32-byte asset ID. */
+    /** The 32-byte asset ID specified as raw bytes (gRPC only). */
     assetId: Uint8Array | string | undefined;
-    /** The 32-byte asset ID encoded as a hex string. */
+    /** The 32-byte asset ID encoded as a hex string (use this for REST). */
     assetIdStr: string | undefined;
-    /** The 32-byte asset group key. */
+    /** The 32-byte asset group key specified as raw bytes (gRPC only). */
     groupKey: Uint8Array | string | undefined;
-    /** The 32-byte asset group key encoded as hex string. */
+    /**
+     * The 32-byte asset group key encoded as hex string (use this for
+     * REST).
+     */
     groupKeyStr: string | undefined;
 }
 export interface UniverseRoot {
@@ -78,6 +84,12 @@ export interface AssetRootQuery {
 export interface QueryRootResponse {
     /** The asset root for the given asset ID or group key. */
     assetRoot: UniverseRoot | undefined;
+}
+export interface DeleteRootQuery {
+    /** An ID value to uniquely identify a Universe root. */
+    id: ID | undefined;
+}
+export interface DeleteRootResponse {
 }
 export interface Outpoint {
     /** The output as a hex encoded (and reversed!) string. */
@@ -132,6 +144,18 @@ export interface AssetProof {
     key: UniverseKey | undefined;
     /** The asset leaf to insert into the Universe tree. */
     assetLeaf: AssetLeaf | undefined;
+}
+export interface InfoRequest {
+}
+export interface InfoResponse {
+    /**
+     * A pseudo-random runtime ID for the current instance of the Universe
+     * server, changes with each restart. Mainly used to identify identical
+     * servers when they are exposed under different hostnames/ports.
+     */
+    runtimeId: string;
+    /** The number of assets known to this Universe server. */
+    numAssets: string;
 }
 export interface SyncTarget {
     id: ID | undefined;
@@ -198,15 +222,31 @@ export interface AssetStatsQuery {
 }
 export interface AssetStatsSnapshot {
     assetId: Uint8Array | string;
+    groupKey: Uint8Array | string;
+    genesisPoint: string;
     totalSupply: string;
     assetName: string;
     assetType: AssetType;
     genesisHeight: number;
+    genesisTimestamp: string;
     totalSyncs: string;
     totalProofs: string;
 }
 export interface UniverseAssetStats {
     assetStats: AssetStatsSnapshot[];
+}
+export interface QueryEventsRequest {
+    startTimestamp: string;
+    endTimestamp: string;
+}
+export interface QueryEventsResponse {
+    events: GroupedUniverseEvents[];
+}
+export interface GroupedUniverseEvents {
+    /** The date the events occurred on, formatted as YYYY-MM-DD. */
+    date: string;
+    syncEvents: string;
+    newProofEvents: string;
 }
 export interface Universe {
     /**
@@ -221,6 +261,12 @@ export interface Universe {
      * asset. This asset can be identified by its asset ID or group key.
      */
     queryAssetRoots(request?: DeepPartial<AssetRootQuery>): Promise<QueryRootResponse>;
+    /**
+     * tapcli: `universe delete`
+     * DeleteAssetRoot deletes the Universe root for a specific asset, including
+     * all asoociated universe keys, leaves, and events.
+     */
+    deleteAssetRoot(request?: DeepPartial<DeleteRootQuery>): Promise<DeleteRootResponse>;
     /**
      * tapcli: `universe keys`
      * AssetLeafKeys queries for the set of Universe keys associated with a given
@@ -259,6 +305,11 @@ export interface Universe {
      */
     insertProof(request?: DeepPartial<AssetProof>): Promise<AssetProofResponse>;
     /**
+     * tapcli: `universe info`
+     * Info returns a set of information about the current state of the Universe.
+     */
+    info(request?: DeepPartial<InfoRequest>): Promise<InfoResponse>;
+    /**
      * tapcli: `universe sync`
      * SyncUniverse takes host information for a remote Universe server, then
      * attempts to synchronize either only the set of specified asset_ids, or all
@@ -289,7 +340,7 @@ export interface Universe {
     deleteFederationServer(request?: DeepPartial<DeleteFederationServerRequest>): Promise<DeleteFederationServerResponse>;
     /**
      * tapcli: `universe stats`
-     * UniverseStats returns a set of aggregrate statistics for the current state
+     * UniverseStats returns a set of aggregate statistics for the current state
      * of the Universe. Stats returned include: total number of syncs, total
      * number of proofs, and total number of known assets.
      */
@@ -302,6 +353,12 @@ export interface Universe {
      * Results can also be sorted based on any of the main query params.
      */
     queryAssetStats(request?: DeepPartial<AssetStatsQuery>): Promise<UniverseAssetStats>;
+    /**
+     * tapcli `universe stats events`
+     * QueryEvents returns the number of sync and proof events for a given time
+     * period, grouped by day.
+     */
+    queryEvents(request?: DeepPartial<QueryEventsRequest>): Promise<QueryEventsResponse>;
 }
 declare type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 declare type DeepPartial<T> = T extends Builtin ? T : T extends Array<infer U> ? Array<DeepPartial<U>> : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>> : T extends {} ? {

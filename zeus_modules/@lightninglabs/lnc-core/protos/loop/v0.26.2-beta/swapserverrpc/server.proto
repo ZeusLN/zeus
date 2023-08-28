@@ -1,0 +1,619 @@
+syntax = "proto3";
+
+import "common.proto";
+
+// We can't change this to swapserverrpc, it would be a breaking change because
+// the package name is also contained in the HTTP URIs and old clients would
+// call the wrong endpoints. Luckily with the go_package option we can have
+// different golang and RPC package names to fix protobuf namespace conflicts.
+package looprpc;
+
+option go_package = "github.com/lightninglabs/loop/swapserverrpc";
+
+service SwapServer {
+    rpc LoopOutTerms (ServerLoopOutTermsRequest) returns (ServerLoopOutTerms);
+
+    rpc NewLoopOutSwap (ServerLoopOutRequest) returns (ServerLoopOutResponse);
+
+    rpc LoopOutPushPreimage (ServerLoopOutPushPreimageRequest)
+        returns (ServerLoopOutPushPreimageResponse);
+
+    rpc LoopOutQuote (ServerLoopOutQuoteRequest) returns (ServerLoopOutQuote);
+
+    rpc LoopInTerms (ServerLoopInTermsRequest) returns (ServerLoopInTerms);
+
+    rpc NewLoopInSwap (ServerLoopInRequest) returns (ServerLoopInResponse);
+
+    rpc LoopInQuote (ServerLoopInQuoteRequest)
+        returns (ServerLoopInQuoteResponse);
+
+    rpc SubscribeLoopOutUpdates (SubscribeUpdatesRequest)
+        returns (stream SubscribeLoopOutUpdatesResponse);
+
+    rpc SubscribeLoopInUpdates (SubscribeUpdatesRequest)
+        returns (stream SubscribeLoopInUpdatesResponse);
+
+    rpc CancelLoopOutSwap (CancelLoopOutSwapRequest)
+        returns (CancelLoopOutSwapResponse);
+
+    rpc Probe (ServerProbeRequest) returns (ServerProbeResponse);
+
+    rpc RecommendRoutingPlugin (RecommendRoutingPluginReq)
+        returns (RecommendRoutingPluginRes);
+
+    rpc ReportRoutingResult (ReportRoutingResultReq)
+        returns (ReportRoutingResultRes);
+
+    rpc MuSig2SignSweep (MuSig2SignSweepReq) returns (MuSig2SignSweepRes);
+
+    rpc PushKey (ServerPushKeyReq) returns (ServerPushKeyRes);
+}
+
+/**
+This enum defines the protocol versions that clients may adhere to. Note that
+this is not a flagged enum. If a particular protocol version adds a feature,
+then in general all the preceding features are also supported. Exception to this
+is when features get deprecated.
+*/
+enum ProtocolVersion {
+    /// No protocol version reported at all.
+    LEGACY = 0;
+
+    /// Client may attempt to send the loop out payment in multiple parts.
+    MULTI_LOOP_OUT = 1;
+
+    /**
+    Loop will use native segwit (P2WSH) htlcs by default, while externally
+    published htlcs may use native (P2WSH) or nested (NP2WSH) segwit as well.
+    */
+    NATIVE_SEGWIT_LOOP_IN = 2;
+
+    /*
+    Once the on chain loop out htlc is confirmed, the client can push the swap
+    preimage to the server to speed up claim of their off chain htlc (acquiring
+    incoming liquidity more quickly than if the server waited for the on chain
+    claim tx).
+    */
+    PREIMAGE_PUSH_LOOP_OUT = 3;
+
+    // The client will propose a cltv expiry height for loop out.
+    USER_EXPIRY_LOOP_OUT = 4;
+
+    // The client will use the new v2 HTLC scripts.
+    HTLC_V2 = 5;
+
+    // The client creates a probe invoice so that the server can perform a
+    // multi-path probe.
+    MULTI_LOOP_IN = 6;
+
+    // The client supports loop out swap cancelation.
+    LOOP_OUT_CANCEL = 7;
+
+    // The client is able to ask the server to probe to test inbound liquidity
+    // and provide more accurate loop-in fees.
+    PROBE = 8;
+
+    // The client may ask the server to use a custom routing helper plugin in
+    // order to enhance off-chain payments corresponding to a swap.
+    ROUTING_PLUGIN = 9;
+
+    // The client will use the new v3 (taproot) HTLC scripts.
+    HTLC_V3 = 10;
+
+    // Enables MuSig2 signature scheme for swaps.
+    MUSIG2 = 11;
+}
+
+message ServerLoopOutRequest {
+    bytes receiver_key = 1;
+
+    bytes swap_hash = 2;
+
+    uint64 amt = 3;
+
+    /// The unix time in seconds we want the on-chain swap to be published by.
+    int64 swap_publication_deadline = 4;
+
+    /// The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 5;
+
+    // The requested absolute block height of the on-chain htlc. This is
+    // subjected to min and max constraints as reported in the LoopOutTerms
+    // response.
+    int32 expiry = 6;
+
+    // The user agent string that identifies the software running on the user's
+    // side. This can be changed in the user's client software but it _SHOULD_
+    // conform to the following pattern:
+    //    Agent-Name/semver-version(/additional-info)
+    // Examples:
+    //    loopd/v0.10.0-beta/commit=3b635821
+    //    litd/v0.2.0-alpha/commit=326d754
+    string user_agent = 7;
+}
+
+message ServerLoopOutResponse {
+    string swap_invoice = 1;
+
+    string prepay_invoice = 2;
+
+    bytes sender_key = 3;
+
+    // The height at which the on-chain htlc will expire. Deprecated because the
+    // field is already specified in the request.
+    int32 expiry = 4 [deprecated = true];
+
+    // A human-readable message from the loop server.
+    string server_message = 5;
+}
+
+message ServerLoopOutQuoteRequest {
+    /// The swap amount. If zero, a quote for a maximum amt swap will be given.
+    uint64 amt = 1;
+
+    /// The unix time in seconds we want the on-chain swap to be published by.
+    int64 swap_publication_deadline = 2;
+
+    /// The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 3;
+
+    // The requested absolute block height of the on-chain htlc. This is
+    // subjected to min and max constraints as reported in the LoopOutTerms
+    // response.
+    int32 expiry = 4;
+
+    // The user agent string that identifies the software running on the user's
+    // side. This can be changed in the user's client software but it _SHOULD_
+    // conform to the following pattern:
+    //    Agent-Name/semver-version(/additional-info)
+    // Examples:
+    //    loopd/v0.10.0-beta/commit=3b635821
+    //    litd/v0.2.0-alpha/commit=326d754
+    string user_agent = 5;
+}
+
+message ServerLoopOutQuote {
+    string swap_payment_dest = 1;
+
+    /// The total estimated swap fee given the quote amt.
+    int64 swap_fee = 2;
+
+    /// Deprecated, total swap fee given quote amt is calculated in swap_fee.
+    int64 swap_fee_rate = 3 [deprecated = true];
+
+    uint64 prepay_amt = 4;
+
+    uint64 min_swap_amount = 5 [deprecated = true];
+
+    uint64 max_swap_amount = 6 [deprecated = true];
+
+    // The server-proposed cltv delta of the on-chain htlc. Deprecated because
+    // the field is already specified in the request.
+    int32 cltv_delta = 7 [deprecated = true];
+}
+
+message ServerLoopOutTermsRequest {
+    /// The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 1;
+
+    // The user agent string that identifies the software running on the user's
+    // side. This can be changed in the user's client software but it _SHOULD_
+    // conform to the following pattern:
+    //    Agent-Name/semver-version(/additional-info)
+    // Examples:
+    //    loopd/v0.10.0-beta/commit=3b635821
+    //    litd/v0.2.0-alpha/commit=326d754
+    string user_agent = 2;
+}
+
+message ServerLoopOutTerms {
+    uint64 min_swap_amount = 1;
+    uint64 max_swap_amount = 2;
+
+    // The minimally accepted cltv delta of the on-chain htlc.
+    int32 min_cltv_delta = 3;
+
+    // The maximally accepted cltv delta of the on-chain htlc.
+    int32 max_cltv_delta = 4;
+}
+
+message ServerLoopInRequest {
+    bytes sender_key = 1;
+
+    bytes sender_internal_pubkey = 9;
+
+    bytes swap_hash = 2;
+
+    uint64 amt = 3;
+
+    string swap_invoice = 4;
+
+    bytes last_hop = 5;
+
+    /// The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 6;
+
+    // An invoice that can be used for the purpose of probing.
+    string probe_invoice = 7;
+
+    // The user agent string that identifies the software running on the user's
+    // side. This can be changed in the user's client software but it _SHOULD_
+    // conform to the following pattern:
+    //    Agent-Name/semver-version(/additional-info)
+    // Examples:
+    //    loopd/v0.10.0-beta/commit=3b635821
+    //    litd/v0.2.0-alpha/commit=326d754
+    string user_agent = 8;
+}
+
+message ServerLoopInResponse {
+    bytes receiver_key = 1;
+
+    bytes receiver_internal_pubkey = 9;
+
+    int32 expiry = 2;
+
+    // A human-readable message from the loop server.
+    string server_message = 3;
+}
+
+message ServerLoopInQuoteRequest {
+    /// The swap amount. If zero, a quote for a maximum amt swap will be given.
+    uint64 amt = 1;
+
+    // The destination pubkey.
+    bytes pubkey = 3;
+
+    // Optional last hop to use.
+    bytes last_hop = 4;
+
+    // Optional route hints to reach the destination through private channels.
+    repeated RouteHint route_hints = 5;
+
+    /// The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 2;
+
+    // The user agent string that identifies the software running on the user's
+    // side. This can be changed in the user's client software but it _SHOULD_
+    // conform to the following pattern:
+    //    Agent-Name/semver-version(/additional-info)
+    // Examples:
+    //    loopd/v0.10.0-beta/commit=3b635821
+    //    litd/v0.2.0-alpha/commit=326d754
+    string user_agent = 6;
+}
+
+message ServerLoopInQuoteResponse {
+    int64 swap_fee = 1;
+    int64 swap_fee_rate = 2 [deprecated = true];
+    uint64 min_swap_amount = 4 [deprecated = true];
+    uint64 max_swap_amount = 5 [deprecated = true];
+    int32 cltv_delta = 6;
+}
+
+message ServerLoopInTermsRequest {
+    /// The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 1;
+
+    // The user agent string that identifies the software running on the user's
+    // side. This can be changed in the user's client software but it _SHOULD_
+    // conform to the following pattern:
+    //    Agent-Name/semver-version(/additional-info)
+    // Examples:
+    //    loopd/v0.10.0-beta/commit=3b635821
+    //    litd/v0.2.0-alpha/commit=326d754
+    string user_agent = 2;
+}
+
+message ServerLoopInTerms {
+    uint64 min_swap_amount = 1;
+    uint64 max_swap_amount = 2;
+}
+
+// ServerLoopOutPushPreimageRequest pushes a preimage to the server. Note that
+// this call returns with no error after the server acknowledges the preimage
+// and does not block until the invoice is settled.
+message ServerLoopOutPushPreimageRequest {
+    // The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 1;
+
+    /*
+    Preimage is the preimage of the loop out swap that we wish to push to the
+    server to speed up off-chain claim once the on-chain htlc has confirmed.
+    */
+    bytes preimage = 2;
+}
+
+message ServerLoopOutPushPreimageResponse {
+}
+
+message SubscribeUpdatesRequest {
+    // The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 1;
+
+    // Swap hash is the hash of the swap to subscribe to updates for.
+    bytes swap_hash = 2;
+}
+
+// ServerSwapState is an enum which represents all the states a swap may have
+// from the server's perspective.
+enum ServerSwapState {
+    // The server has created the swap.
+    SERVER_INITIATED = 0;
+
+    // The server has published the loop out on chain htlc.
+    SERVER_HTLC_PUBLISHED = 1;
+
+    // The swap completed successfully.
+    SERVER_SUCCESS = 2;
+
+    /*
+    The swap failed for a reason that is unknown to the server, this is only
+    set for older swaps.
+    */
+    SERVER_FAILED_UNKNOWN = 3;
+
+    // No htlc was confirmed in time for the loop in swap to complete.
+    SERVER_FAILED_NO_HTLC = 4;
+
+    // A loop in htlc confirmed on chain, but it did not have the correct value.
+    SERVER_FAILED_INVALID_HTLC_AMOUNT = 5;
+
+    /*
+    We did not succeed in completing the loop in off chain payment before the
+    timeout.
+    */
+    SERVER_FAILED_OFF_CHAIN_TIMEOUT = 6;
+
+    // The on chain timeout was claimed.
+    SERVER_FAILED_TIMEOUT = 7;
+
+    /*
+    The server could not publish the loop out on chain htlc before the deadline
+    provided.
+    */
+    SERVER_FAILED_SWAP_DEADLINE = 8;
+
+    // The server could not publish the loop out on chain htlc.
+    SERVER_FAILED_HTLC_PUBLICATION = 9;
+
+    // The server has published the loop out on chain timeout tx.
+    SERVER_TIMEOUT_PUBLISHED = 10;
+
+    // The swap has failed for unknown reasons, it will not be completed.
+    SERVER_UNEXPECTED_FAILURE = 11;
+
+    // The swap htlc has confirmed on chain.
+    SERVER_HTLC_CONFIRMED = 12;
+
+    // The client canceled the swap because they could not route the prepay.
+    SERVER_CLIENT_PREPAY_CANCEL = 13;
+
+    // The client canceled the swap because they could not route the swap
+    // payment.
+    SERVER_CLIENT_INVOICE_CANCEL = 14;
+
+    /*
+    A loop in swap was rejected because it contained multiple outputs for a
+    single swap.
+    */
+    SERVER_FAILED_MULTIPLE_SWAP_SCRIPTS = 15;
+
+    /*
+    The swap failed during creation.
+    */
+    SERVER_FAILED_INITIALIZATION = 16;
+}
+
+message SubscribeLoopOutUpdatesResponse {
+    // The unix timestamp in nanoseconds when the swap was updated.
+    int64 timestamp_ns = 1;
+
+    // The swap's current state.
+    ServerSwapState state = 2;
+}
+
+message SubscribeLoopInUpdatesResponse {
+    // The unix timestamp in nanoseconds when the swap was updated.
+    int64 timestamp_ns = 1;
+
+    // The swap's current state.
+    ServerSwapState state = 2;
+}
+
+enum RoutePaymentType {
+    // No reason, used to distinguish from the default value.
+    ROUTE_UNKNOWN = 0;
+
+    // Prepay route indicates that the swap was canceled because the client
+    // could not find a route to the server for the prepay.
+    PREPAY_ROUTE = 1;
+
+    // Invoice route indicates that the swap was canceled because the client
+    // could not find a route to the server for the swap invoice.
+    INVOICE_ROUTE = 2;
+}
+
+// PaymentFailureReason describes the reason that a payment failed. These
+// values are copied directly from lnd.
+enum PaymentFailureReason {
+    /*
+    Payment isn't failed (yet).
+    */
+    LND_FAILURE_REASON_NONE = 0;
+
+    /*
+    There are more routes to try, but the payment timeout was exceeded.
+    */
+    LND_FAILURE_REASON_TIMEOUT = 1;
+
+    /*
+    All possible routes were tried and failed permanently. Or were no
+    routes to the destination at all.
+    */
+    LND_FAILURE_REASON_NO_ROUTE = 2;
+
+    /*
+    A non-recoverable error has occured.
+    */
+    LND_FAILURE_REASON_ERROR = 3;
+
+    /*
+    Payment details incorrect (unknown hash, invalid amt or
+    invalid final cltv delta)
+    */
+    LND_FAILURE_REASON_INCORRECT_PAYMENT_DETAILS = 4;
+
+    /*
+    Insufficient local balance.
+    */
+    LND_FAILURE_REASON_INSUFFICIENT_BALANCE = 5;
+}
+
+message RouteCancel {
+    // The type of the payment that failed.
+    RoutePaymentType route_type = 1;
+
+    // The htlcs that the client tried to pay the server with, if any.
+    repeated HtlcAttempt attempts = 2;
+
+    // The reason that the payment failed.
+    PaymentFailureReason failure = 3;
+}
+
+message HtlcAttempt {
+    // The number of hops from the htlc's failure hop that it needed to take
+    // to reach the server's node.
+    uint32 remaining_hops = 1;
+}
+
+message CancelLoopOutSwapRequest {
+    // The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 1;
+
+    // The swap hash.
+    bytes swap_hash = 2;
+
+    // The payment address for the swap invoice, used to ensure that only the
+    // swap owner can cancel the payment.
+    bytes payment_address = 3;
+
+    // Additional information about the swap cancelation.
+    oneof cancel_info {
+        RouteCancel route_cancel = 5;
+    }
+}
+
+message CancelLoopOutSwapResponse {
+}
+
+message ServerProbeRequest {
+    // The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 1;
+
+    // The probe amount.
+    uint64 amt = 2;
+
+    // The target node for the probe.
+    bytes target = 3;
+
+    // Optional last hop to use when probing the client.
+    bytes last_hop = 4;
+
+    // Optional route hints to reach the destination through private channels.
+    repeated RouteHint route_hints = 5;
+}
+
+message ServerProbeResponse {
+}
+
+message RecommendRoutingPluginReq {
+    ProtocolVersion protocol_version = 1;
+
+    // The hash of the swap requesting a routing plugin.
+    bytes swap_hash = 2;
+
+    // The payment address for the swap invoice, used to ensure that only the
+    // swap owner can request routing plugin recommendation.
+    bytes payment_address = 3;
+}
+
+enum RoutingPlugin {
+    // Client won't use any plugins to help with payment routing.
+    NONE = 0;
+
+    // Client will try more expensive routes for off-chain payments.
+    LOW_HIGH = 1;
+}
+
+message RecommendRoutingPluginRes {
+    // The routing plugin to use for off-chain payments.
+    RoutingPlugin plugin = 1;
+}
+
+message ReportRoutingResultReq {
+    ProtocolVersion protocol_version = 1;
+
+    // The swap hash.
+    bytes swap_hash = 2;
+
+    // The payment address for the swap invoice, used to ensure that only the
+    // swap owner can report routing result.
+    bytes payment_address = 3;
+
+    // The routing plugin that was used.
+    RoutingPlugin plugin = 4;
+
+    // Whether this payment succeeded.
+    bool success = 5;
+
+    // The number of payment attempts using the plugin.
+    int32 attempts = 6;
+
+    // Total time used in milliseconds.
+    int64 total_time = 7;
+}
+
+message ReportRoutingResultRes {
+}
+
+message MuSig2SignSweepReq {
+    reserved 5;
+
+    ProtocolVersion protocol_version = 1;
+
+    // The swap hash.
+    bytes swap_hash = 2;
+
+    // The payment address for the swap invoice, used to ensure that only the
+    // swap owner can obtain the partial signature.
+    bytes payment_address = 3;
+
+    // The local public nonce.
+    bytes nonce = 4;
+
+    // The psbt of the sweep txn.
+    bytes sweep_tx_psbt = 6;
+}
+
+message MuSig2SignSweepRes {
+    // The server side public nonce.
+    bytes nonce = 1;
+
+    // The partial signature of the server for the requested sighash.
+    bytes partial_signature = 2;
+}
+
+message ServerPushKeyReq {
+    // The protocol version that the client adheres to.
+    ProtocolVersion protocol_version = 1;
+
+    // The swap hash.
+    bytes swap_hash = 2;
+
+    // The client’s private key used in the HTLC’s aggregated internal key.
+    bytes internal_privkey = 3;
+}
+
+message ServerPushKeyRes {
+}
