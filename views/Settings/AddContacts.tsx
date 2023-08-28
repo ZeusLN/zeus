@@ -138,6 +138,9 @@ export default class AddContacts extends React.Component<
                         : contact
                 );
 
+                // Sort the updated contacts alphabetically
+                updatedContacts.sort((a, b) => a.name.localeCompare(b.name));
+
                 // Save the updated contacts to encrypted storage
                 await EncryptedStorage.setItem(
                     'zeus-contacts',
@@ -162,7 +165,9 @@ export default class AddContacts extends React.Component<
                     isFavourite
                 };
 
-                const updatedContacts = [...existingContacts, newContact];
+                const updatedContacts = [...existingContacts, newContact].sort(
+                    (a, b) => a.name.localeCompare(b.name)
+                );
 
                 // Save the updated contacts to encrypted storage
                 await EncryptedStorage.setItem(
