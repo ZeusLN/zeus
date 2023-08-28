@@ -73,10 +73,15 @@ export interface CancelBatchResponse {
 }
 export interface ListBatchRequest {
     /**
-     * The optional batch key of the batch to list. When using REST this field
-     * must be encoded as base64url.
+     * The optional batch key of the batch to list, specified as raw bytes
+     * (gRPC only).
      */
-    batchKey: Uint8Array | string;
+    batchKey: Uint8Array | string | undefined;
+    /**
+     * The optional batch key of the batch to list, specified as a hex
+     * encoded string (use this for REST).
+     */
+    batchKeyStr: string | undefined;
 }
 export interface ListBatchResponse {
     batches: MintingBatch[];

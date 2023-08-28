@@ -37,6 +37,8 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import Edit from '../../assets/images/SVG/Edit.svg';
 import Share from '../../assets/images/SVG/Share.svg';
 
+import { lnrpc } from '../../proto/lightning';
+
 interface ChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
@@ -158,7 +160,8 @@ export default class ChannelView extends React.Component<
             forceClose,
             pendingOpen,
             closing,
-            zero_conf
+            zero_conf,
+            commitment_type
         } = channel;
         const privateChannel = channel.private;
 
@@ -296,6 +299,17 @@ export default class ChannelView extends React.Component<
                             }
                             color={privateChannel ? 'green' : '#808000'}
                         />
+                        {commitment_type && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.commitmentType'
+                                )}
+                                value={
+                                    lnrpc.CommitmentType[commitment_type] ||
+                                    commitment_type
+                                }
+                            />
+                        )}
                         {chain_hash && (
                             <KeyValue
                                 keyValue={localeString(

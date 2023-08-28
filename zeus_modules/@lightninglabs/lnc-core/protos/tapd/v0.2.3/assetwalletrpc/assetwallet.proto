@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+import "taprootassets.proto";
+
+package assetwalletrpc;
+
+option go_package = "github.com/lightninglabs/taproot-assets/taprpc/assetwalletrpc";
+
+service AssetWallet {
+    /*
+    FundVirtualPsbt selects inputs from the available asset commitments to fund
+    a virtual transaction matching the template.
+    */
+    rpc FundVirtualPsbt (FundVirtualPsbtRequest)
+        returns (FundVirtualPsbtResponse);
+
+    /*
+    SignVirtualPsbt signs the inputs of a virtual transaction and prepares the
+    commitments of the inputs and outputs.
+    */
+    rpc SignVirtualPsbt (SignVirtualPsbtRequest)
+        returns (SignVirtualPsbtResponse);
+
+    /*
+    AnchorVirtualPsbts merges and then commits multiple virtual transactions in
+    a single BTC level anchor transaction.
+
+    TODO(guggero): Actually implement accepting and merging multiple
+    transactions.
+    */
+    rpc AnchorVirtualPsbts (AnchorVirtualPsbtsRequest)
+        returns (taprpc.SendAssetResponse);
+
+    /*
+    NextInternalKey derives the next internal key for the given key family and
+    stores it as an internal key in the database to make sure it is identified
+    as a local key later on when importing proofs. While an internal key can
+    also be used as the internal key of a script key, it is recommended to use
+    the NextScriptKey RPC instead, to make sure the tweaked Taproot output key
+    is also recognized as a local key.
+    */
+    rpc NextInternalKey (NextInternalKeyRequest)
+        returns (NextInternalKeyResponse);
+
+    /*
+    NextScriptKey derives the next script key (and its corresponding internal
+    key) and stores them both in the database to make sure they are identified
+    as local keys later on when importing proofs.
+    */
+    rpc NextScriptKey (NextScriptKeyRequest) returns (NextScriptKeyResponse);
+
+    /*
+    ProveAssetOwnership creates an ownership proof embedded in an asset
+    transition proof. That ownership proof is a signed virtual transaction
+    spending the asset with a valid witness to prove the prover owns the keys
+    that can spend the asset.
+    */
+    rpc ProveAssetOwnership (ProveAssetOwnershipRequest)
+        returns (ProveAssetOwnershipResponse);
+
+    /*
+    VerifyAssetOwnership verifies the asset ownership proof embedded in the
+    given transition proof of an asset and returns true if the proof is valid.
+    */
+    rpc VerifyAssetOwnership (VerifyAssetOwnershipRequest)
+        returns (VerifyAssetOwnershipResponse);
+}
+
+message FundVirtualPsbtRequest {
+    oneof template {
+        /*
+        Use an existing PSBT packet as the template for the funded PSBT.
+
+        TODO(guggero): Actually implement this. We can't use the "reserved"
+        keyword here because we're in a oneof, so we add the field but implement
+        it later.
+        */
+        bytes psbt = 1;
+
+        /*
+        Use the asset outputs and optional asset inputs from this raw template.
+        */
+        TxTemplate raw = 2;
+    }
+}
+
+message FundVirtualPsbtResponse {
+    /*
+    The funded but not yet signed PSBT packet.
+    */
+    bytes funded_psbt = 1;
+
+    /*
+    The index of the added change output or -1 if no change was left over.
+    */
+    int32 change_output_index = 2;
+}
+
+message TxTemplate {
+    /*
+    An optional list of inputs to use. Every input must be an asset UTXO known
+    to the wallet. The sum of all inputs must be greater than or equal to the
+    sum of all outputs.
+
+    If no inputs are specified, asset coin selection will be performed instead
+    and inputs of sufficient value will be added to the resulting PSBT.
+    */
+    repeated PrevId inputs = 1;
+
+    /*
+    A map of all Taproot Asset addresses mapped to the anchor transaction's
+    output index that should be sent to.
+    */
+    map<string, uint64> recipients = 2;
+}
+
+message PrevId {
+    /*
+    The bitcoin anchor output on chain that contains the input asset.
+    */
+    OutPoint outpoint = 1;
+
+    /*
+    The asset ID of the previous asset tree.
+    */
+    bytes id = 2;
+
+    /*
+    The tweaked Taproot output key committing to the possible spending
+    conditions of the asset.
+    */
+    bytes script_key = 3;
+}
+
+message OutPoint {
+    /*
+    Raw bytes representing the transaction id.
+    */
+    bytes txid = 1;
+
+    /*
+    The index of the output on the transaction.
+    */
+    uint32 output_index = 2;
+}
+
+message SignVirtualPsbtRequest {
+    /*
+    The PSBT of the virtual transaction that should be signed. The PSBT must
+    contain all required inputs, outputs, UTXO data and custom fields required
+    to identify the signing key.
+    */
+    bytes funded_psbt = 1;
+}
+
+message SignVirtualPsbtResponse {
+    /*
+    The signed virtual transaction in PSBT format.
+    */
+    bytes signed_psbt = 1;
+
+    /*
+    The indices of signed inputs.
+    */
+    repeated uint32 signed_inputs = 2;
+}
+
+message AnchorVirtualPsbtsRequest {
+    /*
+    The list of virtual transactions that should be merged and committed to in
+    the BTC level anchor transaction.
+    */
+    repeated bytes virtual_psbts = 1;
+}
+
+message NextInternalKeyRequest {
+    uint32 key_family = 1;
+}
+
+message NextInternalKeyResponse {
+    taprpc.KeyDescriptor internal_key = 1;
+}
+
+message NextScriptKeyRequest {
+    uint32 key_family = 1;
+}
+
+message NextScriptKeyResponse {
+    taprpc.ScriptKey script_key = 1;
+}
+
+message ProveAssetOwnershipRequest {
+    bytes asset_id = 1;
+
+    bytes script_key = 2;
+}
+
+message ProveAssetOwnershipResponse {
+    bytes proof_with_witness = 1;
+}
+
+message VerifyAssetOwnershipRequest {
+    bytes proof_with_witness = 1;
+}
+
+message VerifyAssetOwnershipResponse {
+    bool valid_proof = 1;
+}
