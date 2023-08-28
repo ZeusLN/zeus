@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+// We can't rename this to auctioneerrpc, otherwise it would be a breaking
+// change since the package name is also contained in the HTTP URIs and old
+// clients would call the wrong endpoints. Luckily with the go_package option we
+// can have different golang and RPC package names.
+package poolrpc;
+
+option go_package = "github.com/lightninglabs/pool/auctioneerrpc";
+
+// HashMail exposes a simple synchronous network stream that can be used for
+// various types of synchronization and coordination. The service allows
+// authenticated users to create a simplex stream call a cipher box. Once the
+// stream is created, any user that knows of the stream ID can read/write from
+// the stream, but only a single user can be on either side at a time.
+service HashMail {
+    /*
+    NewCipherBox creates a new cipher box pipe/stream given a valid
+    authentication mechanism. If the authentication mechanism has been revoked,
+    or needs to be changed, then a CipherChallenge message is returned.
+    Otherwise the method will either be accepted or rejected.
+    */
+    rpc NewCipherBox (CipherBoxAuth) returns (CipherInitResp);
+
+    /*
+    DelCipherBox attempts to tear down an existing cipher box pipe. The same
+    authentication mechanism used to initially create the stream MUST be
+    specified.
+    */
+    rpc DelCipherBox (CipherBoxAuth) returns (DelCipherBoxResp);
+
+    /*
+    SendStream opens up the write side of the passed CipherBox pipe. Writes
+    will be non-blocking up to the buffer size of the pipe. Beyond that writes
+    will block until completed.
+    */
+    rpc SendStream (stream CipherBox) returns (CipherBoxDesc);
+
+    /*
+    RecvStream opens up the read side of the passed CipherBox pipe. This method
+    will block until a full message has been read as this is a message based
+    pipe/stream abstraction.
+    */
+    rpc RecvStream (CipherBoxDesc) returns (stream CipherBox);
+}
+
+message PoolAccountAuth {
+    // The account key being used to authenticate.
+    bytes acct_key = 1;
+
+    // A valid signature over the stream ID being used.
+    bytes stream_sig = 2;
+}
+
+message SidecarAuth {
+    /*
+    A valid sidecar ticket that has been signed (offered) by a Pool account in
+    the active state.
+    */
+    string ticket = 1;
+}
+
+message CipherBoxAuth {
+    // A description of the stream one is attempting to initialize.
+    CipherBoxDesc desc = 1;
+
+    oneof auth {
+        PoolAccountAuth acct_auth = 2;
+
+        SidecarAuth sidecar_auth = 3;
+    }
+}
+
+message DelCipherBoxResp {
+}
+
+message CipherChallenge {
+    // TODO(roasbeef): payment request, node key, etc, etc
+}
+
+message CipherError {
+}
+
+message CipherSuccess {
+    CipherBoxDesc desc = 1;
+}
+
+message CipherInitResp {
+    oneof resp {
+        /*
+        CipherSuccess is returned if the initialization of the cipher box was
+        successful.
+        */
+        CipherSuccess success = 1;
+
+        /*
+        CipherChallenge is returned if the authentication mechanism was revoked
+        or needs to be refreshed.
+        */
+        CipherChallenge challenge = 2;
+
+        /*
+        CipherError is returned if the authentication mechanism failed to
+        validate.
+        */
+        CipherError error = 3;
+    }
+}
+
+message CipherBoxDesc {
+    bytes stream_id = 1;
+}
+
+message CipherBox {
+    CipherBoxDesc desc = 1;
+
+    bytes msg = 2;
+}
