@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+import "taprootassets.proto";
+
+package mintrpc;
+
+option go_package = "github.com/lightninglabs/taproot-assets/taprpc/mintrpc";
+
+service Mint {
+    /* tapcli: `assets mint`
+    MintAsset will attempt to mint the set of assets (async by default to
+    ensure proper batching) specified in the request.
+    */
+    rpc MintAsset (MintAssetRequest) returns (MintAssetResponse);
+
+    /* tapcli: `assets mint finalize`
+    FinalizeBatch will attempt to finalize the current pending batch.
+    */
+    rpc FinalizeBatch (FinalizeBatchRequest) returns (FinalizeBatchResponse);
+
+    /* tapcli: `assets mint cancel`
+    CancelBatch will attempt to cancel the current pending batch.
+    */
+    rpc CancelBatch (CancelBatchRequest) returns (CancelBatchResponse);
+
+    /* tapcli: `assets mint batches`
+    ListBatches lists the set of batches submitted to the daemon, including
+    pending and cancelled batches.
+    */
+    rpc ListBatches (ListBatchRequest) returns (ListBatchResponse);
+}
+
+message MintAsset {
+    // The type of the asset to be created.
+    taprpc.AssetType asset_type = 1;
+
+    // The name, or "tag" of the asset. This will affect the final asset ID.
+    string name = 2;
+
+    /*
+    A blob that resents metadata related to the asset. This will affect the
+    final asset ID.
+    */
+    taprpc.AssetMeta asset_meta = 3;
+
+    /*
+    The total amount of units of the new asset that should be created. If the
+    AssetType is Collectible, then this field cannot be set.
+    */
+    uint64 amount = 4;
+
+    /*
+    The specific group key this asset should be minted with.
+    */
+    bytes group_key = 5;
+
+    /*
+    The name of the asset in the batch that will anchor a new asset group.
+    This asset will be minted with the same group key as the anchor asset.
+    */
+    string group_anchor = 6;
+}
+
+message MintAssetRequest {
+    /*
+    The asset to be minted.
+    */
+    MintAsset asset = 1;
+
+    /*
+    If true, then the asset will be created with a group key, which allows for
+    future asset issuance.
+    */
+    bool enable_emission = 2;
+}
+
+message MintAssetResponse {
+    /*
+    A public key serialized in compressed format that can be used to uniquely
+    identify a pending minting batch. Responses that share the same key will be
+    batched into the same minting transaction.
+    */
+    bytes batch_key = 1;
+}
+
+message MintingBatch {
+    // The internal public key of the batch.
+    bytes batch_key = 1;
+
+    // The assets that are part of the batch.
+    repeated MintAsset assets = 2;
+
+    // The state of the batch.
+    BatchState state = 3;
+}
+
+enum BatchState {
+    BATCH_STATE_UNKNOWN = 0;
+    BATCH_STATE_PEDNING = 1;
+    BATCH_STATE_FROZEN = 2;
+    BATCH_STATE_COMMITTED = 3;
+    BATCH_STATE_BROADCAST = 4;
+    BATCH_STATE_CONFIRMED = 5;
+    BATCH_STATE_FINALIZED = 6;
+    BATCH_STATE_SEEDLING_CANCELLED = 7;
+    BATCH_STATE_SPROUT_CANCELLED = 8;
+}
+
+message FinalizeBatchRequest {
+}
+
+message FinalizeBatchResponse {
+    // The internal public key of the batch.
+    bytes batch_key = 1;
+}
+
+message CancelBatchRequest {
+}
+
+message CancelBatchResponse {
+    // The internal public key of the batch.
+    bytes batch_key = 1;
+}
+
+message ListBatchRequest {
+    // The optional batch key of the batch to list.
+    oneof filter {
+        // The optional batch key of the batch to list, specified as raw bytes
+        // (gRPC only).
+        bytes batch_key = 1;
+
+        // The optional batch key of the batch to list, specified as a hex
+        // encoded string (use this for REST).
+        string batch_key_str = 2;
+    }
+}
+
+message ListBatchResponse {
+    repeated MintingBatch batches = 1;
+}

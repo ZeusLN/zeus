@@ -1,0 +1,1501 @@
+syntax = "proto3";
+
+import "auctioneerrpc/auctioneer.proto";
+
+package poolrpc;
+
+option go_package = "github.com/lightninglabs/pool/poolrpc";
+
+service Trader {
+    /* pool: `getinfo`
+    GetInfo returns general information about the state of the Pool trader
+    daemon.
+    */
+    rpc GetInfo (GetInfoRequest) returns (GetInfoResponse);
+
+    /* pool: `stop`
+    Stop gracefully shuts down the Pool trader daemon.
+    */
+    rpc StopDaemon (StopDaemonRequest) returns (StopDaemonResponse);
+
+    /*
+    QuoteAccount gets a fee quote to fund an account of the given size with the
+    given confirmation target. If the connected lnd wallet doesn't have enough
+    balance to fund an account of the requested size, an error is returned.
+    */
+    rpc QuoteAccount (QuoteAccountRequest) returns (QuoteAccountResponse);
+
+    /* pool: `accounts new`
+    InitAccount creates a new account with the requested size and expiration,
+    funding it from the wallet of the connected lnd node.
+    */
+    rpc InitAccount (InitAccountRequest) returns (Account);
+
+    /* pool: `accounts list`
+    ListAccounts returns a list of all accounts known to the trader daemon and
+    their current state.
+    */
+    rpc ListAccounts (ListAccountsRequest) returns (ListAccountsResponse);
+
+    /* pool: `accounts close`
+    CloseAccount closes an account and returns the funds locked in that account
+    to the connected lnd node's wallet.
+    */
+    rpc CloseAccount (CloseAccountRequest) returns (CloseAccountResponse);
+
+    /* pool: `accounts withdraw`
+    WithdrawAccount splits off parts of the account balance into the specified
+    outputs while recreating the account with a reduced balance.
+    */
+    rpc WithdrawAccount (WithdrawAccountRequest)
+        returns (WithdrawAccountResponse);
+
+    /* pool: `accounts deposit`
+    DepositAccount adds more funds from the connected lnd node's wallet to an
+    account.
+    */
+    rpc DepositAccount (DepositAccountRequest) returns (DepositAccountResponse);
+
+    /* pool: `accounts renew`
+    RenewAccount renews the expiration of an account.
+    */
+    rpc RenewAccount (RenewAccountRequest) returns (RenewAccountResponse);
+
+    /* pool: `accounts bumpfee`
+    BumpAccountFee attempts to bump the fee of an account's transaction through
+    child-pays-for-parent (CPFP). Since the CPFP is performed through the
+    backing lnd node, the account transaction must contain an output under its
+    control for a successful bump. If a CPFP has already been performed for an
+    account, and this RPC is invoked again, then a replacing transaction (RBF)
+    of the child will be broadcast.
+    */
+    rpc BumpAccountFee (BumpAccountFeeRequest) returns (BumpAccountFeeResponse);
+
+    /* pool: `accounts recover`
+    RecoverAccounts queries the auction server for this trader daemon's accounts
+    in case we lost our local account database.
+    */
+    rpc RecoverAccounts (RecoverAccountsRequest)
+        returns (RecoverAccountsResponse);
+
+    /* pool: `accounts listfees`
+    AccountModificationFees returns a map from account key to an ordered list of
+    account action modification fees.
+    */
+    rpc AccountModificationFees (AccountModificationFeesRequest)
+        returns (AccountModificationFeesResponse);
+
+    /* pool: `orders submit`
+    SubmitOrder creates a new ask or bid order and submits for the given account
+    and submits it to the auction server for matching.
+    */
+    rpc SubmitOrder (SubmitOrderRequest) returns (SubmitOrderResponse);
+
+    /* pool: `orders list`
+    ListOrders returns a list of all active and archived orders that are
+    currently known to the trader daemon.
+    */
+    rpc ListOrders (ListOrdersRequest) returns (ListOrdersResponse);
+
+    /* pool: `orders cancel`
+    CancelOrder cancels an active order with the auction server to remove it
+    from future matching.
+    */
+    rpc CancelOrder (CancelOrderRequest) returns (CancelOrderResponse);
+
+    /*
+    QuoteOrder calculates the premium, execution fees and max batch fee rate for
+    an order based on the given order parameters.
+    */
+    rpc QuoteOrder (QuoteOrderRequest) returns (QuoteOrderResponse);
+
+    /* pool: `auction fee`
+    AuctionFee returns the current auction order execution fee specified by the
+    auction server.
+    */
+    rpc AuctionFee (AuctionFeeRequest) returns (AuctionFeeResponse);
+
+    /* pool: `auction leasedurations`
+    LeaseDurations returns the current set of valid lease duration in the
+    market as is, and also information w.r.t if the market is currently active.
+    */
+    rpc LeaseDurations (LeaseDurationRequest) returns (LeaseDurationResponse);
+
+    /* pool: `auction nextbatchinfo`
+    NextBatchInfo returns information about the next batch the auctioneer will
+    perform.
+    */
+    rpc NextBatchInfo (NextBatchInfoRequest) returns (NextBatchInfoResponse);
+
+    /* pool: `auction snapshot`
+    BatchSnapshot returns the snapshot of a past batch identified by its ID.
+    If no ID is provided, the snapshot of the last finalized batch is returned.
+    Deprecated, use BatchSnapshots instead.
+    */
+    rpc BatchSnapshot (BatchSnapshotRequest) returns (BatchSnapshotResponse);
+
+    /* pool: `listauth`
+    GetLsatTokens returns all LSAT tokens the daemon ever paid for.
+    */
+    rpc GetLsatTokens (TokensRequest) returns (TokensResponse);
+
+    /* pool: `auction leases`
+    Leases returns the list of channels that were either purchased or sold by
+    the trader within the auction.
+    */
+    rpc Leases (LeasesRequest) returns (LeasesResponse);
+
+    /* pool: `auction ratings`
+    Returns the Node Tier information for this target Lightning node, and other
+    related ranking information.
+    */
+    rpc NodeRatings (NodeRatingRequest) returns (NodeRatingResponse);
+
+    /* pool: `auction snapshot`
+    BatchSnapshots returns a list of batch snapshots starting at the start batch
+    ID and going back through the history of batches, returning at most the
+    number of specified batches. A maximum of 100 snapshots can be queried in
+    one call. If no start batch ID is provided, the most recent finalized batch
+    is used as the starting point to go back from.
+    */
+    rpc BatchSnapshots (BatchSnapshotsRequest) returns (BatchSnapshotsResponse);
+
+    /* pool: `sidecar offer`
+    OfferSidecar is step 1/4 of the sidecar negotiation between the provider
+    (the trader submitting the bid order) and the recipient (the trader
+    receiving the sidecar channel).
+    This step must be run by the provider. The result is a sidecar ticket with
+    an offer to lease a sidecar channel for the recipient. The offer will be
+    signed with the provider's lnd node public key. The ticket returned by this
+    call will have the state "offered".
+    */
+    rpc OfferSidecar (OfferSidecarRequest) returns (SidecarTicket);
+
+    /* pool: `sidecar register`
+    RegisterSidecarRequest is step 2/4 of the sidecar negotiation between the
+    provider (the trader submitting the bid order) and the recipient (the trader
+    receiving the sidecar channel).
+    This step must be run by the recipient. The result is a sidecar ticket with
+    the recipient's node information and channel funding multisig pubkey filled
+    in. The ticket returned by this call will have the state "registered".
+    */
+    rpc RegisterSidecar (RegisterSidecarRequest) returns (SidecarTicket);
+
+    /* pool: `sidecar expectchannel`
+    ExpectSidecarChannel is step 4/4 of the sidecar negotiation between the
+    provider (the trader submitting the bid order) and the recipient (the trader
+    receiving the sidecar channel).
+    This step must be run by the recipient once the provider has submitted the
+    bid order for the sidecar channel. From this point onwards the Pool trader
+    daemon of both the provider as well as the recipient need to be online to
+    receive and react to match making events from the server.
+    */
+    rpc ExpectSidecarChannel (ExpectSidecarChannelRequest)
+        returns (ExpectSidecarChannelResponse);
+
+    /* pool: `sidecar printticket`
+    Decodes the base58 encoded sidecar ticket into its individual data fields
+    for a more human-readable representation.
+    */
+    rpc DecodeSidecarTicket (SidecarTicket) returns (DecodedSidecarTicket);
+
+    /* pool: `sidecar list`
+    ListSidecars lists all sidecar tickets currently in the local database. This
+    includes tickets offered by our node as well as tickets that our node is the
+    recipient of. Optionally a ticket ID can be provided to filter the tickets.
+    */
+    rpc ListSidecars (ListSidecarsRequest) returns (ListSidecarsResponse);
+
+    /* pool: `sidecar cancel`
+    CancelSidecar cancels the execution of a specific sidecar ticket. Depending
+    on the state of the sidecar ticket its associated bid order might be
+    canceled as well (if this ticket was offered by our node).
+    */
+    rpc CancelSidecar (CancelSidecarRequest) returns (CancelSidecarResponse);
+}
+
+enum AccountVersion {
+    /*
+    Let the version of lnd decide. If a version of lnd >= 0.15.0-beta is
+    detected then a Taproot account is created. For earlier versions a legacy
+    account is created. If a version of lnd >= 0.16.0-beta is detected, then a
+    Taproot v2 account is created.
+    */
+    ACCOUNT_VERSION_LND_DEPENDENT = 0;
+
+    /*
+    A legacy SegWit v0 p2wsh account with a single script.
+    */
+    ACCOUNT_VERSION_LEGACY = 1;
+
+    /*
+    A Taproot enabled account with MuSig2 combined internal key and the expiry
+    script as a single tap script leaf.
+    */
+    ACCOUNT_VERSION_TAPROOT = 2;
+
+    /*
+    A Taproot enabled account with MuSig2 combined internal key and the expiry
+    script as a single tap script leaf. This version uses the MuSig2 v1.0.0-rc2
+    protocol for creating the combined internal key. This can only be selected
+    when the connected lnd version is >= 0.16.0-beta.
+    */
+    ACCOUNT_VERSION_TAPROOT_V2 = 3;
+}
+
+message InitAccountRequest {
+    uint64 account_value = 1;
+
+    oneof account_expiry {
+        uint32 absolute_height = 2;
+        uint32 relative_height = 3;
+    }
+
+    oneof fees {
+        /*
+        The target number of blocks that the transaction should be confirmed in.
+        */
+        uint32 conf_target = 4;
+
+        /*
+        The fee rate, in satoshis per kw, to use for the initial funding
+        transaction.
+        */
+        uint64 fee_rate_sat_per_kw = 6;
+    }
+
+    /*
+    An optional identification string that will be appended to the user agent
+    string sent to the server to give information about the usage of pool. This
+    initiator part is meant for user interfaces to add their name to give the
+    full picture of the binary used (poold, LiT) and the method used for opening
+    the account (pool CLI, LiT UI, other 3rd party UI).
+    */
+    string initiator = 5;
+
+    /*
+    The version of account to create.
+    */
+    AccountVersion version = 7;
+}
+
+message QuoteAccountRequest {
+    uint64 account_value = 1;
+
+    oneof fees {
+        /*
+        The target number of blocks that the transaction should be confirmed in.
+        */
+        uint32 conf_target = 2;
+
+        // TODO(guggero): Add sat_per_vbyte as soon as lnd has a parameter for
+        // that in rpcServer.EstimateFee.
+    }
+}
+
+message QuoteAccountResponse {
+    uint64 miner_fee_rate_sat_per_kw = 1;
+
+    uint64 miner_fee_total = 2;
+}
+
+message ListAccountsRequest {
+    /*
+    Only list accounts that are still active.
+    */
+    bool active_only = 1;
+}
+message ListAccountsResponse {
+    repeated Account accounts = 1;
+}
+
+message Output {
+    // The value, in satoshis, of the output.
+    uint64 value_sat = 1;
+
+    // The address corresponding to the output.
+    string address = 2;
+}
+
+message OutputWithFee {
+    // The address corresponding to the output.
+    string address = 1;
+
+    oneof fees {
+        /*
+        The target number of blocks that the transaction should be confirmed in.
+        */
+        uint32 conf_target = 2;
+
+        /*
+        The fee rate, in satoshis per kw, to use for the withdrawal transaction.
+        */
+        uint64 fee_rate_sat_per_kw = 3;
+    }
+}
+
+message OutputsWithImplicitFee {
+    repeated Output outputs = 1;
+}
+
+message CloseAccountRequest {
+    // The trader key associated with the account that will be closed.
+    bytes trader_key = 1;
+
+    oneof funds_destination {
+        /*
+        A single output/address to which the remaining funds of the account will
+        be sent to at the specified fee. If an address is not specified, then
+        the funds are sent to an address the backing lnd node controls.
+        */
+        OutputWithFee output_with_fee = 2;
+
+        /*
+        The outputs to which the remaining funds of the account will be sent to.
+        This should only be used when wanting to create two or more outputs,
+        otherwise OutputWithFee should be used instead. The fee of the account's
+        closing transaction is implicitly defined by the combined value of all
+        outputs.
+        */
+        OutputsWithImplicitFee outputs = 3;
+    }
+}
+message CloseAccountResponse {
+    // The hash of the closing transaction.
+    bytes close_txid = 1;
+}
+
+message WithdrawAccountRequest {
+    /*
+    The trader key associated with the account that funds will be withdrawed
+    from.
+    */
+    bytes trader_key = 1;
+
+    // The outputs we'll withdraw funds from the account into.
+    repeated Output outputs = 2;
+
+    /*
+    The fee rate, in satoshis per kw, to use for the withdrawal transaction.
+    */
+    uint64 fee_rate_sat_per_kw = 3;
+
+    oneof account_expiry {
+        // The new absolute expiration height of the account.
+        uint32 absolute_expiry = 4;
+
+        // The new relative expiration height of the account.
+        uint32 relative_expiry = 5;
+    }
+
+    /*
+    The new version of the account. If this is set and is a valid version
+    greater than the account's current version, then the account is upgraded to
+    that version during the withdrawal.
+    */
+    AccountVersion new_version = 6;
+}
+message WithdrawAccountResponse {
+    // The state of the account after processing the withdrawal.
+    Account account = 1;
+
+    // The transaction used to withdraw funds from the account.
+    bytes withdraw_txid = 2;
+}
+
+message DepositAccountRequest {
+    /*
+    The trader key associated with the account that funds will be deposited
+    into.
+    */
+    bytes trader_key = 1;
+
+    // The amount in satoshis to deposit into the account.
+    uint64 amount_sat = 2;
+
+    /*
+    The fee rate, in satoshis per kw, to use for the deposit transaction.
+    */
+    uint64 fee_rate_sat_per_kw = 3;
+
+    oneof account_expiry {
+        // The new absolute expiration height of the account.
+        uint32 absolute_expiry = 4;
+
+        // The new relative expiration height of the account.
+        uint32 relative_expiry = 5;
+    }
+
+    /*
+    The new version of the account. If this is set and is a valid version
+    greater than the account's current version, then the account is upgraded to
+    that version during the deposit.
+    */
+    AccountVersion new_version = 6;
+}
+message DepositAccountResponse {
+    // The state of the account after processing the deposit.
+    Account account = 1;
+
+    // The transaction used to deposit funds into the account.
+    bytes deposit_txid = 2;
+}
+
+message RenewAccountRequest {
+    // The key associated with the account to renew.
+    bytes account_key = 1;
+
+    oneof account_expiry {
+        // The new absolute expiration height of the account.
+        uint32 absolute_expiry = 2;
+
+        // The new relative expiration height of the account.
+        uint32 relative_expiry = 3;
+    }
+
+    // The fee rate, in satoshis per kw, to use for the renewal transaction.
+    uint64 fee_rate_sat_per_kw = 4;
+
+    /*
+    The new version of the account. If this is set and is a valid version
+    greater than the account's current version, then the account is upgraded to
+    that version during the renewal.
+    */
+    AccountVersion new_version = 5;
+}
+message RenewAccountResponse {
+    // The state of the account after processing the renewal.
+    Account account = 1;
+
+    // The transaction used to renew the expiration of the account.
+    bytes renewal_txid = 2;
+}
+
+message BumpAccountFeeRequest {
+    /*
+    The trader key associated with the account that will have its fee bumped.
+    */
+    bytes trader_key = 1;
+
+    /*
+    The new fee rate, in satoshis per kw, to use for the child of the account
+    transaction.
+    */
+    uint64 fee_rate_sat_per_kw = 2;
+}
+message BumpAccountFeeResponse {
+}
+
+enum AccountState {
+    // The state of an account when it is pending its confirmation on-chain.
+    PENDING_OPEN = 0;
+
+    /*
+    The state of an account when it has undergone an update on-chain either as
+    part of a matched order or a trader modification and it is pending its
+    confirmation on-chain.
+    */
+    PENDING_UPDATE = 1;
+
+    // The state of an account once it has confirmed on-chain.
+    OPEN = 2;
+
+    /*
+    The state of an account once its expiration has been reached and its closing
+    transaction has confirmed.
+    */
+    EXPIRED = 3;
+
+    /*
+    The state of an account when we're waiting for the closing transaction of
+    an account to confirm that required cooperation with the auctioneer.
+    */
+    PENDING_CLOSED = 4;
+
+    // The state of an account once its closing transaction has confirmed.
+    CLOSED = 5;
+
+    /*
+    The state of an account that indicates that the account was attempted to be
+    recovered but failed because the opening transaction wasn't found by lnd.
+    This could be because it was never published or it never confirmed. Then the
+    funds are SAFU and the account can be considered to never have been opened
+    in the first place.
+    */
+    RECOVERY_FAILED = 6;
+
+    /*
+    The account has recently participated in a batch and is not yet confirmed.
+    */
+    PENDING_BATCH = 7;
+}
+
+message Account {
+    /*
+    The identifying component of an account. This is the key used for the trader
+    in the 2-of-2 multi-sig construction of an account with an auctioneer.
+    */
+    bytes trader_key = 1;
+
+    /*
+    The current outpoint associated with the account. This will change every
+    time the account has been updated.
+    */
+    OutPoint outpoint = 2;
+
+    // The current total amount of satoshis in the account.
+    uint64 value = 3;
+
+    /*
+    The amount of satoshis in the account that is available, meaning not
+    allocated to any oustanding orders.
+    */
+    uint64 available_balance = 4;
+
+    // The height at which the account will expire.
+    uint32 expiration_height = 5;
+
+    // The current state of the account.
+    AccountState state = 6;
+
+    // The hash of the account's latest transaction.
+    bytes latest_txid = 7;
+
+    // The current version of the account.
+    AccountVersion version = 8;
+}
+
+message SubmitOrderRequest {
+    oneof details {
+        Ask ask = 1;
+        Bid bid = 2;
+    }
+
+    /*
+    An optional identification string that will be appended to the user agent
+    string sent to the server to give information about the usage of pool. This
+    initiator part is meant for user interfaces to add their name to give the
+    full picture of the binary used (poold, LiT) and the method used for
+    submitting the order (pool CLI, LiT UI, other 3rd party UI).
+    */
+    string initiator = 3;
+}
+message SubmitOrderResponse {
+    oneof details {
+        /*
+        Order failed with the given reason.
+        */
+        InvalidOrder invalid_order = 1;
+
+        /*
+        The order nonce of the accepted order.
+        */
+        bytes accepted_order_nonce = 2;
+    }
+
+    /*
+    In case a bid order was submitted for a sidecar ticket, that ticket is
+    updated with the new state and bid order nonce.
+    */
+    string updated_sidecar_ticket = 3;
+}
+
+message ListOrdersRequest {
+    /*
+    Can be set to true to list the orders including all events, which can be
+    very verbose.
+    */
+    bool verbose = 1;
+
+    /*
+    Only list orders that are still active.
+    */
+    bool active_only = 2;
+}
+message ListOrdersResponse {
+    repeated Ask asks = 1;
+    repeated Bid bids = 2;
+}
+
+message CancelOrderRequest {
+    bytes order_nonce = 1;
+}
+message CancelOrderResponse {
+}
+
+message Order {
+    /*
+    The trader's account key of the account that is used for the order.
+    */
+    bytes trader_key = 1;
+
+    /*
+    Fixed order rate in parts per billion.
+    */
+    uint32 rate_fixed = 2;
+
+    /*
+    Order amount in satoshis.
+    */
+    uint64 amt = 3;
+
+    /*
+    Maximum fee rate the trader is willing to pay for the batch transaction,
+    expressed in satoshis per 1000 weight units (sat/KW).
+    */
+    uint64 max_batch_fee_rate_sat_per_kw = 4;
+
+    /*
+    Order nonce, acts as unique order identifier.
+    */
+    bytes order_nonce = 5;
+
+    /*
+    The state the order currently is in.
+    */
+    OrderState state = 6;
+
+    /*
+    The number of order units the amount corresponds to.
+    */
+    uint32 units = 7;
+
+    /*
+    The number of currently unfilled units of this order. This will be equal to
+    the total amount of units until the order has reached the state PARTIAL_FILL
+    or EXECUTED.
+    */
+    uint32 units_unfulfilled = 8;
+
+    // The value reserved from the account by this order to ensure the account
+    // can pay execution and chain fees in case it gets matched.
+    uint64 reserved_value_sat = 9;
+
+    // The unix timestamp in nanoseconds the order was first created/submitted.
+    uint64 creation_timestamp_ns = 10;
+
+    /*
+    A list of events that were emitted for this order. This field is only set
+    when the verbose flag is set to true in the request.
+    */
+    repeated OrderEvent events = 11;
+
+    // The minimum number of order units that must be matched per order pair.
+    uint32 min_units_match = 12;
+
+    // The channel type to use for the resulting matched channels.
+    OrderChannelType channel_type = 13;
+
+    // List of nodes that will be allowed to match with our order. Incompatible
+    // with the `not_allowed_node_ids` field.
+    repeated bytes allowed_node_ids = 14;
+
+    // List of nodes that won't be allowed to match with our order. Incompatible
+    // with the `allowed_node_ids` field.
+    repeated bytes not_allowed_node_ids = 15;
+
+    // Auction type where this order must be considered during the matching.
+    AuctionType auction_type = 16;
+
+    // Flag used to signal that this order can be shared in public market
+    // places.
+    bool is_public = 17;
+}
+
+message Bid {
+    /*
+    The common fields shared between both ask and bid order types.
+    */
+    Order details = 1;
+
+    /*
+    Required number of blocks that a channel opened as a result of this bid
+    should be kept open.
+    */
+    uint32 lease_duration_blocks = 2;
+
+    /*
+    The version of the order format that is used. Will be increased once new
+    features are added.
+    */
+    uint32 version = 3;
+
+    /*
+    The minimum node tier this order should be matched with. Only asks backed by
+    a node this tier or higher will be eligible for matching with this bid.
+    */
+    NodeTier min_node_tier = 4;
+
+    /*
+    Give the incoming channel that results from this bid being matched an
+    initial outbound balance by adding additional funds from the taker's account
+    into the channel. As a simplification for the execution protocol and the
+    channel reserve calculations the min_chan_amt must be set to the full order
+    amount. For the inbound liquidity market the self_chan_balance can be at
+    most the same as the order amount.
+    */
+    uint64 self_chan_balance = 5;
+
+    /*
+    If this bid order is meant to lease a channel for another node (which is
+    dubbed a "sidecar channel") then this ticket contains all information
+    required for setting up that sidecar channel. The ticket is expected to be
+    the base58 encoded ticket, including the prefix and the checksum.
+    */
+    string sidecar_ticket = 6;
+
+    /*
+    Signals if this bid is interested in an announced or unannounced channel.
+    */
+    bool unannounced_channel = 7;
+
+    /*
+    Signals if this bid is interested in a zero conf channel or not.
+    */
+    bool zero_conf_channel = 8;
+}
+
+message Ask {
+    /*
+    The common fields shared between both ask and bid order types.
+    */
+    Order details = 1;
+
+    /*
+    The number of blocks the liquidity provider is willing to provide the
+    channel funds for.
+    */
+    uint32 lease_duration_blocks = 2;
+
+    /*
+    The version of the order format that is used. Will be increased once new
+    features are added.
+    */
+    uint32 version = 3;
+
+    /*
+    The constraints for selling the liquidity based on channel discoverability.
+    */
+    ChannelAnnouncementConstraints announcement_constraints = 4;
+
+    /*
+    The constraints for selling the liquidity based on the number of
+    blocks before considering the channel confirmed.
+    */
+    ChannelConfirmationConstraints confirmation_constraints = 5;
+}
+
+message QuoteOrderRequest {
+    /*
+    Order amount in satoshis.
+    */
+    uint64 amt = 1;
+
+    /*
+    Fixed order rate in parts per billion.
+    */
+    uint32 rate_fixed = 2;
+
+    /*
+    Required number of blocks that a channel opened as a result of this bid
+    should be kept open.
+    */
+    uint32 lease_duration_blocks = 3;
+
+    /*
+    Maximum fee rate the trader is willing to pay for the batch transaction,
+    expressed in satoshis per 1000 weight units (sat/KW).
+    */
+    uint64 max_batch_fee_rate_sat_per_kw = 4;
+
+    // The minimum number of order units that must be matched per order pair.
+    uint32 min_units_match = 5;
+}
+message QuoteOrderResponse {
+    /*
+    The total order premium in satoshis for filling the entire order. This
+    represents the interest amount paid to the maker by the taker excluding any
+    execution or chain fees.
+    */
+    uint64 total_premium_sat = 1;
+
+    /*
+    The fixed order rate expressed as a fraction instead of parts per billion.
+    */
+    double rate_per_block = 2;
+
+    /*
+    The fixed order rate expressed as a percentage instead of parts per billion.
+    */
+    double rate_percent = 3;
+
+    /*
+    The total execution fee in satoshis that needs to be paid to the auctioneer
+    for executing the entire order.
+    */
+    uint64 total_execution_fee_sat = 4;
+
+    /*
+    The worst case chain fees that need to be paid if fee rates spike up to the
+    max_batch_fee_rate_sat_per_kw value specified in the request. This value is
+    highly dependent on the min_units_match parameter as well since the
+    calculation assumes chain fees for the chain footprint of opening
+    amt/min_units_match channels (hence worst case calculation).
+    */
+    uint64 worst_case_chain_fee_sat = 5;
+}
+
+message OrderEvent {
+    /*
+    The unix timestamp in nanoseconds the event was emitted at. This is the
+    primary key of the event and is unique across the database.
+    */
+    int64 timestamp_ns = 1;
+
+    // The human readable representation of the event.
+    string event_str = 2;
+
+    oneof event {
+        // The order was updated in the database.
+        UpdatedEvent state_change = 3;
+
+        // The order was involved in a match making attempt.
+        MatchEvent matched = 4;
+    }
+}
+
+message UpdatedEvent {
+    /*
+    The state of the order previous to the change. This is what the state
+    changed from.
+    */
+    OrderState previous_state = 1;
+
+    /*
+    The new state of the order after the change. This is what the state changed
+    to.
+    */
+    OrderState new_state = 2;
+
+    // The units that were filled at the time of the event.
+    uint32 units_filled = 3;
+}
+
+message MatchEvent {
+    // The state of the match making process the order went through.
+    MatchState match_state = 1;
+
+    // The number of units that would be (or were) filled with this match.
+    uint32 units_filled = 2;
+
+    // The nonce of the order we were matched to.
+    bytes matched_order = 3;
+
+    /*
+    The reason why the trader daemon rejected the order. Is only set if
+    match_state is set to REJECTED.
+    */
+    MatchRejectReason reject_reason = 4;
+}
+
+enum MatchState {
+    /*
+    The OrderMatchPrepare message from the auctioneer was received initially.
+    */
+    PREPARE = 0;
+
+    /*
+    The OrderMatchPrepare message from the auctioneer was processed successfully
+    and the batch was accepted.
+    */
+    ACCEPTED = 1;
+
+    /*
+    The order was rejected by the trader daemon, either as an answer to a
+    OrderMatchSignBegin or OrderMatchFinalize message from the auctioneer.
+    */
+    REJECTED = 2;
+
+    /*
+    The OrderMatchSignBegin message from the auctioneer was processed
+    successfully.
+    */
+    SIGNED = 3;
+
+    /*
+    The OrderMatchFinalize message from the auctioneer was processed
+    successfully.
+    */
+    FINALIZED = 4;
+}
+
+enum MatchRejectReason {
+    // No reject occurred, this is the default value.
+    NONE = 0;
+
+    /*
+    The client didn't come up with the same result as the server and is
+    rejecting the batch because of that.
+    */
+    SERVER_MISBEHAVIOR = 1;
+
+    /*
+    The client doesn't support the current batch verification version the
+    server is using.
+    */
+    BATCH_VERSION_MISMATCH = 2;
+
+    /*
+    The client rejects some of the orders, not the full batch. This reason is
+    set on matches for orders that were in the same batch as partial reject ones
+    but were not themselves rejected.
+    */
+    PARTIAL_REJECT_COLLATERAL = 3;
+
+    /*
+    The trader's client has a preference to only match orders with peers it
+    doesn't already have channels with. The order that is rejected with this
+    reason type comes from a peer that the trader already has channels with.
+    */
+    PARTIAL_REJECT_DUPLICATE_PEER = 4;
+
+    /*
+    The trader's client couldn't connect to the remote node of the matched
+    order or the channel funding could not be initialized for another
+    reason. This could also be the rejecting node's fault if their
+    connection is not stable. Using this code can have a negative impact on
+    the reputation score of both nodes, depending on the number of errors
+    recorded.
+    */
+    PARTIAL_REJECT_CHANNEL_FUNDING_FAILED = 5;
+}
+
+message RecoverAccountsRequest {
+    /*
+    Recover the latest account states without interacting with the
+    Lightning Labs server.
+    */
+    bool full_client = 1;
+
+    /*
+    Number of accounts that we are trying to recover. Used during the
+    full_client recovery process.
+    */
+    uint32 account_target = 2;
+
+    /*
+    Auctioneer's public key. Used during the full_client recovery process.
+    This field should be left empty for testnet/mainnet, its value is already
+    hardcoded in our codebase.
+    */
+    string auctioneer_key = 3;
+
+    /*
+    Initial block height. We won't try to look for any account with an expiry
+    height smaller than this value. Used during the full_client recovery
+    process.
+    */
+    uint32 height_hint = 4;
+
+    // bitcoind/btcd instance address. Used during the full_client recovery
+    // process.
+    string bitcoin_host = 5;
+
+    // bitcoind/btcd user name. Used during the full_client recovery
+    // process.
+    string bitcoin_user = 6;
+
+    // bitcoind/btcd password. Used during the full_client recovery
+    // process.
+    string bitcoin_password = 7;
+
+    // Use HTTP POST mode? bitcoind only supports this mode. Used during the
+    // full_client recovery process.
+    bool bitcoin_httppostmode = 8;
+
+    // Use TLS to connect? bitcoind only supports non-TLS connections. Used
+    // during the full_client recovery process.
+    bool bitcoin_usetls = 9;
+
+    // Path to btcd's TLS certificate, if TLS is enabled. Used  during the
+    // full_client recovery process.
+    string bitcoin_tlspath = 10;
+}
+
+message RecoverAccountsResponse {
+    // The number of accounts that were recovered.
+    uint32 num_recovered_accounts = 1;
+}
+
+message AccountModificationFeesRequest {
+}
+
+message AccountModificationFee {
+    // Modification action type.
+    string action = 1;
+
+    // Transaction ID.
+    string txid = 2;
+
+    // Action transaction block height.
+    int32 block_height = 3;
+
+    // Action transaction timestamp.
+    int64 timestamp = 4;
+
+    // Action transaction output amount.
+    int64 output_amount = 5;
+
+    // Action transaction fee.
+    oneof fee {
+        // A flag which is true if fee value has not been set, and is otherwise
+        // false.
+        bool fee_null = 6;
+
+        // Action transaction fee value.
+        int64 fee_value = 7;
+    }
+}
+
+message ListOfAccountModificationFees {
+    repeated AccountModificationFee modification_fees = 1;
+}
+
+message AccountModificationFeesResponse {
+    // A map from account key to an ordered list of account modification fees.
+    map<string, ListOfAccountModificationFees> accounts = 1;
+}
+
+message AuctionFeeRequest {
+}
+
+message AuctionFeeResponse {
+    /*
+    The execution fee charged per matched order.
+    */
+    ExecutionFee execution_fee = 1;
+}
+
+message Lease {
+    // The outpoint of the channel created.
+    OutPoint channel_point = 1;
+
+    // The amount, in satoshis, of the channel created.
+    uint64 channel_amt_sat = 2;
+
+    // The intended duration, in blocks, of the channel created.
+    uint32 channel_duration_blocks = 3;
+
+    // The absolute height that this channel lease expires.
+    uint32 channel_lease_expiry = 4;
+
+    /*
+    The premium, in satoshis, either paid or received for the offered liquidity.
+    */
+    uint64 premium_sat = 5;
+
+    /*
+    The execution fee, in satoshis, charged by the auctioneer for the channel
+    created.
+    */
+    uint64 execution_fee_sat = 6;
+
+    /*
+    The fee, in satoshis, charged by the auctioneer for the batch execution
+    transaction that created this lease.
+    */
+    uint64 chain_fee_sat = 7;
+
+    /*
+    The actual fixed rate expressed in parts per billionth this lease was
+    bought/sold at.
+    */
+    uint64 clearing_rate_price = 8;
+
+    /*
+    The actual fixed rate of the bid/ask, this should always be 'better' than
+    the clearing_rate_price.
+    */
+    uint64 order_fixed_rate = 9;
+
+    // The order executed that resulted in the channel created.
+    bytes order_nonce = 10;
+
+    /*
+    The unique identifier for the order that was matched with that resulted
+    in the channel created.
+    */
+    bytes matched_order_nonce = 16;
+
+    // Whether this channel was purchased from another trader or not.
+    bool purchased = 11;
+
+    // The pubkey of the node that this channel was bought/sold from.
+    bytes channel_remote_node_key = 12;
+
+    // The tier of the node that this channel was bought/sold from.
+    NodeTier channel_node_tier = 13;
+
+    // The self channel balance that was pushed to the recipient.
+    uint64 self_chan_balance = 14;
+
+    // Whether the channel was leased as a sidecar channel (bid orders only).
+    bool sidecar_channel = 15;
+}
+
+message LeasesRequest {
+    /*
+    An optional list of batches to retrieve the leases of. If empty, leases
+    throughout all batches are returned.
+    */
+    repeated bytes batch_ids = 1;
+
+    /*
+    An optional list of accounts to retrieve the leases of. If empty, leases
+    for all accounts are returned.
+    */
+    repeated bytes accounts = 2;
+}
+
+message LeasesResponse {
+    // The relevant list of leases purchased or sold within the auction.
+    repeated Lease leases = 1;
+
+    // The total amount of satoshis earned from the leases returned.
+    uint64 total_amt_earned_sat = 2;
+
+    // The total amount of satoshis paid for the leases returned.
+    uint64 total_amt_paid_sat = 3;
+}
+
+message TokensRequest {
+}
+
+message TokensResponse {
+    /**
+    List of all tokens the daemon knows of, including old/expired tokens.
+    */
+    repeated LsatToken tokens = 1;
+}
+
+message LsatToken {
+    /**
+    The base macaroon that was baked by the auth server.
+    */
+    bytes base_macaroon = 1;
+
+    /**
+    The payment hash of the payment that was paid to obtain the token.
+    */
+    bytes payment_hash = 2;
+
+    /**
+    The preimage of the payment hash, knowledge of this is proof that the
+    payment has been paid. If the preimage is set to all zeros, this means the
+    payment is still pending and the token is not yet fully valid.
+    */
+    bytes payment_preimage = 3;
+
+    /**
+    The amount of millisatoshis that was paid to get the token.
+    */
+    int64 amount_paid_msat = 4;
+
+    /**
+    The amount of millisatoshis paid in routing fee to pay for the token.
+    */
+    int64 routing_fee_paid_msat = 5;
+
+    /**
+    The creation time of the token as UNIX timestamp in seconds.
+    */
+    int64 time_created = 6;
+
+    /**
+    Indicates whether the token is expired or still valid.
+    */
+    bool expired = 7;
+
+    /**
+    Identifying attribute of this token in the store. Currently represents the
+    file name of the token where it's stored on the file system.
+    */
+    string storage_name = 8;
+}
+
+message LeaseDurationRequest {
+}
+
+message LeaseDurationResponse {
+    /*
+    Deprecated, use lease_duration_buckets.
+    */
+    map<uint32, bool> lease_durations = 1 [deprecated = true];
+
+    /*
+    The set of lease durations the market is currently accepting and the state
+    the duration buckets currently are in.
+    */
+    map<uint32, DurationBucketState> lease_duration_buckets = 2;
+}
+
+message NextBatchInfoRequest {
+}
+
+message NextBatchInfoResponse {
+    /*
+    The confirmation target the auctioneer will use for fee estimation of the
+    next batch.
+    */
+    uint32 conf_target = 5;
+
+    /*
+    The fee rate, in satoshis per kiloweight, estimated by the auctioneer to use
+    for the next batch.
+    */
+    uint64 fee_rate_sat_per_kw = 6;
+
+    /*
+    The absolute unix timestamp in seconds at which the auctioneer will attempt
+    to clear the next batch.
+    */
+    uint64 clear_timestamp = 7;
+
+    /*
+    The value used by the auctioneer to determine if an account expiry height
+    needs to be extended after participating in a batch and for how long.
+    */
+    uint32 auto_renew_extension_blocks = 8;
+}
+
+message NodeRatingRequest {
+    // The target node to obtain ratings information for.
+    repeated bytes node_pubkeys = 1;
+}
+
+message NodeRatingResponse {
+    // A series of node ratings for each of the queried nodes.
+    repeated NodeRating node_ratings = 1;
+}
+
+message GetInfoRequest {
+}
+
+message GetInfoResponse {
+    // The version of the Pool daemon that is running.
+    string version = 1;
+
+    // The total number of accounts in the local database.
+    uint32 accounts_total = 2;
+
+    /*
+    The total number of accounts that are in an active, non-archived state,
+    including expired accounts.
+    */
+    uint32 accounts_active = 3;
+
+    // The total number of accounts that are active but have expired.
+    uint32 accounts_active_expired = 4;
+
+    // The total number of accounts that are in an archived/closed state.
+    uint32 accounts_archived = 5;
+
+    // The total number of orders in the local database.
+    uint32 orders_total = 6;
+
+    /*
+    The total number of active/pending orders that are still waiting for
+    execution.
+    */
+    uint32 orders_active = 7;
+
+    // The total number of orders that have been archived.
+    uint32 orders_archived = 8;
+
+    // The current block height as seen by the connected lnd node.
+    uint32 current_block_height = 9;
+
+    // The number of batches an account of this node was ever involved in.
+    uint32 batches_involved = 10;
+
+    // Our lnd node's rating as judged by the auctioneer server.
+    NodeRating node_rating = 11;
+
+    // The number of available LSAT tokens.
+    uint32 lsat_tokens = 12;
+
+    /*
+    Indicates whether there is an active subscription connection to the
+    auctioneer. This will never be true if there is no active account. If there
+    are active accounts, this value represents the network connection status to
+    the auctioneer server.
+    */
+    bool subscribed_to_auctioneer = 13;
+
+    /*
+    Indicates whether the global `--newnodesonly` command line flag or
+    `newnodesonly=true` configuration parameter was set on the Pool trader
+    daemon.
+    */
+    bool new_nodes_only = 14;
+
+    /*
+    A map of all markets identified by their lease duration and the current
+    set of statistics such as number of open orders and total units of open
+    interest.
+    */
+    map<uint32, MarketInfo> market_info = 15;
+}
+
+message StopDaemonRequest {
+}
+
+message StopDaemonResponse {
+}
+
+message OfferSidecarRequest {
+    /*
+    If false, then only the trader_key, unit, self_chan_balance, and
+    lease_duration_blocks need to be set in the bid below. Otherwise, the
+    fields as they're set when submitting a bid need to be filled in.
+    */
+    bool auto_negotiate = 1;
+
+    /*
+    The bid template that will be used to populate the initial sidecar ticket
+    as well as auto negotiate the remainig steps of the sidecar channel if
+    needed.
+    */
+    Bid bid = 2;
+}
+
+message SidecarTicket {
+    /*
+    The complete sidecar ticket in its string encoded form which is base58
+    encoded, has a human readable prefix ('sidecar...') and a checksum built in.
+    The string encoded version will only be used on the trader side of the API.
+    All requests to the auctioneer expect the ticket to be in its raw, tlv
+    encoded byte form.
+    */
+    string ticket = 1;
+}
+
+message DecodedSidecarTicket {
+    // The unique, pseudorandom identifier of the ticket.
+    bytes id = 1;
+
+    // The version of the ticket encoding format.
+    uint32 version = 2;
+
+    // The state of the ticket.
+    string state = 3;
+
+    // The offered channel capacity in satoshis.
+    uint64 offer_capacity = 4;
+
+    // The offered push amount in satoshis.
+    uint64 offer_push_amount = 5;
+
+    // The offered lease duration in blocks.
+    uint32 offer_lease_duration_blocks = 6;
+
+    // The public key the offer was signed with.
+    bytes offer_sign_pubkey = 7;
+
+    // The signature over the offer's digest.
+    bytes offer_signature = 8;
+
+    // Whether the offer was created with the automatic order creation flag.
+    bool offer_auto = 9;
+
+    // The recipient node's public identity key.
+    bytes recipient_node_pubkey = 10;
+
+    /*
+    The recipient node's channel multisig public key to be used for the sidecar
+    channel.
+    */
+    bytes recipient_multisig_pubkey = 11;
+
+    // The index used when deriving the above multisig pubkey.
+    uint32 recipient_multisig_pubkey_index = 12;
+
+    // The nonce of the bid order created for this sidecar ticket.
+    bytes order_bid_nonce = 13;
+
+    /*
+    The signature over the order's digest, signed with the private key that
+    corresponds to the offer_sign_pubkey.
+    */
+    bytes order_signature = 14;
+
+    // The pending channel ID of the sidecar channel during the execution phase.
+    bytes execution_pending_channel_id = 15;
+
+    // The original, base58 encoded ticket.
+    string encoded_ticket = 16;
+
+    // If true, the channel acceptor for this ticket will expect an unannounced
+    // channel.
+    bool offer_unannounced_channel = 17;
+
+    // If true, the channel acceptor for this ticket will expect a zero conf
+    // channel.
+    bool offer_zero_conf_channel = 18;
+}
+
+message RegisterSidecarRequest {
+    /*
+    The sidecar ticket to register and add the node and channel funding
+    information to. The ticket must be in the state "offered".
+    */
+    string ticket = 1;
+
+    /*
+    If this value is True, then the daemon will attempt to finish negotiating
+    the details of the sidecar channel automatically in the background. The
+    progress of the ticket can be monitored using the SidecarState RPC. In
+    addition, if this flag is set, then this method will _block_ until the
+    sidecar negotiation either finishes or breaks down.
+    */
+    bool auto_negotiate = 2;
+}
+
+message ExpectSidecarChannelRequest {
+    /*
+    The sidecar ticket to expect an incoming channel for. The ticket must be in
+    the state "ordered".
+    */
+    string ticket = 1;
+}
+
+message ExpectSidecarChannelResponse {
+}
+
+message ListSidecarsRequest {
+    /*
+    The optional sidecar ID to filter for. If set, the result should either be
+    a single ticket or no ticket in most cases. But because the ID is just 8
+    bytes and is randomly generated, there could be collisions, especially since
+    tickets can also be crafted by a malicious party and given to any node.
+    That's why the offer's public key is also used as an identifying element
+    since that cannot easily be forged without also producing a valid signature.
+    So an attacker cannot overwrite a ticket a node offered by themselves
+    offering a ticket with the same ID and tricking the victim into registering
+    that. Long story sort, there could be multiple tickets with the same ID but
+    different offer public keys, which is why those keys should be checked as
+    well.
+    */
+    bytes sidecar_id = 1;
+}
+
+message ListSidecarsResponse {
+    repeated DecodedSidecarTicket tickets = 1;
+}
+
+message CancelSidecarRequest {
+    bytes sidecar_id = 1;
+}
+
+message CancelSidecarResponse {
+}
