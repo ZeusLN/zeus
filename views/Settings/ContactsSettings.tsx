@@ -72,10 +72,14 @@ export default class ContactsSettings extends React.Component<
     renderContactItem = ({ item }: { item: ContactItem }) => (
         <TouchableOpacity
             onPress={() =>
-                this.state.SendScreen &&
-                this.props.navigation.navigate('ContactDetails', {
-                    contact: item
-                })
+                this.state.SendScreen
+                    ? this.props.navigation.navigate('ContactDetails', {
+                          contact: item
+                      })
+                    : this.props.navigation.navigate('AddContacts', {
+                          prefillContact: item,
+                          isEdit: true
+                      })
             }
         >
             <View

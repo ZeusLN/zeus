@@ -94,8 +94,6 @@ export default class AddContacts extends React.Component<
     };
 
     saveContact = async () => {
-        // await EncryptedStorage.clear();
-        const contactId = uuidv4();
         const {
             lnAddress,
             onchainAddress,
@@ -106,20 +104,14 @@ export default class AddContacts extends React.Component<
             photo,
             isFavourite
         } = this.state;
-        try {
-            // Create a new contact object
-            const newContact: Contact = {
-                id: contactId,
-                lnAddress,
-                onchainAddress,
-                nip05,
-                nostrNpub,
-                name,
-                description,
-                photo,
-                isFavourite
-            };
 
+        const isEdit = !!this.props.navigation.getParam('isEdit', false);
+        const prefillContact = this.props.navigation.getParam(
+            'prefillContact',
+            null
+        );
+
+        try {
             // Retrieve existing contacts from storage
             const contactsString = await EncryptedStorage.getItem(
                 'zeus-contacts'
@@ -128,29 +120,71 @@ export default class AddContacts extends React.Component<
                 ? JSON.parse(contactsString)
                 : [];
 
-            // Update the contacts array by adding the new contact
-            const updatedContacts = [...existingContacts, newContact];
+            if (isEdit && prefillContact) {
+                // Editing an existing contact
+                const updatedContacts = existingContacts.map((contact) =>
+                    contact.id === prefillContact.id
+                        ? {
+                              ...contact,
+                              lnAddress,
+                              onchainAddress,
+                              nip05,
+                              nostrNpub,
+                              name,
+                              description,
+                              photo,
+                              isFavourite
+                          }
+                        : contact
+                );
 
-            // Save the updated contacts to encrypted storage
-            await EncryptedStorage.setItem(
-                'zeus-contacts',
-                JSON.stringify(updatedContacts)
-            );
+                // Save the updated contacts to encrypted storage
+                await EncryptedStorage.setItem(
+                    'zeus-contacts',
+                    JSON.stringify(updatedContacts)
+                );
 
-            console.log('Contact saved successfully!');
-            this.props.navigation.goBack();
+                console.log('Contact updated successfully!');
+                this.props.navigation.goBack();
+            } else {
+                // Creating a new contact
+                const contactId = uuidv4();
 
-            // Reset the input fields after saving the contact
-            this.setState({
-                contacts: updatedContacts,
-                lnAddress: [],
-                onchainAddress: [],
-                nip05: [],
-                nostrNpub: [],
-                name: '',
-                description: '',
-                photo: null
-            });
+                const newContact: Contact = {
+                    id: contactId,
+                    lnAddress,
+                    onchainAddress,
+                    nip05,
+                    nostrNpub,
+                    name,
+                    description,
+                    photo,
+                    isFavourite
+                };
+
+                const updatedContacts = [...existingContacts, newContact];
+
+                // Save the updated contacts to encrypted storage
+                await EncryptedStorage.setItem(
+                    'zeus-contacts',
+                    JSON.stringify(updatedContacts)
+                );
+
+                console.log('Contact saved successfully!');
+                this.props.navigation.goBack();
+
+                // Reset the input fields after saving the contact
+                this.setState({
+                    contacts: updatedContacts,
+                    lnAddress: [],
+                    onchainAddress: [],
+                    nip05: [],
+                    nostrNpub: [],
+                    name: '',
+                    description: '',
+                    photo: null
+                });
+            }
         } catch (error) {
             console.log('Error saving contacts:', error);
         }
@@ -203,6 +237,24 @@ export default class AddContacts extends React.Component<
             isValidNpub: isValid
         });
     };
+
+    componentDidMount() {
+        const prefillContact = this.props.navigation.getParam(
+            'prefillContact',
+            null
+        );
+        if (prefillContact) {
+            this.setState({
+                lnAddress: prefillContact.lnAddress,
+                onchainAddress: prefillContact.onchainAddress,
+                nip05: prefillContact.nip05,
+                nostrNpub: prefillContact.nostrNpub,
+                name: prefillContact.name,
+                description: prefillContact.description,
+                photo: prefillContact.photo
+            });
+        }
+    }
 
     render() {
         const { navigation } = this.props;
