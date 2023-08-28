@@ -153,7 +153,8 @@ export default class Receive extends React.Component<
             memo: settings?.invoices?.memo || '',
             expiry: settings?.invoices?.expiry || '3600',
             routeHints: settings?.invoices?.routeHints || false,
-            ampInvoice: settings?.invoices?.ampInvoice || false
+            ampInvoice: settings?.invoices?.ampInvoice || false,
+            enableLSP: settings?.enableLSP
         });
 
         const lnOnly =
@@ -378,8 +379,8 @@ export default class Receive extends React.Component<
             amount || '0',
             expiry || '3600',
             undefined,
-            ampInvoice || false,
-            routeHints || false,
+            enableLSP ? false : ampInvoice || false,
+            enableLSP ? false : routeHints || false,
             BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
                 : undefined
@@ -1340,18 +1341,20 @@ export default class Receive extends React.Component<
                                                 truncateLongValue
                                             />
                                         )}
-                                    {(belowDustLimit ||
-                                        !haveUnifiedInvoice) && (
-                                        <CollapsedQR
-                                            value={lnInvoice}
-                                            copyValue={lnInvoiceCopyValue}
-                                            copyText={localeString(
-                                                'views.Receive.copyAddress'
-                                            )}
-                                            expanded
-                                            textBottom
-                                        />
-                                    )}
+                                    {selectedIndex !== 2 &&
+                                        (belowDustLimit ||
+                                            !haveUnifiedInvoice) && (
+                                            <CollapsedQR
+                                                value={lnInvoice}
+                                                copyValue={lnInvoiceCopyValue}
+                                                copyText={localeString(
+                                                    'views.Receive.copyAddress'
+                                                )}
+                                                expanded
+                                                textBottom
+                                                truncateLongValue
+                                            />
+                                        )}
                                     <View
                                         style={[
                                             styles.button,
@@ -1569,57 +1572,6 @@ export default class Receive extends React.Component<
                                                     })
                                                 }
                                             />
-                                        </>
-                                    )}
-
-                                    {BackendUtils.supportsLSPs() && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.secondaryText,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    top: 20
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LSP.enableLSP'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={enableLSP}
-                                                onValueChange={async () => {
-                                                    this.setState({
-                                                        enableLSP: !enableLSP
-                                                    });
-                                                    await updateSettings({
-                                                        enableLSP: !enableLSP
-                                                    });
-                                                }}
-                                            />
-                                            {enableLSP && (
-                                                <View
-                                                    style={{
-                                                        margin: 10
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            fontFamily:
-                                                                'Lato-Regular',
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            fontSize: 15
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.Receive.lspSwitchExplainer'
-                                                        )}
-                                                    </Text>
-                                                </View>
-                                            )}
                                         </>
                                     )}
 
