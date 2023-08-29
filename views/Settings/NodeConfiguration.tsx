@@ -566,7 +566,8 @@ export default class NodeConfiguration extends React.Component<
             loading,
             createAccountError,
             createAccountSuccess,
-            createAccount
+            createAccount,
+            seedPhrase
         } = SettingsStore;
 
         const supportsTor =
@@ -1551,7 +1552,7 @@ export default class NodeConfiguration extends React.Component<
                                     </View>
                                 </>
                             )}
-                            {adminMacaroon && (
+                            {adminMacaroon && seedPhrase && (
                                 <Button
                                     title={localeString(
                                         'views.Settings.NodeConfiguration.backUpWallet'
