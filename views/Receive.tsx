@@ -375,7 +375,7 @@ export default class Receive extends React.Component<
         const { createUnifiedInvoice } = InvoicesStore;
 
         createUnifiedInvoice(
-            memo || '',
+            BackendUtils.supportsLSPs() && enableLSP ? '' : memo || '',
             amount || '0',
             expiry || '3600',
             undefined,
@@ -465,6 +465,7 @@ export default class Receive extends React.Component<
 
     validateAddress = (text: string) => {
         const { navigation, InvoicesStore } = this.props;
+        const { enableLSP } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
         const amount = getSatAmount(navigation.getParam('amount'));
 
@@ -480,7 +481,9 @@ export default class Receive extends React.Component<
                     // otherwise we present the user with the create invoice screen
                     if (Number(amount) > 0) {
                         createUnifiedInvoice(
-                            memo,
+                            BackendUtils.supportsLSPs() && enableLSP
+                                ? ''
+                                : memo,
                             amount.toString(),
                             '3600',
                             lnurlParams
@@ -1409,24 +1412,76 @@ export default class Receive extends React.Component<
                             )}
                             {!loading && !haveInvoice && !creatingInvoice && (
                                 <>
-                                    <Text
-                                        style={{
-                                            ...styles.secondaryText,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString('views.Receive.memo')}
-                                    </Text>
-                                    <TextInput
-                                        placeholder={localeString(
-                                            'views.Receive.memoPlaceholder'
-                                        )}
-                                        value={memo}
-                                        onChangeText={(text: string) => {
-                                            this.setState({ memo: text });
-                                            clearUnified();
-                                        }}
-                                    />
+                                    {BackendUtils.supportsLSPs() && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.secondaryText,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    top: 20
+                                                }}
+                                                infoText={[
+                                                    localeString(
+                                                        'views.Receive.lspSwitchExplainer1'
+                                                    ),
+                                                    localeString(
+                                                        'views.Receive.lspSwitchExplainer2'
+                                                    )
+                                                ]}
+                                                infoNav="LspExplanationOverview"
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LSP.enableLSP'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={enableLSP}
+                                                onValueChange={async () => {
+                                                    this.setState({
+                                                        enableLSP: !enableLSP
+                                                    });
+                                                    await updateSettings({
+                                                        enableLSP: !enableLSP
+                                                    });
+                                                }}
+                                            />
+                                        </>
+                                    )}
+
+                                    {!(
+                                        BackendUtils.supportsLSPs() && enableLSP
+                                    ) && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.secondaryText,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Receive.memo'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'views.Receive.memoPlaceholder'
+                                                )}
+                                                value={memo}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setState({
+                                                        memo: text
+                                                    });
+                                                    clearUnified();
+                                                }}
+                                            />
+                                        </>
+                                    )}
 
                                     <AmountInput
                                         amount={value}
@@ -1575,44 +1630,6 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
-                                    {BackendUtils.supportsLSPs() && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.secondaryText,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    top: 20
-                                                }}
-                                                infoText={[
-                                                    localeString(
-                                                        'views.Receive.lspSwitchExplainer1'
-                                                    ),
-                                                    localeString(
-                                                        'views.Receive.lspSwitchExplainer2'
-                                                    )
-                                                ]}
-                                                infoNav="LspExplanationOverview"
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LSP.enableLSP'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={enableLSP}
-                                                onValueChange={async () => {
-                                                    this.setState({
-                                                        enableLSP: !enableLSP
-                                                    });
-                                                    await updateSettings({
-                                                        enableLSP: !enableLSP
-                                                    });
-                                                }}
-                                            />
-                                        </>
-                                    )}
-
                                     {BackendUtils.isLNDBased() &&
                                         !(
                                             BackendUtils.supportsLSPs() &&
@@ -1706,11 +1723,15 @@ export default class Receive extends React.Component<
                                             }
                                             onPress={() => {
                                                 createUnifiedInvoice(
-                                                    memo,
+                                                    BackendUtils.supportsLSPs() &&
+                                                        enableLSP
+                                                        ? ''
+                                                        : memo,
                                                     satAmount.toString() || '0',
                                                     expiry,
                                                     lnurl,
-                                                    enableLSP
+                                                    BackendUtils.supportsLSPs() &&
+                                                        enableLSP
                                                         ? false
                                                         : ampInvoice || false,
                                                     routeHints,
