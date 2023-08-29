@@ -17,6 +17,16 @@ interface RouteHint {
     hop_hints: Array<HopHint>;
 }
 
+interface HTLC {
+    custom_records?: CustomRecords;
+}
+
+interface CustomRecords {
+    [key: number]: string;
+}
+
+const keySendMessageType = '34349334';
+
 export default class Invoice extends BaseModel {
     public route_hints: Array<RouteHint>;
     public fallback_addr: string;
@@ -38,6 +48,7 @@ export default class Invoice extends BaseModel {
     public description_hash: string;
     public r_preimage: string;
     public cltv_expiry: string;
+    public htlcs: Array<HTLC>;
     // c-lightning, eclair
     public bolt11: string;
     public label: string;
@@ -228,5 +239,25 @@ export default class Invoice extends BaseModel {
         }
 
         return false;
+    }
+
+    @computed public get getKeysendMessage(): string {
+        if (
+            this.htlcs &&
+            this.htlcs[0] &&
+            this.htlcs[0].custom_records &&
+            this.htlcs[0].custom_records[keySendMessageType]
+        ) {
+            const encodedMessage =
+                this.htlcs[0].custom_records[keySendMessageType];
+            try {
+                const decoded = Base64Utils.atob(encodedMessage);
+                return decoded;
+            } catch (e) {
+                return '';
+            }
+        }
+
+        return '';
     }
 }
