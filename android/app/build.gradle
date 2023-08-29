@@ -118,7 +118,7 @@ def jscFlavor = 'org.webkit:android-jsc:+'
  * on project.ext.react, JavaScript will not be compiled to Hermes Bytecode
  * and the benefits of using Hermes will therefore be sharply reduced.
  */
-def enableHermes = project.ext.react.get("enableHermes", false);
+def enableHermes = project.ext.react.get("enableHermes", false)
 
 /**
  * Architectures to build native code for in debug.
@@ -126,9 +126,8 @@ def enableHermes = project.ext.react.get("enableHermes", false);
 def nativeArchitectures = project.getProperties().get("reactNativeDebugArchitectures")
 
 android {
-    compileSdkVersion rootProject.ext.compileSdkVersion
-
     defaultConfig {
+        compileSdk rootProject.ext.compileSdkVersion
         applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
@@ -172,7 +171,7 @@ android {
         }
     }
     // applicationVariants are e.g. debug, release
-    applicationVariants.all { variant ->
+    applicationVariants.configureEach { variant ->
         variant.outputs.each { output ->
             // For each separate APK per architecture, set a unique version code as described here:
             // https://developer.android.com/studio/build/configure-apk-splits.html
@@ -213,13 +212,12 @@ android {
 
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
-    implementation 'com.android.support:multidex:1.0.3'
-    implementation 'com.android.support:support-v13:+'
+    implementation 'androidx.multidex:multidex:2.0.1'
     implementation project(':react-native-randombytes')
     implementation "com.facebook.react:react-native:0.70.6!!"  // From node_modules
-    implementation 'androidx.core:core-ktx:1.7.0'
-    implementation 'androidx.appcompat:appcompat:1.4.0'
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0-alpha02'
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-alpha01'
     implementation files("../../node_modules/react-native-tor/android/libs/sifir_android.aar")
     implementation project(':react-native-qrcode-local-image')
     // gif
@@ -240,10 +238,10 @@ dependencies {
     // Pegasus
     implementation project(":lndmobile")
     implementation "androidx.concurrent:concurrent-futures:1.1.0"
-    implementation "androidx.work:work-runtime:2.7.1"
+    implementation "androidx.work:work-runtime:2.8.1"
     implementation "androidx.concurrent:concurrent-futures:1.1.0"
     implementation "com.google.guava:guava:31.0.1-android"
-    implementation "io.grpc:grpc-protobuf-lite:1.30.0"
+    implementation "io.grpc:grpc-protobuf-lite:1.45.1"
 
     implementation "com.jakewharton:process-phoenix:2.0.0"
     implementation 'org.brotli:dec:0.1.2'
@@ -256,7 +254,7 @@ configurations {
 
 // Run this once to be able to run the application with BUCK
 // puts all compile dependencies into folder libs for BUCK to use
-task copyDownloadableDepsToLibs(type: Copy) {
+tasks.register('copyDownloadableDepsToLibs', Copy) {
     from configurations.implementation
     into 'libs'
 }
@@ -265,7 +263,7 @@ apply from: file("../../node_modules/@react-native-community/cli-platform-androi
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:21.0-rc-1"
+        artifact = "com.google.protobuf:protoc:3.24.1"
     }
     generateProtoTasks {
         all().each { task ->
@@ -279,4 +277,3 @@ protobuf {
 }
 
 apply plugin: "kotlin-android"
-apply plugin: "kotlin-android-extensions"
