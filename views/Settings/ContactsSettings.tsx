@@ -6,6 +6,8 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import Screen from '../../components/Screen';
+import Button from '../../components/Button';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 interface ContactsSettingsProps {
     navigation: any;
@@ -26,6 +28,7 @@ interface ContactsSettingsState {
     contacts: ContactItem[];
     search: string;
     SendScreen: boolean;
+    loading: boolean;
 }
 
 export default class ContactsSettings extends React.Component<
@@ -41,7 +44,8 @@ export default class ContactsSettings extends React.Component<
         this.state = {
             contacts: [],
             search: '',
-            SendScreen
+            SendScreen,
+            loading: true
         };
     }
 
@@ -57,10 +61,13 @@ export default class ContactsSettings extends React.Component<
                 );
                 if (contactsString) {
                     const contacts: ContactItem[] = JSON.parse(contactsString);
-                    this.setState({ contacts });
+                    this.setState({ contacts, loading: false });
+                } else {
+                    this.setState({ loading: false });
                 }
             } catch (error) {
                 console.log('Error loading contacts:', error);
+                this.setState({ loading: false });
             }
         });
     };
@@ -140,7 +147,7 @@ export default class ContactsSettings extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { search, contacts, SendScreen } = this.state;
+        const { search, contacts, SendScreen, loading } = this.state;
         const filteredContacts = contacts.filter((contact) => {
             const hasMatch = (field: string) =>
                 Array.isArray(contact[field])
@@ -231,67 +238,75 @@ export default class ContactsSettings extends React.Component<
                     }
                 />
                 <View>
-                    {SendScreen ? (
-                        <View>
-                            <Divider
-                                orientation="horizontal"
-                                style={{ marginTop: 14 }}
-                            />
-                            <SearchBar
-                                placeholder="Nostr npub, NIP-05, LN address, Onchain address"
-                                onChangeText={this.updateSearch}
-                                value={this.state.search}
-                                inputStyle={{
-                                    color: themeColor('text')
-                                }}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                containerStyle={{
-                                    backgroundColor: themeColor('background'),
-                                    borderTopWidth: 0,
-                                    borderBottomWidth: 0
-                                }}
-                                inputContainerStyle={{
-                                    backgroundColor: themeColor('background')
-                                }}
-                                searchIcon={
-                                    <Text
-                                        style={{
-                                            fontSize: 20,
-                                            color: themeColor('text'),
-                                            fontWeight: 'bold'
+                    {contacts.length > 0 && (
+                        <>
+                            {SendScreen ? (
+                                <View>
+                                    <Divider
+                                        orientation="horizontal"
+                                        style={{ marginTop: 14 }}
+                                    />
+                                    <SearchBar
+                                        placeholder="Nostr npub, NIP-05, LN address, Onchain address"
+                                        onChangeText={this.updateSearch}
+                                        value={this.state.search}
+                                        inputStyle={{
+                                            color: themeColor('text')
                                         }}
-                                    >
-                                        To
-                                    </Text>
-                                }
-                                leftIconContainerStyle={{
-                                    marginLeft: 18,
-                                    marginRight: -8
-                                }}
-                            />
-                            <Divider orientation="horizontal" />
-                        </View>
-                    ) : (
-                        <SearchBar
-                            placeholder="Search"
-                            onChangeText={this.updateSearch}
-                            value={this.state.search}
-                            inputStyle={{
-                                color: themeColor('text')
-                            }}
-                            placeholderTextColor={themeColor('secondaryText')}
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                borderTopWidth: 0,
-                                borderBottomWidth: 0
-                            }}
-                            inputContainerStyle={{
-                                borderRadius: 15,
-                                backgroundColor: themeColor('secondary')
-                            }}
-                        />
+                                        placeholderTextColor={themeColor(
+                                            'secondaryText'
+                                        )}
+                                        containerStyle={{
+                                            backgroundColor:
+                                                themeColor('background'),
+                                            borderTopWidth: 0,
+                                            borderBottomWidth: 0
+                                        }}
+                                        inputContainerStyle={{
+                                            backgroundColor:
+                                                themeColor('background')
+                                        }}
+                                        searchIcon={
+                                            <Text
+                                                style={{
+                                                    fontSize: 20,
+                                                    color: themeColor('text'),
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                To
+                                            </Text>
+                                        }
+                                        leftIconContainerStyle={{
+                                            marginLeft: 18,
+                                            marginRight: -8
+                                        }}
+                                    />
+                                    <Divider orientation="horizontal" />
+                                </View>
+                            ) : (
+                                <SearchBar
+                                    placeholder="Search"
+                                    onChangeText={this.updateSearch}
+                                    value={this.state.search}
+                                    inputStyle={{
+                                        color: themeColor('text')
+                                    }}
+                                    placeholderTextColor={themeColor(
+                                        'secondaryText'
+                                    )}
+                                    containerStyle={{
+                                        backgroundColor: 'transparent',
+                                        borderTopWidth: 0,
+                                        borderBottomWidth: 0
+                                    }}
+                                    inputContainerStyle={{
+                                        borderRadius: 15,
+                                        backgroundColor: themeColor('secondary')
+                                    }}
+                                />
+                            )}
+                        </>
                     )}
 
                     {/* Render favorite contacts */}
@@ -337,6 +352,21 @@ export default class ContactsSettings extends React.Component<
                         renderItem={this.renderContactItem}
                         keyExtractor={(item, index) => index.toString()}
                     />
+                    {loading ? (
+                        <LoadingIndicator />
+                    ) : (
+                        contacts.length === 0 && (
+                            <Button
+                                title="No Contacts"
+                                icon={{
+                                    name: 'error-outline',
+                                    size: 25,
+                                    color: themeColor('text')
+                                }}
+                                iconOnly
+                            />
+                        )
+                    )}
                 </View>
             </Screen>
         );

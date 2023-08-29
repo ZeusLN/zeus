@@ -385,31 +385,35 @@ export default class ContactDetails extends React.Component<
                         </View>
                     </Modal>
 
-                    <View>
-                        {contact.lnAddress[0] && (
+                    {contact.lnAddress[0] && (
+                        <View>
                             <View style={styles.contactRow}>
                                 <LightningBolt />
                                 <Text style={styles.contactFields}>
-                                    {`${contact.lnAddress[0].substring(
-                                        0,
-                                        5
-                                    )}...${contact.lnAddress[0].substring(
-                                        contact.lnAddress[0].length - 5
-                                    )}`}
+                                    {contact.lnAddress[0].length > 15
+                                        ? `${contact.lnAddress[0].substring(
+                                              0,
+                                              10
+                                          )}...${contact.lnAddress[0].substring(
+                                              contact.lnAddress[0].length - 5
+                                          )}`
+                                        : contact.lnAddress[0]}
                                 </Text>
                             </View>
-                        )}
-                    </View>
+                        </View>
+                    )}
                     {contact.onchainAddress[0] && (
                         <View style={styles.contactRow}>
                             <BitcoinIcon />
                             <Text style={styles.contactFields}>
-                                {`${contact.onchainAddress[0].substring(
-                                    0,
-                                    5
-                                )}...${contact.onchainAddress[0].substring(
-                                    contact.onchainAddress[0].length - 5
-                                )}`}
+                                {contact.onchainAddress[0].length > 15
+                                    ? `${contact.onchainAddress[0].substring(
+                                          0,
+                                          10
+                                      )}...${contact.onchainAddress[0].substring(
+                                          contact.onchainAddress[0].length - 5
+                                      )}`
+                                    : contact.onchainAddress[0]}
                             </Text>
                         </View>
                     )}
@@ -417,7 +421,14 @@ export default class ContactDetails extends React.Component<
                         <View style={styles.contactRow}>
                             <VerifiedAccount />
                             <Text style={styles.contactFields}>
-                                {contact.nip05[0]}
+                                {contact.nip05[0].length > 15
+                                    ? `${contact.nip05[0].substring(
+                                          0,
+                                          10
+                                      )}...${contact.nip05[0].substring(
+                                          contact.nip05[0].length - 5
+                                      )}`
+                                    : contact.nip05[0]}
                             </Text>
                         </View>
                     )}
@@ -427,13 +438,14 @@ export default class ContactDetails extends React.Component<
                                 <KeySecurity />
                             </View>
                             <Text style={styles.contactFields}>
-                                {contact.nostrNpub[0]}
-                                {`${contact.nostrNpub[0].substring(
-                                    0,
-                                    6
-                                )}...${contact.nostrNpub[0].substring(
-                                    contact.nostrNpub[0].length - 6
-                                )}`}
+                                {contact.nostrNpub[0].length > 15
+                                    ? `${contact.nostrNpub[0].substring(
+                                          0,
+                                          10
+                                      )}...${contact.nostrNpub[0].substring(
+                                          contact.nostrNpub[0].length - 5
+                                      )}`
+                                    : contact.nostrNpub[0]}
                             </Text>
                         </View>
                     )}
