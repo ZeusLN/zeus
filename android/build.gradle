@@ -6,8 +6,7 @@ buildscript {
         compileSdkVersion = 33
         targetSdkVersion = 33
         ndkVersion = "22.1.7171670"
-        supportLibVersion = "28.0.0"
-        kotlinVersion = "1.6.0"
+        kotlinVersion = "1.6.21"
         // hack for react-native-camera-kit
         kotlin_version = kotlinVersion
     }
@@ -17,7 +16,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:7.2.1")
+        classpath("com.android.tools.build:gradle:7.2.2")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
         classpath "com.google.protobuf:protobuf-gradle-plugin:0.8.12"
 
@@ -29,7 +28,7 @@ buildscript {
 allprojects {
     def REACT_NATIVE_VERSION = new File(['node', '--print',"JSON.parse(require('fs').readFileSync(require.resolve('react-native/package.json'), 'utf-8')).version"].execute(null, rootDir).text.trim())
 
-    configurations.all {
+    configurations.configureEach {
         resolutionStrategy {
             force "com.facebook.react:react-native:" + REACT_NATIVE_VERSION
         }
