@@ -275,6 +275,12 @@ export default class AddContacts extends React.Component<
             isValidNIP05,
             isValidNpub
         } = this.state;
+        const isEdit = !!this.props.navigation.getParam('isEdit', false);
+        const prefillContact = this.props.navigation.getParam(
+            'prefillContact',
+            null
+        );
+
         const dropdownValues = [
             { key: 'LN address', translateKey: '', value: 'lnAddress' },
             {
@@ -346,10 +352,12 @@ export default class AddContacts extends React.Component<
                             }}
                         >
                             {this.state.photo ? (
-                                <Image
-                                    source={{ uri: this.state.photo }}
-                                    style={styles.photo}
-                                />
+                                <TouchableOpacity onPress={this.selectPhoto}>
+                                    <Image
+                                        source={{ uri: this.state.photo }}
+                                        style={styles.photo}
+                                    />
+                                </TouchableOpacity>
                             ) : (
                                 <AddPhotos />
                             )}
