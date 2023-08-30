@@ -356,6 +356,7 @@
     "views.Invoice.paymentHash": "Payment Hash",
     "views.Invoice.paymentRequest": "Payment Request",
     "views.Invoice.copyPaymentRequest": "Copy Payment Request",
+    "views.Invoices.keysendMessage": "Keysend message",
     "views.LNDConnectConfigQRScanner.error": "Error fetching lndconnect config",
     "views.LncQRScanner.error": "Error parsing LNC config",
     "views.LNDHubQRScanner.text": "Scan a LNDHub or Blue Wallet QR code",

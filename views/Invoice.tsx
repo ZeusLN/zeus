@@ -57,7 +57,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             getRPreimage,
             cltv_expiry,
             expirationDate,
-            getPaymentRequest
+            getPaymentRequest,
+            getKeysendMessage
         } = invoice;
         const privateInvoice = invoice.private;
         const noteKey = getRPreimage || payment_hash;
@@ -118,6 +119,16 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     </View>
 
                     <View style={styles.content}>
+                        {getKeysendMessage && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoices.keysendMessage'
+                                )}
+                                value={getKeysendMessage}
+                                sensitive
+                            />
+                        )}
+
                         <KeyValue
                             keyValue={localeString('views.Invoice.memo')}
                             value={
