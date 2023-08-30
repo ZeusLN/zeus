@@ -491,6 +491,11 @@ export const CURRENCY_KEYS = [
         key: '🇺🇾 Uruguayan Peso (UYU)',
         value: 'UYU',
         supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇲🇷 Mauritanian Ouguiya (MRU)',
+        value: 'MRU',
+        supportedSources: ['Zeus', 'Yadio']
     }
 ];
 
