@@ -141,14 +141,14 @@ export default class ContactDetails extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     rightComponent={<StarButton />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="none"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
                 <View
                     style={{
-                        backgroundColor: themeColor('background'),
+                        backgroundColor: 'none',
                         alignItems: 'center',
                         marginTop: 60
                     }}

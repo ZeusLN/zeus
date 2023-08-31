@@ -300,10 +300,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                         loading: false
                     });
                     if (response) {
-                        const [route, props] = response;
                         this.setState({
                             isValidReceiver: true
                         });
+                        const [route, props] = response;
                         navigation.navigate(route, props);
                     }
                 } catch {
@@ -514,11 +514,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                     >
                         <TextInput
                             placeholder={'lnbc1...'}
-                            value={!this.state.isValidReceiver && destination}
                             onChangeText={(text: string) => {
                                 this.setState({
-                                    destination: text,
-                                    isValidReceiver: false
+                                    destination: text
                                 });
                                 this.validateAddress(text);
                             }}
@@ -531,7 +529,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             autoCorrect={false}
                             autoCapitalize="none"
                         />
-                        {this.state.isValidReceiver && (
+                        {this.state.isValidReceiver && contactName && (
                             <View
                                 style={{
                                     flexDirection: 'row',
@@ -563,9 +561,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 SendScreen: true
                                             }
                                         );
-                                        this.setState({
-                                            isValidReceiver: false
-                                        });
                                     }}
                                     style={{
                                         position: 'absolute',
