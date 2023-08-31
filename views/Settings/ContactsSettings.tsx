@@ -225,7 +225,7 @@ export default class ContactsSettings extends React.Component<
             >
                 <Header
                     leftComponent={<BackButton />}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor="none"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
@@ -257,14 +257,12 @@ export default class ContactsSettings extends React.Component<
                                             'secondaryText'
                                         )}
                                         containerStyle={{
-                                            backgroundColor:
-                                                themeColor('background'),
+                                            backgroundColor: 'none',
                                             borderTopWidth: 0,
                                             borderBottomWidth: 0
                                         }}
                                         inputContainerStyle={{
-                                            backgroundColor:
-                                                themeColor('background')
+                                            backgroundColor: 'none'
                                         }}
                                         searchIcon={
                                             <Text
@@ -318,7 +316,7 @@ export default class ContactsSettings extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                FAVOURITES ({favoriteContacts.length})
+                                FAVORITES ({favoriteContacts.length})
                             </Text>
                         </View>
                     )}

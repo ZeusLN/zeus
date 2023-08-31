@@ -256,10 +256,16 @@ export default class AddContacts extends React.Component<
                 nostrNpub: prefillContact.nostrNpub,
                 name: prefillContact.name,
                 description: prefillContact.description,
-                photo: prefillContact.photo
+                photo: prefillContact.photo,
+                isFavourite: prefillContact.isFavourite
             });
         }
     }
+    toggleFavorite = () => {
+        this.setState((prevState) => ({
+            isFavourite: !prevState.isFavourite
+        }));
+    };
 
     render() {
         const { navigation } = this.props;
@@ -315,6 +321,15 @@ export default class AddContacts extends React.Component<
             </TouchableOpacity>
         );
 
+        const StarButton = ({ isFavourite, onPress }) => (
+            <Icon
+                name={isFavourite ? 'star' : 'star-outline'}
+                onPress={onPress}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
         return (
             <KeyboardAvoidingView
                 style={{
@@ -330,6 +345,12 @@ export default class AddContacts extends React.Component<
                 >
                     <Header
                         leftComponent={<BackButton />}
+                        rightComponent={
+                            <StarButton
+                                isFavourite={this.state.isFavourite}
+                                onPress={this.toggleFavorite}
+                            />
+                        }
                         backgroundColor={themeColor('background')}
                         containerStyle={{
                             borderBottomWidth: 0
@@ -367,7 +388,8 @@ export default class AddContacts extends React.Component<
                     <View
                         style={{
                             alignSelf: 'center',
-                            marginTop: 22
+                            marginTop: 22,
+                            padding: Platform.OS === 'ios' ? 8 : 0
                         }}
                     >
                         <TextInput
@@ -386,7 +408,11 @@ export default class AddContacts extends React.Component<
                         style={{ marginTop: 6 }}
                     />
                     <View
-                        style={{ alignContent: 'center', alignSelf: 'center' }}
+                        style={{
+                            alignContent: 'center',
+                            alignSelf: 'center',
+                            padding: Platform.OS === 'ios' ? 8 : 0
+                        }}
                     >
                         <TextInput
                             onChangeText={(text: string) => {
@@ -782,22 +808,24 @@ export default class AddContacts extends React.Component<
                         color={!isValidNpub && 'red'}
                     />
                 </ScrollView>
-                {(lnAddress[0] || onchainAddress[0]) && (
-                    <TouchableOpacity
-                        onPress={() =>
-                            this.setState({ showExtraFieldModal: true })
-                        }
-                        style={{
-                            alignSelf: 'center',
-                            marginTop: 10,
-                            marginBottom: 20
-                        }}
-                    >
-                        <Text style={styles.addExtraFieldText}>
-                            add extra field
-                        </Text>
-                    </TouchableOpacity>
-                )}
+                {(lnAddress[0] || onchainAddress[0]) &&
+                    isValidLightningAddress &&
+                    isValidOnchainAddress && (
+                        <TouchableOpacity
+                            onPress={() =>
+                                this.setState({ showExtraFieldModal: true })
+                            }
+                            style={{
+                                alignSelf: 'center',
+                                marginTop: 10,
+                                marginBottom: 20
+                            }}
+                        >
+                            <Text style={styles.addExtraFieldText}>
+                                add extra field
+                            </Text>
+                        </TouchableOpacity>
+                    )}
 
                 <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
                     <Button
@@ -851,6 +879,9 @@ const styles = StyleSheet.create({
         color: themeColor('text')
     },
     inputContainer: {
+        paddingTop: Platform.OS === 'ios' ? 9 : 0,
+        paddingBottom: Platform.OS === 'ios' ? 9 : 0,
+        paddingRight: Platform.OS === 'ios' ? 9 : 0,
         marginLeft: 24,
         flexDirection: 'row',
         alignItems: 'center'
@@ -869,7 +900,7 @@ const styles = StyleSheet.create({
     deleteIcon: {
         position: 'absolute',
         right: 20,
-        top: 20
+        top: Platform.OS === 'ios' ? 18 : 20
     },
     textInput: {
         fontSize: 20,
