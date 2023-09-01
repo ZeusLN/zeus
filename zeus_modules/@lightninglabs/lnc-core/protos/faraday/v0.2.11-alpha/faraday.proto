@@ -1,0 +1,593 @@
+syntax = "proto3";
+
+package frdrpc;
+
+option go_package = "github.com/lightninglabs/faraday/frdrpc";
+
+service FaradayServer {
+    /** frcli: `outliers`
+    Get close recommendations for currently open channels based on whether it is
+    an outlier.
+
+    Example request:
+    http://localhost:8466/v1/faraday/outliers/REVENUE?rec_request.minimum_monitored=123
+    */
+    rpc OutlierRecommendations (OutlierRecommendationsRequest)
+        returns (CloseRecommendationsResponse);
+
+    /** frcli: `threshold`
+    Get close recommendations for currently open channels based whether they are
+    below a set threshold.
+
+    Example request:
+    http://localhost:8466/v1/faraday/threshold/UPTIME?rec_request.minimum_monitored=123
+    */
+    rpc ThresholdRecommendations (ThresholdRecommendationsRequest)
+        returns (CloseRecommendationsResponse);
+
+    /** frcli: `revenue`
+    Get a pairwise revenue report for a channel.
+
+    Example request:
+    http://localhost:8466/v1/faraday/revenue
+    */
+    rpc RevenueReport (RevenueReportRequest) returns (RevenueReportResponse);
+
+    /** frcli: `insights`
+    List currently open channel with routing and uptime information.
+
+    Example request:
+    http://localhost:8466/v1/faraday/insights
+    */
+    rpc ChannelInsights (ChannelInsightsRequest)
+        returns (ChannelInsightsResponse);
+
+    /** frcli:
+    Get fiat prices for btc.
+
+    Example request:
+    http://localhost:8466/v1/faraday/exchangerate
+    */
+    rpc ExchangeRate (ExchangeRateRequest) returns (ExchangeRateResponse);
+
+    /**
+    Get a report of your node's activity over a period.
+
+    Example request:
+    http://localhost:8466/v1/faraday/nodeaudit
+    */
+    rpc NodeAudit (NodeAuditRequest) returns (NodeAuditResponse);
+
+    /**
+    Get a channel close report for a specific channel.
+
+    Example request:
+    http://localhost:8466/v1/faraday/closereport
+    */
+    rpc CloseReport (CloseReportRequest) returns (CloseReportResponse);
+}
+
+message CloseRecommendationRequest {
+    /*
+    The minimum amount of time in seconds that a channel should have been
+    monitored by lnd to be eligible for close. This value is in place to
+    protect against closing of newer channels.
+    */
+    int64 minimum_monitored = 1;
+
+    enum Metric {
+        UNKNOWN = 0;
+        UPTIME = 1;
+        REVENUE = 2;
+        INCOMING_VOLUME = 3;
+        OUTGOING_VOLUME = 4;
+        TOTAL_VOLUME = 5;
+    }
+
+    /*
+    The data point base close recommendations on. Available options are:
+    Uptime: ratio of channel peer's uptime to the period they have been
+    monitored to.
+    Revenue: the revenue that the channel has produced per block that its
+    funding transaction has been confirmed for.
+    */
+    Metric metric = 2;
+}
+
+message OutlierRecommendationsRequest {
+    /*
+    The parameters that are common to all close recommendations.
+    */
+    CloseRecommendationRequest rec_request = 1;
+
+    /*
+    The number of inter-quartile ranges a value needs to be beneath the lower
+    quartile/ above the upper quartile to be considered a lower/upper outlier.
+    Lower values will be more aggressive in recommending channel closes, and
+    upper values will be more conservative. Recommended values are 1.5 for
+    aggressive recommendations and 3 for conservative recommendations.
+    */
+    float outlier_multiplier = 2;
+}
+
+message ThresholdRecommendationsRequest {
+    /*
+    The parameters that are common to all close recommendations.
+    */
+    CloseRecommendationRequest rec_request = 1;
+
+    /*
+    The threshold that recommendations will be calculated based on.
+    For uptime: ratio of uptime to observed lifetime beneath which channels
+    will be recommended for closure.
+
+    For revenue: revenue per block that capital has been committed to the
+    channel beneath which channels will be recommended for closure. This
+    value is provided per block so that channels that have been open for
+    different periods of time can be compared.
+
+    For incoming volume: The incoming volume per block that capital has
+    been committed to the channel beneath which channels will be recommended
+    for closure. This value is provided per block so that channels that have
+    been open for different periods of time can be compared.
+
+    For outgoing volume: The outgoing volume per block that capital has been
+    committed to the channel beneath which channels will be recommended for
+    closure. This value is provided per block so that channels that have been
+    open for different periods of time can be compared.
+
+    For total volume: The total volume per block that capital has been
+    committed to the channel beneath which channels will be recommended for
+    closure. This value is provided per block so that channels that have been
+    open for different periods of time can be compared.
+    */
+    float threshold_value = 2;
+}
+
+message CloseRecommendationsResponse {
+    /*
+    The total number of channels, before filtering out channels that are
+    not eligible for close recommendations.
+    */
+    int32 total_channels = 1;
+
+    /*
+    The number of channels that were considered for close recommendations.
+    */
+    int32 considered_channels = 2;
+
+    /*
+    A set of channel close recommendations. The absence of a channel in this
+    set implies that it was not considered for close because it did not meet
+    the criteria for close recommendations (it is private, or has not been
+    monitored for long enough).
+    */
+    repeated Recommendation recommendations = 3;
+}
+
+message Recommendation {
+    /*
+    The channel point [funding txid: outpoint] of the channel being considered
+    for close.
+     */
+    string chan_point = 1;
+
+    // The value of the metric that close recommendations were based on.
+    float value = 2;
+
+    // A boolean indicating whether we recommend closing the channel.
+    bool recommend_close = 3;
+}
+
+message RevenueReportRequest {
+    /*
+    The funding transaction outpoints for the channels to generate a revenue
+    report for. If this is empty, it will be generated for all open and closed
+    channels. Channel funding points should be expressed with the format
+    fundingTxID:outpoint.
+    */
+    repeated string chan_points = 1;
+
+    /*
+    Start time is beginning of the range over which the report will be
+    generated, expressed as unix epoch offset in seconds.
+    */
+    uint64 start_time = 2;
+
+    /*
+    End time is end of the range over which the report will be
+    generated, expressed as unix epoch offset in seconds.
+     */
+    uint64 end_time = 3;
+}
+
+message RevenueReportResponse {
+    /*
+    Reports is a set of pairwise revenue report generated for the channel(s)
+    over the period specified.
+    */
+    repeated RevenueReport reports = 1;
+}
+
+message RevenueReport {
+    /*
+    Target channel is the channel that the report is generated for; incoming
+    fields in the report mean that this channel was the incoming channel,
+    and the pair as the outgoing, outgoing fields mean that this channel was
+    the outgoing channel and the peer was the incoming channel.
+    */
+    string target_channel = 1;
+
+    /*
+    Pair reports maps the channel point of a peer that we generated revenue
+    with to a report detailing the revenue.
+    */
+    map<string, PairReport> pair_reports = 2;
+}
+
+message PairReport {
+    /*
+    Amount outgoing msat is the amount in millisatoshis that arrived
+    on the pair channel to be forwarded onwards by our channel.
+    */
+    int64 amount_outgoing_msat = 1;
+
+    /*
+    Fees outgoing is the amount of fees in millisatoshis that we
+    attribute to the channel for its role as the outgoing channel in
+    forwards.
+    */
+    int64 fees_outgoing_msat = 2;
+
+    /*
+    Amount incoming msat is the amount in millisatoshis that arrived
+    on our channel to be forwarded onwards by the pair channel.
+    */
+    int64 amount_incoming_msat = 3;
+
+    /*
+    Fees incoming is the amount of fees in millisatoshis that we
+    attribute to the channel for its role as the incoming channel in
+    forwards.
+    */
+    int64 fees_incoming_msat = 4;
+}
+
+message ChannelInsightsRequest {
+}
+
+message ChannelInsightsResponse {
+    // Insights for the set of currently open channels.
+    repeated ChannelInsight channel_insights = 1;
+}
+
+message ChannelInsight {
+    // The outpoint of the channel's funding transaction.
+    string chan_point = 1;
+
+    /*
+    The amount of time in seconds that we have monitored the channel peer's
+    uptime for.
+    */
+    uint64 monitored_seconds = 2;
+
+    /*
+    The amount of time in seconds that the channel peer has been online over
+    the period it has been monitored for.
+    */
+    uint64 uptime_seconds = 3;
+
+    /*
+    The volume, in millisatoshis, that has been forwarded with this channel as
+    the incoming channel.
+    */
+    int64 volume_incoming_msat = 4;
+
+    /*
+    The volume, in millisatoshis, that has been forwarded with this channel as
+    the outgoing channel.
+    */
+    int64 volume_outgoing_msat = 5;
+
+    /*
+    The total fees earned by this channel for its participation in forwards,
+    expressed in millisatoshis. Note that we attribute fees evenly across
+    incoming and outgoing channels.
+    */
+    int64 fees_earned_msat = 6;
+
+    // The number of confirmations the funding transaction has.
+    uint32 confirmations = 7;
+
+    // True if the channel is private.
+    bool private = 8;
+}
+
+/*
+Granularity describes the aggregation level at which the Bitcoin price should
+be queried. Note that setting lower levels of granularity may require more
+queries to the fiat backend.
+*/
+enum Granularity {
+    UNKNOWN_GRANULARITY = 0;
+    MINUTE = 1;
+    FIVE_MINUTES = 2;
+    FIFTEEN_MINUTES = 3;
+    THIRTY_MINUTES = 4;
+    HOUR = 5;
+    SIX_HOURS = 6;
+    TWELVE_HOURS = 7;
+    DAY = 8;
+}
+
+/*
+FiatBackend is the API endpoint to be used for any fiat related queries.
+*/
+enum FiatBackend {
+    UNKNOWN_FIATBACKEND = 0;
+
+    // Use the CoinCap API for fiat price information.
+    // This API is reached through the following URL:
+    // https://api.coincap.io/v2/assets/bitcoin/history
+    COINCAP = 1;
+
+    // Use the CoinDesk API for fiat price information.
+    // This API is reached through the following URL:
+    // https://api.coindesk.com/v1/bpi/historical/close.json
+    COINDESK = 2;
+
+    // Use custom price data provided in a CSV file for fiat price information.
+    CUSTOM = 3;
+
+    // Use the CoinGecko API for fiat price information.
+    // This API is reached through the following URL:
+    // https://api.coingecko.com/api/v3/coins/bitcoin/market_chart
+    COINGECKO = 4;
+}
+
+message ExchangeRateRequest {
+    reserved 1;
+
+    reserved 2;
+
+    // A set of timestamps for which we want the bitcoin price.
+    repeated uint64 timestamps = 3;
+
+    // The level of granularity at which we want the bitcoin price to be quoted.
+    Granularity granularity = 4;
+
+    // The api to be used for fiat related queries.
+    FiatBackend fiat_backend = 5;
+
+    // Custom price points to use if the CUSTOM FiatBackend option is set.
+    repeated BitcoinPrice custom_prices = 8;
+}
+
+message ExchangeRateResponse {
+    reserved 1;
+
+    // Rates contains a set of exchange rates for the set of timestamps
+    repeated ExchangeRate rates = 2;
+}
+
+message BitcoinPrice {
+    // The price of 1 BTC, expressed in USD.
+    string price = 1;
+
+    // The timestamp for this price price provided.
+    uint64 price_timestamp = 2;
+
+    // The currency that the price is denoted in.
+    string currency = 3;
+}
+
+message ExchangeRate {
+    // timestamp is the timestamp of the original request made.
+    uint64 timestamp = 1;
+
+    /*
+    Price is the bitcoin price approximation for the timestamp queried. Note
+    that this value has its own timestamp because we are not guaranteed to get
+    price points for the exact timestamp that was queried.
+    */
+    BitcoinPrice btc_price = 2;
+}
+
+message NodeAuditRequest {
+    // The unix time from which to produce the report, inclusive.
+    uint64 start_time = 1;
+
+    // The unix time until which to produce the report, exclusive.
+    uint64 end_time = 2;
+
+    reserved 3;
+
+    /*
+    Set to generate a report without conversion to fiat. If set, fiat values
+    will display as 0.
+    */
+    bool disable_fiat = 4;
+
+    // The level of granularity at which we wish to produce fiat prices.
+    Granularity granularity = 5;
+
+    /*
+    An optional set of custom categories which can be used to identify bespoke
+    categories in the report. Each category must have a unique name, and may not
+    have common identifier regexes. Transactions that are matched to these
+    categories report the category name in the CustomCategory field.
+    */
+    repeated CustomCategory custom_categories = 6;
+
+    // The api to be used for fiat related queries.
+    FiatBackend fiat_backend = 7;
+
+    // Custom price points to use if the CUSTOM FiatBackend option is set.
+    repeated BitcoinPrice custom_prices = 8;
+}
+
+message CustomCategory {
+    /*
+    The name for the custom category which will contain all transactions that
+    are labelled with a string matching one of the regexes provided in
+    label identifiers.
+    */
+    string name = 1;
+
+    /*
+    Set to true to apply this category to on chain transactions. Can be set in
+    conjunction with off_chain to apply the category to all transactions.
+    */
+    bool on_chain = 2;
+
+    /*
+    Set to true to apply this category to off chain transactions. Can be set in
+    conjunction with on_chain to apply the category to all transactions.
+    */
+    bool off_chain = 3;
+
+    /*
+    A set of regular expressions which identify transactions by their label as
+    belonging in this custom category. If a label matches any single regex in
+    the set, it is considered to be in the category. These expressions will be
+    matched against various labels that are present in lnd: on chain
+    transactions will be matched against their label field, off chain receipts
+    will be matched against their memo. At present, there is no way to match
+    forwards or off chain payments. These expressions must be unique across
+    custom categories, otherwise faraday will not be able to identify which
+    custom category a transaction belongs in.
+    */
+    repeated string label_patterns = 5;
+}
+
+enum EntryType {
+    UNKNOWN = 0;
+
+    // A channel opening transaction for a channel opened by our node.
+    LOCAL_CHANNEL_OPEN = 1;
+
+    // A channel opening transaction for a channel opened by a remote node.
+    REMOTE_CHANNEL_OPEN = 2;
+
+    // The on chain fee paid to open a channel.
+    CHANNEL_OPEN_FEE = 3;
+
+    // A channel closing transaction.
+    CHANNEL_CLOSE = 4;
+
+    // Receipt of funds. On chain this reflects receives, off chain settlement
+    // of invoices.
+    RECEIPT = 5;
+
+    // Payment of funds. On chain this reflects sends, off chain settlement
+    // of our payments.
+    PAYMENT = 6;
+
+    // Payment of fees.
+    FEE = 7;
+
+    // Receipt of a payment to ourselves.
+    CIRCULAR_RECEIPT = 8;
+
+    // A forward through our node.
+    FORWARD = 9;
+
+    // Fees earned from forwarding.
+    FORWARD_FEE = 10;
+
+    // Sending of a payment to ourselves.
+    CIRCULAR_PAYMENT = 11;
+
+    // The fees paid to send an off chain payment to ourselves.
+    CIRCULAR_FEE = 12;
+
+    // A transaction that sweeps funds back into our wallet's control.
+    SWEEP = 13;
+
+    // The amount of fees paid for a sweep transaction.
+    SWEEP_FEE = 14;
+
+    // The fees paid to close a channel.
+    CHANNEL_CLOSE_FEE = 15;
+}
+
+message ReportEntry {
+    // The unix timestamp of the event.
+    uint64 timestamp = 1;
+
+    // Whether the entry occurred on chain or off chain.
+    bool on_chain = 2;
+
+    // The amount of the entry, expressed in millisatoshis.
+    uint64 amount = 3;
+
+    // Whether the entry is a credit or a debit.
+    bool credit = 4;
+
+    // The asset affected by the entry.
+    string asset = 5;
+
+    // The kind of activity that this entry represents.
+    EntryType type = 6;
+
+    /*
+    This field will be populated for entry type custom, and represents the name
+    of a custom category that the report was produced with.
+    */
+    string custom_category = 12;
+
+    // The transaction id of the entry.
+    string txid = 7;
+
+    // The fiat amount of the entry's amount in the currency specified in the
+    // btc_price field.
+    string fiat = 8;
+
+    // A unique identifier for the entry, if available.
+    string reference = 9;
+
+    // An additional note for the entry, providing additional context.
+    string note = 10;
+
+    // The bitcoin price and timestamp used to calculate our fiat value.
+    BitcoinPrice btc_price = 11;
+}
+
+message NodeAuditResponse {
+    // On chain reports for the period queried.
+    repeated ReportEntry reports = 1;
+}
+
+message CloseReportRequest {
+    /*
+    The funding outpoint of the channel the report should be created for,
+    formatted txid:outpoint.
+    */
+    string channel_point = 1;
+}
+
+message CloseReportResponse {
+    // The funding outpoint of the channel.
+    string channel_point = 1;
+
+    // True if we opened the channel, false if the remote peer did.
+    bool channel_initiator = 2;
+
+    // The type of close that resolved this channel.
+    string close_type = 3;
+
+    // The transaction id of the close transaction that confirmed on chain.
+    string close_txid = 4;
+
+    /*
+    The fee we paid on chain to open this channel in satoshis, note that this
+    field will be zero if the remote party paid.
+    */
+    string open_fee = 5;
+
+    /*
+    The fee we paid on chain for the close transaction in staoshis, note that
+    this field will be zero if the remote party paid.
+    */
+    string close_fee = 6;
+}

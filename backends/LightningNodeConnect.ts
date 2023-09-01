@@ -141,15 +141,51 @@ export default class LightningNodeConnect {
 
     openChannel = async (data: OpenChannelRequest) =>
         await this.lnc.lnd.lightning
-            .openChannelSync({
-                private: data.privateChannel,
-                scid_alias: data.scidAlias,
-                local_funding_amount: data.local_funding_amount,
-                min_confs: data.min_confs,
-                node_pubkey_string: data.node_pubkey_string,
-                sat_per_vbyte: data.sat_per_vbyte,
-                spend_unconfirmed: data.spend_unconfirmed
-            })
+            .openChannelSync(
+                data.simpleTaprootChannel
+                    ? {
+                          private: data.privateChannel,
+                          scid_alias: data.scidAlias,
+                          local_funding_amount: data.local_funding_amount,
+                          min_confs: data.min_confs,
+                          node_pubkey_string: data.node_pubkey_string,
+                          sat_per_vbyte: data.sat_per_vbyte,
+                          spend_unconfirmed: data.spend_unconfirmed,
+                          fund_max: data.fundMax,
+                          outpoints: data.utxos
+                              ? data.utxos.map((utxo: string) => {
+                                    const [txid_str, output_index] =
+                                        utxo.split(':');
+                                    return {
+                                        txid_str,
+                                        output_index: Number(output_index)
+                                    };
+                                })
+                              : undefined,
+                          commitment_type:
+                              lnrpc.CommitmentType['SIMPLE_TAPROOT']
+                      }
+                    : {
+                          private: data.privateChannel,
+                          scid_alias: data.scidAlias,
+                          local_funding_amount: data.local_funding_amount,
+                          min_confs: data.min_confs,
+                          node_pubkey_string: data.node_pubkey_string,
+                          sat_per_vbyte: data.sat_per_vbyte,
+                          spend_unconfirmed: data.spend_unconfirmed,
+                          fund_max: data.fundMax,
+                          outpoints: data.utxos
+                              ? data.utxos.map((utxo: string) => {
+                                    const [txid_str, output_index] =
+                                        utxo.split(':');
+                                    return {
+                                        txid_str,
+                                        output_index: Number(output_index)
+                                    };
+                                })
+                              : undefined
+                      }
+            )
             .then((data: lnrpc.ChannelPoint) => snakeize(data));
     // TODO add with external accounts
     // openChannelStream = (data: OpenChannelRequest) =>
@@ -348,5 +384,6 @@ export default class LightningNodeConnect {
     supportsBumpFee = () => true;
     supportsLSPs = () => false;
     supportsNetworkInfo = () => false;
+    supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     isLNDBased = () => true;
 }

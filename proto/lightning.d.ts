@@ -7191,7 +7191,8 @@ export namespace lnrpc {
         LEGACY = 1,
         STATIC_REMOTE_KEY = 2,
         ANCHORS = 3,
-        SCRIPT_ENFORCED_LEASE = 4
+        SCRIPT_ENFORCED_LEASE = 4,
+        SIMPLE_TAPROOT = 5
     }
 
     /** Properties of a ChannelConstraints. */
@@ -7443,6 +7444,9 @@ export namespace lnrpc {
 
         /** Channel peer_scid_alias */
         peer_scid_alias?: Long | null;
+
+        /** Channel memo */
+        memo?: string | null;
     }
 
     /** Represents a Channel. */
@@ -7557,6 +7561,9 @@ export namespace lnrpc {
 
         /** Channel peer_scid_alias. */
         public peer_scid_alias: Long;
+
+        /** Channel memo. */
+        public memo: string;
 
         /**
          * Creates a new Channel instance using the specified properties.
@@ -11364,6 +11371,39 @@ export namespace lnrpc {
 
         /** BatchOpenChannel commitment_type */
         commitment_type?: lnrpc.CommitmentType | null;
+
+        /** BatchOpenChannel remote_max_value_in_flight_msat */
+        remote_max_value_in_flight_msat?: Long | null;
+
+        /** BatchOpenChannel remote_max_htlcs */
+        remote_max_htlcs?: number | null;
+
+        /** BatchOpenChannel max_local_csv */
+        max_local_csv?: number | null;
+
+        /** BatchOpenChannel zero_conf */
+        zero_conf?: boolean | null;
+
+        /** BatchOpenChannel scid_alias */
+        scid_alias?: boolean | null;
+
+        /** BatchOpenChannel base_fee */
+        base_fee?: Long | null;
+
+        /** BatchOpenChannel fee_rate */
+        fee_rate?: Long | null;
+
+        /** BatchOpenChannel use_base_fee */
+        use_base_fee?: boolean | null;
+
+        /** BatchOpenChannel use_fee_rate */
+        use_fee_rate?: boolean | null;
+
+        /** BatchOpenChannel remote_chan_reserve_sat */
+        remote_chan_reserve_sat?: Long | null;
+
+        /** BatchOpenChannel memo */
+        memo?: string | null;
     }
 
     /** Represents a BatchOpenChannel. */
@@ -11400,6 +11440,39 @@ export namespace lnrpc {
 
         /** BatchOpenChannel commitment_type. */
         public commitment_type: lnrpc.CommitmentType;
+
+        /** BatchOpenChannel remote_max_value_in_flight_msat. */
+        public remote_max_value_in_flight_msat: Long;
+
+        /** BatchOpenChannel remote_max_htlcs. */
+        public remote_max_htlcs: number;
+
+        /** BatchOpenChannel max_local_csv. */
+        public max_local_csv: number;
+
+        /** BatchOpenChannel zero_conf. */
+        public zero_conf: boolean;
+
+        /** BatchOpenChannel scid_alias. */
+        public scid_alias: boolean;
+
+        /** BatchOpenChannel base_fee. */
+        public base_fee: Long;
+
+        /** BatchOpenChannel fee_rate. */
+        public fee_rate: Long;
+
+        /** BatchOpenChannel use_base_fee. */
+        public use_base_fee: boolean;
+
+        /** BatchOpenChannel use_fee_rate. */
+        public use_fee_rate: boolean;
+
+        /** BatchOpenChannel remote_chan_reserve_sat. */
+        public remote_chan_reserve_sat: Long;
+
+        /** BatchOpenChannel memo. */
+        public memo: string;
 
         /**
          * Creates a new BatchOpenChannel instance using the specified properties.
@@ -11686,6 +11759,15 @@ export namespace lnrpc {
 
         /** OpenChannelRequest remote_chan_reserve_sat */
         remote_chan_reserve_sat?: Long | null;
+
+        /** OpenChannelRequest fund_max */
+        fund_max?: boolean | null;
+
+        /** OpenChannelRequest memo */
+        memo?: string | null;
+
+        /** OpenChannelRequest outpoints */
+        outpoints?: lnrpc.IOutPoint[] | null;
     }
 
     /** Represents an OpenChannelRequest. */
@@ -11770,6 +11852,15 @@ export namespace lnrpc {
 
         /** OpenChannelRequest remote_chan_reserve_sat. */
         public remote_chan_reserve_sat: Long;
+
+        /** OpenChannelRequest fund_max. */
+        public fund_max: boolean;
+
+        /** OpenChannelRequest memo. */
+        public memo: string;
+
+        /** OpenChannelRequest outpoints. */
+        public outpoints: lnrpc.IOutPoint[];
 
         /**
          * Creates a new OpenChannelRequest instance using the specified properties.
@@ -13664,6 +13755,9 @@ export namespace lnrpc {
 
             /** PendingChannel private */
             private?: boolean | null;
+
+            /** PendingChannel memo */
+            memo?: string | null;
         }
 
         /** Represents a PendingChannel. */
@@ -13711,6 +13805,9 @@ export namespace lnrpc {
 
             /** PendingChannel private. */
             public private: boolean;
+
+            /** PendingChannel memo. */
+            public memo: string;
 
             /**
              * Creates a new PendingChannel instance using the specified properties.
@@ -13821,6 +13918,9 @@ export namespace lnrpc {
 
             /** PendingOpenChannel fee_per_kw */
             fee_per_kw?: Long | null;
+
+            /** PendingOpenChannel funding_expiry_blocks */
+            funding_expiry_blocks?: number | null;
         }
 
         /** Represents a PendingOpenChannel. */
@@ -13844,6 +13944,9 @@ export namespace lnrpc {
 
             /** PendingOpenChannel fee_per_kw. */
             public fee_per_kw: Long;
+
+            /** PendingOpenChannel funding_expiry_blocks. */
+            public funding_expiry_blocks: number;
 
             /**
              * Creates a new PendingOpenChannel instance using the specified properties.
@@ -14904,7 +15007,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a WalletBalanceRequest. */
-    interface IWalletBalanceRequest {}
+    interface IWalletBalanceRequest {
+        /** WalletBalanceRequest account */
+        account?: string | null;
+    }
 
     /** Represents a WalletBalanceRequest. */
     class WalletBalanceRequest implements IWalletBalanceRequest {
@@ -14913,6 +15019,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IWalletBalanceRequest);
+
+        /** WalletBalanceRequest account. */
+        public account: string;
 
         /**
          * Creates a new WalletBalanceRequest instance using the specified properties.
@@ -50738,7 +50847,16 @@ export namespace walletrpc {
         HTLC_SECOND_LEVEL_REVOKE = 10,
         WITNESS_KEY_HASH = 11,
         NESTED_WITNESS_KEY_HASH = 12,
-        COMMITMENT_ANCHOR = 13
+        COMMITMENT_ANCHOR = 13,
+        COMMITMENT_NO_DELAY_TWEAKLESS = 14,
+        COMMITMENT_TO_REMOTE_CONFIRMED = 15,
+        HTLC_OFFERED_TIMEOUT_SECOND_LEVEL_INPUT_CONFIRMED = 16,
+        HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL_INPUT_CONFIRMED = 17,
+        LEASE_COMMITMENT_TIME_LOCK = 18,
+        LEASE_COMMITMENT_TO_REMOTE_CONFIRMED = 19,
+        LEASE_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL = 20,
+        LEASE_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL = 21,
+        TAPROOT_PUB_KEY_SPEND = 22
     }
 
     /** Properties of a PendingSweep. */
