@@ -25,6 +25,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import AddressUtils from '../../utils/AddressUtils';
 
 import Button from '../../components/Button';
+import { localeString } from '../../utils/LocaleUtils';
 
 interface AddContactsProps {
     navigation: any;
@@ -281,11 +282,6 @@ export default class AddContacts extends React.Component<
             isValidNIP05,
             isValidNpub
         } = this.state;
-        const isEdit = !!this.props.navigation.getParam('isEdit', false);
-        const prefillContact = this.props.navigation.getParam(
-            'prefillContact',
-            null
-        );
 
         const dropdownValues = [
             { key: 'LN address', translateKey: '', value: 'lnAddress' },
@@ -397,7 +393,9 @@ export default class AddContacts extends React.Component<
                                 this.setState({ name: text });
                             }}
                             value={name}
-                            placeholder="Name*"
+                            placeholder={localeString(
+                                'views.Settings.AddContacts.name'
+                            )}
                             placeholderTextColor={themeColor('secondaryText')}
                             style={styles.textInput}
                             autoCapitalize="none"
@@ -420,7 +418,9 @@ export default class AddContacts extends React.Component<
                             }}
                             value={description}
                             multiline
-                            placeholder="Description (max 120)"
+                            placeholder={localeString(
+                                'views.Settings.AddContacts.description'
+                            )}
                             placeholderTextColor={themeColor('secondaryText')}
                             style={styles.textInput}
                             autoCapitalize="none"
@@ -482,7 +482,9 @@ export default class AddContacts extends React.Component<
                                 }
                             }}
                             value={lnAddress[0]}
-                            placeholder="LN address"
+                            placeholder={localeString(
+                                'views.Settings.AddContacts.lnAddress'
+                            )}
                             placeholderTextColor={themeColor('secondaryText')}
                             style={[styles.textInput]}
                             autoCapitalize="none"
@@ -522,7 +524,9 @@ export default class AddContacts extends React.Component<
                                             }
                                         }}
                                         value={address}
-                                        placeholder="LN address"
+                                        placeholder={localeString(
+                                            'views.Settings.AddContacts.lnAddress'
+                                        )}
                                         placeholderTextColor={themeColor(
                                             'secondaryText'
                                         )}
@@ -578,7 +582,9 @@ export default class AddContacts extends React.Component<
                                 }
                             }}
                             value={onchainAddress[0]}
-                            placeholder="Onchain address"
+                            placeholder={localeString(
+                                'views.Settings.AddContacts.onchainAddress'
+                            )}
                             placeholderTextColor={themeColor('secondaryText')}
                             style={[styles.textInput]}
                             numberOfLines={1}
@@ -619,7 +625,9 @@ export default class AddContacts extends React.Component<
                                             }
                                         }}
                                         value={address}
-                                        placeholder="Onchain address"
+                                        placeholder={localeString(
+                                            'views.Settings.AddContacts.onchainAddress'
+                                        )}
                                         placeholderTextColor={themeColor(
                                             'secondaryText'
                                         )}
@@ -672,7 +680,9 @@ export default class AddContacts extends React.Component<
                                 }
                             }}
                             value={nip05[0]}
-                            placeholder="NIP-05"
+                            placeholder={localeString(
+                                'views.Settings.AddContacts.nip05'
+                            )}
                             placeholderTextColor={themeColor('secondaryText')}
                             numberOfLines={1}
                             style={styles.textInput}
@@ -710,7 +720,9 @@ export default class AddContacts extends React.Component<
                                             }
                                         }}
                                         value={address}
-                                        placeholder="NIP-05"
+                                        placeholder={localeString(
+                                            'views.Settings.AddContacts.nip05'
+                                        )}
                                         placeholderTextColor={themeColor(
                                             'secondaryText'
                                         )}
@@ -763,7 +775,9 @@ export default class AddContacts extends React.Component<
                                 }
                             }}
                             value={nostrNpub[0]}
-                            placeholder="Nostr npub"
+                            placeholder={localeString(
+                                'views.Settings.AddContacts.nostrNpub'
+                            )}
                             placeholderTextColor={themeColor('secondaryText')}
                             numberOfLines={1}
                             style={styles.textInput}
@@ -803,7 +817,9 @@ export default class AddContacts extends React.Component<
                                             }
                                         }}
                                         value={address}
-                                        placeholder="Nostr npub"
+                                        placeholder={localeString(
+                                            'views.Settings.AddContacts.nostrNpub'
+                                        )}
                                         placeholderTextColor={themeColor(
                                             'secondaryText'
                                         )}
@@ -848,14 +864,18 @@ export default class AddContacts extends React.Component<
                             }}
                         >
                             <Text style={styles.addExtraFieldText}>
-                                add extra field
+                                {localeString(
+                                    'views.Settings.AddContacts.addExtraField'
+                                )}
                             </Text>
                         </TouchableOpacity>
                     )}
 
                 <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
                     <Button
-                        title="Save Contact"
+                        title={localeString(
+                            'views.Settings.AddContacts.saveContact'
+                        )}
                         buttonStyle={{ padding: 14 }}
                         onPress={async () => {
                             this.saveContact();
