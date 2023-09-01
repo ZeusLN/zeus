@@ -373,5 +373,6 @@ export default class Spark {
     supportsBumpFee = () => false;
     supportsLSPs = () => false;
     supportsNetworkInfo = () => false;
+    supportsSimpleTaprootChannels = () => false;
     isLNDBased = () => false;
 }

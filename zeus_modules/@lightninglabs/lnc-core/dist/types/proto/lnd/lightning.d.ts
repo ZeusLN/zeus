@@ -56,6 +56,8 @@ export declare enum CommitmentType {
      * channel before its maturity date.
      */
     SCRIPT_ENFORCED_LEASE = "SCRIPT_ENFORCED_LEASE",
+    /** SIMPLE_TAPROOT - TODO(roasbeef): need script enforce mirror type for the above as well? */
+    SIMPLE_TAPROOT = "SIMPLE_TAPROOT",
     UNRECOGNIZED = "UNRECOGNIZED"
 }
 export declare enum Initiator {
@@ -948,6 +950,12 @@ export interface Channel {
     peerAlias: string;
     /** This is the peer SCID alias. */
     peerScidAlias: string;
+    /**
+     * An optional note-to-self to go along with the channel containing some
+     * useful information. This is only ever stored locally and in no way impacts
+     * the channel's operation.
+     */
+    memo: string;
 }
 export interface ListChannelsRequest {
     activeOnly: boolean;
@@ -1387,6 +1395,61 @@ export interface BatchOpenChannel {
      * the remote peer supports explicit channel negotiation.
      */
     commitmentType: CommitmentType;
+    /**
+     * The maximum amount of coins in millisatoshi that can be pending within
+     * the channel. It only applies to the remote party.
+     */
+    remoteMaxValueInFlightMsat: string;
+    /**
+     * The maximum number of concurrent HTLCs we will allow the remote party to add
+     * to the commitment transaction.
+     */
+    remoteMaxHtlcs: number;
+    /**
+     * Max local csv is the maximum csv delay we will allow for our own commitment
+     * transaction.
+     */
+    maxLocalCsv: number;
+    /** If this is true, then a zero-conf channel open will be attempted. */
+    zeroConf: boolean;
+    /**
+     * If this is true, then an option-scid-alias channel-type open will be
+     * attempted.
+     */
+    scidAlias: boolean;
+    /** The base fee charged regardless of the number of milli-satoshis sent. */
+    baseFee: string;
+    /**
+     * The fee rate in ppm (parts per million) that will be charged in
+     * proportion of the value of each forwarded HTLC.
+     */
+    feeRate: string;
+    /**
+     * If use_base_fee is true the open channel announcement will update the
+     * channel base fee with the value specified in base_fee. In the case of
+     * a base_fee of 0 use_base_fee is needed downstream to distinguish whether
+     * to use the default base fee value specified in the config or 0.
+     */
+    useBaseFee: boolean;
+    /**
+     * If use_fee_rate is true the open channel announcement will update the
+     * channel fee rate with the value specified in fee_rate. In the case of
+     * a fee_rate of 0 use_fee_rate is needed downstream to distinguish whether
+     * to use the default fee rate value specified in the config or 0.
+     */
+    useFeeRate: boolean;
+    /**
+     * The number of satoshis we require the remote peer to reserve. This value,
+     * if specified, must be above the dust limit and below 20% of the channel
+     * capacity.
+     */
+    remoteChanReserveSat: string;
+    /**
+     * An optional note-to-self to go along with the channel containing some
+     * useful information. This is only ever stored locally and in no way impacts
+     * the channel's operation.
+     */
+    memo: string;
 }
 export interface BatchOpenChannelResponse {
     pendingChannels: PendingUpdate[];
@@ -1533,6 +1596,14 @@ export interface OpenChannelRequest {
      * be zero and is ignored.
      */
     fundMax: boolean;
+    /**
+     * An optional note-to-self to go along with the channel containing some
+     * useful information. This is only ever stored locally and in no way impacts
+     * the channel's operation.
+     */
+    memo: string;
+    /** A list of selected outpoints that are allocated for channel funding. */
+    outpoints: OutPoint[];
 }
 export interface OpenStatusUpdate {
     /**
@@ -1762,6 +1833,12 @@ export interface PendingChannelsResponse_PendingChannel {
     chanStatusFlags: string;
     /** Whether this channel is advertised to the network or not. */
     private: boolean;
+    /**
+     * An optional note-to-self to go along with the channel containing some
+     * useful information. This is only ever stored locally and in no way
+     * impacts the channel's operation.
+     */
+    memo: string;
 }
 export interface PendingChannelsResponse_PendingOpenChannel {
     /** The pending channel */
@@ -1782,6 +1859,18 @@ export interface PendingChannelsResponse_PendingOpenChannel {
      * transaction. This value can later be updated once the channel is open.
      */
     feePerKw: string;
+    /**
+     * The number of blocks until the funding transaction is considered
+     * expired. If this value gets close to zero, there is a risk that the
+     * channel funding will be canceled by the channel responder. The
+     * channel should be fee bumped using CPFP (see walletrpc.BumpFee) to
+     * ensure that the channel confirms in time. Otherwise a force-close
+     * will be necessary if the channel confirms after the funding
+     * transaction expires. A negative value means the channel responder has
+     * very likely canceled the funding and the channel will never become
+     * fully operational.
+     */
+    fundingExpiryBlocks: number;
 }
 export interface PendingChannelsResponse_WaitingCloseChannel {
     /** The pending channel waiting for closing tx to confirm */
@@ -1886,6 +1975,11 @@ export interface WalletAccountBalance {
     unconfirmedBalance: string;
 }
 export interface WalletBalanceRequest {
+    /**
+     * The wallet account the balance is shown for.
+     * If this is not specified, the balance of the "default" account is shown.
+     */
+    account: string;
 }
 export interface WalletBalanceResponse {
     /** The balance of the wallet */
@@ -2570,21 +2664,21 @@ export interface Invoice {
     amtPaid: string;
     /**
      * The amount that was accepted for this invoice, in satoshis. This will ONLY
-     * be set if this invoice has been settled. We provide this field as if the
-     * invoice was created with a zero value, then we need to record what amount
-     * was ultimately accepted. Additionally, it's possible that the sender paid
-     * MORE that was specified in the original invoice. So we'll record that here
-     * as well.
+     * be set if this invoice has been settled or accepted. We provide this field
+     * as if the invoice was created with a zero value, then we need to record what
+     * amount was ultimately accepted. Additionally, it's possible that the sender
+     * paid MORE that was specified in the original invoice. So we'll record that
+     * here as well.
      * Note: Output only, don't specify for creating an invoice.
      */
     amtPaidSat: string;
     /**
      * The amount that was accepted for this invoice, in millisatoshis. This will
-     * ONLY be set if this invoice has been settled. We provide this field as if
-     * the invoice was created with a zero value, then we need to record what
-     * amount was ultimately accepted. Additionally, it's possible that the sender
-     * paid MORE that was specified in the original invoice. So we'll record that
-     * here as well.
+     * ONLY be set if this invoice has been settled or accepted. We provide this
+     * field as if the invoice was created with a zero value, then we need to
+     * record what amount was ultimately accepted. Additionally, it's possible that
+     * the sender paid MORE that was specified in the original invoice. So we'll
+     * record that here as well.
      * Note: Output only, don't specify for creating an invoice.
      */
     amtPaidMsat: string;
@@ -3684,8 +3778,10 @@ export interface Lightning {
     signMessage(request?: DeepPartial<SignMessageRequest>): Promise<SignMessageResponse>;
     /**
      * lncli: `verifymessage`
-     * VerifyMessage verifies a signature over a msg. The signature must be
-     * zbase32 encoded and signed by an active node in the resident node's
+     * VerifyMessage verifies a signature over a message and recovers the signer's
+     * public key. The signature is only deemed valid if the recovered public key
+     * corresponds to a node key in the public Lightning network. The signature
+     * must be zbase32 encoded and signed by an active node in the resident node's
      * channel database. In addition to returning the validity of the signature,
      * VerifyMessage also returns the recovered pubkey from the signature.
      */

@@ -19,6 +19,8 @@ export default class OpenChannelRequest extends BaseModel {
     public utxos?: string[];
     public privateChannel?: boolean;
     public scidAlias?: boolean;
+    public simpleTaprootChannel?: boolean;
+    public fundMax?: boolean;
 
     constructor(data?: any) {
         super(data);

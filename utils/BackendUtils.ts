@@ -135,6 +135,8 @@ class BackendUtils {
     supportsBumpFee = () => this.call('supportsBumpFee');
     supportsLSPs = () => this.call('supportsLSPs');
     supportsNetworkInfo = () => this.call('supportsNetworkInfo');
+    supportsSimpleTaprootChannels = () =>
+        this.call('supportsSimpleTaprootChannels');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC

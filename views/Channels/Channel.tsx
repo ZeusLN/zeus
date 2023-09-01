@@ -158,7 +158,8 @@ export default class ChannelView extends React.Component<
             forceClose,
             pendingOpen,
             closing,
-            zero_conf
+            zero_conf,
+            getCommitmentType
         } = channel;
         const privateChannel = channel.private;
 
@@ -296,6 +297,14 @@ export default class ChannelView extends React.Component<
                             }
                             color={privateChannel ? 'green' : '#808000'}
                         />
+                        {getCommitmentType && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.commitmentType'
+                                )}
+                                value={getCommitmentType}
+                            />
+                        )}
                         {chain_hash && (
                             <KeyValue
                                 keyValue={localeString(

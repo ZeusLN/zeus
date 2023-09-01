@@ -123,9 +123,9 @@ export const INTERFACE_KEYS = [
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (c-lightning-REST)', value: 'c-lightning-REST' },
-    { key: 'Eclair', value: 'eclair' },
     { key: 'LNDHub', value: 'lndhub' },
-    { key: '[DEPRECATED] Core Lightning (Sparko)', value: 'spark' }
+    { key: '[DEPRECATED] Core Lightning (Sparko)', value: 'spark' },
+    { key: '[DEPRECATED] Eclair', value: 'eclair' }
 ];
 
 export const LNC_MAILBOX_KEYS = [
@@ -490,6 +490,11 @@ export const CURRENCY_KEYS = [
     {
         key: '🇺🇾 Uruguayan Peso (UYU)',
         value: 'UYU',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇲🇷 Mauritanian Ouguiya (MRU)',
+        value: 'MRU',
         supportedSources: ['Zeus', 'Yadio']
     }
 ];

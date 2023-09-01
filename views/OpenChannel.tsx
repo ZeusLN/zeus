@@ -12,12 +12,14 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 
-import Amount from './../components/Amount';
-import AmountInput from './../components/AmountInput';
-import Button from './../components/Button';
+import Amount from '../components/Amount';
+import AmountInput from '../components/AmountInput';
+import Button from '../components/Button';
 import Header from '../components/Header';
-import LightningIndicator from './../components/LightningIndicator';
-import Screen from './../components/Screen';
+import KeyValue from '../components/KeyValue';
+import LightningIndicator from '../components/LightningIndicator';
+import { Row } from '../components/layout/Row';
+import Screen from '../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
@@ -33,13 +35,15 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-import BalanceStore from './../stores/BalanceStore';
-import ChannelsStore from './../stores/ChannelsStore';
-import ModalStore from './../stores/ModalStore';
-import NodeInfoStore from './../stores/NodeInfoStore';
-import SettingsStore from './../stores/SettingsStore';
-import UTXOsStore from './../stores/UTXOsStore';
+import BalanceStore from '../stores/BalanceStore';
+import ChannelsStore from '../stores/ChannelsStore';
+import ModalStore from '../stores/ModalStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
+import SettingsStore from '../stores/SettingsStore';
+import UTXOsStore from '../stores/UTXOsStore';
 
+import CaretDown from '../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 
 interface OpenChannelProps {
@@ -56,17 +60,20 @@ interface OpenChannelProps {
 interface OpenChannelState {
     node_pubkey_string: string;
     local_funding_amount: string;
+    fundMax: boolean;
     satAmount: string | number;
     min_confs: number;
     spend_unconfirmed: boolean;
     sat_per_vbyte: string;
     privateChannel: boolean;
     scidAlias: boolean;
+    simpleTaprootChannel: boolean;
     host: string;
     suggestImport: string;
     utxos: Array<string>;
     utxoBalance: number;
     connectPeerOnly: boolean;
+    advancedSettingsToggle: boolean;
 }
 
 @inject(
@@ -87,17 +94,20 @@ export default class OpenChannel extends React.Component<
         this.state = {
             node_pubkey_string: '',
             local_funding_amount: '',
+            fundMax: false,
             satAmount: '',
             min_confs: 1,
             spend_unconfirmed: false,
             sat_per_vbyte: '2',
             privateChannel: true,
             scidAlias: true,
+            simpleTaprootChannel: false,
             host: '',
             suggestImport: '',
             utxos: [],
             utxoBalance: 0,
-            connectPeerOnly: false
+            connectPeerOnly: false,
+            advancedSettingsToggle: false
         };
     }
 
@@ -198,14 +208,9 @@ export default class OpenChannel extends React.Component<
     };
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
-        const { SettingsStore } = this.props;
-        const { implementation } = SettingsStore;
         const newState: any = {};
         newState.utxos = utxos;
         newState.utxoBalance = utxoBalance;
-        if (implementation === 'c-lightning-REST') {
-            newState.local_funding_amount = 'all';
-        }
         this.setState(newState);
     };
 
@@ -251,6 +256,7 @@ export default class OpenChannel extends React.Component<
         const {
             node_pubkey_string,
             local_funding_amount,
+            fundMax,
             satAmount,
             min_confs,
             host,
@@ -259,9 +265,11 @@ export default class OpenChannel extends React.Component<
             utxoBalance,
             privateChannel,
             scidAlias,
-            connectPeerOnly
+            simpleTaprootChannel,
+            connectPeerOnly,
+            advancedSettingsToggle
         } = this.state;
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
@@ -320,6 +328,7 @@ export default class OpenChannel extends React.Component<
                         flex: 1
                     }}
                     keyboardShouldPersistTaps="handled"
+                    ref="_scrollView"
                 >
                     {!!suggestImport && (
                         <View style={styles.clipboardImport}>
@@ -452,26 +461,69 @@ export default class OpenChannel extends React.Component<
 
                         {!connectPeerOnly && (
                             <>
-                                <AmountInput
-                                    amount={local_funding_amount}
-                                    title={localeString(
-                                        'views.OpenChannel.localAmt'
-                                    )}
-                                    onAmountChange={(
-                                        amount: string,
-                                        satAmount: string | number
-                                    ) => {
-                                        this.setState({
-                                            local_funding_amount: amount,
-                                            satAmount
-                                        });
-                                    }}
-                                    hideConversion={
-                                        local_funding_amount === 'all'
-                                    }
-                                />
+                                {BackendUtils.supportsCoinControl() && (
+                                    <UTXOPicker
+                                        onValueChange={this.selectUTXOs}
+                                        UTXOsStore={UTXOsStore}
+                                    />
+                                )}
 
-                                {local_funding_amount === 'all' && (
+                                {BackendUtils.isLNDBased() && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                top: 20,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.OpenChannel.fundMax'
+                                            )}
+                                        </Text>
+                                        <Switch
+                                            value={fundMax}
+                                            onValueChange={() => {
+                                                const newValue: boolean =
+                                                    !fundMax;
+                                                this.setState({
+                                                    fundMax: newValue,
+                                                    local_funding_amount:
+                                                        newValue &&
+                                                        implementation ===
+                                                            'c-lightning-REST'
+                                                            ? 'all'
+                                                            : ''
+                                                });
+                                            }}
+                                        />
+                                    </>
+                                )}
+
+                                {!fundMax && (
+                                    <AmountInput
+                                        amount={local_funding_amount}
+                                        title={localeString(
+                                            'views.OpenChannel.localAmt'
+                                        )}
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                local_funding_amount: amount,
+                                                satAmount
+                                            });
+                                        }}
+                                        hideConversion={
+                                            local_funding_amount === 'all'
+                                        }
+                                    />
+                                )}
+
+                                {(local_funding_amount === 'all' ||
+                                    fundMax) && (
                                     <View style={{ marginBottom: 20 }}>
                                         <Amount
                                             sats={
@@ -483,28 +535,6 @@ export default class OpenChannel extends React.Component<
                                         />
                                     </View>
                                 )}
-
-                                <Text
-                                    style={{
-                                        ...styles.secondaryText,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString('views.OpenChannel.numConf')}
-                                </Text>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    placeholder={'1'}
-                                    value={min_confs.toString()}
-                                    onChangeText={(text: string) => {
-                                        const newMinConfs = Number(text);
-                                        this.setState({
-                                            min_confs: newMinConfs,
-                                            spend_unconfirmed: newMinConfs === 0
-                                        });
-                                    }}
-                                    locked={openingChannel}
-                                />
 
                                 <>
                                     <Text
@@ -563,57 +593,150 @@ export default class OpenChannel extends React.Component<
                                     )}
                                 </>
 
-                                {BackendUtils.supportsCoinControl() &&
-                                    !BackendUtils.isLNDBased() && (
-                                        <UTXOPicker
-                                            onValueChange={this.selectUTXOs}
-                                            UTXOsStore={UTXOsStore}
-                                        />
-                                    )}
-
-                                <>
-                                    <Text
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        this.setState({
+                                            advancedSettingsToggle:
+                                                !advancedSettingsToggle
+                                        });
+                                    }}
+                                >
+                                    <View
                                         style={{
-                                            top: 20,
-                                            color: themeColor('secondaryText')
+                                            marginTop: 10,
+                                            marginBottom: 10
                                         }}
                                     >
-                                        {localeString(
-                                            'views.OpenChannel.announceChannel'
-                                        )}
-                                    </Text>
-                                    <Switch
-                                        value={!privateChannel}
-                                        onValueChange={() =>
-                                            this.setState({
-                                                privateChannel: !privateChannel
-                                            })
-                                        }
-                                    />
-                                </>
+                                        <Row justify="space-between">
+                                            <View style={{ width: '95%' }}>
+                                                <KeyValue
+                                                    keyValue={localeString(
+                                                        'general.advancedSettings'
+                                                    )}
+                                                />
+                                            </View>
+                                            {advancedSettingsToggle ? (
+                                                <CaretDown
+                                                    fill={themeColor('text')}
+                                                    width="20"
+                                                    height="20"
+                                                />
+                                            ) : (
+                                                <CaretRight
+                                                    fill={themeColor('text')}
+                                                    width="20"
+                                                    height="20"
+                                                />
+                                            )}
+                                        </Row>
+                                    </View>
+                                </TouchableOpacity>
 
-                                {BackendUtils.isLNDBased() && (
+                                {advancedSettingsToggle && (
                                     <>
                                         <Text
                                             style={{
-                                                top: 20,
+                                                ...styles.secondaryText,
                                                 color: themeColor(
                                                     'secondaryText'
                                                 )
                                             }}
                                         >
                                             {localeString(
-                                                'views.OpenChannel.scidAlias'
+                                                'views.OpenChannel.numConf'
                                             )}
                                         </Text>
-                                        <Switch
-                                            value={scidAlias}
-                                            onValueChange={() =>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder={'1'}
+                                            value={min_confs.toString()}
+                                            onChangeText={(text: string) => {
+                                                const newMinConfs =
+                                                    Number(text);
                                                 this.setState({
-                                                    scidAlias: !scidAlias
-                                                })
-                                            }
+                                                    min_confs: newMinConfs,
+                                                    spend_unconfirmed:
+                                                        newMinConfs === 0
+                                                });
+                                            }}
+                                            locked={openingChannel}
                                         />
+
+                                        <>
+                                            <Text
+                                                style={{
+                                                    top: 20,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.OpenChannel.announceChannel'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={!privateChannel}
+                                                onValueChange={() =>
+                                                    this.setState({
+                                                        privateChannel:
+                                                            !privateChannel
+                                                    })
+                                                }
+                                            />
+                                        </>
+
+                                        {BackendUtils.isLNDBased() && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        top: 20,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.scidAlias'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={scidAlias}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            scidAlias:
+                                                                !scidAlias
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )}
+
+                                        {BackendUtils.supportsSimpleTaprootChannels() && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        top: 20,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.simpleTaprootChannel'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={simpleTaprootChannel}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            simpleTaprootChannel:
+                                                                !simpleTaprootChannel
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )}
                                     </>
                                 )}
                             </>
@@ -635,7 +758,11 @@ export default class OpenChannel extends React.Component<
                                     size: 25,
                                     color: 'white'
                                 }}
-                                onPress={() =>
+                                onPress={() => {
+                                    this.refs._scrollView.scrollTo({
+                                        y: 0,
+                                        animated: true
+                                    });
                                     connectPeer(
                                         {
                                             ...this.state,
@@ -644,8 +771,8 @@ export default class OpenChannel extends React.Component<
                                         },
                                         false,
                                         connectPeerOnly
-                                    )
-                                }
+                                    );
+                                }}
                             />
                         </View>
 

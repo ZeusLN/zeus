@@ -102,7 +102,7 @@ Zeus is proud to be integrated on the following platforms:
 ### Android nodes
 * [Nayuta Core](https://nayuta.co/core/)
 
-## Developing
+## Starting development
 
 **Don't trust, verify** the code with your own two eyes. Then when ready proceed to the steps below based on your platform.
 
