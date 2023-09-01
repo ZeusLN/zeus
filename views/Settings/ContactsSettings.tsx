@@ -8,6 +8,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import { localeString } from '../../utils/LocaleUtils';
 
 interface ContactsSettingsProps {
     navigation: any;
@@ -120,7 +121,9 @@ export default class ContactsSettings extends React.Component<
                                   )}...${item.lnAddress[0].slice(-4)}`
                                 : item.lnAddress[0]
                             : item.lnAddress.length > 1
-                            ? 'multiple addresses'
+                            ? `${localeString(
+                                  'views.Settings.ContactsSettings.multipleAddresses'
+                              )}`
                             : item.onchainAddress &&
                               item.onchainAddress.length === 1 &&
                               item.onchainAddress[0] !== '' &&
@@ -131,7 +134,9 @@ export default class ContactsSettings extends React.Component<
                                       4
                                   )}...${item.onchainAddress[0].slice(-4)}`
                                 : item.onchainAddress[0]
-                            : 'multiple addresses'}
+                            : `${localeString(
+                                  'views.Settings.ContactsSettings.multipleAddresses'
+                              )}`}
                     </Text>
                 </View>
             </View>
@@ -244,7 +249,9 @@ export default class ContactsSettings extends React.Component<
                                         style={{ marginTop: 14 }}
                                     />
                                     <SearchBar
-                                        placeholder="Nostr npub, NIP-05, LN address, Onchain address"
+                                        placeholder={localeString(
+                                            'views.Settings.ContactsSettings.searchBar1'
+                                        )}
                                         onChangeText={this.updateSearch}
                                         value={this.state.search}
                                         inputStyle={{
@@ -281,7 +288,9 @@ export default class ContactsSettings extends React.Component<
                                 </View>
                             ) : (
                                 <SearchBar
-                                    placeholder="Search"
+                                    placeholder={localeString(
+                                        'views.Settings.ContactsSettings.searchBar2'
+                                    )}
                                     onChangeText={this.updateSearch}
                                     value={this.state.search}
                                     inputStyle={{
@@ -313,7 +322,10 @@ export default class ContactsSettings extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                FAVORITES ({favoriteContacts.length})
+                                {localeString(
+                                    'views.Settings.ContactsSettings.favorites'
+                                )}{' '}
+                                ({favoriteContacts.length})
                             </Text>
                         </View>
                     )}
@@ -338,7 +350,10 @@ export default class ContactsSettings extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                CONTACTS ({nonFavoriteContacts.length})
+                                {localeString(
+                                    'views.Settings.ContactsSettings.contacts'
+                                )}{' '}
+                                ({nonFavoriteContacts.length})
                             </Text>
                         </View>
                     )}
@@ -352,7 +367,9 @@ export default class ContactsSettings extends React.Component<
                     ) : (
                         contacts.length === 0 && (
                             <Button
-                                title="No Contacts"
+                                title={localeString(
+                                    'views.Settings.ContactsSettings.noContacts'
+                                )}
                                 icon={{
                                     name: 'error-outline',
                                     size: 25,
