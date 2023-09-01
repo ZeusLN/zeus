@@ -459,7 +459,11 @@ export default class AddContacts extends React.Component<
                         style={{
                             marginTop: 14
                         }}
-                        color={!isValidLightningAddress && 'red'}
+                        color={
+                            lnAddress.length == 1 &&
+                            !isValidLightningAddress &&
+                            'red'
+                        }
                     />
                     <View style={styles.inputContainer}>
                         <View style={styles.icons}>
@@ -489,7 +493,11 @@ export default class AddContacts extends React.Component<
                             <Divider
                                 orientation="horizontal"
                                 style={{ marginTop: 16 }}
-                                color={!isValidLightningAddress && 'red'}
+                                color={
+                                    index === lnAddress.length - 2 &&
+                                    !isValidLightningAddress &&
+                                    'red'
+                                }
                             />
                             <View key={index} style={styles.inputContainer}>
                                 <View style={styles.icons}>
@@ -545,6 +553,7 @@ export default class AddContacts extends React.Component<
                             marginTop: 10
                         }}
                         color={
+                            onchainAddress.length == 1 &&
                             (!isValidOnchainAddress ||
                                 !isValidLightningAddress) &&
                             'red'
@@ -582,6 +591,7 @@ export default class AddContacts extends React.Component<
                                 orientation="horizontal"
                                 style={{ marginTop: 16 }}
                                 color={
+                                    index === onchainAddress.length - 2 &&
                                     (!isValidOnchainAddress ||
                                         !isValidLightningAddress) &&
                                     'red'
@@ -638,7 +648,9 @@ export default class AddContacts extends React.Component<
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
                         color={
-                            (!isValidOnchainAddress || !isValidNIP05) && 'red'
+                            nip05.length == 1 &&
+                            (!isValidOnchainAddress || !isValidNIP05) &&
+                            'red'
                         }
                     />
                     <View style={styles.inputContainer}>
@@ -672,6 +684,11 @@ export default class AddContacts extends React.Component<
                             <Divider
                                 orientation="horizontal"
                                 style={{ marginTop: 16 }}
+                                color={
+                                    index === nip05.length - 2 &&
+                                    (!isValidOnchainAddress || !isValidNIP05) &&
+                                    'red'
+                                }
                             />
                             <View key={index} style={styles.inputContainer}>
                                 <View style={styles.icons}>
@@ -721,7 +738,11 @@ export default class AddContacts extends React.Component<
                     <Divider
                         orientation="horizontal"
                         style={{ marginTop: 10 }}
-                        color={(!isValidNIP05 || !isValidNpub) && 'red'}
+                        color={
+                            nostrNpub.length == 1 &&
+                            (!isValidNIP05 || !isValidNpub) &&
+                            'red'
+                        }
                     />
                     <View style={styles.inputContainer}>
                         <View style={styles.icons}>
@@ -754,6 +775,11 @@ export default class AddContacts extends React.Component<
                             <Divider
                                 orientation="horizontal"
                                 style={{ marginTop: 16 }}
+                                color={
+                                    index === nostrNpub.length - 2 &&
+                                    (!isValidNIP05 || !isValidNpub) &&
+                                    'red'
+                                }
                             />
                             <View key={index} style={styles.inputContainer}>
                                 <View style={styles.icons}>
@@ -848,6 +874,15 @@ export default class AddContacts extends React.Component<
                             !isValidLightningAddress ||
                             !isValidNIP05 ||
                             !isValidNpub ||
+                            (lnAddress.length > 1 &&
+                                lnAddress[lnAddress.length - 1] === '') ||
+                            (onchainAddress.length > 1 &&
+                                onchainAddress[onchainAddress.length - 1]) ===
+                                '' ||
+                            (nip05.length > 1 &&
+                                nip05[nip05.length - 1] === '') ||
+                            (nostrNpub.length > 1 &&
+                                nostrNpub[nostrNpub.length - 1] === '') ||
                             !(lnAddress[0] || onchainAddress[0])
                         }
                     />
