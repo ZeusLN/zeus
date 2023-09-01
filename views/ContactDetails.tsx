@@ -16,6 +16,7 @@ import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../assets/images/SVG/Key Security.svg';
 import VerifiedAccount from '../assets/images/SVG/Verified Account.svg';
+import EditContact from '../assets/images/SVG/Pen.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -134,13 +135,29 @@ export default class ContactDetails extends React.Component<
                 onPress={this.toggleFavorite}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={28}
             />
+        );
+        const EditContactButton = () => (
+            <TouchableOpacity
+                onPress={() =>
+                    navigation.navigate('AddContacts', {
+                        prefillContact: contact,
+                        isEdit: true
+                    })
+                }
+            >
+                <EditContact height={36} width={36} />
+            </TouchableOpacity>
         );
         return (
             <Screen>
                 <Header
                     leftComponent={<BackButton />}
+                    centerComponent={<EditContactButton />}
                     rightComponent={<StarButton />}
+                    centerContainerStyle={{ paddingRight: 6, marginTop: -3 }}
+                    placement="right"
                     backgroundColor="none"
                     containerStyle={{
                         borderBottomWidth: 0

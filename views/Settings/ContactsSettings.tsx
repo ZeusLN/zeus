@@ -75,14 +75,9 @@ export default class ContactsSettings extends React.Component<
     renderContactItem = ({ item }: { item: ContactItem }) => (
         <TouchableOpacity
             onPress={() =>
-                this.state.SendScreen
-                    ? this.props.navigation.navigate('ContactDetails', {
-                          contact: item
-                      })
-                    : this.props.navigation.navigate('AddContacts', {
-                          prefillContact: item,
-                          isEdit: true
-                      })
+                this.props.navigation.navigate('ContactDetails', {
+                    contact: item
+                })
             }
         >
             <View
@@ -116,7 +111,8 @@ export default class ContactsSettings extends React.Component<
                     >
                         {item.lnAddress &&
                         item.lnAddress.length === 1 &&
-                        item.lnAddress[0] !== ''
+                        item.lnAddress[0] !== '' &&
+                        item.onchainAddress[0] === ''
                             ? item.lnAddress[0].length > 15
                                 ? `${item.lnAddress[0].slice(
                                       0,
@@ -127,13 +123,14 @@ export default class ContactsSettings extends React.Component<
                             ? 'multiple addresses'
                             : item.onchainAddress &&
                               item.onchainAddress.length === 1 &&
-                              item.onchainAddress !== ''
-                            ? item.onchainAddress.length > 15
-                                ? `${item.onchainAddress.slice(
+                              item.onchainAddress[0] !== '' &&
+                              item.lnAddress[0] === ''
+                            ? item.onchainAddress[0].length > 15
+                                ? `${item.onchainAddress[0].slice(
                                       0,
                                       4
-                                  )}...${item.onchainAddress.slice(-4)}`
-                                : item.onchainAddress
+                                  )}...${item.onchainAddress[0].slice(-4)}`
+                                : item.onchainAddress[0]
                             : 'multiple addresses'}
                     </Text>
                 </View>

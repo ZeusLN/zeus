@@ -84,7 +84,6 @@ interface SendState {
     clipboard: string;
     loading: boolean;
     preventUnitReset: boolean;
-    isValidReceiver: boolean;
     contactName: string;
 }
 
@@ -133,7 +132,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             clipboard: '',
             loading: false,
             preventUnitReset,
-            isValidReceiver: false,
             contactName
         };
     }
@@ -300,9 +298,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                         loading: false
                     });
                     if (response) {
-                        this.setState({
-                            isValidReceiver: true
-                        });
                         const [route, props] = response;
                         navigation.navigate(route, props);
                     }
@@ -514,6 +509,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     >
                         <TextInput
                             placeholder={'lnbc1...'}
+                            value={!contactName && destination}
                             onChangeText={(text: string) => {
                                 this.setState({
                                     destination: text
@@ -529,7 +525,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             autoCorrect={false}
                             autoCapitalize="none"
                         />
-                        {this.state.isValidReceiver && contactName && (
+                        {contactName && (
                             <View
                                 style={{
                                     flexDirection: 'row',
