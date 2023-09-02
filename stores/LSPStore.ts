@@ -35,16 +35,17 @@ export default class LSPStore {
         this.channelAcceptor = undefined;
     };
 
+    getLSPHost = () =>
+        this.settingsStore.embeddedLndNetwork === 'Mainnet'
+            ? this.settingsStore.settings.lspMainnet
+            : this.settingsStore.settings.lspTestnet;
+
     @action
     public getLSPInfo = () => {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'get',
-                `${
-                    this.settingsStore.embeddedLndNetwork === 'Mainnet'
-                        ? this.settingsStore.settings.lspMainnet
-                        : this.settingsStore.settings.lspTestnet
-                }/api/v1/info`,
+                `${this.getLSPHost()}/api/v1/info`,
                 {
                     'Content-Type': 'application/json'
                 }
@@ -85,11 +86,7 @@ export default class LSPStore {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
-                `${
-                    this.settingsStore.embeddedLndNetwork === 'Mainnet'
-                        ? this.settingsStore.settings.lspMainnet
-                        : this.settingsStore.settings.lspTestnet
-                }/api/v1/fee`,
+                `${this.getLSPHost()}/api/v1/fee`,
                 {
                     'Content-Type': 'application/json'
                 },
@@ -158,11 +155,7 @@ export default class LSPStore {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
-                `${
-                    this.settingsStore.embeddedLndNetwork === 'Mainnet'
-                        ? this.settingsStore.settings.lspMainnet
-                        : this.settingsStore.settings.lspTestnet
-                }/api/v1/proposal`,
+                `${this.getLSPHost()}/api/v1/proposal`,
                 this.settingsStore.settings.lspAccessKey
                     ? {
                           'Content-Type': 'application/json',
