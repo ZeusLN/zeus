@@ -173,7 +173,8 @@ export default class LSPStore {
                           'Content-Type': 'application/json'
                       },
                 JSON.stringify({
-                    bolt11
+                    bolt11,
+                    simpleTaproot: true
                 })
             )
                 .then(async (response: any) => {
