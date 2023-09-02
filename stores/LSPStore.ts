@@ -7,6 +7,7 @@ import stores from './Stores';
 import lndMobile from '../lndmobile/LndMobileInjection';
 const { channel } = lndMobile;
 
+import Base64Utils from '../utils/Base64Utils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -127,8 +128,12 @@ export default class LSPStore {
                     const channelAcceptRequest =
                         channel.decodeChannelAcceptRequest(event.data);
 
-                    // PEGASUS TODO only allow chans from LSP
-                    const isZeroConfAllowed = true;
+                    // Only allow 0-conf chans from LSP
+                    const isZeroConfAllowed =
+                        this.info.pubkey ===
+                        Base64Utils.bytesToHexString(
+                            channelAcceptRequest.node_pubkey
+                        );
 
                     await channel.channelAcceptorResponse(
                         channelAcceptRequest.pending_chan_id,
