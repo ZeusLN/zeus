@@ -218,7 +218,8 @@ export default class ChannelBackupStore {
             if (olderThanThreeDays) this.backupChannels();
         }
         if (!time && !status) this.backupChannels();
-        if (this.channelEventsSubscription) return;
+        if (this.channelEventsSubscription?.remove)
+            this.channelEventsSubscription.remove();
         this.channelEventsSubscription = LndMobileEventEmitter.addListener(
             'SubscribeChannelEvents',
             async (event: any) => {
