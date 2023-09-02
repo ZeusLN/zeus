@@ -99,6 +99,7 @@ const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
         isTestnet ? 'testnet.blixtwallet.com' : 'node.blixtwallet.com'
     }
     ${!isTestnet ? 'neutrino.addpeer=noad.sathoarder.com' : ''}
+    ${!isTestnet ? 'neutrino.addpeer=btcd.lnolymp.us' : ''}
     ${
         !isTestnet
             ? 'neutrino.assertfilterheader=230000:1308d5cfc6462f877a5587fd77d7c1ab029d45e58d5175aaf8c264cee9bde760'
