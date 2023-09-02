@@ -119,7 +119,7 @@ export default class LSPStore {
 
     @action
     public initChannelAcceptor = async () => {
-        if (this.channelAcceptor) return;
+        if (this.channelAcceptor?.remove) this.channelAcceptor.remove();
         this.channelAcceptor = LndMobileEventEmitter.addListener(
             'ChannelAcceptor',
             async (event: any) => {
