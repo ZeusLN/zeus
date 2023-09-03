@@ -167,7 +167,9 @@ export default class LSPStore {
                       },
                 JSON.stringify({
                     bolt11,
-                    simpleTaproot: true
+                    // TODO investigate why Taproot chans from LSP
+                    // result in unsettled funds
+                    simpleTaproot: false
                 })
             )
                 .then(async (response: any) => {
