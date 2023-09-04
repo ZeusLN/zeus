@@ -374,6 +374,7 @@
     "views.NodeInfo.implementationVersion": "Implementation Version",
     "views.NodeInfo.zeusVersion": "Zeus Version",
     "views.NodeInfo.synced": "Synced to Chain",
+    "views.NodeInfo.syncedToGraph": "Synced to Graph",
     "views.NodeInfo.blockHeight": "Block Height",
     "views.NodeInfo.blockHash": "Block Hash",
     "views.NodeInfo.uris": "URIs",
