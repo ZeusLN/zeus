@@ -7,8 +7,7 @@ import {
     Text,
     View,
     ScrollView,
-    TouchableOpacity,
-    TouchableWithoutFeedback
+    TouchableOpacity
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
@@ -38,6 +37,7 @@ import {
     ErrorMessage
 } from '../components/SuccessErrorMessage';
 import Header from '../components/Header';
+import OnchainFeeInput from '../components/OnchainFeeInput';
 import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
@@ -368,10 +368,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingLightning');
     };
 
-    setFee = (text: string) => {
-        this.setState({ fee: text });
-    };
-
     handleOnNavigateBack = (fee: string) => {
         this.setState({
             fee
@@ -405,9 +401,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             unconfirmedBlockchainBalance,
             lightningBalance
         } = BalanceStore;
-        const { implementation, settings } = SettingsStore;
-        const { privacy } = settings;
-        const enableMempoolRates = privacy && privacy.enableMempoolRates;
+        const { implementation } = SettingsStore;
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
@@ -481,7 +475,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         )}
                     <Text
                         style={{
-                            ...styles.secondaryText,
+                            ...styles.text,
                             color: themeColor('secondaryText')
                         }}
                     >
@@ -531,7 +525,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         !BackendUtils.supportsOnchainSends() && (
                             <Text
                                 style={{
-                                    ...styles.secondaryText,
+                                    ...styles.text,
                                     color: themeColor('secondaryText')
                                 }}
                             >
@@ -582,51 +576,19 @@ export default class Send extends React.Component<SendProps, SendState> {
 
                                 <Text
                                     style={{
-                                        ...styles.secondaryText,
+                                        ...styles.text,
                                         color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Send.feeSatsVbyte')}:
                                 </Text>
-                                {enableMempoolRates ? (
-                                    <TouchableWithoutFeedback
-                                        onPress={() =>
-                                            navigation.navigate('EditFee', {
-                                                onNavigateBack:
-                                                    this.handleOnNavigateBack
-                                            })
-                                        }
-                                    >
-                                        <View
-                                            style={{
-                                                ...styles.editFeeBox,
-                                                borderColor:
-                                                    'rgba(255, 217, 63, .6)',
-                                                borderWidth: 3
-                                            }}
-                                        >
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text'),
-                                                    paddingBottom: 5,
-                                                    fontSize: 18
-                                                }}
-                                            >
-                                                {fee}
-                                            </Text>
-                                        </View>
-                                    </TouchableWithoutFeedback>
-                                ) : (
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        value={fee}
-                                        onChangeText={(text: string) =>
-                                            this.setState({ fee: text })
-                                        }
-                                        style={styles.textInput}
-                                    />
-                                )}
+
+                                <OnchainFeeInput
+                                    fee={fee}
+                                    onChangeFee={(text: string) =>
+                                        this.setState({ fee: text })
+                                    }
+                                />
 
                                 {BackendUtils.supportsCoinControl() &&
                                     !BackendUtils.isLNDBased && (
@@ -673,7 +635,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <React.Fragment>
                                         <Text
                                             style={{
-                                                ...styles.secondaryText,
+                                                ...styles.text,
                                                 marginTop: 10,
                                                 color: themeColor(
                                                     'secondaryText'
@@ -742,7 +704,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         <React.Fragment>
                                             <Text
                                                 style={{
-                                                    ...styles.secondaryText,
+                                                    ...styles.text,
                                                     color: themeColor(
                                                         'secondaryText'
                                                     )
@@ -778,7 +740,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             </Text>
                                             <Text
                                                 style={{
-                                                    ...styles.secondaryText,
+                                                    ...styles.text,
                                                     color: themeColor(
                                                         'secondaryText'
                                                     )
@@ -806,7 +768,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             />
                                             <Text
                                                 style={{
-                                                    ...styles.secondaryText,
+                                                    ...styles.text,
                                                     color: themeColor(
                                                         'secondaryText'
                                                     )
@@ -852,7 +814,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <Text
                                     style={{
-                                        ...styles.secondaryText,
+                                        ...styles.text,
                                         color: themeColor('secondaryText')
                                     }}
                                 >
@@ -923,19 +885,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 }
 
 const styles = StyleSheet.create({
-    editFeeBox: {
-        height: 65,
-        padding: 15,
-        marginTop: 15,
-        borderRadius: 4,
-        borderColor: '#FFD93F',
-        borderWidth: 2,
-        marginBottom: 20
-    },
     text: {
-        fontFamily: 'Lato-Regular'
-    },
-    secondaryText: {
         fontFamily: 'Lato-Regular'
     },
     textInput: {
