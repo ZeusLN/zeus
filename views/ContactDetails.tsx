@@ -1,15 +1,7 @@
 import * as React from 'react';
-import {
-    Text,
-    View,
-    Image,
-    StyleSheet,
-    TouchableOpacity,
-    Modal
-} from 'react-native';
+import { Text, View, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { Header, Icon, Divider } from 'react-native-elements';
-import Button from '../components/Button';
+import { Header, Icon } from 'react-native-elements';
 import Screen from '../components/Screen';
 
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
@@ -37,7 +29,6 @@ interface ContactItem {
 }
 interface ContactDetailsState {
     contact: ContactItem;
-    isModalVisible: boolean;
 }
 export default class ContactDetails extends React.Component<
     ContactDetailsProps,
@@ -51,15 +42,9 @@ export default class ContactDetails extends React.Component<
         );
 
         this.state = {
-            contact,
-            isModalVisible: false
+            contact
         };
     }
-    toggleModal = () => {
-        this.setState((prevState) => ({
-            isModalVisible: !prevState.isModalVisible
-        }));
-    };
     sendAddress = (address: string) => {
         const { navigation } = this.props;
         const { contact } = this.state;
@@ -117,7 +102,7 @@ export default class ContactDetails extends React.Component<
     };
 
     render() {
-        const { contact, isModalVisible } = this.state;
+        const { contact } = this.state;
         const { navigation } = this.props;
         const BackButton = () => (
             <Icon
@@ -200,320 +185,102 @@ export default class ContactDetails extends React.Component<
                     >
                         {contact.description}
                     </Text>
-                    <Modal
-                        transparent={true}
-                        animationType="slide"
-                        visible={isModalVisible}
-                    >
-                        <View style={styles.centeredView}>
-                            <View
-                                style={{
-                                    ...styles.modal,
-                                    backgroundColor: themeColor('background')
-                                }}
-                            >
-                                {isModalVisible && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text'),
-                                                fontSize: 25
-                                            }}
-                                        >
-                                            Select address to use
-                                        </Text>
-
-                                        {contact.lnAddress &&
-                                            contact.lnAddress.length > 0 &&
-                                            contact.lnAddress[0] !== '' && (
-                                                <>
-                                                    {contact.lnAddress.map(
-                                                        (address, index) => (
-                                                            <TouchableOpacity
-                                                                key={index}
-                                                                onPress={() => {
-                                                                    this.sendAddress(
-                                                                        address
-                                                                    );
-                                                                    this.setState(
-                                                                        {
-                                                                            isModalVisible:
-                                                                                false
-                                                                        }
-                                                                    );
-                                                                }}
-                                                            >
-                                                                {address !==
-                                                                    contact
-                                                                        .lnAddress[0] && (
-                                                                    <Divider
-                                                                        orientation="horizontal"
-                                                                        style={{
-                                                                            marginTop: 20
-                                                                        }}
-                                                                    />
-                                                                )}
-
-                                                                {contact
-                                                                    .lnAddress
-                                                                    .length >
-                                                                    0 && (
-                                                                    <Text
-                                                                        style={{
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            ),
-                                                                            fontSize: 16,
-                                                                            fontWeight:
-                                                                                'bold',
-                                                                            marginTop: 12,
-                                                                            marginBottom: 4
-                                                                        }}
-                                                                    >
-                                                                        Lightning
-                                                                        Address:
-                                                                    </Text>
-                                                                )}
-                                                                <Text
-                                                                    style={{
-                                                                        color: themeColor(
-                                                                            'text'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {address.length >
-                                                                    15
-                                                                        ? address.substr(
-                                                                              0,
-                                                                              15
-                                                                          ) +
-                                                                          '...' +
-                                                                          address.substr(
-                                                                              address.length -
-                                                                                  15
-                                                                          )
-                                                                        : address}
-                                                                </Text>
-                                                            </TouchableOpacity>
-                                                        )
-                                                    )}
-                                                </>
-                                            )}
-
-                                        {contact.onchainAddress &&
-                                            contact.onchainAddress.length > 0 &&
-                                            contact.onchainAddress[0] !==
-                                                '' && (
-                                                <>
-                                                    {contact.onchainAddress.map(
-                                                        (address, index) => (
-                                                            <TouchableOpacity
-                                                                key={index}
-                                                                onPress={() => {
-                                                                    this.sendAddress(
-                                                                        address
-                                                                    );
-                                                                    this.setState(
-                                                                        {
-                                                                            isModalVisible:
-                                                                                false
-                                                                        }
-                                                                    );
-                                                                }}
-                                                            >
-                                                                {(contact
-                                                                    .lnAddress[0] !==
-                                                                    '' ||
-                                                                    address !==
-                                                                        contact
-                                                                            .onchainAddress[0]) && (
-                                                                    <Divider
-                                                                        orientation="horizontal"
-                                                                        style={{
-                                                                            marginTop: 20
-                                                                        }}
-                                                                    />
-                                                                )}
-                                                                {contact
-                                                                    .onchainAddress
-                                                                    .length >
-                                                                    0 && (
-                                                                    <Text
-                                                                        style={{
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            ),
-                                                                            fontSize: 16,
-                                                                            fontWeight:
-                                                                                'bold',
-                                                                            marginTop: 12,
-                                                                            marginBottom: 4
-                                                                        }}
-                                                                    >
-                                                                        On-chain
-                                                                        Address:
-                                                                    </Text>
-                                                                )}
-                                                                <Text
-                                                                    style={{
-                                                                        color: themeColor(
-                                                                            'text'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {address.length >
-                                                                    15
-                                                                        ? address.substr(
-                                                                              0,
-                                                                              15
-                                                                          ) +
-                                                                          '...' +
-                                                                          address.substr(
-                                                                              address.length -
-                                                                                  15
-                                                                          )
-                                                                        : address}
-                                                                </Text>
-                                                            </TouchableOpacity>
-                                                        )
-                                                    )}
-                                                </>
-                                            )}
-                                        <View
-                                            style={{
-                                                ...styles.button,
-                                                marginTop: 14
-                                            }}
-                                        >
-                                            <Button
-                                                title="CANCEL"
-                                                onPress={() =>
-                                                    this.setState({
-                                                        isModalVisible: false
-                                                    })
-                                                }
-                                                secondary
-                                            />
-                                        </View>
-                                    </>
-                                )}
-                            </View>
-                        </View>
-                    </Modal>
-
-                    {contact.lnAddress[0] && (
+                    {contact.lnAddress.length > 0 && (
                         <View>
-                            <View style={styles.contactRow}>
-                                <LightningBolt />
-                                <Text style={styles.contactFields}>
-                                    {contact.lnAddress[0].length > 15
-                                        ? `${contact.lnAddress[0].substring(
-                                              0,
-                                              10
-                                          )}...${contact.lnAddress[0].substring(
-                                              contact.lnAddress[0].length - 5
-                                          )}`
-                                        : contact.lnAddress[0]}
-                                </Text>
-                            </View>
+                            {contact.lnAddress.map((address, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    onPress={() => this.sendAddress(address)}
+                                >
+                                    <View style={styles.contactRow}>
+                                        <LightningBolt />
+                                        <Text style={styles.contactFields}>
+                                            {address.length > 15
+                                                ? `${address.substring(
+                                                      0,
+                                                      10
+                                                  )}...${address.substring(
+                                                      address.length - 5
+                                                  )}`
+                                                : address}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
                         </View>
                     )}
-                    {contact.onchainAddress[0] && (
-                        <View style={styles.contactRow}>
-                            <BitcoinIcon />
-                            <Text style={styles.contactFields}>
-                                {contact.onchainAddress[0].length > 15
-                                    ? `${contact.onchainAddress[0].substring(
-                                          0,
-                                          10
-                                      )}...${contact.onchainAddress[0].substring(
-                                          contact.onchainAddress[0].length - 5
-                                      )}`
-                                    : contact.onchainAddress[0]}
-                            </Text>
+
+                    {contact.onchainAddress.length > 0 && (
+                        <View>
+                            {contact.onchainAddress.map((address, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    onPress={() => this.sendAddress(address)}
+                                >
+                                    <View key={index} style={styles.contactRow}>
+                                        <BitcoinIcon />
+                                        <Text style={styles.contactFields}>
+                                            {address.length > 15
+                                                ? `${address.substring(
+                                                      0,
+                                                      10
+                                                  )}...${address.substring(
+                                                      address.length - 5
+                                                  )}`
+                                                : address}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
                         </View>
                     )}
-                    {contact.nip05[0] && (
-                        <View style={styles.contactRow}>
-                            <VerifiedAccount />
-                            <Text style={styles.contactFields}>
-                                {contact.nip05[0].length > 15
-                                    ? `${contact.nip05[0].substring(
-                                          0,
-                                          10
-                                      )}...${contact.nip05[0].substring(
-                                          contact.nip05[0].length - 5
-                                      )}`
-                                    : contact.nip05[0]}
-                            </Text>
+                    {contact.nip05.length > 0 && (
+                        <View>
+                            {contact.nip05.map((value, index) => (
+                                <View key={index} style={styles.contactRow}>
+                                    <VerifiedAccount />
+                                    <Text style={styles.contactFields}>
+                                        {value.length > 15
+                                            ? `${value.substring(
+                                                  0,
+                                                  10
+                                              )}...${value.substring(
+                                                  value.length - 5
+                                              )}`
+                                            : value}
+                                    </Text>
+                                </View>
+                            ))}
                         </View>
                     )}
-                    {contact.nostrNpub[0] && (
-                        <View style={styles.contactRow}>
-                            <View>
-                                <KeySecurity />
-                            </View>
-                            <Text style={styles.contactFields}>
-                                {contact.nostrNpub[0].length > 15
-                                    ? `${contact.nostrNpub[0].substring(
-                                          0,
-                                          10
-                                      )}...${contact.nostrNpub[0].substring(
-                                          contact.nostrNpub[0].length - 5
-                                      )}`
-                                    : contact.nostrNpub[0]}
-                            </Text>
+                    {contact.nostrNpub.length > 0 && (
+                        <View>
+                            {contact.nostrNpub.map((value, index) => (
+                                <View key={index} style={styles.contactRow}>
+                                    <View>
+                                        <KeySecurity />
+                                    </View>
+                                    <Text style={styles.contactFields}>
+                                        {value.length > 15
+                                            ? `${value.substring(
+                                                  0,
+                                                  10
+                                              )}...${value.substring(
+                                                  value.length - 5
+                                              )}`
+                                            : value}
+                                    </Text>
+                                </View>
+                            ))}
                         </View>
                     )}
                 </View>
-                <Button
-                    containerStyle={{ position: 'absolute', bottom: 30 }}
-                    buttonStyle={{ padding: 18 }}
-                    title="MAKE PAYMENT"
-                    onPress={() => {
-                        if (
-                            contact.lnAddress.length === 1 &&
-                            contact.lnAddress[0] !== '' &&
-                            contact.onchainAddress[0] === ''
-                        )
-                            this.sendAddress(contact.lnAddress[0]);
-                        else if (
-                            contact.onchainAddress.length === 1 &&
-                            contact.onchainAddress[0] !== '' &&
-                            contact.lnAddress[0] === ''
-                        ) {
-                            this.sendAddress(contact.onchainAddress[0]);
-                        } else {
-                            this.toggleModal();
-                        }
-                    }}
-                />
             </Screen>
         );
     }
 }
 
 const styles = StyleSheet.create({
-    centeredView: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 22
-    },
-    modal: {
-        margin: 20,
-        borderRadius: 20,
-        padding: 35,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5
-    },
     text: {
         fontFamily: 'Lato-Regular'
     },
@@ -523,8 +290,8 @@ const styles = StyleSheet.create({
     },
     contactRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 10
+        marginRight: 10,
+        alignItems: 'center'
     },
     contactFields: {
         fontSize: 20,
