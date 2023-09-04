@@ -605,6 +605,7 @@
     "views.Settings.Privacy.title": "Privacy settings",
     "views.Settings.Payments.title": "Payments settings",
     "views.Settings.Payments.defaultFeeLimit": "Default Fee Limit",
+    "views.Settings.Payments.timeoutSeconds": "Timeout (seconds)",
     "views.Settings.Invoices.title": "Invoices settings",
     "views.Settings.Privacy.blockExplorer": "Default Block explorer",
     "views.Settings.Privacy.BlockExplorer.custom": "Custom",
