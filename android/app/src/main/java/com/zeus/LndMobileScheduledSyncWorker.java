@@ -37,8 +37,6 @@ import com.facebook.react.bridge.ReadableMap;
 
 import com.oblador.keychain.KeychainModule;
 
-import com.hypertrack.hyperlog.HyperLog;
-
 public class LndMobileScheduledSyncWorker extends ListenableWorker {
   private final String TAG = "LndScheduledSyncWorker";
   private final String HANDLERTHREAD_NAME = "zeus_lndmobile_sync";
@@ -72,14 +70,9 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
 
   @Override
   public ListenableFuture<Result> startWork() {
-    HyperLog.i(TAG, "------------------------------------");
-    HyperLog.i(TAG, "Starting scheduled sync work");
-    HyperLog.i(TAG, "I am " + getApplicationContext().getPackageName());
     writeLastScheduledSyncAttemptToDb();
 
-    HyperLog.i(TAG, "MainActivity.started = " + MainActivity.started);
     if (MainActivity.started) {
-      HyperLog.i(TAG, "MainActivity is started, quitting job");
       future.set(Result.success());
       return future;
     }
@@ -95,25 +88,18 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     keychain.getInternetCredentialsForServer("password", keychainOptions, new PromiseWrapper() {
       @Override
       public void onSuccess(@Nullable Object value) {
-        HyperLog.d(TAG, "onSuccess");
-
         if (value == null) {
-          HyperLog.e(TAG, "Failed to get wallet password, got null from keychain provider");
           future.set(Result.failure());
           return;
         }
         else {
-          HyperLog.d(TAG, "Password data retrieved from keychain");
           final String password = ((ReadableMap) value).getString("password");
-          HyperLog.d(TAG, "Password retrieved");
-
           startLndWorkThread(future, password);
         }
       }
 
       @Override
       public void onFail(Throwable throwable) {
-        HyperLog.d(TAG, "Failed to get wallet password " + throwable.getMessage(), throwable);
         future.set(Result.failure());
       }
     });
@@ -132,8 +118,6 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
         incomingHandler = new Handler() {
           @Override
           public void handleMessage(Message msg) {
-            HyperLog.d(TAG, "Handling new incoming message from LndMobileService, msg id: " + msg.what);
-            HyperLog.v(TAG, msg.toString());
             Bundle bundle;
 
             try {
@@ -141,11 +125,9 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                 case LndMobileService.MSG_REGISTER_CLIENT_ACK: {
                   try {
                     if (!lndStarted) {
-                      HyperLog.i(TAG, "Sending MSG_START_LND request");
                       startLnd();
                     } else {
                       // Just exit if we reach this scenario
-                      HyperLog.w(TAG, "WARNING, Got MSG_REGISTER_CLIENT_ACK when lnd should already be started, quitting work.");
                       unbindLndMobileService();
                       future.set(Result.success());
                       return;
@@ -171,24 +153,13 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                       lnrpc.Stateservice.SubscribeStateResponse state = lnrpc.Stateservice.SubscribeStateResponse.parseFrom(response);
                       lnrpc.Stateservice.WalletState currentState = state.getState();
                       if (currentState == lnrpc.Stateservice.WalletState.LOCKED) {
-                        HyperLog.i(TAG, "Got WalletState.LOCKED");
-                        HyperLog.i(TAG, "SubscribeState reports wallet is locked. Sending UnlockWallet request");
                         unlockWalletRequest(password);
-                      } else if (currentState == lnrpc.Stateservice.WalletState.UNLOCKED) {
-                        HyperLog.i(TAG, "Got WalletState.UNLOCKED");
-                        HyperLog.i(TAG, "Waiting for WalletState.RPC_ACTIVE");
                       } else if (currentState == lnrpc.Stateservice.WalletState.RPC_ACTIVE) {
-                        HyperLog.i(TAG, "Got WalletState.RPC_ACTIVE");
-                        HyperLog.i(TAG, "LndMobileService reports RPC server ready. Sending GetInfo request");
                         getInfoRequest();
-                      } else {
-                        HyperLog.w(TAG, "SubscribeState got unknown state " + currentState);
                       }
                     } catch (Throwable t) {
                       t.printStackTrace();
                     }
-                  } else {
-                    HyperLog.w(TAG, "Warning: Got unknown MSG_GRPC_STREAM_RESULT for method: " + method);
                   }
                   break;
                 }
@@ -197,19 +168,11 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                   final byte[] response = bundle.getByteArray("response");
                   final String method = bundle.getString("method");
 
-                  if (method.equals("UnlockWallet")) {
-                    HyperLog.i(TAG, "Got MSG_GRPC_COMMAND_RESULT for UnlockWallet. Waiting for SubscribeState to send event before doing anything");
-                  } else if (method.equals("GetInfo")) {
+                  if (method.equals("GetInfo")) {
                     try {
                       lnrpc.LightningOuterClass.GetInfoResponse res = lnrpc.LightningOuterClass.GetInfoResponse.parseFrom(response);
-                      HyperLog.d(TAG, "GetInfo response");
-                      HyperLog.v(TAG, "blockHash:     " + res.getBlockHash());
-                      HyperLog.d(TAG, "blockHeight:   " + Integer.toString(res.getBlockHeight()));
-                      HyperLog.i(TAG, "syncedToChain: " + Boolean.toString(res.getSyncedToChain()));
-                      HyperLog.i(TAG, "syncedToGraph: " + Boolean.toString(res.getSyncedToGraph()));
 
                       if (res.getSyncedToChain() && res.getSyncedToGraph()) {
-                        HyperLog.i(TAG, "Syncs are done, letting lnd work for 10s before quitting");
                         writeLastScheduledSyncToDb();
 
                         Handler handler = new Handler();
@@ -221,10 +184,8 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                       }
                       else {
                         if (++numGetInfoCalls == 20) {
-                          HyperLog.e(TAG, "GetInfo was called " + numGetInfoCalls + " times and still no syncedToChain = true. shutting down worker.");
                           stopWorker(false);
                         } else{
-                          HyperLog.i(TAG, "Sleeping 10s then checking again");
                           Handler handler = new Handler();
                           handler.postDelayed(new Runnable() {
                             public void run() {
@@ -232,7 +193,6 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                                 getInfoRequest();
                               }
                               catch (Throwable t) {
-                                HyperLog.e(TAG, "Job handler got an exception, shutting down worker.", t);
                                 stopWorker(false);
                               }
                             }
@@ -253,7 +213,6 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                   super.handleMessage(msg);
               }
             } catch (Throwable t) {
-              HyperLog.e(TAG, "Job handler got an exception, shutting down worker.", t);
               stopWorker(false);
             }
           }
@@ -272,13 +231,11 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
   }
 
   private void stopWorker(boolean success) {
-    HyperLog.i(TAG, "Job is done. Quitting");
     unbindLndMobileService();
 
     new Handler().postDelayed(new Runnable() {
       @Override
       public void run() {
-        HyperLog.i(TAG, "Calling future.set(Result.success());");
         future.set(success ? Result.success() : Result.failure());
       }
     }, 1500);
@@ -342,13 +299,12 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
           message.replyTo = messenger;
           messengerService.send(message);
         } catch (RemoteException e) {
-          HyperLog.e(TAG, "Unable to send unbind request to LndMobileService", e);
+          // ignore
         }
       }
 
       getApplicationContext().unbindService(serviceConnection);
       lndMobileServiceBound = false;
-      HyperLog.i(TAG, "Unbinding LndMobileService");
     }
   }
 
@@ -367,12 +323,12 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
       statement.execute();
       db.setTransactionSuccessful();
     } catch (Exception e) {
-      HyperLog.w(TAG, e.getMessage(), e);
+      // ignore
     } finally {
       try {
         db.endTransaction();
       } catch (Exception e) {
-        HyperLog.w(TAG, e.getMessage(), e);
+        // ignore
       }
     }
   }
@@ -392,12 +348,12 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
       statement.execute();
       db.setTransactionSuccessful();
     } catch (Exception e) {
-      HyperLog.w(TAG, e.getMessage(), e);
+      // ignore
     } finally {
       try {
         db.endTransaction();
       } catch (Exception e) {
-        HyperLog.w(TAG, e.getMessage(), e);
+        // ignore
       }
     }
   }
@@ -406,9 +362,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     String packageName = getApplicationContext().getPackageName();
     ActivityManager am = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      HyperLog.d(TAG, "Process " + p.processName);
       if (p.processName.equals(packageName + ":blixtLndMobile")) {
-        HyperLog.d(TAG, "Found " + packageName + ":blixtLndMobile pid: " + String.valueOf(p.pid));
         return true;
       }
     }
@@ -420,7 +374,6 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     ActivityManager am = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
       if (p.processName.equals(packageName + ":blixtLndMobile")) {
-        HyperLog.i(TAG, "Killing " + packageName + ":blixtLndMobile with pid: " + String.valueOf(p.pid));
         Process.killProcess(p.pid);
         return true;
       }
@@ -431,17 +384,16 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
   private ServiceConnection serviceConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        lndMobileServiceBound = true;
-        messengerService = new Messenger(service);
+      lndMobileServiceBound = true;
+      messengerService = new Messenger(service);
 
-        try {
-            Message msg = Message.obtain(null,
-                    LndMobileService.MSG_REGISTER_CLIENT);
-            msg.replyTo = messenger;
-            messengerService.send(msg);
-        } catch (RemoteException e) {
-          HyperLog.e(TAG, "Unable to send MSG_REGISTER_CLIENT to LndMobileService", e);
-        }
+      try {
+        Message msg = Message.obtain(null, LndMobileService.MSG_REGISTER_CLIENT);
+        msg.replyTo = messenger;
+        messengerService.send(msg);
+      } catch (RemoteException e) {
+        // ignore
+      }
     }
 
     @Override

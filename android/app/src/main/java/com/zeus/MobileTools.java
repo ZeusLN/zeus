@@ -14,8 +14,6 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Promise;
 
-import com.hypertrack.hyperlog.HyperLog;
-
 class MobileTools extends ReactContextBaseJavaModule {
   final String TAG = "MobileTools";
 
@@ -40,7 +38,6 @@ class MobileTools extends ReactContextBaseJavaModule {
 
     Ndef ndef = Ndef.get(tag);
     if (ndef == null) {
-      HyperLog.d(TAG, "NFC tag is not NDEF");
       promise.resolve(null);
     }
 
@@ -76,11 +73,8 @@ class MobileTools extends ReactContextBaseJavaModule {
           promise.resolve(s);
           return;
         } catch (UnsupportedEncodingException e) {
-          HyperLog.e(TAG, "Error returning ndef data", e);
+          // ignore
         }
-      }
-      else {
-        HyperLog.d(TAG, "Cannot read NFC Tag Record");
       }
     }
     promise.resolve(null);

@@ -67,8 +67,6 @@ import com.facebook.react.modules.storage.AsyncLocalStorageUtil;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 import com.oblador.keychain.KeychainModule;
 
-import com.hypertrack.hyperlog.HyperLog;
-
 // TODO break this class up
 class LndMobile extends ReactContextBaseJavaModule {
   private final String TAG = "LndMobile";
@@ -100,7 +98,6 @@ class LndMobile extends ReactContextBaseJavaModule {
   class IncomingHandler extends Handler {
     @Override
     public void handleMessage(Message msg) {
-      HyperLog.d(TAG, "New incoming message from LndMobileService, msg id: " + msg.what);
       Bundle bundle = msg.getData();
 
       switch (msg.what) {
@@ -112,17 +109,12 @@ class LndMobile extends ReactContextBaseJavaModule {
           final int request = msg.arg1;
 
           if (!requests.containsKey(request)) {
-            // If request is -1, we intentionally don't want to resolve the promise.
-            if (request != -1) {
-              HyperLog.e(TAG, "Unknown request: " + request + " for " + msg.what);
-            }
-            return; // !
+            return;
           }
 
           final Promise promise = requests.remove(request);
 
           if (bundle.containsKey("error_code")) {
-            HyperLog.e(TAG, "ERROR" + msg);
             promise.reject(bundle.getString("error_code"), bundle.getString("error_desc"));
           } else {
             final byte[] bytes = (byte[]) bundle.get("response");
@@ -144,7 +136,6 @@ class LndMobile extends ReactContextBaseJavaModule {
             final byte[] bytes = (byte[]) bundle.get("response");
             promise.resolve("response=" + new String(bytes, StandardCharsets.UTF_8));
           } else if (bundle.containsKey("error_code")) {
-            HyperLog.e(TAG, "ERROR" + msg);
             promise.reject(bundle.getString("error_code"), bundle.getString("error_desc"));
           } else {
             promise.reject("noresponse");
@@ -157,7 +148,6 @@ class LndMobile extends ReactContextBaseJavaModule {
           WritableMap params = Arguments.createMap();
 
           if (bundle.containsKey("error_code")) {
-            HyperLog.e(TAG, "ERROR" + msg);
             params.putString("error_code", bundle.getString("error_code"));
             params.putString("error_desc", bundle.getString("error_desc"));
           } else {
@@ -178,7 +168,6 @@ class LndMobile extends ReactContextBaseJavaModule {
           final int request = msg.arg1;
 
           if (!requests.containsKey(request)) {
-            HyperLog.e(TAG, "Unknown request: " + request + " for " + msg.what);
             return;
           }
 
@@ -209,8 +198,6 @@ class LndMobile extends ReactContextBaseJavaModule {
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-      HyperLog.i(TAG, "Service attached");
-      HyperLog.i(TAG, "Request = " + request);
       lndMobileServiceBound = true;
       lndMobileServiceMessenger = new Messenger(service);
 
@@ -234,7 +221,6 @@ class LndMobile extends ReactContextBaseJavaModule {
       // unexpectedly disconnected -- that is, its process crashed.
       lndMobileServiceMessenger = null;
       lndMobileServiceBound = false;
-      HyperLog.e(TAG, "Service disconnected");
     }
   }
 
@@ -291,8 +277,6 @@ class LndMobile extends ReactContextBaseJavaModule {
 
       lndMobileServiceBound = true;
 
-      HyperLog.i(TAG, "LndMobile initialized");
-
       // Note: Promise is returned from MSG_REGISTER_CLIENT_ACK message from LndMobileService
     } else {
       promise.resolve(0);
@@ -311,13 +295,12 @@ class LndMobile extends ReactContextBaseJavaModule {
           message.replyTo = messenger;
           lndMobileServiceMessenger.send(message);
         } catch (RemoteException e) {
-          HyperLog.e(TAG, "Unable to send unbind request to LndMobileService", e);
+          // ignore
         }
       }
 
       getReactApplicationContext().unbindService(lndMobileServiceConnection);
       lndMobileServiceBound = false;
-      HyperLog.i(TAG, "Unbinding LndMobileService");
     }
   }
 
@@ -402,7 +385,6 @@ class LndMobile extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void sendCommand(String method, String payloadStr, final Promise promise) {
-    HyperLog.d(TAG, "sendCommand() " + method);
     int req = new Random().nextInt();
     requests.put(req, promise);
 
@@ -423,7 +405,6 @@ class LndMobile extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void sendStreamCommand(String method, String payloadStr, boolean streamOnlyOnce, Promise promise) {
-    HyperLog.d(TAG, "sendStreamCommand() " + method);
     int req = new Random().nextInt();
     requests.put(req, promise);
 
@@ -447,7 +428,6 @@ class LndMobile extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void sendBidiStreamCommand(String method, boolean streamOnlyOnce, Promise promise) {
-    HyperLog.d(TAG, "sendBidiStreamCommand() " + method);
     int req = new Random().nextInt();
     requests.put(req, promise);
 
@@ -470,7 +450,6 @@ class LndMobile extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void writeToStream(String method, String payloadStr, Promise promise) {
-    HyperLog.d(TAG, "writeToStream() " + method);
     int req = new Random().nextInt();
     requests.put(req, promise);
 
@@ -496,7 +475,6 @@ class LndMobile extends ReactContextBaseJavaModule {
     int req = new Random().nextInt();
     requests.put(req, promise);
 
-    HyperLog.d(TAG, "unlockWallet()");
     Message message = Message.obtain(null, LndMobileService.MSG_UNLOCKWALLET, req, 0);
     message.replyTo = messenger;
 
@@ -521,12 +499,8 @@ class LndMobile extends ReactContextBaseJavaModule {
       if (seed.getType(i) == ReadableType.String) {
         seedList.add(seed.getString(i));
       }
-      else {
-        HyperLog.w(TAG, "InitWallet: Got non-string in seed array");
-      }
     }
 
-    HyperLog.d(TAG, "initWallet()");
     Message message = Message.obtain(null, LndMobileService.MSG_INITWALLET, req, 0);
     message.replyTo = messenger;
 

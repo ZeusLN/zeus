@@ -223,7 +223,6 @@ dependencies {
     // gif
     implementation 'com.facebook.fresco:fresco:2.6.0'
     implementation 'com.facebook.fresco:animated-gif:2.6.0'
-    implementation "com.hypertrack:hyperlog:0.0.10"
 
     if (enableHermes) {
         //noinspection GradleDynamicVersion

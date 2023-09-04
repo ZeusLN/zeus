@@ -13,7 +13,6 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        jcenter()
     }
     dependencies {
         classpath("com.android.tools.build:gradle:7.2.2")
@@ -49,7 +48,6 @@ allprojects {
             url "https://raw.githubusercontent.com/guardianproject/gpmaven/master"
         }
         google()
-        jcenter()
         maven {
             url "https://www.jitpack.io"
         }
