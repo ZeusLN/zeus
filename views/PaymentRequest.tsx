@@ -62,6 +62,7 @@ interface InvoiceState {
     feeLimitSat: string;
     feeOption: string;
     maxFeePercent: string;
+    timeoutSeconds: string;
     outgoingChanId: string | null;
     lastHopPubkey: string | null;
     settingsToggle: boolean;
@@ -91,6 +92,7 @@ export default class PaymentRequest extends React.Component<
         feeLimitSat: '100',
         feeOption: 'fixed',
         maxFeePercent: '0.5',
+        timeoutSeconds: '60',
         outgoingChanId: null,
         lastHopPubkey: null,
         settingsToggle: false
@@ -104,7 +106,8 @@ export default class PaymentRequest extends React.Component<
         this.setState({
             feeOption: settings?.payments?.defaultFeeMethod || 'fixed',
             feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
-            maxFeePercent: settings?.payments?.defaultFeePercentage || '0.5'
+            maxFeePercent: settings?.payments?.defaultFeePercentage || '0.5',
+            timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
         });
     }
 
@@ -169,7 +172,8 @@ export default class PaymentRequest extends React.Component<
             max_fee_percent,
             outgoing_chan_id,
             last_hop_pubkey,
-            amp
+            amp,
+            timeout_seconds
         }: SendPaymentReq
     ) => {
         const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
@@ -199,7 +203,8 @@ export default class PaymentRequest extends React.Component<
             max_fee_percent,
             outgoing_chan_id,
             last_hop_pubkey,
-            amp
+            amp,
+            timeout_seconds
         });
 
         if (SettingsStore.implementation === 'lightning-node-connect') {
@@ -229,7 +234,8 @@ export default class PaymentRequest extends React.Component<
             lastHopPubkey,
             customAmount,
             satAmount,
-            settingsToggle
+            settingsToggle,
+            timeoutSeconds
         } = this.state;
         const {
             pay_req,
@@ -588,9 +594,9 @@ export default class PaymentRequest extends React.Component<
                                                                 : 0.25
                                                     }}
                                                 >
-                                                    {`${localeString(
+                                                    {localeString(
                                                         'general.sats'
-                                                    )}`}
+                                                    )}
                                                 </Text>
                                                 <TextInput
                                                     style={{
@@ -862,6 +868,30 @@ export default class PaymentRequest extends React.Component<
                                             />
                                         </React.Fragment>
                                     )}
+
+                                    {isLnd && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.Payments.timeoutSeconds'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                value={timeoutSeconds}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        timeoutSeconds: text
+                                                    })
+                                                }
+                                            />
+                                        </>
+                                    )}
                                 </>
                             )}
 
@@ -904,7 +934,9 @@ export default class PaymentRequest extends React.Component<
                                                         outgoingChanId,
                                                     last_hop_pubkey:
                                                         lastHopPubkey,
-                                                    amp: enableAmp
+                                                    amp: enableAmp,
+                                                    timeout_seconds:
+                                                        timeoutSeconds
                                                 }
                                             );
                                         }}

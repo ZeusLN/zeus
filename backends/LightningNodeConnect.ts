@@ -202,8 +202,7 @@ export default class LightningNodeConnect {
         if (data.pubkey) delete data.pubkey;
         return this.lnc.lnd.router.sendPaymentV2({
             ...data,
-            allow_self_payment: true,
-            timeout_seconds: 60
+            allow_self_payment: true
         });
     };
     closeChannel = async (urlParams?: Array<string>) => {
