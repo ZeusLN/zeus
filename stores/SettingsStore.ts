@@ -703,7 +703,7 @@ export default class SettingsStore {
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: false,
-        waitForGraphSync: true,
+        waitForGraphSync: false,
         rescan: false,
         recovery: false,
         // LSP
