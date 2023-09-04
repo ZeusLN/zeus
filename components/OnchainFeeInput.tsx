@@ -47,7 +47,8 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                 <TouchableWithoutFeedback
                     onPress={() =>
                         NavigationService.navigate('EditFee', {
-                            onNavigateBack: onChangeFee
+                            onNavigateBack: onChangeFee,
+                            fee: newFee
                         })
                     }
                 >
