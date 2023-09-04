@@ -21,6 +21,7 @@ interface PaymentsSettingsState {
     feeLimitMethod: string;
     feeLimit: string;
     feePercentage: string;
+    timeoutSeconds: string;
 }
 
 @inject('SettingsStore')
@@ -32,7 +33,8 @@ export default class PaymentsSettings extends React.Component<
     state = {
         feeLimitMethod: 'fixed',
         feeLimit: '100',
-        feePercentage: '0.5'
+        feePercentage: '0.5',
+        timeoutSeconds: '60'
     };
 
     async UNSAFE_componentWillMount() {
@@ -43,7 +45,8 @@ export default class PaymentsSettings extends React.Component<
         this.setState({
             feeLimitMethod: settings?.payments?.defaultFeeMethod || 'fixed',
             feeLimit: settings?.payments?.defaultFeeFixed || '100',
-            feePercentage: settings?.payments?.defaultFeePercentage || '0.5'
+            feePercentage: settings?.payments?.defaultFeePercentage || '0.5',
+            timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
         });
     }
 
@@ -58,7 +61,8 @@ export default class PaymentsSettings extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { feeLimit, feeLimitMethod, feePercentage } = this.state;
+        const { feeLimit, feeLimitMethod, feePercentage, timeoutSeconds } =
+            this.state;
         const { SettingsStore } = this.props;
         const { updateSettings } = SettingsStore;
 
@@ -87,9 +91,9 @@ export default class PaymentsSettings extends React.Component<
                             color: themeColor('text')
                         }}
                     >
-                        {`${localeString(
+                        {localeString(
                             'views.Settings.Payments.defaultFeeLimit'
-                        )}`}
+                        )}
                     </Text>
                     <View
                         style={{
@@ -121,7 +125,8 @@ export default class PaymentsSettings extends React.Component<
                                     payments: {
                                         defaultFeeMethod: 'fixed',
                                         defaultFeePercentage: feePercentage,
-                                        defaultFeeFixed: text
+                                        defaultFeeFixed: text,
+                                        timeoutSeconds
                                     }
                                 });
                             }}
@@ -141,7 +146,7 @@ export default class PaymentsSettings extends React.Component<
                                 opacity: feeLimitMethod == 'fixed' ? 1 : 0.25
                             }}
                         >
-                            {`${localeString('general.sats')}`}
+                            {localeString('general.sats')}
                         </Text>
                         <TextInput
                             style={{
@@ -158,7 +163,8 @@ export default class PaymentsSettings extends React.Component<
                                     payments: {
                                         defaultFeeMethod: 'percent',
                                         defaultFeePercentage: text,
-                                        defaultFeeFixed: feeLimit
+                                        defaultFeeFixed: feeLimit,
+                                        timeoutSeconds
                                     }
                                 });
                             }}
@@ -181,6 +187,32 @@ export default class PaymentsSettings extends React.Component<
                             {'%'}
                         </Text>
                     </View>
+                    <Text
+                        style={{
+                            fontFamily: 'Lato-Regular',
+                            paddingTop: 5,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {localeString('views.Settings.Payments.timeoutSeconds')}
+                    </Text>
+                    <TextInput
+                        keyboardType="numeric"
+                        value={timeoutSeconds}
+                        onChangeText={async (text: string) => {
+                            this.setState({
+                                timeoutSeconds: text
+                            });
+                            await updateSettings({
+                                payments: {
+                                    defaultFeeMethod: feeLimitMethod,
+                                    defaultFeePercentage: feePercentage,
+                                    defaultFeeFixed: feeLimit,
+                                    timeoutSeconds: text
+                                }
+                            });
+                        }}
+                    />
                 </View>
             </Screen>
         );
