@@ -16,6 +16,8 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
     const { settingsStore, feeStore } = stores;
     const { settings } = settingsStore;
     const enableMempoolRates = settings?.privacy?.enableMempoolRates;
+    const preferredMempoolRate =
+        settings?.payments?.preferredMempoolRate || 'fastestFee';
 
     const [newFee, setNewFee] = useState(fee);
     const [loading, setLoading] = useState(false);
@@ -30,8 +32,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
             feeStore
                 .getOnchainFeesviaMempool()
                 .then((recommendedFees) => {
-                    console.log('recommendedFees', recommendedFees);
-                    setNewFee(recommendedFees.fastestFee);
+                    setNewFee(recommendedFees[preferredMempoolRate]);
                     setLoading(false);
                 })
                 .catch(() => {
