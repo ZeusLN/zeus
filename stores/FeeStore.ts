@@ -50,7 +50,7 @@ export default class FeeStore {
         this.loading = true;
         this.error = false;
         this.recommendedFees = {};
-        ReactNativeBlobUtil.fetch(
+        return ReactNativeBlobUtil.fetch(
             'get',
             `https://mempool.space/${
                 this.nodeInfoStore.nodeInfo.isTestNet ? 'testnet/' : ''
@@ -61,6 +61,7 @@ export default class FeeStore {
                 if (status == 200) {
                     this.loading = false;
                     this.recommendedFees = response.json();
+                    return this.recommendedFees;
                 } else {
                     this.recommendedFees = {};
                     this.loading = false;
