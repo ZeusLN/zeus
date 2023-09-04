@@ -56,6 +56,7 @@ interface PaymentsSettings {
     defaultFeeMethod?: string;
     defaultFeePercentage?: string;
     defaultFeeFixed?: string;
+    timeoutSeconds?: string;
     preferredMempoolRate?: string;
 }
 
@@ -678,6 +679,7 @@ export default class SettingsStore {
             defaultFeeMethod: 'fixed',
             defaultFeePercentage: '0.5',
             defaultFeeFixed: '100',
+            timeoutSeconds: '60',
             preferredMempoolRate: 'fastestFee'
         },
         invoices: {
