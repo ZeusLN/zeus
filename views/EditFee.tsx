@@ -25,9 +25,11 @@ import Refresh from '../assets/images/SVG/Refresh.svg';
 import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 
 import FeeStore from './../stores/FeeStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface EditFeeProps {
     FeeStore: FeeStore;
+    SettingsStore: SettingsStore;
     navigation: any;
     displayOnly?: boolean;
 }
@@ -38,7 +40,7 @@ interface EditFeeState {
     fee: string;
 }
 
-@inject('FeeStore')
+@inject('FeeStore', 'SettingsStore')
 @observer
 export default class EditFee extends React.Component<
     EditFeeProps,
@@ -53,9 +55,20 @@ export default class EditFee extends React.Component<
         };
     }
 
-    UNSAFE_componentWillMount() {
-        const { FeeStore } = this.props;
-        FeeStore.getOnchainFeesviaMempool();
+    async UNSAFE_componentWillMount() {
+        const { FeeStore, SettingsStore, navigation } = this.props;
+        const fee = navigation.getParam('fee', null);
+        const { settings } = SettingsStore;
+        const fees: any = await FeeStore.getOnchainFeesviaMempool();
+
+        const preferredMempoolRate =
+            settings?.payments?.preferredMempoolRate || 'fastestFee';
+        if (fee && fees[preferredMempoolRate] === fee) {
+            this.setState({
+                selectedFee: preferredMempoolRate,
+                fee
+            });
+        }
     }
 
     render() {
