@@ -28,11 +28,13 @@ import ChannelsStore from '../stores/ChannelsStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import TransactionsStore, { SendPaymentReq } from '../stores/TransactionsStore';
 import UnitsStore from '../stores/UnitsStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 
 import FeeUtils from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
+import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import { Row } from '../components/layout/Row';
@@ -49,6 +51,7 @@ interface InvoiceProps {
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
     ChannelsStore: ChannelsStore;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }
 
@@ -66,6 +69,7 @@ interface InvoiceState {
     outgoingChanId: string | null;
     lastHopPubkey: string | null;
     settingsToggle: boolean;
+    lightningReadyToSend: boolean;
 }
 
 @inject(
@@ -74,6 +78,7 @@ interface InvoiceState {
     'TransactionsStore',
     'UnitsStore',
     'ChannelsStore',
+    'NodeInfoStore',
     'SettingsStore'
 )
 @observer
@@ -82,6 +87,7 @@ export default class PaymentRequest extends React.Component<
     InvoiceState
 > {
     listener: any;
+    isComponentMounted: boolean = false;
     state = {
         customAmount: '',
         satAmount: '',
@@ -95,12 +101,14 @@ export default class PaymentRequest extends React.Component<
         timeoutSeconds: '60',
         outgoingChanId: null,
         lastHopPubkey: null,
-        settingsToggle: false
+        settingsToggle: false,
+        lightningReadyToSend: false
     };
 
     async UNSAFE_componentWillMount() {
+        this.isComponentMounted = true;
         const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
+        const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
 
         this.setState({
@@ -109,7 +117,38 @@ export default class PaymentRequest extends React.Component<
             maxFeePercent: settings?.payments?.defaultFeePercentage || '0.5',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
         });
+
+        if (implementation === 'embedded-lnd') {
+            this.checkIfLndReady();
+        } else {
+            this.setState({
+                lightningReadyToSend: true
+            });
+        }
     }
+
+    componentWillUnmount(): void {
+        this.isComponentMounted = false;
+    }
+
+    checkIfLndReady = async () => {
+        const { BalanceStore, NodeInfoStore } = this.props;
+        const noBalance = BalanceStore.lightningBalance === 0;
+        const { isLightningReadyToSend } = NodeInfoStore;
+        while (
+            !this.state.lightningReadyToSend &&
+            this.isComponentMounted &&
+            !noBalance
+        ) {
+            sleep(7000);
+            const isReady = await isLightningReadyToSend();
+            if (isReady) {
+                this.setState({
+                    lightningReadyToSend: true
+                });
+            }
+        }
+    };
 
     subscribePayment = (streamingCall: string) => {
         const { handlePayment, handlePaymentError } =
@@ -235,7 +274,8 @@ export default class PaymentRequest extends React.Component<
             customAmount,
             satAmount,
             settingsToggle,
-            timeoutSeconds
+            timeoutSeconds,
+            lightningReadyToSend
         } = this.state;
         const {
             pay_req,
@@ -294,6 +334,8 @@ export default class PaymentRequest extends React.Component<
         const isNoAmountInvoice: boolean =
             !requestAmount || requestAmount === 0;
 
+        const noBalance = this.props.BalanceStore.lightningBalance === 0;
+
         const QRButton = () => (
             <Icon
                 name="qr-code"
@@ -347,8 +389,7 @@ export default class PaymentRequest extends React.Component<
                     {!loading && !loadingFeeEstimate && !!pay_req && (
                         <View style={styles.content}>
                             <>
-                                {this.props.BalanceStore.lightningBalance ===
-                                    0 && (
+                                {noBalance && (
                                     <View
                                         style={{
                                             paddingTop: 10,
@@ -895,6 +936,26 @@ export default class PaymentRequest extends React.Component<
                                 </>
                             )}
 
+                            {!!pay_req && !lightningReadyToSend && !noBalance && (
+                                <>
+                                    <Text
+                                        style={{
+                                            fontFamily: 'Lato-Bold',
+                                            color: themeColor('highlight'),
+                                            margin: 5,
+                                            alignSelf: 'center',
+                                            marginTop: 10,
+                                            marginBottom: 10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.PaymentRequest.lndGettingReady'
+                                        )}
+                                    </Text>
+                                    <LoadingIndicator size={30} />
+                                </>
+                            )}
+
                             {!!pay_req && (
                                 <View style={styles.button}>
                                     <Button
@@ -940,6 +1001,7 @@ export default class PaymentRequest extends React.Component<
                                                 }
                                             );
                                         }}
+                                        disabled={!lightningReadyToSend}
                                     />
                                 </View>
                             )}

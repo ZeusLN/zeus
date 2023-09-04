@@ -96,6 +96,7 @@ export interface Settings {
     expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
     bimodalPathfinding: boolean;
+    waitForGraphSync: boolean;
     rescan: boolean;
     recovery: boolean;
     // LSP
@@ -702,6 +703,7 @@ export default class SettingsStore {
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: false,
+        waitForGraphSync: true,
         rescan: false,
         recovery: false,
         // LSP
@@ -907,6 +909,10 @@ export default class SettingsStore {
                 // default automatic channel backups to on
                 if (this.settings.automaticDisasterRecoveryBackup !== false) {
                     this.settings.automaticDisasterRecoveryBackup = true;
+                }
+
+                if (this.settings.waitForGraphSync === undefined) {
+                    this.settings.waitForGraphSync = true;
                 }
 
                 // migrate locale to ISO 639-1
