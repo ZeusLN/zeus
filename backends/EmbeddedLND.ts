@@ -95,7 +95,7 @@ export default class EmbeddedLND extends LND {
                   )
                 : undefined,
             amp: data?.amp,
-            timeout_seconds: 60,
+            timeout_seconds: data?.timeout_seconds || 60,
             allow_self_payment: true,
             multi_path: data?.multi_path,
             max_shard_size_msat: data?.max_shard_size_msat,

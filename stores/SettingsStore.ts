@@ -56,6 +56,7 @@ interface PaymentsSettings {
     defaultFeeMethod?: string;
     defaultFeePercentage?: string;
     defaultFeeFixed?: string;
+    timeoutSeconds?: string;
 }
 
 interface InvoicesSettings {
@@ -653,7 +654,8 @@ export default class SettingsStore {
         payments: {
             defaultFeeMethod: 'fixed',
             defaultFeePercentage: '0.5',
-            defaultFeeFixed: '100'
+            defaultFeeFixed: '100',
+            timeoutSeconds: '60'
         },
         invoices: {
             addressType: '0',
