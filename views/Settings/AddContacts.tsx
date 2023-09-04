@@ -859,8 +859,7 @@ export default class AddContacts extends React.Component<
                             }
                             style={{
                                 alignSelf: 'center',
-                                marginTop: 10,
-                                marginBottom: 20
+                                marginTop: 10
                             }}
                         >
                             <Text style={styles.addExtraFieldText}>
@@ -871,7 +870,12 @@ export default class AddContacts extends React.Component<
                         </TouchableOpacity>
                     )}
 
-                <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+                <View
+                    style={{
+                        paddingHorizontal: 20,
+                        paddingVertical: 20
+                    }}
+                >
                     <Button
                         title={localeString(
                             'views.Settings.AddContacts.saveContact'
