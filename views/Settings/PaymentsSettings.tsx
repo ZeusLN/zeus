@@ -10,6 +10,7 @@ import Switch from '../../components/Switch';
 
 import SettingsStore, { MEMPOOL_RATES_KEYS } from '../../stores/SettingsStore';
 
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -101,138 +102,161 @@ export default class PaymentsSettings extends React.Component<
                         paddingRight: 15
                     }}
                 >
-                    <Text
-                        style={{
-                            fontFamily: 'Lato-Regular',
-                            paddingTop: 5,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {localeString(
-                            'views.Settings.Payments.defaultFeeLimit'
-                        )}
-                    </Text>
-                    <View
-                        style={{
-                            flex: 1,
-                            flexWrap: 'wrap',
-                            flexDirection: 'row',
-                            justifyContent: 'flex-end',
-                            opacity: feeLimitMethod == 'percent' ? 1 : 0.25
-                        }}
-                    ></View>
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            width: '95%'
-                        }}
-                    >
-                        <TextInput
-                            style={{
-                                width: '50%',
-                                opacity: feeLimitMethod == 'fixed' ? 1 : 0.25
-                            }}
-                            keyboardType="numeric"
-                            value={feeLimit}
-                            onChangeText={async (text: string) => {
-                                this.setState({
-                                    feeLimit: text
-                                });
-                                await updateSettings({
-                                    payments: {
-                                        defaultFeeMethod: 'fixed',
-                                        defaultFeePercentage: feePercentage,
-                                        defaultFeeFixed: text,
-                                        timeoutSeconds,
-                                        preferredMempoolRate
+                    {BackendUtils.isLNDBased() && (
+                        <>
+                            <Text
+                                style={{
+                                    fontFamily: 'Lato-Regular',
+                                    paddingTop: 5,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('general.lightning')} -{' '}
+                                {localeString(
+                                    'views.Settings.Payments.defaultFeeLimit'
+                                )}
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexWrap: 'wrap',
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end',
+                                    opacity:
+                                        feeLimitMethod == 'percent' ? 1 : 0.25
+                                }}
+                            ></View>
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    width: '95%'
+                                }}
+                            >
+                                <TextInput
+                                    style={{
+                                        width: '50%',
+                                        opacity:
+                                            feeLimitMethod == 'fixed' ? 1 : 0.25
+                                    }}
+                                    keyboardType="numeric"
+                                    value={feeLimit}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            feeLimit: text
+                                        });
+                                        await updateSettings({
+                                            payments: {
+                                                defaultFeeMethod: 'fixed',
+                                                defaultFeePercentage:
+                                                    feePercentage,
+                                                defaultFeeFixed: text,
+                                                timeoutSeconds,
+                                                preferredMempoolRate
+                                            }
+                                        });
+                                    }}
+                                    onPressIn={() =>
+                                        this.setState({
+                                            feeLimitMethod: 'fixed'
+                                        })
                                     }
-                                });
-                            }}
-                            onPressIn={() =>
-                                this.setState({
-                                    feeLimitMethod: 'fixed'
-                                })
-                            }
-                        />
-                        <Text
-                            style={{
-                                fontFamily: 'Lato-Regular',
-                                paddingTop: 5,
-                                color: themeColor('text'),
-                                top: 28,
-                                right: 30,
-                                opacity: feeLimitMethod == 'fixed' ? 1 : 0.25
-                            }}
-                        >
-                            {localeString('general.sats')}
-                        </Text>
-                        <TextInput
-                            style={{
-                                width: '50%',
-                                opacity: feeLimitMethod == 'percent' ? 1 : 0.25
-                            }}
-                            keyboardType="numeric"
-                            value={feePercentage}
-                            onChangeText={async (text: string) => {
-                                this.setState({
-                                    feePercentage: text
-                                });
-                                await updateSettings({
-                                    payments: {
-                                        defaultFeeMethod: 'percent',
-                                        defaultFeePercentage: text,
-                                        defaultFeeFixed: feeLimit,
-                                        timeoutSeconds,
-                                        preferredMempoolRate
+                                />
+                                <Text
+                                    style={{
+                                        fontFamily: 'Lato-Regular',
+                                        paddingTop: 5,
+                                        color: themeColor('text'),
+                                        top: 28,
+                                        right: 30,
+                                        opacity:
+                                            feeLimitMethod == 'fixed' ? 1 : 0.25
+                                    }}
+                                >
+                                    {localeString('general.sats')}
+                                </Text>
+                                <TextInput
+                                    style={{
+                                        width: '50%',
+                                        opacity:
+                                            feeLimitMethod == 'percent'
+                                                ? 1
+                                                : 0.25,
+                                        right: 5
+                                    }}
+                                    keyboardType="numeric"
+                                    value={feePercentage}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            feePercentage: text
+                                        });
+                                        await updateSettings({
+                                            payments: {
+                                                defaultFeeMethod: 'percent',
+                                                defaultFeePercentage: text,
+                                                defaultFeeFixed: feeLimit,
+                                                timeoutSeconds,
+                                                preferredMempoolRate
+                                            }
+                                        });
+                                    }}
+                                    onPressIn={() =>
+                                        this.setState({
+                                            feeLimitMethod: 'percent'
+                                        })
                                     }
-                                });
-                            }}
-                            onPressIn={() =>
-                                this.setState({
-                                    feeLimitMethod: 'percent'
-                                })
-                            }
-                        />
-                        <Text
-                            style={{
-                                fontFamily: 'Lato-Regular',
-                                paddingTop: 5,
-                                color: themeColor('text'),
-                                top: 28,
-                                right: 18,
-                                opacity: feeLimitMethod == 'percent' ? 1 : 0.25
-                            }}
-                        >
-                            {'%'}
-                        </Text>
-                    </View>
-                    <Text
-                        style={{
-                            fontFamily: 'Lato-Regular',
-                            paddingTop: 5,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {localeString('views.Settings.Payments.timeoutSeconds')}
-                    </Text>
-                    <TextInput
-                        keyboardType="numeric"
-                        value={timeoutSeconds}
-                        onChangeText={async (text: string) => {
-                            this.setState({
-                                timeoutSeconds: text
-                            });
-                            await updateSettings({
-                                payments: {
-                                    defaultFeeMethod: feeLimitMethod,
-                                    defaultFeePercentage: feePercentage,
-                                    defaultFeeFixed: feeLimit,
-                                    timeoutSeconds: text,
-                                    preferredMempoolRate
-                                }
-                            });
-                        }}
-                    />
+                                />
+                                <Text
+                                    style={{
+                                        fontFamily: 'Lato-Regular',
+                                        paddingTop: 5,
+                                        color: themeColor('text'),
+                                        top: 28,
+                                        right: 25,
+                                        opacity:
+                                            feeLimitMethod == 'percent'
+                                                ? 1
+                                                : 0.25
+                                    }}
+                                >
+                                    {'%'}
+                                </Text>
+                            </View>
+                        </>
+                    )}
+                    {BackendUtils.isLNDBased() && (
+                        <>
+                            <Text
+                                style={{
+                                    fontFamily: 'Lato-Regular',
+                                    paddingTop: 5,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('general.lightning')} -{' '}
+                                {localeString(
+                                    'views.Settings.Payments.timeoutSeconds'
+                                )}
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                value={timeoutSeconds}
+                                onChangeText={async (text: string) => {
+                                    this.setState({
+                                        timeoutSeconds: text
+                                    });
+                                    await updateSettings({
+                                        payments: {
+                                            defaultFeeMethod: feeLimitMethod,
+                                            defaultFeePercentage: feePercentage,
+                                            defaultFeeFixed: feeLimit,
+                                            timeoutSeconds: text,
+                                            preferredMempoolRate
+                                        }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
                     <ListItem
                         containerStyle={{
                             borderBottomWidth: 0,
@@ -254,7 +278,7 @@ export default class PaymentsSettings extends React.Component<
                             style={{
                                 flex: 1,
                                 flexDirection: 'row',
-                                justifyContent: 'flex-end'
+                                right: 10
                             }}
                         >
                             <Switch
