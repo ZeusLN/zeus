@@ -57,6 +57,7 @@ interface PaymentsSettings {
     defaultFeePercentage?: string;
     defaultFeeFixed?: string;
     timeoutSeconds?: string;
+    preferredMempoolRate?: string;
 }
 
 interface InvoicesSettings {
@@ -116,6 +117,29 @@ export const BLOCK_EXPLORER_KEYS = [
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
         value: 'Custom'
+    }
+];
+
+export const MEMPOOL_RATES_KEYS = [
+    {
+        key: 'Fastest fee',
+        value: 'fastestFee',
+        translateKey: 'views.EditFee.fastestFee'
+    },
+    {
+        key: 'Half hour fee',
+        value: 'halfHourFee',
+        translateKey: 'views.EditFee.halfHourFee'
+    },
+    {
+        key: 'Hour fee',
+        value: 'hourFee',
+        translateKey: 'views.EditFee.hourFee'
+    },
+    {
+        key: 'Minimum fee',
+        value: 'minimumFee',
+        translateKey: 'views.EditFee.minimumFee'
     }
 ];
 
@@ -655,7 +679,8 @@ export default class SettingsStore {
             defaultFeeMethod: 'fixed',
             defaultFeePercentage: '0.5',
             defaultFeeFixed: '100',
-            timeoutSeconds: '60'
+            timeoutSeconds: '60',
+            preferredMempoolRate: 'fastestFee'
         },
         invoices: {
             addressType: '0',

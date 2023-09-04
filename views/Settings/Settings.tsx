@@ -458,7 +458,7 @@ export default class Settings extends React.Component<
                             </View>
                         </View>
                     )}
-                    {selectedNode && BackendUtils.isLNDBased() && (
+                    {selectedNode && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -494,33 +494,42 @@ export default class Settings extends React.Component<
                                 </View>
                             </TouchableOpacity>
 
-                            <View style={styles.separationLine} />
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('InvoicesSettings')
-                                }
-                            >
-                                <View>
-                                    <ReceiveIcon
-                                        fill={themeColor('text')}
-                                        style={{ marginLeft: 3, marginTop: 3 }}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Wallet.Wallet.invoices'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
-                                </View>
-                            </TouchableOpacity>
+                            {BackendUtils.isLNDBased() && (
+                                <>
+                                    <View style={styles.separationLine} />
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'InvoicesSettings'
+                                            )
+                                        }
+                                    >
+                                        <View>
+                                            <ReceiveIcon
+                                                fill={themeColor('text')}
+                                                style={{
+                                                    marginLeft: 3,
+                                                    marginTop: 3
+                                                }}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.Wallet.invoices'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
+                                </>
+                            )}
                         </View>
                     )}
                     {selectedNode &&

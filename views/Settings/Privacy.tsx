@@ -99,7 +99,7 @@ export default class Privacy extends React.Component<
                     navigation={navigation}
                 />
                 <ScrollView
-                    style={{ flex: 1, padding: 15 }}
+                    style={{ flex: 1, margin: 10 }}
                     keyboardShouldPersistTaps="handled"
                 >
                     <DropdownSetting
