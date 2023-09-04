@@ -1,8 +1,11 @@
 import { action, observable } from 'mobx';
 import NodeInfo from '../models/NodeInfo';
+import ChannelsStore from './ChannelsStore';
 import SettingsStore from './SettingsStore';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import BackendUtils from '../utils/BackendUtils';
+
+import Channel from '../models/Channel';
 
 export default class NodeInfoStore {
     @observable public loading = false;
@@ -12,9 +15,11 @@ export default class NodeInfoStore {
     @observable public networkInfo: any = {};
     @observable public testnet: boolean;
     @observable public regtest: boolean;
+    channelsStore: ChannelsStore;
     settingsStore: SettingsStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(channelsStore: ChannelsStore, settingsStore: SettingsStore) {
+        this.channelsStore = channelsStore;
         this.settingsStore = settingsStore;
     }
 
@@ -86,5 +91,21 @@ export default class NodeInfoStore {
                 this.errorMsg = errorToUserFriendly(error.toString());
                 this.getNodeInfoError();
             });
+    };
+
+    @action
+    public isLightningReadyToSend = async () => {
+        const { channels } = this.channelsStore;
+        this.channelsStore.getChannels();
+        await this.getNodeInfo();
+        const syncedToChain = this.nodeInfo?.synced_to_chain;
+        const syncedToGraph = this.nodeInfo?.synced_to_graph;
+        const requireGraphSync = this.settingsStore?.settings?.waitForGraphSync;
+
+        return (
+            syncedToChain &&
+            (!requireGraphSync || syncedToGraph) &&
+            channels.some((channel: Channel) => channel.active)
+        );
     };
 }
