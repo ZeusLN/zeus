@@ -29,7 +29,7 @@ export default class EmbeddedNode extends React.Component<
     EmbeddedNodeState
 > {
     state = {
-        waitForGraphSync: true,
+        waitForGraphSync: false,
         rescan: false
     };
 
