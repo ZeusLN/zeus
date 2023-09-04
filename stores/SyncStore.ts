@@ -25,6 +25,14 @@ export default class SyncStore {
         this.settingsStore = settingsStore;
     }
 
+    @action
+    public reset = () => {
+        this.isSyncing = false;
+        this.syncStatusUpdatesPaused = false;
+        this.isInExpressGraphSync = false;
+        this.error = false;
+    };
+
     setExpressGraphSyncStatus = (syncing: boolean) => {
         this.isInExpressGraphSync = syncing;
     };
