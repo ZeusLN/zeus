@@ -3,6 +3,7 @@ import {
     FlatList,
     NativeModules,
     NativeEventEmitter,
+    Text,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -13,6 +14,7 @@ import BigNumber from 'bignumber.js';
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -422,13 +424,40 @@ export default class Activity extends React.PureComponent<
                                             </ListItem.Subtitle>
                                         </ListItem.Content>
                                         <ListItem.Content right>
-                                            <Amount
-                                                sats={item.getAmount}
-                                                sensitive
-                                                color={this.getRightTitleTheme(
-                                                    item
-                                                )}
-                                            />
+                                            <Row>
+                                                <Amount
+                                                    sats={item.getAmount}
+                                                    sensitive
+                                                    color={this.getRightTitleTheme(
+                                                        item
+                                                    )}
+                                                />
+                                                {item.getFee &&
+                                                    item.getFee != 0 && (
+                                                        <>
+                                                            <Text
+                                                                style={{
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }}
+                                                            >
+                                                                {' '}
+                                                                +{' '}
+                                                            </Text>
+                                                            <Amount
+                                                                sats={
+                                                                    item.getFee
+                                                                }
+                                                                sensitive
+                                                                color={this.getRightTitleTheme(
+                                                                    item
+                                                                )}
+                                                                fee
+                                                            />
+                                                        </>
+                                                    )}
+                                            </Row>
                                             <ListItem.Subtitle
                                                 right
                                                 style={{
