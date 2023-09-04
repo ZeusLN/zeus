@@ -45,8 +45,6 @@ export interface ILndMobile {
 export interface ILndMobileTools {
     writeConfig(data: string): Promise<string>;
     killLnd(): Promise<boolean>;
-    log(level: 'v' | 'd' | 'i' | 'w' | 'e', tag: string, msg: string): void;
-    saveLogs(): Promise<string>;
     copyLndLog(network: string): Promise<boolean>;
     tailLog(numberOfLines: number, network: string): Promise<string>;
     observeLndLogFile(network: string): Promise<boolean>;

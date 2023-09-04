@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import com.hypertrack.hyperlog.HyperLog;
-
 class LndMobileScheduledSync extends ReactContextBaseJavaModule {
   private final String TAG = "LndMobileScheduledSync";
   private final String LND_SCHEDULED_SYNC_WORK_NAME = "LND_SCHEDULED_SYNC_WORK";
@@ -72,15 +70,10 @@ class LndMobileScheduledSync extends ReactContextBaseJavaModule {
   @ReactMethod
   public void checkScheduledSyncWorkStatus(Promise promise) {
     try {
-      HyperLog.d(TAG, "Checking unique periodic work");
-
       ListenableFuture<List<WorkInfo>> future = workManager.getWorkInfosForUniqueWork(LND_SCHEDULED_SYNC_WORK_NAME);
       List<WorkInfo> workInfoList = future.get();
       if (workInfoList.size() == 0) {
         promise.resolve("WORK_NOT_EXIST");
-      }
-      else if (workInfoList.size() > 1) {
-        HyperLog.w(TAG, "Found more than 1 work");
       }
 
       for (WorkInfo workInfo : workInfoList) {
@@ -89,7 +82,6 @@ class LndMobileScheduledSync extends ReactContextBaseJavaModule {
         return;
       }
     } catch (Throwable e) {
-      HyperLog.e(TAG, "Could not create periodic work", e);
       promise.reject("Could not create periodic work", e);
     }
   }
