@@ -911,10 +911,6 @@ export default class SettingsStore {
                     this.settings.automaticDisasterRecoveryBackup = true;
                 }
 
-                if (this.settings.waitForGraphSync === undefined) {
-                    this.settings.waitForGraphSync = true;
-                }
-
                 // migrate locale to ISO 639-1
                 if (
                     this.settings.locale != null &&
