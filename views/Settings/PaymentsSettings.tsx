@@ -1,11 +1,14 @@
 import * as React from 'react';
 import { Text, View } from 'react-native';
+import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
 
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, { MEMPOOL_RATES_KEYS } from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -21,6 +24,8 @@ interface PaymentsSettingsState {
     feeLimitMethod: string;
     feeLimit: string;
     feePercentage: string;
+    enableMempoolRates: boolean;
+    preferredMempoolRate: string;
 }
 
 @inject('SettingsStore')
@@ -32,7 +37,9 @@ export default class PaymentsSettings extends React.Component<
     state = {
         feeLimitMethod: 'fixed',
         feeLimit: '100',
-        feePercentage: '0.5'
+        feePercentage: '0.5',
+        enableMempoolRates: false,
+        preferredMempoolRate: 'fastestFee'
     };
 
     async UNSAFE_componentWillMount() {
@@ -43,7 +50,10 @@ export default class PaymentsSettings extends React.Component<
         this.setState({
             feeLimitMethod: settings?.payments?.defaultFeeMethod || 'fixed',
             feeLimit: settings?.payments?.defaultFeeFixed || '100',
-            feePercentage: settings?.payments?.defaultFeePercentage || '0.5'
+            feePercentage: settings?.payments?.defaultFeePercentage || '0.5',
+            enableMempoolRates: settings?.privacy?.enableMempoolRates || false,
+            preferredMempoolRate:
+                settings?.payments?.preferredMempoolRate || 'fastestFee'
         });
     }
 
@@ -58,9 +68,15 @@ export default class PaymentsSettings extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { feeLimit, feeLimitMethod, feePercentage } = this.state;
+        const {
+            feeLimit,
+            feeLimitMethod,
+            feePercentage,
+            enableMempoolRates,
+            preferredMempoolRate
+        } = this.state;
         const { SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { updateSettings, settings } = SettingsStore;
 
         return (
             <Screen>
@@ -77,7 +93,8 @@ export default class PaymentsSettings extends React.Component<
                 />
                 <View
                     style={{
-                        padding: 20
+                        paddingLeft: 15,
+                        paddingRight: 15
                     }}
                 >
                     <Text
@@ -121,7 +138,8 @@ export default class PaymentsSettings extends React.Component<
                                     payments: {
                                         defaultFeeMethod: 'fixed',
                                         defaultFeePercentage: feePercentage,
-                                        defaultFeeFixed: text
+                                        defaultFeeFixed: text,
+                                        preferredMempoolRate
                                     }
                                 });
                             }}
@@ -158,7 +176,8 @@ export default class PaymentsSettings extends React.Component<
                                     payments: {
                                         defaultFeeMethod: 'percent',
                                         defaultFeePercentage: text,
-                                        defaultFeeFixed: feeLimit
+                                        defaultFeeFixed: feeLimit,
+                                        preferredMempoolRate
                                     }
                                 });
                             }}
@@ -181,6 +200,77 @@ export default class PaymentsSettings extends React.Component<
                             {'%'}
                         </Text>
                     </View>
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular',
+                                left: -10
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Privacy.enableMempoolRates'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={enableMempoolRates}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        enableMempoolRates: !enableMempoolRates
+                                    });
+                                    await updateSettings({
+                                        privacy: {
+                                            defaultBlockExplorer:
+                                                settings?.privacy
+                                                    ?.defaultBlockExplorer,
+                                            customBlockExplorer:
+                                                settings?.privacy
+                                                    ?.customBlockExplorer,
+                                            clipboard:
+                                                settings?.privacy?.clipboard,
+                                            lurkerMode:
+                                                settings?.privacy?.lurkerMode,
+                                            enableMempoolRates:
+                                                !enableMempoolRates
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+                    <DropdownSetting
+                        title={localeString(
+                            'views.Settings.Payments.preferredMempoolRate'
+                        )}
+                        selectedValue={preferredMempoolRate}
+                        onValueChange={async (value: string) => {
+                            this.setState({
+                                preferredMempoolRate: value
+                            });
+                            await updateSettings({
+                                payments: {
+                                    defaultFeeMethod: feeLimitMethod,
+                                    defaultFeePercentage: feePercentage,
+                                    defaultFeeFixed: feeLimit,
+                                    preferredMempoolRate: value
+                                }
+                            });
+                        }}
+                        values={MEMPOOL_RATES_KEYS}
+                        disabled={!enableMempoolRates}
+                    />
                 </View>
             </Screen>
         );

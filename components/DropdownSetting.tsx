@@ -17,6 +17,7 @@ interface DropdownSettingProps {
     selectedValue: string | boolean;
     onValueChange: (value: any) => void;
     values: Array<any>;
+    disabled?: boolean;
 }
 
 export default class DropdownSetting extends React.Component<
@@ -24,7 +25,8 @@ export default class DropdownSetting extends React.Component<
     {}
 > {
     render() {
-        const { title, selectedValue, onValueChange, values } = this.props;
+        const { title, selectedValue, onValueChange, values, disabled } =
+            this.props;
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
@@ -70,9 +72,11 @@ export default class DropdownSetting extends React.Component<
                             style={{
                                 color: themeColor('text'),
                                 backgroundColor: themeColor('secondary'),
-                                ...styles.field
+                                ...styles.field,
+                                opacity: disabled ? 0.25 : 1
                             }}
                             dropdownIconColor={themeColor('text')}
+                            enabled={!disabled}
                         >
                             {pickerValuesAndroid}
                         </Picker>
@@ -91,6 +95,7 @@ export default class DropdownSetting extends React.Component<
                         </Text>
                         <TouchableOpacity
                             onPress={() =>
+                                !disabled &&
                                 ActionSheetIOS.showActionSheetWithOptions(
                                     {
                                         options: pickerValuesIOS,
@@ -105,6 +110,7 @@ export default class DropdownSetting extends React.Component<
                                     }
                                 )
                             }
+                            style={{ opacity: disabled ? 0.25 : 1 }}
                         >
                             <Text
                                 style={{
