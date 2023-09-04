@@ -19,14 +19,15 @@ export interface SendPaymentReq {
     payment_request?: string;
     amount?: string;
     pubkey?: string;
-    max_parts?: string | null;
-    max_shard_amt?: string | null;
-    fee_limit_sat?: string | null;
-    max_fee_percent?: string | null;
-    outgoing_chan_id?: string | null;
-    last_hop_pubkey?: string | null;
-    message?: string | null;
+    max_parts?: string;
+    max_shard_amt?: string;
+    fee_limit_sat?: string;
+    max_fee_percent?: string;
+    outgoing_chan_id?: string;
+    last_hop_pubkey?: string;
+    message?: string;
     amp?: boolean;
+    timeout_seconds?: string;
 }
 
 export default class TransactionsStore {
@@ -199,7 +200,8 @@ export default class TransactionsStore {
         outgoing_chan_id,
         last_hop_pubkey,
         message,
-        amp
+        amp,
+        timeout_seconds
     }: SendPaymentReq) => {
         this.loading = true;
         this.error_msg = null;
@@ -271,6 +273,11 @@ export default class TransactionsStore {
         // max fee percent for c-lightning
         if (max_fee_percent) {
             data.max_fee_percent = max_fee_percent;
+        }
+
+        // payment timeout for LND
+        if (BackendUtils.isLNDBased()) {
+            data.timeout_seconds = Number(timeout_seconds) || 60;
         }
 
         const payFunc =
