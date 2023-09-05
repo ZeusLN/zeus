@@ -5,6 +5,7 @@ import {
     BackHandler,
     Linking,
     PanResponder,
+    Platform,
     Text,
     TouchableOpacity,
     View
@@ -17,6 +18,7 @@ import {
     NavigationContainerRef
 } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
+import RNRestart from 'react-native-restart';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -457,8 +459,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     size: 25
                                 }}
                                 onPress={() => {
-                                    setConnectingStatus(true);
-                                    this.refresh();
+                                    if (Platform.OS === 'android') {
+                                        RNRestart.Restart();
+                                    } else {
+                                        setConnectingStatus(true);
+                                        this.refresh();
+                                    }
                                 }}
                             />
                         </View>
