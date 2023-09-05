@@ -432,7 +432,7 @@ export default class Activity extends React.PureComponent<
                                                         item
                                                     )}
                                                 />
-                                                {item.getFee &&
+                                                {!!item.getFee &&
                                                     item.getFee != 0 && (
                                                         <>
                                                             <Text
