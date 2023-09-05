@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Badge } from 'react-native-elements';
-import { Animated, Easing, Image, TouchableOpacity, View } from 'react-native';
+import {
+    Animated,
+    Easing,
+    Image,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 
@@ -347,9 +354,20 @@ export default class WalletHeader extends React.Component<
                     ) : settings.display && settings.display.displayNickname ? (
                         <View style={{ top: 5 }}>
                             <Row>
-                                <Body>
-                                    {PrivacyUtils.sensitiveValue(displayName)}
-                                </Body>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular',
+                                        fontSize: 16
+                                    }}
+                                    onPress={() => {
+                                        navigation.navigate('Nodes');
+                                    }}
+                                >
+                                    {PrivacyUtils.sensitiveValue(
+                                        displayName
+                                    )?.toString()}
+                                </Text>
                                 <NetworkBadge />
                                 <TorBadge />
                             </Row>
