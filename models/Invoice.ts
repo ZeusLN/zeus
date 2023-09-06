@@ -1,4 +1,5 @@
 import { observable, computed } from 'mobx';
+import BigNumber from 'bignumber.js';
 
 import BaseModel from './BaseModel';
 import Base64Utils from './../utils/Base64Utils';
@@ -223,10 +224,16 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get expirationDate(): Date | string {
-        if (this.expiry || this.expire_time) {
-            const expiration = this.expiry || this.expire_time;
-            if (expiration == '0') return localeString('models.Invoice.never');
-            return `${expiration} ${localeString('models.Invoice.seconds')}`;
+        const expiry = this.expiry || this.expire_time;
+
+        // handle LNDHub
+        if (expiry && new BigNumber(expiry).gte(1600000000)) {
+            return DateTimeUtils.listFormattedDate(expiry);
+        }
+
+        if (expiry) {
+            if (expiry == '0') return localeString('models.Invoice.never');
+            return `${expiry} ${localeString('models.Invoice.seconds')}`;
         }
 
         return this.expires_at
@@ -235,10 +242,19 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get isExpired(): boolean {
-        if (this.expiry) {
+        const expiry = this.expiry || this.expire_time;
+
+        if (expiry && new BigNumber(expiry).gte(1600000000)) {
             return (
                 new Date().getTime() / 1000 >
-                Number(this.creation_date) + Number(this.expiry)
+                DateTimeUtils.listFormattedDate(expiry)
+            );
+        }
+
+        if (expiry) {
+            return (
+                new Date().getTime() / 1000 >
+                Number(this.creation_date) + Number(expiry)
             );
         }
 
