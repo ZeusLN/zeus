@@ -47,7 +47,7 @@ export default class Invoice extends BaseModel {
     public private: boolean;
     public creation_date: string;
     public description_hash: string;
-    public r_preimage: string;
+    public r_preimage: any;
     public cltv_expiry: string;
     public htlcs: Array<HTLC>;
     // c-lightning, eclair
@@ -77,7 +77,8 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getRPreimage(): string {
-        const preimage = this.r_preimage;
+        if (!this.r_preimage) return '';
+        const preimage = this.r_preimage.data || this.r_preimage;
         return typeof preimage === 'object'
             ? Base64Utils.bytesToHexString(preimage)
             : typeof preimage === 'string'
@@ -88,7 +89,8 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getRHash(): string {
-        const hash = this.r_hash;
+        if (!this.r_hash) return '';
+        const hash = this.r_hash.data || this.r_hash;
         return typeof hash === 'object'
             ? Base64Utils.bytesToHexString(hash)
             : typeof hash === 'string'
