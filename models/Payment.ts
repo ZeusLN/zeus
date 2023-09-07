@@ -1,5 +1,6 @@
 import { computed } from 'mobx';
 import bolt11 from 'bolt11';
+import BigNumber from 'bignumber.js';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
@@ -103,6 +104,19 @@ export default class Payment extends BaseModel {
         }
 
         return '0';
+    }
+
+    @computed public get getFeePercentage(): string {
+        const amount = this.getAmount;
+        const fee = this.getFee;
+        if (!fee || !amount || fee == '0') return '';
+
+        // use at most 3 decimal places and remove trailing 0s
+        return (
+            Number(new BigNumber(fee).div(amount).times(100).toFixed(3))
+                .toString()
+                .replace(/-/g, '') + '%'
+        );
     }
 
     @computed public get enhancedPath(): any[] {
