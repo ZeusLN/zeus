@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
+import { Row } from '../components/layout/Row';
 import Amount from '../components/Amount';
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -72,7 +73,8 @@ export default class TransactionView extends React.Component<TransactionProps> {
             num_confirmations,
             time_stamp,
             destAddresses,
-            total_fees,
+            getFee,
+            getFeePercentage,
             status,
             getOutpoint
         } = transaction;
@@ -157,17 +159,30 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {total_fees ? (
+                    {getFee ? (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Transaction.totalFees'
                             )}
                             value={
-                                <Amount
-                                    sats={total_fees || 0}
-                                    toggleable
-                                    sensitive
-                                />
+                                <Row>
+                                    <Amount
+                                        sats={getFee || 0}
+                                        debit
+                                        toggleable
+                                        sensitive
+                                    />
+                                    {getFeePercentage && (
+                                        <Text
+                                            style={{
+                                                fontFamily: 'Lato-Regular',
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {` (${getFeePercentage})`}
+                                        </Text>
+                                    )}
+                                </Row>
                             }
                         />
                     ) : null}
