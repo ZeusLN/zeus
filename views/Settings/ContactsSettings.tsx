@@ -23,6 +23,7 @@ interface ContactItem {
     description: string;
     photo: string | null;
     isFavourite: boolean;
+    id: string;
 }
 
 interface ContactsSettingsState {
@@ -77,7 +78,7 @@ export default class ContactsSettings extends React.Component<
         <TouchableOpacity
             onPress={() =>
                 this.props.navigation.navigate('ContactDetails', {
-                    contact: item
+                    contactId: item.id
                 })
             }
         >
@@ -153,8 +154,12 @@ export default class ContactsSettings extends React.Component<
         const filteredContacts = contacts.filter((contact) => {
             const hasMatch = (field: string) =>
                 Array.isArray(contact[field])
-                    ? contact[field].some((input) => input.includes(search))
-                    : contact[field].includes(search);
+                    ? contact[field].some((input) =>
+                          input.toLowerCase().includes(search.toLowerCase())
+                      )
+                    : contact[field]
+                          .toLowerCase()
+                          .includes(search.toLowerCase());
 
             return (
                 hasMatch('name') ||
@@ -324,7 +329,7 @@ export default class ContactsSettings extends React.Component<
                             >
                                 {localeString(
                                     'views.Settings.ContactsSettings.favorites'
-                                )}{' '}
+                                ).toUpperCase()}{' '}
                                 ({favoriteContacts.length})
                             </Text>
                         </View>
@@ -352,7 +357,7 @@ export default class ContactsSettings extends React.Component<
                             >
                                 {localeString(
                                     'views.Settings.ContactsSettings.contacts'
-                                )}{' '}
+                                ).toUpperCase()}{' '}
                                 ({nonFavoriteContacts.length})
                             </Text>
                         </View>
