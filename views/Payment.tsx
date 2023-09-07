@@ -1,9 +1,16 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
+import {
+    StyleSheet,
+    ScrollView,
+    View,
+    Text,
+    TouchableOpacity
+} from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import { Row } from '../components/layout/Row';
 import Amount from '../components/Amount';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
@@ -66,6 +73,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const {
             getDisplayTime,
             getFee,
+            getFeePercentage,
             payment_hash,
             getPreimage,
             enhancedPath,
@@ -129,12 +137,24 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             <KeyValue
                                 keyValue={localeString('views.Payment.fee')}
                                 value={
-                                    <Amount
-                                        sats={getFee}
-                                        debit
-                                        sensitive
-                                        toggleable
-                                    />
+                                    <Row>
+                                        <Amount
+                                            sats={getFee}
+                                            debit
+                                            sensitive
+                                            toggleable
+                                        />
+                                        {getFeePercentage && (
+                                            <Text
+                                                style={{
+                                                    fontFamily: 'Lato-Regular',
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {` (${getFeePercentage})`}
+                                            </Text>
+                                        )}
+                                    </Row>
                                 }
                                 toggleable
                             />

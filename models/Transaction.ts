@@ -1,4 +1,5 @@
 import { computed } from 'mobx';
+import BigNumber from 'bignumber.js';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from './../utils/DateTimeUtils';
@@ -49,6 +50,19 @@ export default class Transaction extends BaseModel {
         return this.total_fees || 0;
     }
 
+    @computed public get getFeePercentage(): string {
+        const amount = this.getAmount;
+        const fee = this.getFee;
+        if (!fee || !amount || fee == '0') return '';
+
+        // use at most 3 decimal places and remove trailing 0s
+        return (
+            Number(new BigNumber(fee).div(amount).times(100).toFixed(3))
+                .toString()
+                .replace(/-/g, '') + '%'
+        );
+    }
+
     @computed public get getTimestamp(): string | number {
         return this.time_stamp || 0;
     }
@@ -78,7 +92,16 @@ export default class Transaction extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        return this.value || this.amount || 0;
+        const amount = this.value || this.amount || 0;
+        const fee = this.getFee;
+
+        const amountIsNegative = Number(amount) < 0;
+        const feeIsNegative = Number(fee) < 0;
+        const sameFormat = amountIsNegative === feeIsNegative;
+
+        return sameFormat
+            ? new BigNumber(amount).minus(this.getFee).toString()
+            : new BigNumber(amount).plus(this.getFee).toString();
     }
 
     @computed public get getBlockHeight(): string | boolean {
