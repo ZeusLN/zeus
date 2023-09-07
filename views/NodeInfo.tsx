@@ -88,8 +88,32 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                 {nodeInfo.synced_to_chain != null && (
                     <KeyValue
                         keyValue={localeString('views.NodeInfo.synced')}
-                        value={nodeInfo.synced_to_chain ? 'True' : 'False'}
-                        color={nodeInfo.synced_to_chain ? 'green' : 'red'}
+                        value={
+                            nodeInfo.synced_to_chain
+                                ? localeString('general.true')
+                                : localeString('general.false')
+                        }
+                        color={
+                            nodeInfo.synced_to_chain
+                                ? themeColor('success')
+                                : themeColor('error')
+                        }
+                    />
+                )}
+
+                {nodeInfo.synced_to_graph != null && (
+                    <KeyValue
+                        keyValue={localeString('views.NodeInfo.syncedToGraph')}
+                        value={
+                            nodeInfo.synced_to_graph
+                                ? localeString('general.true')
+                                : localeString('general.false')
+                        }
+                        color={
+                            nodeInfo.synced_to_graph
+                                ? themeColor('success')
+                                : themeColor('error')
+                        }
                     />
                 )}
 

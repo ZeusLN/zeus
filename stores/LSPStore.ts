@@ -7,6 +7,7 @@ import stores from './Stores';
 import lndMobile from '../lndmobile/LndMobileInjection';
 const { channel } = lndMobile;
 
+import Base64Utils from '../utils/Base64Utils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -34,16 +35,17 @@ export default class LSPStore {
         this.channelAcceptor = undefined;
     };
 
+    getLSPHost = () =>
+        this.settingsStore.embeddedLndNetwork === 'Mainnet'
+            ? this.settingsStore.settings.lspMainnet
+            : this.settingsStore.settings.lspTestnet;
+
     @action
     public getLSPInfo = () => {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'get',
-                `${
-                    this.settingsStore.embeddedLndNetwork === 'Mainnet'
-                        ? this.settingsStore.settings.lspMainnet
-                        : this.settingsStore.settings.lspTestnet
-                }/api/v1/info`,
+                `${this.getLSPHost()}/api/v1/info`,
                 {
                     'Content-Type': 'application/json'
                 }
@@ -84,11 +86,7 @@ export default class LSPStore {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
-                `${
-                    this.settingsStore.embeddedLndNetwork === 'Mainnet'
-                        ? this.settingsStore.settings.lspMainnet
-                        : this.settingsStore.settings.lspTestnet
-                }/api/v1/fee`,
+                `${this.getLSPHost()}/api/v1/fee`,
                 {
                     'Content-Type': 'application/json'
                 },
@@ -119,7 +117,7 @@ export default class LSPStore {
 
     @action
     public initChannelAcceptor = async () => {
-        if (this.channelAcceptor) return;
+        if (this.channelAcceptor?.remove) this.channelAcceptor.remove();
         this.channelAcceptor = LndMobileEventEmitter.addListener(
             'ChannelAcceptor',
             async (event: any) => {
@@ -127,8 +125,12 @@ export default class LSPStore {
                     const channelAcceptRequest =
                         channel.decodeChannelAcceptRequest(event.data);
 
-                    // PEGASUS TODO only allow chans from LSP
-                    const isZeroConfAllowed = true;
+                    // Only allow 0-conf chans from LSP
+                    const isZeroConfAllowed =
+                        this.info.pubkey ===
+                        Base64Utils.bytesToHexString(
+                            channelAcceptRequest.node_pubkey
+                        );
 
                     await channel.channelAcceptorResponse(
                         channelAcceptRequest.pending_chan_id,
@@ -153,11 +155,7 @@ export default class LSPStore {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
-                `${
-                    this.settingsStore.embeddedLndNetwork === 'Mainnet'
-                        ? this.settingsStore.settings.lspMainnet
-                        : this.settingsStore.settings.lspTestnet
-                }/api/v1/proposal`,
+                `${this.getLSPHost()}/api/v1/proposal`,
                 this.settingsStore.settings.lspAccessKey
                     ? {
                           'Content-Type': 'application/json',
@@ -168,7 +166,10 @@ export default class LSPStore {
                           'Content-Type': 'application/json'
                       },
                 JSON.stringify({
-                    bolt11
+                    bolt11,
+                    // TODO investigate why Taproot chans from LSP
+                    // result in unsettled funds
+                    simpleTaproot: false
                 })
             )
                 .then(async (response: any) => {

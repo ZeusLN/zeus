@@ -45,6 +45,10 @@ export default class Transaction extends BaseModel {
         return localeString('general.transaction');
     }
 
+    @computed public get getFee(): string | number {
+        return this.total_fees || 0;
+    }
+
     @computed public get getTimestamp(): string | number {
         return this.time_stamp || 0;
     }

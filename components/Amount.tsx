@@ -6,6 +6,7 @@ import UnitsStore from '../stores/UnitsStore';
 import SettingsStore from '../stores/SettingsStore';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import ClockIcon from '../assets/images/SVG/Clock.svg';
+import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { Spacer } from './layout/Spacer';
 import { Row } from './layout/Row';
@@ -25,6 +26,7 @@ interface AmountDisplayProps {
     jumboText?: boolean;
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
     pending?: boolean;
+    fee?: boolean;
     fiatRatesLoading?: boolean;
 }
 
@@ -39,6 +41,7 @@ function AmountDisplay({
     jumboText = false,
     color = undefined,
     pending = false,
+    fee = false,
     fiatRatesLoading = false
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
@@ -86,7 +89,12 @@ function AmountDisplay({
                     <Spacer width={2} />
                     <View style={{ paddingBottom: jumboText ? 8 : 1.5 }}>
                         <Body secondary small={!jumboText} color={color}>
-                            {plural ? 'sats' : 'sat'}
+                            {plural ? 'sats' : 'sat'}{' '}
+                            {fee
+                                ? localeString(
+                                      'views.Payment.fee'
+                                  ).toLowerCase()
+                                : ''}
                         </Body>
                     </View>
                 </Row>
@@ -107,6 +115,26 @@ function AmountDisplay({
                         {space ? <TextSpace /> : <Spacer width={1} />}
                         {amount !== 'N/A' && <FiatSymbol />}
                         {pending ? <Pending /> : null}
+                        {fee && (
+                            <>
+                                <Spacer width={2} />
+                                <View
+                                    style={{
+                                        paddingBottom: jumboText ? 8 : 1.5
+                                    }}
+                                >
+                                    <Body
+                                        secondary
+                                        small={!jumboText}
+                                        color={color}
+                                    >
+                                        {localeString(
+                                            'views.Payment.fee'
+                                        ).toLowerCase()}
+                                    </Body>
+                                </View>
+                            </>
+                        )}
                     </Row>
                 );
             } else {
@@ -123,6 +151,26 @@ function AmountDisplay({
                                 amount.toString()
                             )}
                         </Body>
+                        {fee && (
+                            <>
+                                <Spacer width={2} />
+                                <View
+                                    style={{
+                                        paddingBottom: jumboText ? 8 : 1.5
+                                    }}
+                                >
+                                    <Body
+                                        secondary
+                                        small={!jumboText}
+                                        color={color}
+                                    >
+                                        {localeString(
+                                            'views.Payment.fee'
+                                        ).toLowerCase()}
+                                    </Body>
+                                </View>
+                            </>
+                        )}
                     </Row>
                 );
             }
@@ -144,6 +192,7 @@ interface AmountProps {
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
     toggleable?: boolean;
     pending?: boolean;
+    fee?: boolean;
 }
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
@@ -160,7 +209,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
             debit = false,
             toggleable = false,
             color = undefined,
-            pending = false
+            pending = false,
+            fee = false
         } = this.props;
         const FiatStore = this.props.FiatStore!;
         const UnitsStore = this.props.UnitsStore!;
@@ -198,6 +248,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                             negative={false}
                             jumboText={jumboText}
                             pending={pending}
+                            fee={fee}
                             fiatRatesLoading={FiatStore.loading}
                         />
                     </TouchableOpacity>
@@ -212,6 +263,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     negative={false}
                     jumboText={jumboText}
                     pending={pending}
+                    fee={fee}
                     fiatRatesLoading={FiatStore.loading}
                 />
             );
@@ -253,6 +305,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         jumboText={jumboText}
                         color={textColor}
                         pending={pending}
+                        fee={fee}
                         fiatRatesLoading={FiatStore.loading}
                     />
                 </TouchableOpacity>
@@ -268,6 +321,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 jumboText={jumboText}
                 color={textColor}
                 pending={pending}
+                fee={fee}
                 fiatRatesLoading={FiatStore.loading}
             />
         );

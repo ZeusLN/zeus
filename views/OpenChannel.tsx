@@ -5,8 +5,7 @@ import {
     StyleSheet,
     Text,
     View,
-    TouchableOpacity,
-    TouchableWithoutFeedback
+    TouchableOpacity
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
@@ -16,6 +15,7 @@ import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
 import Header from '../components/Header';
+import OnchainFeeInput from '../components/OnchainFeeInput';
 import KeyValue from '../components/KeyValue';
 import LightningIndicator from '../components/LightningIndicator';
 import { Row } from '../components/layout/Row';
@@ -269,9 +269,7 @@ export default class OpenChannel extends React.Component<
             connectPeerOnly,
             advancedSettingsToggle
         } = this.state;
-        const { settings, implementation } = SettingsStore;
-        const { privacy } = settings;
-        const enableMempoolRates = privacy && privacy.enableMempoolRates;
+        const { implementation } = SettingsStore;
 
         const {
             connectingToPeer,
@@ -390,7 +388,7 @@ export default class OpenChannel extends React.Component<
 
                         <Text
                             style={{
-                                ...styles.secondaryText,
+                                ...styles.text,
                                 color: themeColor('secondaryText')
                             }}
                         >
@@ -407,7 +405,7 @@ export default class OpenChannel extends React.Component<
 
                         <Text
                             style={{
-                                ...styles.secondaryText,
+                                ...styles.text,
                                 color: themeColor('secondaryText')
                             }}
                         >
@@ -539,7 +537,7 @@ export default class OpenChannel extends React.Component<
                                 <>
                                     <Text
                                         style={{
-                                            ...styles.secondaryText,
+                                            ...styles.text,
                                             color: themeColor('secondaryText')
                                         }}
                                     >
@@ -547,50 +545,15 @@ export default class OpenChannel extends React.Component<
                                             'views.OpenChannel.satsPerVbyte'
                                         )}
                                     </Text>
-                                    {enableMempoolRates ? (
-                                        <TouchableWithoutFeedback
-                                            onPress={() =>
-                                                navigation.navigate('EditFee', {
-                                                    onNavigateBack:
-                                                        this
-                                                            .handleOnNavigateBack
-                                                })
-                                            }
-                                        >
-                                            <View
-                                                style={{
-                                                    ...styles.editFeeBox,
-
-                                                    borderColor:
-                                                        'rgba(255, 217, 63, .6)',
-                                                    borderWidth: 3
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        ...styles.text,
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontSize: 18
-                                                    }}
-                                                >
-                                                    {sat_per_vbyte}
-                                                </Text>
-                                            </View>
-                                        </TouchableWithoutFeedback>
-                                    ) : (
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            placeholder={'2'}
-                                            value={sat_per_vbyte}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    sat_per_vbyte: text
-                                                })
-                                            }
-                                        />
-                                    )}
+                                    <OnchainFeeInput
+                                        fee={sat_per_vbyte}
+                                        onChangeFee={(text: string) => {
+                                            console.log('text', text);
+                                            this.setState({
+                                                sat_per_vbyte: text
+                                            });
+                                        }}
+                                    />
                                 </>
 
                                 <TouchableOpacity
@@ -636,7 +599,7 @@ export default class OpenChannel extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                ...styles.secondaryText,
+                                                ...styles.text,
                                                 color: themeColor(
                                                     'secondaryText'
                                                 )
@@ -798,9 +761,6 @@ const styles = StyleSheet.create({
     text: {
         fontFamily: 'Lato-Regular'
     },
-    secondaryText: {
-        fontFamily: 'Lato-Regular'
-    },
     textWhite: {
         color: 'white',
         fontFamily: 'Lato-Regular'
@@ -819,14 +779,5 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: 'rgba(92, 99,216, 1)',
         color: 'white'
-    },
-    editFeeBox: {
-        height: 65,
-        padding: 15,
-        marginTop: 15,
-        borderRadius: 4,
-        borderColor: '#FFD93F',
-        borderWidth: 2,
-        marginBottom: 20
     }
 });
