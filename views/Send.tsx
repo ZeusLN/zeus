@@ -185,9 +185,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     async componentDidUpdate(prevProps, prevState) {
         if (this.state.destination !== prevState.destination) {
-            if (this.state.destination) {
-                this.validateAddress(this.state.destination);
-            }
+            this.validateAddress(this.state.destination);
         }
     }
 
@@ -551,12 +549,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 />
                                 <TouchableOpacity
                                     onPress={() => {
-                                        navigation.navigate(
-                                            'ContactsSettings',
-                                            {
-                                                SendScreen: true
-                                            }
-                                        );
+                                        this.setState({
+                                            contactName: '',
+                                            destination: ''
+                                        });
                                     }}
                                     style={{
                                         position: 'absolute',
@@ -639,7 +635,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             satAmount
                                         });
                                     }}
-                                    // hideConversion={amount === 'all'}
+                                    hideConversion={amount === 'all'}
                                 />
 
                                 <View style={{ paddingBottom: 15 }}>
