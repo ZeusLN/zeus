@@ -12,6 +12,7 @@ import VerifiedAccount from '../assets/images/SVG/Verified Account.svg';
 import EditContact from '../assets/images/SVG/Pen.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
+import LinkingUtils from '../utils/LinkingUtils';
 
 interface ContactDetailsProps {
     navigation: any;
@@ -142,6 +143,11 @@ export default class ContactDetails extends React.Component<
 
         // Update the state to reflect the changes
         this.setState({ contact: updatedContact });
+    };
+
+    handleNpubPress = (value: string) => {
+        const deepLink = `nostr:${value}`;
+        LinkingUtils.handleDeepLink(deepLink, this.props.navigation);
     };
 
     render() {
@@ -362,29 +368,39 @@ export default class ContactDetails extends React.Component<
                                     <View>
                                         {contact.nostrNpub.map(
                                             (value: string, index: number) => (
-                                                <View
+                                                <TouchableOpacity
                                                     key={index}
-                                                    style={styles.contactRow}
+                                                    onPress={() =>
+                                                        this.handleNpubPress(
+                                                            value
+                                                        )
+                                                    }
                                                 >
-                                                    <View>
-                                                        <KeySecurity />
-                                                    </View>
-                                                    <Text
+                                                    <View
                                                         style={
-                                                            styles.contactFields
+                                                            styles.contactRow
                                                         }
                                                     >
-                                                        {value.length > 15
-                                                            ? `${value.substring(
-                                                                  0,
-                                                                  10
-                                                              )}...${value.substring(
-                                                                  value.length -
-                                                                      5
-                                                              )}`
-                                                            : value}
-                                                    </Text>
-                                                </View>
+                                                        <View>
+                                                            <KeySecurity />
+                                                        </View>
+                                                        <Text
+                                                            style={
+                                                                styles.contactFields
+                                                            }
+                                                        >
+                                                            {value.length > 15
+                                                                ? `${value.substring(
+                                                                      0,
+                                                                      10
+                                                                  )}...${value.substring(
+                                                                      value.length -
+                                                                          5
+                                                                  )}`
+                                                                : value}
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
                                             )
                                         )}
                                     </View>
