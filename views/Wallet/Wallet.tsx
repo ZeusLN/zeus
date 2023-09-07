@@ -267,6 +267,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelsStore,
             ChannelBackupStore,
             LSPStore,
+            SyncStore,
             SettingsStore
         } = this.props;
 
@@ -274,6 +275,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
+            SyncStore.reset();
             LSPStore.reset();
             ChannelBackupStore.reset();
         }

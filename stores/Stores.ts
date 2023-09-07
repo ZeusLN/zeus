@@ -46,7 +46,10 @@ class Stores {
         this.modalStore = new ModalStore();
         this.fiatStore = new FiatStore(this.settingsStore);
         this.channelsStore = new ChannelsStore(this.settingsStore);
-        this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
+        this.nodeInfoStore = new NodeInfoStore(
+            this.channelsStore,
+            this.settingsStore
+        );
         this.lspStore = new LSPStore(this.settingsStore);
         this.channelBackupStore = new ChannelBackupStore(
             this.nodeInfoStore,

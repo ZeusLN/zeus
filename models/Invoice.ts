@@ -77,7 +77,9 @@ export default class Invoice extends BaseModel {
 
     @computed public get getRPreimage(): string {
         const preimage = this.r_preimage;
-        return typeof preimage === 'string'
+        return typeof preimage === 'object'
+            ? Base64Utils.bytesToHexString(preimage)
+            : typeof preimage === 'string'
             ? preimage.includes('=')
                 ? Base64Utils.base64ToHex(preimage)
                 : preimage
@@ -86,7 +88,9 @@ export default class Invoice extends BaseModel {
 
     @computed public get getRHash(): string {
         const hash = this.r_hash;
-        return typeof hash === 'string'
+        return typeof hash === 'object'
+            ? Base64Utils.bytesToHexString(hash)
+            : typeof hash === 'string'
             ? hash.includes('=')
                 ? Base64Utils.base64ToHex(hash)
                 : hash

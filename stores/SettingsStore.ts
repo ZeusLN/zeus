@@ -56,6 +56,8 @@ interface PaymentsSettings {
     defaultFeeMethod?: string;
     defaultFeePercentage?: string;
     defaultFeeFixed?: string;
+    timeoutSeconds?: string;
+    preferredMempoolRate?: string;
 }
 
 interface InvoicesSettings {
@@ -94,6 +96,7 @@ export interface Settings {
     expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
     bimodalPathfinding: boolean;
+    waitForGraphSync: boolean;
     rescan: boolean;
     recovery: boolean;
     // LSP
@@ -115,6 +118,29 @@ export const BLOCK_EXPLORER_KEYS = [
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
         value: 'Custom'
+    }
+];
+
+export const MEMPOOL_RATES_KEYS = [
+    {
+        key: 'Fastest fee',
+        value: 'fastestFee',
+        translateKey: 'views.EditFee.fastestFee'
+    },
+    {
+        key: 'Half hour fee',
+        value: 'halfHourFee',
+        translateKey: 'views.EditFee.halfHourFee'
+    },
+    {
+        key: 'Hour fee',
+        value: 'hourFee',
+        translateKey: 'views.EditFee.hourFee'
+    },
+    {
+        key: 'Minimum fee',
+        value: 'minimumFee',
+        translateKey: 'views.EditFee.minimumFee'
     }
 ];
 
@@ -653,7 +679,9 @@ export default class SettingsStore {
         payments: {
             defaultFeeMethod: 'fixed',
             defaultFeePercentage: '0.5',
-            defaultFeeFixed: '100'
+            defaultFeeFixed: '100',
+            timeoutSeconds: '60',
+            preferredMempoolRate: 'fastestFee'
         },
         invoices: {
             addressType: '0',
@@ -675,6 +703,7 @@ export default class SettingsStore {
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: false,
+        waitForGraphSync: false,
         rescan: false,
         recovery: false,
         // LSP
