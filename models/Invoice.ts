@@ -197,11 +197,13 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getFormattedRhash(): string {
-        return typeof this.r_hash === 'string'
-            ? this.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
-            : this.r_hash.data
-            ? Base64Utils.bytesToHexString(this.r_hash.data)
-            : Base64Utils.bytesToHexString(this.r_hash);
+        return this.r_hash
+            ? typeof this.r_hash === 'string'
+                ? this.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
+                : this.r_hash.data
+                ? Base64Utils.bytesToHexString(this.r_hash.data)
+                : Base64Utils.bytesToHexString(this.r_hash)
+            : '';
     }
 
     @computed public get getDate(): string | number | Date {
