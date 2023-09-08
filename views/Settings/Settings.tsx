@@ -268,9 +268,7 @@ export default class Settings extends React.Component<
                             }}
                         >
                             <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('ContactsSettings')
-                                }
+                                onPress={() => navigation.navigate('Contacts')}
                             >
                                 <View style={styles.columnField}>
                                     <View>

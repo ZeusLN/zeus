@@ -76,8 +76,8 @@ import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 import BumpFee from './views/BumpFee';
 import QR from './views/QR';
 import AddNotes from './views/AddNotes';
-import ContactsSettings from './views/Settings/ContactsSettings';
-import AddContacts from './views/Settings/AddContacts';
+import Contacts from './views/Settings/Contacts';
+import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
 // POS
 import Order from './views/Order';
@@ -324,11 +324,11 @@ const AppScenes = {
     LSPSettings: {
         screen: LSP
     },
-    ContactsSettings: {
-        screen: ContactsSettings
+    Contacts: {
+        screen: Contacts
     },
-    AddContacts: {
-        screen: AddContacts
+    AddContact: {
+        screen: AddContact
     },
     ContactDetails: {
         screen: ContactDetails
