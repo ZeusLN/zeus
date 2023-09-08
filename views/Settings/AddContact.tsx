@@ -28,7 +28,7 @@ import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
 import Screen from '../../components/Screen';
 
-interface AddContactsProps {
+interface AddContactProps {
     navigation: any;
 }
 
@@ -43,7 +43,7 @@ interface Contact {
     isFavourite: boolean;
 }
 
-interface AddContactsState {
+interface AddContactState {
     contacts: Contact[];
     lnAddress: string[];
     onchainAddress: string[];
@@ -60,9 +60,9 @@ interface AddContactsState {
     isValidNpub: boolean;
 }
 
-export default class AddContacts extends React.Component<
-    AddContactsProps,
-    AddContactsState
+export default class AddContact extends React.Component<
+    AddContactProps,
+    AddContactState
 > {
     constructor(props: any) {
         super(props);
@@ -299,7 +299,7 @@ export default class AddContacts extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => {
-                    navigation.navigate('ContactsSettings', {
+                    navigation.navigate('Contacts', {
                         refresh: true
                     });
                 }}
@@ -399,7 +399,7 @@ export default class AddContacts extends React.Component<
                                 }}
                                 value={name}
                                 placeholder={localeString(
-                                    'views.Settings.AddContacts.name'
+                                    'views.Settings.AddContact.name'
                                 )}
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
@@ -426,7 +426,7 @@ export default class AddContacts extends React.Component<
                                 value={description}
                                 multiline
                                 placeholder={localeString(
-                                    'views.Settings.AddContacts.description'
+                                    'views.Settings.AddContact.description'
                                 )}
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
@@ -499,7 +499,7 @@ export default class AddContacts extends React.Component<
                                 }}
                                 value={lnAddress[0]}
                                 placeholder={localeString(
-                                    'views.Settings.AddContacts.lnAddress'
+                                    'views.Settings.AddContact.lnAddress'
                                 )}
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
@@ -546,7 +546,7 @@ export default class AddContacts extends React.Component<
                                             }}
                                             value={address}
                                             placeholder={localeString(
-                                                'views.Settings.AddContacts.lnAddress'
+                                                'views.Settings.AddContact.lnAddress'
                                             )}
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
@@ -606,7 +606,7 @@ export default class AddContacts extends React.Component<
                                 }}
                                 value={onchainAddress[0]}
                                 placeholder={localeString(
-                                    'views.Settings.AddContacts.onchainAddress'
+                                    'views.Settings.AddContact.onchainAddress'
                                 )}
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
@@ -656,7 +656,7 @@ export default class AddContacts extends React.Component<
                                             }}
                                             value={address}
                                             placeholder={localeString(
-                                                'views.Settings.AddContacts.onchainAddress'
+                                                'views.Settings.AddContact.onchainAddress'
                                             )}
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
@@ -711,7 +711,7 @@ export default class AddContacts extends React.Component<
                                 }}
                                 value={nip05[0]}
                                 placeholder={localeString(
-                                    'views.Settings.AddContacts.nip05'
+                                    'views.Settings.AddContact.nip05'
                                 )}
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
@@ -757,7 +757,7 @@ export default class AddContacts extends React.Component<
                                             }}
                                             value={address}
                                             placeholder={localeString(
-                                                'views.Settings.AddContacts.nip05'
+                                                'views.Settings.AddContact.nip05'
                                             )}
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
@@ -812,7 +812,7 @@ export default class AddContacts extends React.Component<
                                 }}
                                 value={nostrNpub[0]}
                                 placeholder={localeString(
-                                    'views.Settings.AddContacts.nostrNpub'
+                                    'views.Settings.AddContact.nostrNpub'
                                 )}
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
@@ -857,7 +857,7 @@ export default class AddContacts extends React.Component<
                                             }}
                                             value={address}
                                             placeholder={localeString(
-                                                'views.Settings.AddContacts.nostrNpub'
+                                                'views.Settings.AddContact.nostrNpub'
                                             )}
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
@@ -903,7 +903,7 @@ export default class AddContacts extends React.Component<
                             >
                                 <Text style={styles.addExtraFieldText}>
                                     {localeString(
-                                        'views.Settings.AddContacts.addExtraField'
+                                        'views.Settings.AddContact.addExtraField'
                                     )}
                                 </Text>
                             </TouchableOpacity>
@@ -917,7 +917,7 @@ export default class AddContacts extends React.Component<
                     >
                         <Button
                             title={localeString(
-                                'views.Settings.AddContacts.saveContact'
+                                'views.Settings.AddContact.saveContact'
                             )}
                             buttonStyle={{ padding: 14 }}
                             onPress={async () => {

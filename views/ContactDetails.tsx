@@ -175,7 +175,7 @@ export default class ContactDetails extends React.Component<
         const EditContactButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('AddContacts', {
+                    navigation.navigate('AddContact', {
                         prefillContact: contact,
                         isEdit: true
                     })

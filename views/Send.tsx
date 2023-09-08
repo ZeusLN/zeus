@@ -565,7 +565,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         )}
                         <TouchableOpacity
                             onPress={() =>
-                                navigation.navigate('ContactsSettings', {
+                                navigation.navigate('Contacts', {
                                     SendScreen: true
                                 })
                             }
