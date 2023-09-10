@@ -32,6 +32,7 @@ interface FeeBreakdownProps {
     commit_weight?: number;
     commit_fee?: number;
     csv_delay?: number;
+    label?: string;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore')
@@ -54,7 +55,8 @@ export default class FeeBreakdown extends React.Component<
             total_satoshis_sent,
             commit_weight,
             commit_fee,
-            csv_delay
+            csv_delay,
+            label
         } = this.props;
         const { loading, chanInfo } = ChannelsStore;
         const { nodeInfo, testnet } = NodeInfoStore;
@@ -80,6 +82,17 @@ export default class FeeBreakdown extends React.Component<
 
         return (
             <React.Fragment>
+                {label && !(!loading && !(localPolicy && remotePolicy)) && (
+                    <Text
+                        style={{
+                            ...styles.text,
+                            ...styles.breakdownHeader,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {label}
+                    </Text>
+                )}
                 {loading && <LoadingIndicator />}
                 {!loading && localPolicy && remotePolicy && (
                     <React.Fragment>
@@ -405,5 +418,10 @@ const styles = StyleSheet.create({
     title: {
         paddingTop: 15,
         paddingBottom: 5
+    },
+    breakdownHeader: {
+        alignSelf: 'center',
+        padding: 20,
+        fontSize: 20
     }
 });

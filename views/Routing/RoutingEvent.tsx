@@ -187,38 +187,22 @@ export default class RoutingEvent extends React.Component<
                         />
                     )}
 
-                    <Text
-                        style={{
-                            ...styles.text,
-                            ...styles.breakdownHeader,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {localeString(
-                            'views.Routing.RoutingEvent.sourceChannel'
-                        )}
-                    </Text>
                     <FeeBreakdown
                         channelId={chan_id_in}
                         peerDisplay={chanInLabel}
                         channelPoint={channelInPoint}
-                    />
-                    <Text
-                        style={{
-                            ...styles.text,
-                            ...styles.breakdownHeader,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {localeString(
-                            'views.Routing.RoutingEvent.destinationChannel'
+                        label={localeString(
+                            'views.Routing.RoutingEvent.sourceChannel'
                         )}
-                    </Text>
+                    />
 
                     <FeeBreakdown
                         channelId={chan_id_out}
                         peerDisplay={chanOutLabel}
                         channelPoint={channelOutPoint}
+                        label={localeString(
+                            'views.Routing.RoutingEvent.destinationChannel'
+                        )}
                     />
                 </ScrollView>
             </Screen>
@@ -237,10 +221,5 @@ const styles = StyleSheet.create({
     amount: {
         alignItems: 'center',
         padding: 10
-    },
-    breakdownHeader: {
-        alignSelf: 'center',
-        padding: 20,
-        fontSize: 20
     }
 });
