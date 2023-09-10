@@ -12,12 +12,16 @@ import { Row } from './layout/Row';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 
+import stores from '../stores/Stores';
+
 interface PaymentPathProps {
     value?: any;
+    aliasMap?: any;
 }
 
 export default function PaymentPath(props: PaymentPathProps) {
-    const { value } = props;
+    const { value, aliasMap } = props;
+
     const paths: any = [];
     const [expanded, setExpanded] = useState(new Map());
     const updateMap = (k: number, v: boolean) => {
@@ -27,10 +31,14 @@ export default function PaymentPath(props: PaymentPathProps) {
         const hops: any = [];
         let title = '';
         path.map((hop: any, key: number) => {
+            const displayName = aliasMap.get(hop.pubKey) || hop.node;
             title +=
                 hop.node.length >= 66
-                    ? `${PrivacyUtils.sensitiveValue(hop.node).slice(0, 6)}...`
-                    : PrivacyUtils.sensitiveValue(hop.node);
+                    ? `${PrivacyUtils.sensitiveValue(displayName).slice(
+                          0,
+                          6
+                      )}...`
+                    : PrivacyUtils.sensitiveValue(displayName);
             if (key + 1 !== path.length) {
                 title += ', ';
             }
@@ -107,6 +115,9 @@ export default function PaymentPath(props: PaymentPathProps) {
             );
         }
         path.map((hop: any, key: number) => {
+            if (!hop.alias && !aliasMap.get(hop.pubKey)) {
+                stores.channelsStore.getNodeInfo(hop.pubKey);
+            }
             (expanded.get(index) || value.length === 1) &&
                 hops.push(
                     <View
@@ -153,7 +164,11 @@ export default function PaymentPath(props: PaymentPathProps) {
                                 }}
                             >
                                 {`${
-                                    hop.node.length >= 66
+                                    aliasMap.get(hop.pubKey)
+                                        ? PrivacyUtils.sensitiveValue(
+                                              aliasMap.get(hop.pubKey)
+                                          )
+                                        : hop.node.length >= 66
                                         ? `${
                                               PrivacyUtils.sensitiveValue(
                                                   hop.node
