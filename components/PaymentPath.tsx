@@ -4,6 +4,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import UrlUtils from '../utils/UrlUtils';
 
 import Amount from './Amount';
 import KeyValue from './KeyValue';
@@ -156,31 +157,43 @@ export default function PaymentPath(props: PaymentPathProps) {
                                     {`${key + 1}`}
                                 </Text>
                             </View>
-                            <Text
-                                style={{
-                                    fontSize: 15,
-                                    color: themeColor('highlight'),
-                                    fontFamily: 'Lato-Bold'
+                            <TouchableOpacity
+                                onPress={() => {
+                                    if (!hop.pubKey) return;
+                                    UrlUtils.goToBlockExplorerPubkey(
+                                        hop.pubKey,
+                                        stores.nodeInfoStore.testnet
+                                    );
                                 }}
                             >
-                                {`${
-                                    aliasMap.get(hop.pubKey)
-                                        ? PrivacyUtils.sensitiveValue(
-                                              aliasMap.get(hop.pubKey)
-                                          )
-                                        : hop.node.length >= 66
-                                        ? `${
-                                              PrivacyUtils.sensitiveValue(
+                                <Text
+                                    style={{
+                                        fontSize: 15,
+                                        color: themeColor('highlight'),
+                                        fontFamily: 'Lato-Bold'
+                                    }}
+                                >
+                                    {`${
+                                        aliasMap.get(hop.pubKey)
+                                            ? PrivacyUtils.sensitiveValue(
+                                                  aliasMap.get(hop.pubKey)
+                                              )
+                                            : hop.node.length >= 66
+                                            ? `${
+                                                  PrivacyUtils.sensitiveValue(
+                                                      hop.node
+                                                  ).slice(0, 14) +
+                                                  '...' +
+                                                  PrivacyUtils.sensitiveValue(
+                                                      hop.node
+                                                  ).slice(-14)
+                                              }`
+                                            : PrivacyUtils.sensitiveValue(
                                                   hop.node
-                                              ).slice(0, 14) +
-                                              '...' +
-                                              PrivacyUtils.sensitiveValue(
-                                                  hop.node
-                                              ).slice(-14)
-                                          }`
-                                        : PrivacyUtils.sensitiveValue(hop.node)
-                                }`}
-                            </Text>
+                                              )
+                                    }`}
+                                </Text>
+                            </TouchableOpacity>
                         </Row>
 
                         <View style={{ marginLeft: 50, marginBottom: 15 }}>
