@@ -486,7 +486,11 @@ export default class NodeConfiguration extends React.Component<
             nodes: newNodes,
             selectedNode: this.getNewSelectedNodeIndex(index, settings)
         }).then(() => {
-            navigation.navigate('Nodes', { refresh: true });
+            if (newNodes.length === 0) {
+                navigation.navigate('IntroSplash');
+            } else {
+                navigation.navigate('Nodes', { refresh: true });
+            }
         });
     };
 
