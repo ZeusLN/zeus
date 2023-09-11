@@ -5,7 +5,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableWithoutFeedback,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -18,11 +17,10 @@ import BalanceSlider from '../../components/BalanceSlider';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
+import OnchainFeeInput from '../../components/OnchainFeeInput';
 import Amount from '../../components/Amount';
 import FeeBreakdown from '../../components/FeeBreakdown';
 import Screen from '../../components/Screen';
-import Switch from '../../components/Switch';
-import TextInput from '../../components/TextInput';
 
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -122,7 +120,6 @@ export default class ChannelView extends React.Component<
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
-        const enableMempoolRates = privacy && privacy.enableMempoolRates;
         const { testnet } = NodeInfoStore;
 
         const {
@@ -597,87 +594,24 @@ export default class ChannelView extends React.Component<
                                 </View>
                             )}
                         {confirmCloseChannel && (
-                            <React.Fragment>
+                            <View>
                                 {(BackendUtils.isLNDBased() ||
                                     !implementation) && (
-                                    <React.Fragment>
+                                    <>
                                         <Text style={styles.text}>
                                             {localeString(
                                                 'views.Channel.closingRate'
                                             )}
                                         </Text>
-                                        {enableMempoolRates ? (
-                                            <TouchableWithoutFeedback
-                                                onPress={() =>
-                                                    navigation.navigate(
-                                                        'EditFee',
-                                                        {
-                                                            onNavigateBack:
-                                                                this
-                                                                    .handleOnNavigateBack
-                                                        }
-                                                    )
-                                                }
-                                            >
-                                                <View
-                                                    style={{
-                                                        ...styles.editFeeBox,
-                                                        borderColor:
-                                                            'rgba(255, 217, 63, .6)',
-                                                        borderWidth: 3
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            ...styles.text,
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            fontSize: 18
-                                                        }}
-                                                    >
-                                                        {satPerByte}
-                                                    </Text>
-                                                </View>
-                                            </TouchableWithoutFeedback>
-                                        ) : (
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                placeholder={'2'}
-                                                value={satPerByte}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        satPerByte: text
-                                                    })
-                                                }
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                            />
-                                        )}
-                                        {BackendUtils.isLNDBased() && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.secondaryText,
-                                                        top: 20
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Channel.forceClose'
-                                                    )}
-                                                </Text>
-                                                <Switch
-                                                    value={forceCloseChannel}
-                                                    onValueChange={() =>
-                                                        this.setState({
-                                                            forceCloseChannel:
-                                                                !forceCloseChannel
-                                                        })
-                                                    }
-                                                />
-                                            </>
-                                        )}
-                                    </React.Fragment>
+                                        <OnchainFeeInput
+                                            fee={satPerByte}
+                                            onChangeFee={(text: string) => {
+                                                this.setState({
+                                                    satPerByte: text
+                                                });
+                                            }}
+                                        />
+                                    </>
                                 )}
                                 <View style={styles.button}>
                                     <Button
@@ -699,7 +633,7 @@ export default class ChannelView extends React.Component<
                                         warning
                                     />
                                 </View>
-                            </React.Fragment>
+                            </View>
                         )}
                     </KeyboardAvoidingView>
                 </ScrollView>
