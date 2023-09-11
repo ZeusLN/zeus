@@ -144,6 +144,8 @@ export default class Payment extends BaseModel {
                                 this.nodes[pubKey] && this.nodes[pubKey].alias;
                             const nodeLabel = alias ? alias : pubKey;
                             const enhancedHop = {
+                                alias,
+                                pubKey,
                                 node: nodeLabel,
                                 forwarded: hop.amt_to_forward,
                                 fee: hop.fee_msat
