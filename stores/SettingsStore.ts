@@ -899,6 +899,9 @@ export default class SettingsStore {
                 }
 
                 // set default LSPs if not defined
+                if (this.settings.enableLSP === undefined) {
+                    this.settings.enableLSP = true;
+                }
                 if (!this.settings.lspMainnet) {
                     this.settings.lspMainnet = DEFAULT_LSP_MAINNET;
                 }
