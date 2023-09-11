@@ -65,6 +65,8 @@ export default class ChannelsStore {
         type: 'numeric'
     };
     @observable public showSearch: boolean = false;
+    // aliasMap
+    @observable public aliasMap: any = observable.map({});
 
     settingsStore: SettingsStore;
 
@@ -236,10 +238,19 @@ export default class ChannelsStore {
     };
 
     @action
-    getNodeInfo = (pubkey: string) =>
-        BackendUtils.getNodeInfo([pubkey]).then((data: any) => {
-            return data.node;
-        });
+    getNodeInfo = (pubkey: string) => {
+        this.loading = true;
+        BackendUtils.getNodeInfo([pubkey])
+            .then((data: any) => {
+                this.loading = false;
+                if (data?.node?.alias)
+                    this.aliasMap.set(pubkey, data.node.alias);
+                return data.node;
+            })
+            .catch(() => {
+                this.loading = false;
+            });
+    };
 
     @action
     enrichChannels = async (channels: Array<Channel>) => {
