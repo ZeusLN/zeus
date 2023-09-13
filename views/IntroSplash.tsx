@@ -57,7 +57,12 @@ export default class IntroSplash extends React.Component<
         const { navigation } = this.props;
 
         const LanguageButton = () => (
-            <TouchableOpacity onPress={() => navigation.navigate('Language')}>
+            <TouchableOpacity
+                onPress={() => navigation.navigate('Language')}
+                accessibilityLabel={localeString(
+                    'views.Settings.Language.title'
+                )}
+            >
                 <Globe fill={themeColor('text')} stroke={themeColor('text')} />
             </TouchableOpacity>
         );

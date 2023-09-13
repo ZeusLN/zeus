@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, View, Text } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -116,6 +116,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
+                accessibilityLabel={localeString('general.add')}
             />
         );
 
@@ -214,6 +215,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     </ListItem.Content>
                                     <Button
                                         title=""
+                                        accessibilityLabel={localeString(
+                                            'views.Settings.Language.title'
+                                        )}
                                         icon={{
                                             name: 'settings',
                                             size: 25,
@@ -244,15 +248,24 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     />
                 )}
                 {nodes && nodes.length === 0 && !loading && (
-                    <Button
-                        title={localeString('views.Settings.Nodes.noNodes')}
-                        icon={{
-                            name: 'error-outline',
-                            size: 25,
-                            color: themeColor('text')
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            paddingVertical: 15,
+                            paddingHorizontal: 10
                         }}
-                        iconOnly
-                    />
+                    >
+                        <Icon
+                            name="error-outline"
+                            size={25}
+                            color={themeColor('text')}
+                        />
+                        <Text style={{ color: themeColor('text') }}>
+                            {localeString('views.Settings.Nodes.noNodes')}
+                        </Text>
+                    </View>
                 )}
             </Screen>
         );
