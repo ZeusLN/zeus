@@ -216,7 +216,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     <Button
                                         title=""
                                         accessibilityLabel={localeString(
-                                            'views.Settings.Language.title'
+                                            'views.Settings.title'
                                         )}
                                         icon={{
                                             name: 'settings',

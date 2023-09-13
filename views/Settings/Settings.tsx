@@ -111,6 +111,7 @@ export default class Settings extends React.Component<
         const OlympusButton = () => (
             <TouchableOpacity
                 onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
+                accessibilityLabel={localeString('views.Settings.olympus')}
             >
                 <View style={{ top: -7 }}>
                     <Olympus width="45" height="45" fill={themeColor('text')} />

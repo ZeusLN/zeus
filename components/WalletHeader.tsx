@@ -268,7 +268,7 @@ export default class WalletHeader extends React.Component<
                             }}
                             source={TorIcon}
                             accessibilityLabel={localeString(
-                                'views.Settings.AddEditNode.useTor'
+                                'general.torEnabled'
                             )}
                         />
                     </TouchableOpacity>
@@ -277,7 +277,10 @@ export default class WalletHeader extends React.Component<
         );
 
         const SearchButton = () => (
-            <TouchableOpacity onPress={() => ChannelsStore.toggleSearch()}>
+            <TouchableOpacity
+                onPress={() => ChannelsStore.toggleSearch()}
+                accessibilityLabel={localeString('general.search')}
+            >
                 <Search
                     fill={themeColor('text')}
                     width="30"
@@ -293,6 +296,7 @@ export default class WalletHeader extends React.Component<
         const OpenChannelButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('OpenChannel')}
+                accessibilityLabel={localeString('views.Wallet.Channels.open')}
             >
                 <Add
                     fill={themeColor('text')}

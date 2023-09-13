@@ -97,16 +97,23 @@ function AmountDisplay({
                     accessibilityLabel={accessibilityLabel}
                 >
                     {pending ? <Pending /> : null}
-                    <Body jumbo={jumboText} color={color} accessible>
+                    <Body
+                        jumbo={jumboText}
+                        color={color}
+                        accessible={accessible}
+                    >
                         {amount}
                     </Body>
                     <Spacer width={2} />
-                    <View style={{ paddingBottom: jumboText ? 8 : 1.5 }}>
+                    <View
+                        style={{ paddingBottom: jumboText ? 8 : 1.5 }}
+                        accessible={accessible}
+                    >
                         <Body
                             secondary
                             small={!jumboText}
                             color={color}
-                            accessible
+                            accessible={accessible}
                         >
                             {plural ? 'sats' : 'sat'}{' '}
                             {fee
@@ -127,7 +134,11 @@ function AmountDisplay({
                         accessible={accessible}
                         accessibilityLabel={accessibilityLabel}
                     >
-                        <Body jumbo={jumboText} color={color} accessible>
+                        <Body
+                            jumbo={jumboText}
+                            color={color}
+                            accessible={accessible}
+                        >
                             {negative ? '-' : ''}
                             {amount === 'N/A' && fiatRatesLoading ? (
                                 <LoadingIndicator size={20} />
@@ -170,7 +181,11 @@ function AmountDisplay({
                         {pending ? <Pending /> : null}
                         {amount !== 'N/A' && <FiatSymbol accessible />}
                         {space ? <TextSpace /> : <Spacer width={1} />}
-                        <Body jumbo={jumboText} color={color} accessible>
+                        <Body
+                            jumbo={jumboText}
+                            color={color}
+                            accessible={accessible}
+                        >
                             {negative ? '-' : ''}
                             {amount === 'N/A' && fiatRatesLoading ? (
                                 <LoadingIndicator size={20} />
