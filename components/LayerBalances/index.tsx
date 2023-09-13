@@ -14,6 +14,7 @@ import UnitsStore from './../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import BlueWalletWarning from '../../components/BlueWalletWarning';
 
