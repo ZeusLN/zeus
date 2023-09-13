@@ -264,7 +264,7 @@ PODS:
     - React
   - react-native-randombytes (3.5.3):
     - React
-  - react-native-restart (0.0.24):
+  - react-native-restart (0.0.27):
     - React-Core
   - react-native-safe-area-context (0.6.4):
     - React
@@ -639,7 +639,7 @@ SPEC CHECKSUMS:
   react-native-netinfo: fefd4e98d75cbdd6e85fc530f7111a8afdf2b0c5
   react-native-nfc-manager: 001c3a98e68efd57b7fb04b1837ab06ca7243238
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
-  react-native-restart: 45c8dca02491980f2958595333cbccd6877cb57e
+  react-native-restart: 7595693413fe3ca15893702f2c8306c62a708162
   react-native-safe-area-context: 52342d2d80ea8faadd0ffa76d83b6051f20c5329
   react-native-tor: 3b14e9160b2eb7fa3f310921b2dee71a5171e5b7
   react-native-udp: df79c3cb72c4e71240cd3ce4687bfb8a137140d5
