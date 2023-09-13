@@ -262,7 +262,7 @@ export default class LND {
                       node_pubkey_string: data.node_pubkey_string,
                       sat_per_vbyte: data.sat_per_vbyte,
                       spend_unconfirmed: data.spend_unconfirmed,
-                      fund_max: data.fundMax,
+                      fund_max: data.fundMax ? data.fundMax : undefined,
                       outpoints:
                           data.utxos && data.utxos.length > 0
                               ? data.utxos.map((utxo: string) => {
@@ -284,7 +284,7 @@ export default class LND {
                       node_pubkey_string: data.node_pubkey_string,
                       sat_per_vbyte: data.sat_per_vbyte,
                       spend_unconfirmed: data.spend_unconfirmed,
-                      fund_max: data.fundMax,
+                      fund_max: data.fundMax ? data.fundMax : undefined,
                       outpoints:
                           data.utxos && data.utxos.length > 0
                               ? data.utxos.map((utxo: string) => {
