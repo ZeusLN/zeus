@@ -28,6 +28,8 @@ interface AmountDisplayProps {
     pending?: boolean;
     fee?: boolean;
     fiatRatesLoading?: boolean;
+    accessible?: boolean;
+    accessibilityLabel?: string;
 }
 
 function AmountDisplay({
@@ -42,7 +44,9 @@ function AmountDisplay({
     color = undefined,
     pending = false,
     fee = false,
-    fiatRatesLoading = false
+    fiatRatesLoading = false,
+    accessible,
+    accessibilityLabel
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
         console.error('Must include a symbol when rendering fiat');
@@ -66,7 +70,13 @@ function AmountDisplay({
     );
 
     const FiatSymbol = () => (
-        <Body secondary jumbo={jumboText} color={color}>
+        <Body
+            secondary
+            jumbo={jumboText}
+            color={color}
+            accessible={accessible}
+            accessibilityLabel={unit}
+        >
             {actualSymbol}
         </Body>
     );
@@ -81,14 +91,23 @@ function AmountDisplay({
     switch (unit) {
         case 'sats':
             return (
-                <Row align="flex-end">
+                <Row
+                    align="flex-end"
+                    accessible={accessible}
+                    accessibilityLabel={accessibilityLabel}
+                >
                     {pending ? <Pending /> : null}
-                    <Body jumbo={jumboText} color={color}>
+                    <Body jumbo={jumboText} color={color} accessible>
                         {amount}
                     </Body>
                     <Spacer width={2} />
                     <View style={{ paddingBottom: jumboText ? 8 : 1.5 }}>
-                        <Body secondary small={!jumboText} color={color}>
+                        <Body
+                            secondary
+                            small={!jumboText}
+                            color={color}
+                            accessible
+                        >
                             {plural ? 'sats' : 'sat'}{' '}
                             {fee
                                 ? localeString(
@@ -103,8 +122,12 @@ function AmountDisplay({
         case 'fiat':
             if (rtl) {
                 return (
-                    <Row align="flex-end">
-                        <Body jumbo={jumboText} color={color}>
+                    <Row
+                        align="flex-end"
+                        accessible={accessible}
+                        accessibilityLabel={accessibilityLabel}
+                    >
+                        <Body jumbo={jumboText} color={color} accessible>
                             {negative ? '-' : ''}
                             {amount === 'N/A' && fiatRatesLoading ? (
                                 <LoadingIndicator size={20} />
@@ -113,7 +136,7 @@ function AmountDisplay({
                             )}
                         </Body>
                         {space ? <TextSpace /> : <Spacer width={1} />}
-                        {amount !== 'N/A' && <FiatSymbol />}
+                        {amount !== 'N/A' && <FiatSymbol accessible />}
                         {pending ? <Pending /> : null}
                         {fee && (
                             <>
@@ -139,11 +162,15 @@ function AmountDisplay({
                 );
             } else {
                 return (
-                    <Row align="flex-end">
+                    <Row
+                        align="flex-end"
+                        accessible={accessible}
+                        accessibilityLabel={accessibilityLabel}
+                    >
                         {pending ? <Pending /> : null}
-                        {amount !== 'N/A' && <FiatSymbol />}
+                        {amount !== 'N/A' && <FiatSymbol accessible />}
                         {space ? <TextSpace /> : <Spacer width={1} />}
-                        <Body jumbo={jumboText} color={color}>
+                        <Body jumbo={jumboText} color={color} accessible>
                             {negative ? '-' : ''}
                             {amount === 'N/A' && fiatRatesLoading ? (
                                 <LoadingIndicator size={20} />
@@ -193,6 +220,8 @@ interface AmountProps {
     toggleable?: boolean;
     pending?: boolean;
     fee?: boolean;
+    accessible?: boolean;
+    accessibilityLabel?: string;
 }
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
@@ -210,7 +239,9 @@ export default class Amount extends React.Component<AmountProps, {}> {
             toggleable = false,
             color = undefined,
             pending = false,
-            fee = false
+            fee = false,
+            accessible,
+            accessibilityLabel
         } = this.props;
         const FiatStore = this.props.FiatStore!;
         const UnitsStore = this.props.UnitsStore!;
@@ -250,6 +281,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
                             pending={pending}
                             fee={fee}
                             fiatRatesLoading={FiatStore.loading}
+                            accessible={accessible}
+                            accessibilityLabel={accessibilityLabel}
                         />
                     </TouchableOpacity>
                 );
@@ -265,6 +298,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     pending={pending}
                     fee={fee}
                     fiatRatesLoading={FiatStore.loading}
+                    accessible={accessible}
+                    accessibilityLabel={accessibilityLabel}
                 />
             );
         }
@@ -307,6 +342,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         pending={pending}
                         fee={fee}
                         fiatRatesLoading={FiatStore.loading}
+                        accessible={accessible}
+                        accessibilityLabel={accessibilityLabel}
                     />
                 </TouchableOpacity>
             );
@@ -323,6 +360,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 pending={pending}
                 fee={fee}
                 fiatRatesLoading={FiatStore.loading}
+                accessible={accessible}
+                accessibilityLabel={accessibilityLabel}
             />
         );
     }

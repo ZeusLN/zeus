@@ -93,6 +93,7 @@ const TempleButton = ({ navigation }: { navigation: any }) => (
 const ScanBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
         onPress={() => navigation.navigate('HandleAnythingQRScanner')}
+        accessibilityLabel={localeString('general.scan')}
     >
         <Scan fill={themeColor('text')} />
     </TouchableOpacity>
@@ -213,6 +214,7 @@ export default class WalletHeader extends React.Component<
             <TouchableOpacity
                 onPress={() => protectedNavigation(navigation, 'Settings')}
                 onLongPress={() => protectedNavigation(navigation, 'Nodes')}
+                accessibilityLabel={localeString('views.Settings.title')}
             >
                 {multipleNodes ? (
                     <NodeIdenticon
@@ -265,6 +267,9 @@ export default class WalletHeader extends React.Component<
                                 height: 25
                             }}
                             source={TorIcon}
+                            accessibilityLabel={localeString(
+                                'views.Settings.AddEditNode.useTor'
+                            )}
                         />
                     </TouchableOpacity>
                 ) : null}

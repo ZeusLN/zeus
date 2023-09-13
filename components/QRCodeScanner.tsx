@@ -187,6 +187,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                         style={{
                             flex: 1
                         }}
+                        accessibilityLabel={localeString('general.scan')}
                     >
                         <Camera
                             style={styles.preview}

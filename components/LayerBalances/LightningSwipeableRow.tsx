@@ -65,35 +65,37 @@ export default class LightningSwipeableRow extends Component<
                 }}
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
-                    {text === localeString('general.routing') && (
-                        <Routing
-                            fill={themeColor('highlight')}
-                            width={30}
-                            height={30}
-                        />
-                    )}
-                    {text === localeString('general.receive') && (
-                        <Receive
-                            fill={themeColor('highlight')}
-                            width={30}
-                            height={30}
-                        />
-                    )}
-                    {text === localeString('general.send') && (
-                        <Send
-                            fill={themeColor('highlight')}
-                            width={30}
-                            height={30}
-                        />
-                    )}
-                    <Text
-                        style={{
-                            ...styles.actionText,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {text}
-                    </Text>
+                    <View accessible accessibilityRole="button">
+                        {text === localeString('general.routing') && (
+                            <Routing
+                                fill={themeColor('highlight')}
+                                width={30}
+                                height={30}
+                            />
+                        )}
+                        {text === localeString('general.receive') && (
+                            <Receive
+                                fill={themeColor('highlight')}
+                                width={30}
+                                height={30}
+                            />
+                        )}
+                        {text === localeString('general.send') && (
+                            <Send
+                                fill={themeColor('highlight')}
+                                width={30}
+                                height={30}
+                            />
+                        )}
+                        <Text
+                            style={{
+                                ...styles.actionText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {text}
+                        </Text>
+                    </View>
                 </RectButton>
             </Animated.View>
         );

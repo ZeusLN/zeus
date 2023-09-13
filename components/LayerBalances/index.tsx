@@ -41,23 +41,32 @@ type DataRow = {
 };
 
 const Row = ({ item }: { item: DataRow }) => (
-    <RectButton
-        style={{
-            ...styles.rectButton,
-            backgroundColor: themeColor('secondary')
-        }}
-    >
-        <View style={styles.left}>
-            {item.layer === 'On-chain' ? <OnChainSvg /> : <LightningSvg />}
-            <Spacer width={5} />
-            <Text style={{ ...styles.layerText, color: themeColor('text') }}>
-                {item.layer === 'Lightning'
-                    ? localeString('general.lightning')
-                    : localeString('general.onchain')}
-            </Text>
-        </View>
+    <RectButton>
+        <View
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={localeString(
+                'views.index.accessibilityLabel.' + item.layer
+            )}
+            style={{
+                ...styles.rectButton,
+                backgroundColor: themeColor('secondary')
+            }}
+        >
+            <View style={styles.left}>
+                {item.layer === 'On-chain' ? <OnChainSvg /> : <LightningSvg />}
+                <Spacer width={5} />
+                <Text
+                    style={{ ...styles.layerText, color: themeColor('text') }}
+                >
+                    {item.layer === 'Lightning'
+                        ? localeString('general.lightning')
+                        : localeString('general.onchain')}
+                </Text>
+            </View>
 
-        <Amount sats={item.balance} sensitive />
+            <Amount sats={item.balance} sensitive />
+        </View>
     </RectButton>
 );
 
