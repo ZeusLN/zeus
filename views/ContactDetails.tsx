@@ -145,7 +145,7 @@ export default class ContactDetails extends React.Component<
         this.setState({ contact: updatedContact });
     };
 
-    handleNpubPress = (value: string) => {
+    handleNostr = (value: string) => {
         const deepLink = `nostr:${value}`;
         LinkingUtils.handleDeepLink(deepLink, this.props.navigation);
     };
@@ -338,27 +338,36 @@ export default class ContactDetails extends React.Component<
                                     <View>
                                         {contact.nip05.map(
                                             (value: string, index: number) => (
-                                                <View
+                                                <TouchableOpacity
                                                     key={index}
-                                                    style={styles.contactRow}
+                                                    onPress={() =>
+                                                        this.handleNostr(value)
+                                                    }
                                                 >
-                                                    <VerifiedAccount />
-                                                    <Text
+                                                    <View
+                                                        key={index}
                                                         style={
-                                                            styles.contactFields
+                                                            styles.contactRow
                                                         }
                                                     >
-                                                        {value.length > 15
-                                                            ? `${value.substring(
-                                                                  0,
-                                                                  10
-                                                              )}...${value.substring(
-                                                                  value.length -
-                                                                      5
-                                                              )}`
-                                                            : value}
-                                                    </Text>
-                                                </View>
+                                                        <VerifiedAccount />
+                                                        <Text
+                                                            style={
+                                                                styles.contactFields
+                                                            }
+                                                        >
+                                                            {value.length > 15
+                                                                ? `${value.substring(
+                                                                      0,
+                                                                      10
+                                                                  )}...${value.substring(
+                                                                      value.length -
+                                                                          5
+                                                                  )}`
+                                                                : value}
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
                                             )
                                         )}
                                     </View>
@@ -371,9 +380,7 @@ export default class ContactDetails extends React.Component<
                                                 <TouchableOpacity
                                                     key={index}
                                                     onPress={() =>
-                                                        this.handleNpubPress(
-                                                            value
-                                                        )
+                                                        this.handleNostr(value)
                                                     }
                                                 >
                                                     <View

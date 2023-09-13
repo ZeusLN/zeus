@@ -325,10 +325,9 @@ export default class Contacts extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString(
+                                {`${localeString(
                                     'views.Settings.Contacts.favorites'
-                                ).toUpperCase()}{' '}
-                                ({favoriteContacts.length})
+                                ).toUpperCase()} (${favoriteContacts.length})`}
                             </Text>
                         </View>
                     )}
@@ -353,10 +352,11 @@ export default class Contacts extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString(
+                                {`${localeString(
                                     'views.Settings.Contacts.contacts'
-                                ).toUpperCase()}{' '}
-                                ({nonFavoriteContacts.length})
+                                ).toUpperCase()} (${
+                                    nonFavoriteContacts.length
+                                })`}
                             </Text>
                         </View>
                     )}
