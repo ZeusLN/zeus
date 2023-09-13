@@ -30,8 +30,6 @@ import java.util.HashSet;
 
 import com.google.protobuf.ByteString;
 
-import com.hypertrack.hyperlog.HyperLog;
-
 public class LndMobileService extends Service {
   private static final String TAG = "LndMobileService";
   boolean lndStarted = false;
@@ -85,25 +83,21 @@ public class LndMobileService extends Service {
   class IncomingHandler extends Handler {
       @Override
       public void handleMessage(Message msg) {
-        HyperLog.d(TAG, "New incoming message from client, msg id: " + msg.what);
         Bundle bundle = msg.getData();
         final int request = msg.arg1;
 
         switch (msg.what) {
           case MSG_REGISTER_CLIENT:
             mClients.add(msg.replyTo);
-            HyperLog.d(TAG, "Got register client " + msg.replyTo);
             sendToClient(msg.replyTo, Message.obtain(null, MSG_REGISTER_CLIENT_ACK, request, 0));
             //sendToClients(Message.obtain(null, MSG_REGISTER_CLIENT_ACK, request, 0));
             break;
 
           case MSG_UNREGISTER_CLIENT:
-            HyperLog.d(TAG, "Got unregister client " + msg.replyTo);
             mClients.remove(msg.replyTo);
             break;
 
           case MSG_START_LND:
-            HyperLog.d(TAG, "Got MSG_START_LND request");
             final String args = bundle.getString("args", "");
             startLnd(msg.replyTo, args, request);
             break;
@@ -118,7 +112,6 @@ public class LndMobileService extends Service {
               m = streamMethods.get(method);
 
               if (m == null) {
-                HyperLog.e(TAG, "Method " + method + " not found");
                 return;
               }
             }
@@ -128,7 +121,6 @@ public class LndMobileService extends Service {
             if (msg.what == MSG_GRPC_STREAM_COMMAND || msg.what == MSG_GRPC_BIDI_STREAM_COMMAND) {
               if (streamOnlyOnce) {
                 if (streamsStarted.contains(method)) {
-                  HyperLog.d(TAG, "Attempting to stream " + method + " twice, not allowing");
                   return;
                 }
               }
@@ -175,29 +167,6 @@ public class LndMobileService extends Service {
           }
 
           case MSG_CHECKSTATUS:
-            // lndmobile.Lndmobile.getStatus(new lndmobile.LndStatusCallback() {
-            //   @Override
-            //   public void onResponse(boolean b, boolean b1) {
-            //     HyperLog.i(TAG, "lnd started" + b);
-            //     HyperLog.i(TAG, "wallet unlocked" + b1);
-
-            //     int flags = 0;
-
-            //     flags += LndMobile.LndStatus.SERVICE_BOUND.flag;
-
-            //     if (b) {
-            //       flags += LndMobile.LndStatus.PROCESS_STARTED.flag;
-            //     }
-
-            //     if (b1) {
-            //       flags += LndMobile.LndStatus.WALLET_UNLOCKED.flag;
-            //     }
-
-            //     HyperLog.d(TAG, "MSG_CHECKSTATUS sending " + flags);
-            //     sendToClient(msg.replyTo, Message.obtain(null, MSG_CHECKSTATUS_RESPONSE, request, flags));
-            //   }
-            // });
-
             int flags = 0;
 
             flags += LndMobile.LndStatus.SERVICE_BOUND.flag;
@@ -206,14 +175,10 @@ public class LndMobileService extends Service {
               flags += LndMobile.LndStatus.PROCESS_STARTED.flag;
             }
 
-            HyperLog.d(TAG, "MSG_CHECKSTATUS sending " + flags);
             sendToClient(msg.replyTo, Message.obtain(null, MSG_CHECKSTATUS_RESPONSE, request, flags));
-            //sendToClients(Message.obtain(null, MSG_CHECKSTATUS_RESPONSE, request, flags));
             break;
 
           case MSG_UNLOCKWALLET: {
-            HyperLog.d(TAG, "Got MSG_UNLOCKWALLET");
-
             String password = bundle.getString("password");
 
             lnrpc.Walletunlocker.UnlockWalletRequest.Builder unlockWallet = lnrpc.Walletunlocker.UnlockWalletRequest.newBuilder();
@@ -227,8 +192,6 @@ public class LndMobileService extends Service {
           }
 
           case MSG_INITWALLET:
-            HyperLog.d(TAG, "Got MSG_INITWALLET");
-
             ArrayList<String> seed = bundle.getStringArrayList("seed");
             String password = bundle.getString("password");
             int recoveryWindow = bundle.getInt("recoveryWindow");
@@ -241,7 +204,6 @@ public class LndMobileService extends Service {
               initWallet.setRecoveryWindow(recoveryWindow);
             }
             if (channelBackupsBase64 != null) {
-              HyperLog.d(TAG, "--CHANNEL BACKUP RESTORE--");
               initWallet.setChannelBackups(
                 lnrpc.LightningOuterClass.ChanBackupSnapshot.newBuilder().setMultiChanBackup(
                   lnrpc.LightningOuterClass.MultiChanBackup.newBuilder().setMultiChanBackup(
@@ -258,36 +220,28 @@ public class LndMobileService extends Service {
             break;
 
           case MSG_STOP_LND:
-            HyperLog.d(TAG, "Got MSG_STOP_LND");
             stopLnd(msg.replyTo, request);
             break;
 
           case MSG_GOSSIP_SYNC:
-            HyperLog.i(TAG, "Got MSG_GOSSIP_SYNC");
             final String networkType = bundle.getString("networkType", "");
             gossipSync(msg.replyTo, networkType, request);
             break;
 
           case MSG_PING:
-            HyperLog.d(TAG, "Got MSG_PING");
             sendToClient(msg.replyTo, Message.obtain(null, MSG_PONG, request, 0));
             break;
 
           case MSG_GRPC_STREAM_WRITE:
-            HyperLog.d(TAG, "Got MSG_GRPC_STREAM_WRITE");
             final String method = bundle.getString("method");
             final byte[] payload = bundle.getByteArray("payload");
 
             lndmobile.SendStream s = writeStreams.get(method);
-            if (s == null) {
-              HyperLog.e(TAG, "Could not find write stream for " + method);
-            }
 
             try {
               s.send(payload);
             } catch (Throwable error) {
               // TODO(hsjoberg): Handle errors
-              HyperLog.e(TAG, error.getMessage());
             }
 
             Message message = Message.obtain(null, MSG_GRPC_STREAM_WRITE_RESULT, request, 0);
@@ -317,8 +271,6 @@ public class LndMobileService extends Service {
 
     @Override
     public void onError(Exception e) {
-      HyperLog.e(TAG, "LndCallback onError() for " + method, e);
-
       Message msg = Message.obtain(null, MSG_GRPC_COMMAND_RESULT, request, 0);
 
       Bundle bundle = new Bundle();
@@ -344,8 +296,6 @@ public class LndMobileService extends Service {
 
     @Override
     public void onResponse(byte[] bytes) {
-      HyperLog.d(TAG, "LndCallback onResponse() for " + method);
-
       Message msg = Message.obtain(null, MSG_GRPC_COMMAND_RESULT, request, 0);
 
       Bundle bundle = new Bundle();
@@ -369,13 +319,6 @@ public class LndMobileService extends Service {
 
     @Override
     public void onError(Exception e) {
-      HyperLog.e(TAG, "LndStreamCallback onError() for " + method, e);
-      HyperLog.e(TAG, e.getMessage());
-
-      if (e.getMessage().contains("EOF")) {
-        HyperLog.i(TAG, "Got EOF in LndStreamCallback for " + method);
-      }
-
       Message msg = Message.obtain(null, MSG_GRPC_STREAM_RESULT, 0, 0);
 
       Bundle bundle = new Bundle();
@@ -400,7 +343,6 @@ public class LndMobileService extends Service {
 
     @Override
     public void onResponse(byte[] bytes) {
-      HyperLog.d(TAG, "onResponse() for " + method);
       Message msg = Message.obtain(null, MSG_GRPC_STREAM_RESULT, 0, 0);
 
       Bundle bundle = new Bundle();
@@ -414,7 +356,6 @@ public class LndMobileService extends Service {
   }
 
   void gossipSync(Messenger recipient, String networkType, int request) {
-    HyperLog.i(TAG, "gossipSync()");
     Runnable gossipSync = new Runnable() {
       public void run() {
         Lndmobile.gossipSync(
@@ -425,8 +366,6 @@ public class LndMobileService extends Service {
 
           @Override
           public void onError(Exception e) {
-            HyperLog.e(TAG, "Could not invoke Lndmobile.gossipSync()", e);
-
             Message msg = Message.obtain(null, MSG_GOSSIP_SYNC_RESULT, request, 0);
 
             Bundle bundle = new Bundle();
@@ -457,7 +396,6 @@ public class LndMobileService extends Service {
   }
 
   void startLnd(Messenger recipient, String args, int request) {
-    HyperLog.d(TAG, "startLnd(): Starting lnd");
     Runnable startLnd = new Runnable() {
 
       @Override
@@ -466,8 +404,6 @@ public class LndMobileService extends Service {
 
           @Override
           public void onError(Exception e) {
-            HyperLog.e(TAG, "Could not invoke Lndmobile.start()", e);
-
             Message msg = Message.obtain(null, MSG_START_LND_RESULT, request, 0);
 
             Bundle bundle = new Bundle();
@@ -498,10 +434,9 @@ public class LndMobileService extends Service {
     new Thread(startLnd).start();
   }
 
-  void sendToClient(Messenger reciever, Message msg) {
-    final int i = mClients.indexOf(reciever);
+  void sendToClient(Messenger receiver, Message msg) {
+    final int i = mClients.indexOf(receiver);
     if (i == -1) {
-      HyperLog.w(TAG, "Warning, could not find recipient to send message to");
       return;
     }
     try {
@@ -523,19 +458,13 @@ public class LndMobileService extends Service {
 
   @Override
   public IBinder onBind(Intent intent) {
-    HyperLog.v(TAG, "onBind()");
     return messenger.getBinder();
   }
 
   @Override
   public boolean onUnbind(Intent intent) {
-    HyperLog.v(TAG, "onUnbind()");
-
     if (mClients.isEmpty()) {
-      HyperLog.i(TAG, "Last client unbound. Checking if lnd is alive and stopping it.");
-
       if (checkLndProcessExists()) {
-        HyperLog.i(TAG, "Lnd exists, attempting to stop it");
         stopLnd(null, -1);
       }
     }
@@ -545,7 +474,6 @@ public class LndMobileService extends Service {
 
   @Override
   public void onRebind(Intent intent) {
-    HyperLog.v(TAG, "onRebind()");
     super.onRebind(intent);
   }
 
@@ -562,12 +490,6 @@ public class LndMobileService extends Service {
         syncMethods.put(name, m);
       }
     }
-
-    /*if (checkLndProcessExists()) {
-      HyperLog.w(TAG, "WARNING: Found lnd process while in LndMobileService constructor.");
-      HyperLog.w(TAG, "Going to kill lnd process");
-      killLndProcess();
-    }*/
   }
 
   private boolean checkLndProcessExists() {
@@ -575,7 +497,6 @@ public class LndMobileService extends Service {
     ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
       if (p.processName.equals(packageName + ":blixtLndMobile")) {
-        HyperLog.d(TAG, packageName + ":blixtLndMobile pid: " + String.valueOf(p.pid));
         return true;
       }
     }
@@ -587,7 +508,6 @@ public class LndMobileService extends Service {
     ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
       if (p.processName.equals(packageName + ":blixtLndMobile")) {
-        HyperLog.i(TAG, "Killing " + packageName + ":blixtLndMobile with pid: " + String.valueOf(p.pid));
         Process.killProcess(p.pid);
         return true;
       }
@@ -601,8 +521,6 @@ public class LndMobileService extends Service {
       new Callback() {
         @Override
         public void onError(Exception e) {
-          HyperLog.e(TAG, "Got Error when trying to stop lnd", e);
-
           lndStarted = false;
 
           if (recipient != null) {
@@ -619,8 +537,6 @@ public class LndMobileService extends Service {
 
         @Override
         public void onResponse(byte[] bytes) {
-          HyperLog.e(TAG, "onReponse for stopDaemon");
-
           lndStarted = false;
 
           if (recipient != null) {
