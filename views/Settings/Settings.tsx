@@ -282,7 +282,9 @@ export default class Settings extends React.Component<
                                             color: themeColor('text')
                                         }}
                                     >
-                                        Contacts
+                                        {localeString(
+                                            'views.Settings.Contacts.contacts'
+                                        )}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon />

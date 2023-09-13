@@ -307,6 +307,7 @@ export default class AddContact extends React.Component<
                 underlayColor="transparent"
             />
         );
+
         const AddPhotos = () => (
             <TouchableOpacity onPress={this.selectPhoto}>
                 <AddIcon
@@ -491,7 +492,7 @@ export default class AddContact extends React.Component<
                                     this.setState({
                                         lnAddress: updatedAddresses
                                     });
-                                    if (text === '') {
+                                    if (!text) {
                                         this.setState({
                                             isValidLightningAddress: true
                                         });
@@ -537,7 +538,7 @@ export default class AddContact extends React.Component<
                                                 this.setState({
                                                     lnAddress: updatedAddresses
                                                 });
-                                                if (text === '') {
+                                                if (!text) {
                                                     this.setState({
                                                         isValidLightningAddress:
                                                             true
@@ -598,7 +599,7 @@ export default class AddContact extends React.Component<
                                     this.setState({
                                         onchainAddress: updatedAddresses
                                     });
-                                    if (text === '') {
+                                    if (!text) {
                                         this.setState({
                                             isValidOnchainAddress: true
                                         });
@@ -647,7 +648,7 @@ export default class AddContact extends React.Component<
                                                     onchainAddress:
                                                         updatedAddresses
                                                 });
-                                                if (text === '') {
+                                                if (!text) {
                                                     this.setState({
                                                         isValidOnchainAddress:
                                                             true
@@ -703,7 +704,7 @@ export default class AddContact extends React.Component<
                                     this.setState({
                                         nip05: updatedAddresses
                                     });
-                                    if (text === '') {
+                                    if (!text) {
                                         this.setState({
                                             isValidNIP05: true
                                         });
@@ -749,7 +750,7 @@ export default class AddContact extends React.Component<
                                                 this.setState({
                                                     nip05: updatedAddresses
                                                 });
-                                                if (text === '') {
+                                                if (!text) {
                                                     this.setState({
                                                         isValidNIP05: true
                                                     });
@@ -804,7 +805,7 @@ export default class AddContact extends React.Component<
                                     this.setState({
                                         nostrNpub: updatedAddresses
                                     });
-                                    if (text === '') {
+                                    if (!text) {
                                         this.setState({
                                             isValidNpub: true
                                         });
@@ -849,7 +850,7 @@ export default class AddContact extends React.Component<
                                                 this.setState({
                                                     nostrNpub: updatedAddresses
                                                 });
-                                                if (text === '') {
+                                                if (!text) {
                                                     this.setState({
                                                         isValidNpub: true
                                                     });
