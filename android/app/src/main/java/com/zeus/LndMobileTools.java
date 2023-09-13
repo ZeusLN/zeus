@@ -66,8 +66,6 @@ import com.facebook.react.modules.storage.AsyncLocalStorageUtil;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 import com.oblador.keychain.KeychainModule;
 
-import com.hypertrack.hyperlog.HyperLog;
-
 // TODO break this class up
 class LndMobileTools extends ReactContextBaseJavaModule {
   final String TAG = "LndMobileTools";
@@ -90,9 +88,7 @@ class LndMobileTools extends ReactContextBaseJavaModule {
       PrintWriter out = new PrintWriter(filename);
       out.println(config);
       out.close();
-      HyperLog.d(TAG, "Saved lnd config: " + filename);
     } catch (Exception e) {
-      HyperLog.e(TAG, "Couldn't write " + filename, e);
       promise.reject("Couldn't write: " + filename, e);
       return;
     }
@@ -110,49 +106,11 @@ class LndMobileTools extends ReactContextBaseJavaModule {
     ActivityManager am = (ActivityManager) getCurrentActivity().getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
       if (p.processName.equals(packageName + ":blixtLndMobile")) {
-        HyperLog.i(TAG, "Killing " + packageName + ":blixtLndMobile with pid: " + String.valueOf(p.pid));
         Process.killProcess(p.pid);
         return true;
       }
     }
     return false;
-  }
-
-  @ReactMethod
-  public void log(String type, String tag, String message) {
-    String mainTag = "BlixtWallet";
-
-    switch (type) {
-      case "v":
-        HyperLog.v(mainTag, "[" + tag + "] " + message);
-      break;
-      case "d":
-        HyperLog.d(mainTag, "[" + tag + "] " + message);
-      break;
-      case "i":
-        HyperLog.i(mainTag, "[" + tag + "] " + message);
-      break;
-      case "w":
-        HyperLog.w(mainTag, "[" + tag + "] " + message);
-      break;
-      case "e":
-        HyperLog.e(mainTag, "[" + tag + "] " + message);
-      break;
-      default:
-        HyperLog.v(mainTag, "[unknown msg type][" + tag + "] " + message);
-      break;
-    }
-  }
-
-  @ReactMethod
-  public void saveLogs(Promise promise) {
-    File file = HyperLog.getDeviceLogsInFile(getReactApplicationContext(), false);
-    if (file != null && file.exists()) {
-      promise.resolve(file.getAbsolutePath());
-    }
-    else {
-      promise.reject("Fail saving log");
-    }
   }
 
   @ReactMethod
@@ -378,7 +336,6 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
     Ndef ndef = Ndef.get(tag);
     if (ndef == null) {
-      HyperLog.d(TAG, "NFC tag is not NDEF");
       promise.resolve(null);
     }
 
@@ -414,11 +371,8 @@ class LndMobileTools extends ReactContextBaseJavaModule {
           promise.resolve(s);
           return;
         } catch (UnsupportedEncodingException e) {
-          HyperLog.e(TAG, "Error returning ndef data", e);
+          // ignore
         }
-      }
-      else {
-        HyperLog.d(TAG, "Cannot read NFC Tag Record");
       }
     }
     promise.resolve(null);
@@ -426,7 +380,6 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void DEBUG_deleteWallet(String network, Promise promise) {
-    HyperLog.i(TAG, "DEBUG deleting wallet");
     String filename = getReactApplicationContext().getFilesDir().toString() + "/data/chain/bitcoin/" + network + "/wallet.db";
     File file = new File(filename);
     promise.resolve(file.delete());
@@ -434,7 +387,6 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void DEBUG_deleteDatafolder(Promise promise) {
-    HyperLog.i(TAG, "DEBUG deleting data folder");
     String filename = getReactApplicationContext().getFilesDir().toString() + "/data/";
     File file = new File(filename);
     deleteRecursive(file);
@@ -447,13 +399,10 @@ class LndMobileTools extends ReactContextBaseJavaModule {
         deleteRecursive(child);
       }
     }
-
-    HyperLog.d(TAG, "Delete file " + fileOrDirectory.getName() + " : " + fileOrDirectory.delete());
   }
 
   @ReactMethod
   public void DEBUG_deleteSpeedloaderLastrunFile(Promise promise) {
-    HyperLog.i(TAG, "DEBUG cache lastrun");
     String filename = getReactApplicationContext().getCacheDir().toString() + "/lastrun";
     File file = new File(filename);
     promise.resolve(file.delete());
@@ -461,7 +410,6 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void DEBUG_deleteSpeedloaderDgraphDirectory(Promise promise) {
-    HyperLog.i(TAG, "DEBUG cache lastrun");
     String filename = getReactApplicationContext().getCacheDir().toString() + "/dgraph";
     File file = new File(filename);
     deleteRecursive(file);
@@ -487,7 +435,6 @@ class LndMobileTools extends ReactContextBaseJavaModule {
     ActivityManager am = (ActivityManager) getReactApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
       if (p.processName.equals(packageName + ":blixtLndMobile")) {
-        HyperLog.d(TAG, packageName + ":blixtLndMobile pid: " + String.valueOf(p.pid));
         promise.resolve(true);
         return;
       }
@@ -497,17 +444,13 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void deleteTLSCerts(Promise promise) {
-    HyperLog.i(TAG, "Deleting lnd TLS certificates");
-
     String tlsKeyFilename = getReactApplicationContext().getFilesDir().toString() + "/tls.key";
     File tlsKeyFile = new File(tlsKeyFilename);
     boolean tlsKeyFileDeletion = tlsKeyFile.delete();
-    HyperLog.i(TAG, "Delete: " + tlsKeyFilename.toString() + ": " + tlsKeyFileDeletion);
 
     String tlsCertFilename = getReactApplicationContext().getFilesDir().toString() + "/tls.cert";
     File tlsCertFile = new File(tlsCertFilename);
     boolean tlsCertFileDeletion = tlsCertFile.delete();
-    HyperLog.i(TAG, "Delete: " + tlsCertFilename.toString() + ": " + tlsCertFileDeletion);
 
     promise.resolve(tlsKeyFileDeletion && tlsCertFileDeletion);
   }
