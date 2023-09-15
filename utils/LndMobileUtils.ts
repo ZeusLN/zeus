@@ -65,6 +65,22 @@ export function checkLndStreamErrorResponse(
 const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
     const { writeConfig } = lndMobile.index;
 
+    const peerMode = stores.settingsStore?.settings?.dontAllowOtherPeers
+        ? 'connect'
+        : 'addpeer';
+
+    const peerDefaults = `neutrino.${peerMode}=${
+        isTestnet
+            ? 'btcd-testnet.lightning.computer'
+            : 'btcd-mainnet.lightning.computer'
+    }
+    neutrino.${peerMode}=${isTestnet ? 'testnet.lnolymp.us' : 'node.lnolymp.us'}
+    neutrino.${peerMode}=${
+        isTestnet ? 'testnet.blixtwallet.com' : 'node.blixtwallet.com'
+    }
+    ${!isTestnet ? `neutrino.${peerMode}=noad.sathoarder.com` : ''}
+    ${!isTestnet ? `neutrino.${peerMode}=btcd.lnolymp.us` : ''}`;
+
     const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
@@ -89,17 +105,14 @@ const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
     bitcoin.defaultchanconfs=1
     
     [Neutrino]
-    neutrino.addpeer=${
-        isTestnet
-            ? 'btcd-testnet.lightning.computer'
-            : 'btcd-mainnet.lightning.computer'
+    ${
+        stores.settingsStore?.settings?.neutrinoPeers &&
+        stores.settingsStore?.settings?.neutrinoPeers.length > 0
+            ? stores.settingsStore?.settings?.neutrinoPeers.map(
+                  (peer) => `neutrino.${peerMode}=${peer}`
+              )
+            : peerDefaults
     }
-    neutrino.addpeer=${isTestnet ? 'testnet.lnolymp.us' : 'node.lnolymp.us'}
-    neutrino.addpeer=${
-        isTestnet ? 'testnet.blixtwallet.com' : 'node.blixtwallet.com'
-    }
-    ${!isTestnet ? 'neutrino.addpeer=noad.sathoarder.com' : ''}
-    ${!isTestnet ? 'neutrino.addpeer=btcd.lnolymp.us' : ''}
     ${
         !isTestnet
             ? 'neutrino.assertfilterheader=230000:1308d5cfc6462f877a5587fd77d7c1ab029d45e58d5175aaf8c264cee9bde760'

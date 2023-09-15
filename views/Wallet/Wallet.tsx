@@ -332,10 +332,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
             if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                 ChannelBackupStore.initSubscribeChannelEvents();
-            if (
-                BackendUtils.supportsLSPs() &&
-                SettingsStore.settings.enableLSP
-            ) {
+            if (BackendUtils.supportsLSPs()) {
+                if (SettingsStore.settings.enableLSP) {
+                    LSPStore.getLSPInfo();
+                }
                 LSPStore.initChannelAcceptor();
             }
             NodeInfoStore.getNodeInfo();

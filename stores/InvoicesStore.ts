@@ -182,8 +182,6 @@ export default class InvoicesStore {
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
-        this.lspStore.reset();
-
         const req: any = {
             memo,
             value,
@@ -199,26 +197,25 @@ export default class InvoicesStore {
             value &&
             value !== '0'
         ) {
-            await this.lspStore.getLSPInfo().then(async (result) => {
-                const info: any = result;
-                const method = info.connection_methods[0];
+            const info: any = this.lspStore?.info;
+            const method =
+                info.connection_methods && info.connection_methods[0];
 
-                try {
-                    await this.channelsStore.connectPeer(
-                        {
-                            host: `${method.address}:${method.port}`,
-                            node_pubkey_string: info.pubkey,
-                            local_funding_amount: ''
-                        },
-                        false,
-                        true
-                    );
-                } catch (e) {}
-
-                await this.lspStore.getZeroConfFee(
-                    Number(new BigNumber(value).times(1000))
+            try {
+                await this.channelsStore.connectPeer(
+                    {
+                        host: `${method.address}:${method.port}`,
+                        node_pubkey_string: info.pubkey,
+                        local_funding_amount: ''
+                    },
+                    false,
+                    true
                 );
-            });
+            } catch (e) {}
+
+            await this.lspStore.getZeroConfFee(
+                Number(new BigNumber(value).times(1000))
+            );
 
             if (new BigNumber(value).gt(this.lspStore.zeroConfFee || 0)) {
                 req.value = new BigNumber(value).minus(

@@ -240,7 +240,7 @@ export default class ChannelsStore {
     @action
     getNodeInfo = (pubkey: string) => {
         this.loading = true;
-        BackendUtils.getNodeInfo([pubkey])
+        return BackendUtils.getNodeInfo([pubkey])
             .then((data: any) => {
                 this.loading = false;
                 if (data?.node?.alias)
