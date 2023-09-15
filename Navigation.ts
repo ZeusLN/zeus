@@ -59,6 +59,9 @@ import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
 import Pathfinding from './views/Settings/EmbeddedNode/Pathfinding';
 import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
 import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
+import Peers from './views/Settings/EmbeddedNode/Peers';
+import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
+import ZeroConfPeers from './views/Settings/EmbeddedNode/Peers/ZeroConfPeers';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -318,6 +321,15 @@ const AppScenes = {
     },
     LNDLogs: {
         screen: LNDLogs
+    },
+    Peers: {
+        screen: Peers
+    },
+    NeutrinoPeers: {
+        screen: NeutrinoPeers
+    },
+    ZeroConfPeers: {
+        screen: ZeroConfPeers
     },
     LSPSettings: {
         screen: LSP
