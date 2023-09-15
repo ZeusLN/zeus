@@ -96,6 +96,9 @@ export interface Settings {
     expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
     bimodalPathfinding: boolean;
+    dontAllowOtherPeers: boolean;
+    neutrinoPeers: Array<string>;
+    zeroConfPeers: Array<string>;
     waitForGraphSync: boolean;
     rescan: boolean;
     recovery: boolean;
@@ -703,6 +706,9 @@ export default class SettingsStore {
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: false,
+        dontAllowOtherPeers: false,
+        neutrinoPeers: [],
+        zeroConfPeers: [],
         waitForGraphSync: false,
         rescan: false,
         recovery: false,

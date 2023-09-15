@@ -125,12 +125,17 @@ export default class LSPStore {
                     const channelAcceptRequest =
                         channel.decodeChannelAcceptRequest(event.data);
 
-                    // Only allow 0-conf chans from LSP
+                    const requestPubkey = Base64Utils.bytesToHexString(
+                        channelAcceptRequest.node_pubkey
+                    );
+
+                    // Only allow 0-conf chans from LSP or whitelisted peers
                     const isZeroConfAllowed =
-                        this.info.pubkey ===
-                        Base64Utils.bytesToHexString(
-                            channelAcceptRequest.node_pubkey
-                        );
+                        this.info?.pubkey === requestPubkey ||
+                        (this.settingsStore?.settings?.zeroConfPeers &&
+                            this.settingsStore?.settings?.zeroConfPeers.includes(
+                                requestPubkey
+                            ));
 
                     await channel.channelAcceptorResponse(
                         channelAcceptRequest.pending_chan_id,
