@@ -116,7 +116,8 @@ export default function TextInput(props: TextInputProps) {
                 ...style,
                 ...defaultStyle,
                 ...styles.wrapper,
-                backgroundColor: themeColor('secondary')
+                backgroundColor: themeColor('secondary'),
+                opacity: locked ? 0.8 : 1
             }}
         >
             {prefix ? (

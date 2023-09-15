@@ -204,6 +204,30 @@ export default class EmbeddedNode extends React.Component<
                             containerStyle={{
                                 backgroundColor: 'transparent'
                             }}
+                            onPress={() => navigation.navigate('Peers')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'general.peers'
+                                    )[0].toUpperCase() +
+                                        localeString('general.peers').slice(1)}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
                             onPress={() => navigation.navigate('LNDLogs')}
                         >
                             <ListItem.Content>
@@ -232,7 +256,7 @@ export default class EmbeddedNode extends React.Component<
                             >
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'Lato-Regular'
                                     }}
                                 >
@@ -287,7 +311,7 @@ export default class EmbeddedNode extends React.Component<
                             >
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'Lato-Regular'
                                     }}
                                 >
