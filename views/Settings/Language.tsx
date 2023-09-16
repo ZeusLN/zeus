@@ -55,7 +55,7 @@ export default class Language extends React.Component<
 
     updateSearch = (value: string) => {
         const result = LOCALE_KEYS.filter((item: any) =>
-            item.key.includes(value)
+            item.value.toLowerCase().includes(value.toLowerCase())
         );
         this.setState({
             search: value,
