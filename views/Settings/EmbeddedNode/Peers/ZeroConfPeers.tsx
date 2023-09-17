@@ -172,7 +172,7 @@ export default class ZeroConfPeers extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        top: 15
+                                        marginTop: 15
                                     }}
                                 >{`${localeString(
                                     'general.noneSelected'
