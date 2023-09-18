@@ -11,7 +11,6 @@ import { inject, observer } from 'mobx-react';
 
 import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
-import AccountIcon from '../../assets/images/SVG/Wallet2.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
 import SecurityIcon from '../../assets/images/SVG/Lock.svg';
@@ -257,6 +256,43 @@ export default class Settings extends React.Component<
                             </TouchableOpacity>
                         </View>
                     )}
+                    {selectedNode && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginTop: 5,
+                                marginBottom: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Contacts')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View>
+                                        <ContactIcon
+                                            stroke={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Contacts.contacts'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {selectedNode && BackendUtils.supportsNodeInfo() && (
                         <View
@@ -417,12 +453,12 @@ export default class Settings extends React.Component<
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: 90,
-                                borderRadius: 10,
+                                height: 45,
+                                // borderRadius: 10,
                                 alignSelf: 'center'
                             }}
                         >
-                            <View style={styles.columnField}>
+                            {/* <View style={styles.columnField}>
                                 <View>
                                     <AccountIcon stroke={themeColor('text')} />
                                 </View>
@@ -437,25 +473,7 @@ export default class Settings extends React.Component<
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon />
                                 </View>
-                            </View>
-
-                            <View style={styles.separationLine} />
-                            <View style={styles.columnField}>
-                                <View>
-                                    <ContactIcon stroke={themeColor('text')} />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    Contacts
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
-                                </View>
-                            </View>
+                            </View> */}
                         </View>
                     )}
                     {selectedNode && (

@@ -15,15 +15,22 @@ class LinkingUtils {
                 if (nfcData) this.handleDeepLink(nfcData, navigation);
             }
         });
-
-    handleDeepLink = (url: string, navigation: any) =>
-        handleAnything(url)
-            .then(([route, props]) => {
-                navigation.navigate(route, props);
-            })
-            .catch((err) =>
-                console.error(localeString('views.Wallet.Wallet.error'), err)
-            );
+    handleDeepLink = (url: string, navigation: any) => {
+        if (url.startsWith('nostr:')) {
+            Linking.openURL(url);
+        } else {
+            handleAnything(url)
+                .then(([route, props]) => {
+                    navigation.navigate(route, props);
+                })
+                .catch((err) =>
+                    console.error(
+                        localeString('views.Wallet.Wallet.error'),
+                        err
+                    )
+                );
+        }
+    };
 }
 
 const linkingUtils = new LinkingUtils();
