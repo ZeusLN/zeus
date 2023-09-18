@@ -17,6 +17,7 @@ interface ContactsSettingsProps {
 interface ContactItem {
     lnAddress: string;
     onchainAddress: string;
+    pubkey: string;
     nip05: string;
     nostrNpub: string;
     name: string;
@@ -167,7 +168,8 @@ export default class Contacts extends React.Component<
                 hasMatch('lnAddress') ||
                 hasMatch('nip05') ||
                 hasMatch('onchainAddress') ||
-                hasMatch('nostrNpub')
+                hasMatch('nostrNpub') ||
+                hasMatch('pubkey')
             );
         });
 

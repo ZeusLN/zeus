@@ -21,6 +21,7 @@ interface ContactDetailsProps {
 interface ContactItem {
     lnAddress: string;
     onchainAddress: string;
+    pubkey: string;
     nip05: string;
     nostrNpub: string;
     name: string;
@@ -44,6 +45,7 @@ export default class ContactDetails extends React.Component<
             contact: {
                 lnAddress: '',
                 onchainAddress: '',
+                pubkey: '',
                 nip05: '',
                 nostrNpub: '',
                 name: '',
@@ -188,6 +190,13 @@ export default class ContactDetails extends React.Component<
             <>
                 {isLoading ? (
                     <Screen>
+                        <Header
+                            leftComponent={<BackButton />}
+                            backgroundColor="none"
+                            containerStyle={{
+                                borderBottomWidth: 0
+                            }}
+                        />
                         <View style={{ marginTop: 60 }}>
                             <LoadingIndicator />
                         </View>
@@ -245,7 +254,8 @@ export default class ContactDetails extends React.Component<
                             >
                                 {contact.description}
                             </Text>
-                            {contact.lnAddress.length >= 1 &&
+                            {contact.lnAddress &&
+                                contact.lnAddress.length >= 1 &&
                                 contact.lnAddress[0] !== '' && (
                                     <View>
                                         {contact.lnAddress.map(
@@ -288,8 +298,54 @@ export default class ContactDetails extends React.Component<
                                         )}
                                     </View>
                                 )}
+                            {contact.pubkey &&
+                                contact.pubkey.length >= 1 &&
+                                contact.pubkey[0] !== '' && (
+                                    <View>
+                                        {contact.pubkey.map(
+                                            (
+                                                address: string,
+                                                index: number
+                                            ) => (
+                                                <TouchableOpacity
+                                                    key={index}
+                                                    onPress={() =>
+                                                        this.sendAddress(
+                                                            address
+                                                        )
+                                                    }
+                                                >
+                                                    <View
+                                                        key={index}
+                                                        style={
+                                                            styles.contactRow
+                                                        }
+                                                    >
+                                                        <LightningBolt />
+                                                        <Text
+                                                            style={
+                                                                styles.contactFields
+                                                            }
+                                                        >
+                                                            {address.length > 15
+                                                                ? `${address.substring(
+                                                                      0,
+                                                                      10
+                                                                  )}...${address.substring(
+                                                                      address.length -
+                                                                          5
+                                                                  )}`
+                                                                : address}
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            )
+                                        )}
+                                    </View>
+                                )}
 
-                            {contact.onchainAddress.length >= 1 &&
+                            {contact.onchainAddress &&
+                                contact.onchainAddress.length >= 1 &&
                                 contact.onchainAddress[0] !== '' && (
                                     <View>
                                         {contact.onchainAddress.map(
@@ -333,7 +389,9 @@ export default class ContactDetails extends React.Component<
                                         )}
                                     </View>
                                 )}
-                            {contact.nip05.length >= 1 &&
+
+                            {contact.nip05 &&
+                                contact.nip05.length >= 1 &&
                                 contact.nip05[0] !== '' && (
                                     <View>
                                         {contact.nip05.map(
@@ -372,7 +430,8 @@ export default class ContactDetails extends React.Component<
                                         )}
                                     </View>
                                 )}
-                            {contact.nostrNpub.length >= 1 &&
+                            {contact.nostrNpub &&
+                                contact.nostrNpub.length >= 1 &&
                                 contact.nostrNpub[0] !== '' && (
                                     <View>
                                         {contact.nostrNpub.map(
