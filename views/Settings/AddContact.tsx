@@ -210,17 +210,19 @@ export default class AddContact extends React.Component<
     selectPhoto = () => {
         launchImageLibrary(
             {
-                title: 'Select Photo',
                 mediaType: 'photo',
                 quality: 1.0,
                 maxWidth: 500,
-                maxHeight: 500
+                maxHeight: 500,
+                includeBase64: true
             },
-            (response) => {
+            (response: any) => {
                 if (!response.didCancel) {
-                    const asset = response.assets[0];
-                    if (asset.uri) {
-                        this.setState({ photo: asset.uri });
+                    const asset = response?.assets[0];
+                    if (asset.base64) {
+                        this.setState({
+                            photo: `data:image/png;base64,${asset.base64}`
+                        });
                     }
                 }
             }
