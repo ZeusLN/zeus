@@ -9,6 +9,8 @@ import {
     ScrollView,
     TouchableOpacity
 } from 'react-native';
+import { Chip, Icon } from 'react-native-elements';
+
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 
@@ -49,6 +51,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Scan from '../assets/images/SVG/Scan.svg';
+import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 
 interface SendProps {
     exitSetup: any;
@@ -81,6 +84,7 @@ interface SendState {
     clipboard: string;
     loading: boolean;
     preventUnitReset: boolean;
+    contactName: string;
 }
 
 @inject(
@@ -103,6 +107,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const transactionType = navigation.getParam('transactionType', null);
         const isValid = navigation.getParam('isValid', false);
         const preventUnitReset = navigation.getParam('preventUnitReset', false);
+        const contactName = navigation.getParam('contactName', null);
 
         if (transactionType === 'Lightning') {
             this.props.InvoicesStore.getPayReq(destination);
@@ -126,7 +131,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             enableAtomicMultiPathPayment: false,
             clipboard: '',
             loading: false,
-            preventUnitReset
+            preventUnitReset,
+            contactName
         };
     }
 
@@ -151,6 +157,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
+        const contactName = navigation.getParam('contactName', null);
 
         if (transactionType === 'Lightning') {
             this.props.InvoicesStore.getPayReq(destination);
@@ -159,7 +166,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.setState({
             transactionType,
             destination,
-            isValid: true
+            isValid: true,
+            contactName
         });
 
         if (amount) {
@@ -171,6 +179,12 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     async componentDidMount() {
         if (this.state.destination) {
+            this.validateAddress(this.state.destination);
+        }
+    }
+
+    async componentDidUpdate(prevProps, prevState) {
+        if (this.state.destination !== prevState.destination) {
             this.validateAddress(this.state.destination);
         }
     }
@@ -394,7 +408,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             enableAtomicMultiPathPayment,
             clipboard,
             loading,
-            preventUnitReset
+            preventUnitReset,
+            contactName
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -481,19 +496,85 @@ export default class Send extends React.Component<SendProps, SendState> {
                     >
                         {paymentOptions.join(', ')}
                     </Text>
-                    <TextInput
-                        placeholder={'lnbc1...'}
-                        value={destination}
-                        onChangeText={(text: string) => {
-                            this.setState({
-                                destination: text
-                            });
-                            this.validateAddress(text);
-                        }}
-                        style={styles.textInput}
-                        autoCorrect={false}
-                        autoCapitalize="none"
-                    />
+                    <View
+                        style={{ flexDirection: 'row', alignItems: 'center' }}
+                    >
+                        <TextInput
+                            placeholder={'lnbc1...'}
+                            value={!contactName && destination}
+                            onChangeText={(text: string) => {
+                                this.setState({
+                                    destination: text
+                                });
+                                this.validateAddress(text);
+                            }}
+                            style={{
+                                flex: 1,
+                                paddingVertical: 10,
+                                paddingHorizontal: 15,
+                                paddingRight: 40
+                            }}
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                        />
+                        {contactName && (
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    position: 'absolute',
+                                    left: 10,
+                                    top: 22
+                                }}
+                            >
+                                <Chip
+                                    title={contactName}
+                                    titleStyle={{
+                                        ...styles.text,
+                                        color: themeColor('background'),
+                                        backgroundColor: themeColor('chain')
+                                    }}
+                                    type="inline"
+                                    containerStyle={{
+                                        backgroundColor: themeColor('chain'),
+                                        borderRadius: 8,
+                                        paddingRight: 24
+                                    }}
+                                />
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        this.setState({
+                                            contactName: '',
+                                            destination: ''
+                                        });
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        right: 8,
+                                        top: 8
+                                    }}
+                                >
+                                    <Icon
+                                        name="close-circle"
+                                        type="material-community"
+                                        size={18}
+                                        color={themeColor('background')}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        <TouchableOpacity
+                            onPress={() =>
+                                navigation.navigate('Contacts', {
+                                    SendScreen: true
+                                })
+                            }
+                            style={{ position: 'absolute', right: 10 }}
+                        >
+                            <ContactIcon stroke={themeColor('text')} />
+                        </TouchableOpacity>
+                    </View>
+
                     {!!error_msg && !!destination && (
                         <View style={{ paddingTop: 10, paddingBottom: 10 }}>
                             <ErrorMessage message={error_msg} />
@@ -589,7 +670,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         this.setState({ fee: text })
                                     }
                                 />
-
                                 {BackendUtils.supportsCoinControl() &&
                                     !BackendUtils.isLNDBased && (
                                         <UTXOPicker
@@ -657,7 +737,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     message: text
                                                 })
                                             }
-                                            style={styles.textInput}
                                         />
                                         <Text
                                             style={{
@@ -725,7 +804,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                         maxParts: text
                                                     })
                                                 }
-                                                style={styles.textInput}
                                             />
                                             <Text
                                                 style={{
@@ -764,7 +842,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                         feeLimitSat: text
                                                     })
                                                 }
-                                                style={styles.textInput}
                                             />
                                             <Text
                                                 style={{
@@ -791,7 +868,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                         maxShardAmt: text
                                                     })
                                                 }
-                                                style={styles.textInput}
                                             />
                                         </React.Fragment>
                                     )}
@@ -874,7 +950,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             confirmationTarget: text
                                         })
                                     }
-                                    style={styles.textInput}
                                 />
                             </View>
                         )}
@@ -888,9 +963,8 @@ const styles = StyleSheet.create({
     text: {
         fontFamily: 'Lato-Regular'
     },
-    textInput: {
-        paddingTop: 10,
-        paddingBottom: 10
+    secondaryText: {
+        fontFamily: 'Lato-Regular'
     },
     content: {
         padding: 20
