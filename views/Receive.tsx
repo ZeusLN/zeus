@@ -1212,6 +1212,7 @@ export default class Receive extends React.Component<
                                 </View>
                             )}
                             {haveInvoice &&
+                                BackendUtils.supportsLSPs() &&
                                 enableLSP &&
                                 satAmount === '0' &&
                                 selectedIndex !== 2 && (
