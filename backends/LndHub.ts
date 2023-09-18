@@ -121,6 +121,8 @@ export default class LndHub extends LND {
         !(
             stores.settingsStore.lndhubUrl.includes('lnbank/api/lndhub') ||
             stores.settingsStore.lndhubUrl.includes('lntxbot') ||
+            // Alby
+            stores.settingsStore.lndhubUrl.includes('ln.getalby.com') ||
             // LNBits
             stores.settingsStore.lndhubUrl.includes('/lndhub/ext/')
         );
