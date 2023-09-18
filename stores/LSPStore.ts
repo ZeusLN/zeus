@@ -115,9 +115,33 @@ export default class LSPStore {
         });
     };
 
+    handleChannelAcceptorEvent = async (channelAcceptRequest: any) => {
+        try {
+            const requestPubkey = Base64Utils.bytesToHexString(
+                channelAcceptRequest.node_pubkey
+            );
+
+            // Only allow 0-conf chans from LSP or whitelisted peers
+            const isZeroConfAllowed =
+                this.info?.pubkey === requestPubkey ||
+                (this.settingsStore?.settings?.zeroConfPeers &&
+                    this.settingsStore?.settings?.zeroConfPeers.includes(
+                        requestPubkey
+                    ));
+
+            await channel.channelAcceptorResponse(
+                channelAcceptRequest.pending_chan_id,
+                !channelAcceptRequest.wants_zero_conf || isZeroConfAllowed,
+                isZeroConfAllowed
+            );
+        } catch (error: any) {
+            console.error('handleChannelAcceptorEvent error:', error.message);
+        }
+    };
+
     @action
     public initChannelAcceptor = async () => {
-        if (this.channelAcceptor?.remove) this.channelAcceptor.remove();
+        if (this.channelAcceptor) return;
         this.channelAcceptor = LndMobileEventEmitter.addListener(
             'ChannelAcceptor',
             async (event: any) => {
@@ -125,24 +149,7 @@ export default class LSPStore {
                     const channelAcceptRequest =
                         channel.decodeChannelAcceptRequest(event.data);
 
-                    const requestPubkey = Base64Utils.bytesToHexString(
-                        channelAcceptRequest.node_pubkey
-                    );
-
-                    // Only allow 0-conf chans from LSP or whitelisted peers
-                    const isZeroConfAllowed =
-                        this.info?.pubkey === requestPubkey ||
-                        (this.settingsStore?.settings?.zeroConfPeers &&
-                            this.settingsStore?.settings?.zeroConfPeers.includes(
-                                requestPubkey
-                            ));
-
-                    await channel.channelAcceptorResponse(
-                        channelAcceptRequest.pending_chan_id,
-                        !channelAcceptRequest.wants_zero_conf ||
-                            isZeroConfAllowed,
-                        isZeroConfAllowed
-                    );
+                    await this.handleChannelAcceptorEvent(channelAcceptRequest);
                 } catch (error: any) {
                     console.error('channel acceptance error: ' + error.message);
                 }
