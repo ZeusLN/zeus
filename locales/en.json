@@ -705,6 +705,7 @@
     "views.Settings.AddContact.description": "Description (max 120)",
     "views.Settings.AddContact.lnAddress": "LN address",
     "views.Settings.AddContact.onchainAddress": "Onchain address",
+    "views.Settings.AddContact.pubkey": "Public key",
     "views.Settings.AddContact.nip05": "NIP-05",
     "views.Settings.AddContact.nostrNpub": "Nostr npub",
     "views.Settings.AddContact.addExtraField": "add extra field",
