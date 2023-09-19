@@ -1068,15 +1068,17 @@ export default class AddContact extends React.Component<
                                 !isValidNIP05 ||
                                 !isValidNpub ||
                                 !isValidPubkey ||
-                                (lnAddress.length > 1 &&
+                                (lnAddress?.length > 1 &&
                                     lnAddress[lnAddress.length - 1] === '') ||
-                                (onchainAddress.length > 1 &&
+                                (pubkey?.length > 1 &&
+                                    pubkey[pubkey.length - 1] === '') ||
+                                (onchainAddress?.length > 1 &&
                                     onchainAddress[
                                         onchainAddress.length - 1
                                     ]) === '' ||
-                                (nip05.length > 1 &&
+                                (nip05?.length > 1 &&
                                     nip05[nip05.length - 1] === '') ||
-                                (nostrNpub.length > 1 &&
+                                (nostrNpub?.length > 1 &&
                                     nostrNpub[nostrNpub.length - 1] === '') ||
                                 !(lnAddress[0] || onchainAddress[0])
                             }
