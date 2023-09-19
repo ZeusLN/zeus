@@ -40,72 +40,97 @@ interface ChannelsProps {
 @inject('ChannelsStore', 'SettingsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
-    private getChannelsSortKeys = () => [
-        {
-            key: `${localeString('views.Channel.capacity')} (${localeString(
-                'views.Channel.SortButton.largestFirst'
-            )})`,
-            value: {
-                param: 'channelCapacity',
-                dir: 'DESC',
-                type: 'numeric'
-            }
-        },
-        {
-            key: `${localeString('views.Channel.capacity')} (${localeString(
-                'views.Channel.SortButton.smallestFirst'
-            )})`,
-            value: { param: 'channelCapacity', dir: 'ASC', type: 'numeric' }
-        },
-        {
-            key: `${localeString(
-                'views.Channel.inboundCapacity'
-            )} (${localeString('views.Channel.SortButton.largestFirst')})`,
-            value: { param: 'remoteBalance', dir: 'DESC', type: 'numeric' }
-        },
-        {
-            key: `${localeString(
-                'views.Channel.inboundCapacity'
-            )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
-            value: { param: 'remoteBalance', dir: 'ASC', type: 'numeric' }
-        },
-        {
-            key: `${localeString(
-                'views.Channel.outboundCapacity'
-            )} (${localeString('views.Channel.SortButton.largestFirst')})`,
-            value: { param: 'localBalance', dir: 'DESC', type: 'numeric' }
-        },
-        {
-            key: `${localeString(
-                'views.Channel.outboundCapacity'
-            )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
-            value: { param: 'localBalance', dir: 'ASC', type: 'numeric' }
-        },
-        {
-            key: `${localeString('views.Channel.displayName')} (${localeString(
-                'views.Channel.SortButton.ascending'
-            )})`,
-            value: { param: 'displayName', dir: 'ASC', type: 'alphanumeric' }
-        },
-        {
-            key: `${localeString('views.Channel.displayName')} (${localeString(
-                'views.Channel.SortButton.descending'
-            )})`,
-            value: { param: 'displayName', dir: 'DESC', type: 'alphanumeric' }
+    private getChannelsSortKeys = (closed?: boolean) => {
+        const sortKeys = [];
+
+        if (closed) {
+            sortKeys.push(
+                {
+                    key: `${localeString(
+                        'views.Channel.closeHeight'
+                    )} (${localeString('views.Channel.SortButton.ascending')})`,
+                    value: { param: 'closeHeight', dir: 'ASC', type: 'numeric' }
+                },
+                {
+                    key: `${localeString(
+                        'views.Channel.closeHeight'
+                    )} (${localeString(
+                        'views.Channel.SortButton.descending'
+                    )})`,
+                    value: {
+                        param: 'closeHeight',
+                        dir: 'DESC',
+                        type: 'numeric'
+                    }
+                }
+            );
         }
-        // {
-        //     key: `${localeString('views.Channel.channelId')} (${localeString(
-        //         'views.Channel.SortButton.ascending'
-        //     )})`,
-        //     value: { param: 'channelId', dir: 'ASC', type: 'alphanumeric' }
-        // },
-        // {
-        //     key: `${localeString('views.Channel.channelId')} (${localeString(
-        //         'views.Channel.SortButton.descending'
-        //     )})`,
-        //     value: { param: 'channelId', dir: 'DESC', type: 'alphanumeric' }
-        // }
-    ];
+
+        sortKeys.push(
+            {
+                key: `${localeString('views.Channel.capacity')} (${localeString(
+                    'views.Channel.SortButton.largestFirst'
+                )})`,
+                value: {
+                    param: 'channelCapacity',
+                    dir: 'DESC',
+                    type: 'numeric'
+                }
+            },
+            {
+                key: `${localeString('views.Channel.capacity')} (${localeString(
+                    'views.Channel.SortButton.smallestFirst'
+                )})`,
+                value: { param: 'channelCapacity', dir: 'ASC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.inboundCapacity'
+                )} (${localeString('views.Channel.SortButton.largestFirst')})`,
+                value: { param: 'remoteBalance', dir: 'DESC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.inboundCapacity'
+                )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
+                value: { param: 'remoteBalance', dir: 'ASC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.outboundCapacity'
+                )} (${localeString('views.Channel.SortButton.largestFirst')})`,
+                value: { param: 'localBalance', dir: 'DESC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.outboundCapacity'
+                )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
+                value: { param: 'localBalance', dir: 'ASC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.displayName'
+                )} (${localeString('views.Channel.SortButton.ascending')})`,
+                value: {
+                    param: 'displayName',
+                    dir: 'ASC',
+                    type: 'alphanumeric'
+                }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.displayName'
+                )} (${localeString('views.Channel.SortButton.descending')})`,
+                value: {
+                    param: 'displayName',
+                    dir: 'DESC',
+                    type: 'alphanumeric'
+                }
+            }
+        );
+
+        return sortKeys;
+    };
 
     renderItem = ({ item }) => {
         const { ChannelsStore, navigation } = this.props;
@@ -196,7 +221,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
 
     render() {
         const { ChannelsStore, SettingsStore, navigation } = this.props;
-        const { channelsType, search } = ChannelsStore;
         const {
             loading,
             getChannels,
@@ -207,7 +231,9 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             filteredPendingChannels,
             filteredClosedChannels,
             setSort,
-            showSearch
+            showSearch,
+            channelsType,
+            search
         } = ChannelsStore;
 
         const lurkerMode: boolean =
@@ -287,7 +313,9 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                                 onValueChange={(value: any) => {
                                     setSort(value);
                                 }}
-                                values={this.getChannelsSortKeys()}
+                                values={this.getChannelsSortKeys(
+                                    channelsType === ChannelsType.Closed
+                                )}
                             />
                         </Row>
                         <FilterOptions ChannelsStore={ChannelsStore} />
