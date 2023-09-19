@@ -181,14 +181,15 @@ export default class Contacts extends React.Component<
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={35}
             />
         );
         const Add = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity onPress={() => navigation.navigate('AddContact')}>
                 <View
                     style={{
-                        width: 30,
-                        height: 30,
+                        width: 35,
+                        height: 35,
                         borderRadius: 25,
                         backgroundColor: themeColor('chain'),
                         justifyContent: 'center',
@@ -197,23 +198,12 @@ export default class Contacts extends React.Component<
                 >
                     <AddIcon
                         fill={themeColor('background')}
-                        width={12}
-                        height={12}
+                        width={16}
+                        height={16}
                         style={{ alignSelf: 'center' }}
                     />
                 </View>
             </TouchableOpacity>
-        );
-        const PayButton = ({ navigation }: { navigation: any }) => (
-            <Chip
-                title="Pay"
-                titleStyle={{ color: 'black', fontSize: 16 }}
-                buttonStyle={{
-                    backgroundColor: themeColor('chain'),
-                    minWidth: 70
-                }}
-                onPress={() => navigation.navigate('AddContact')}
-            />
         );
 
         const favoriteContacts = filteredContacts.filter(
@@ -237,11 +227,7 @@ export default class Contacts extends React.Component<
                         borderBottomWidth: 0
                     }}
                     rightComponent={
-                        SendScreen ? (
-                            <PayButton navigation={navigation} />
-                        ) : (
-                            <Add navigation={navigation} />
-                        )
+                        !SendScreen && <Add navigation={navigation} />
                     }
                 />
                 <View>

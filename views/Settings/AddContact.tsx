@@ -327,6 +327,7 @@ export default class AddContact extends React.Component<
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={35}
             />
         );
 
@@ -347,6 +348,7 @@ export default class AddContact extends React.Component<
                 onPress={onPress}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={35}
             />
         );
 
