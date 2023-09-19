@@ -332,14 +332,12 @@ export default class AddContact extends React.Component<
         );
 
         const AddPhotos = () => (
-            <TouchableOpacity onPress={this.selectPhoto}>
-                <AddIcon
-                    fill={themeColor('background')}
-                    width="20"
-                    height="20"
-                    style={{ alignSelf: 'center' }}
-                />
-            </TouchableOpacity>
+            <AddIcon
+                fill={themeColor('background')}
+                width="20"
+                height="20"
+                style={{ alignSelf: 'center' }}
+            />
         );
 
         const StarButton = ({ isFavourite, onPress }) => (
@@ -385,30 +383,30 @@ export default class AddContact extends React.Component<
                                 alignItems: 'center'
                             }}
                         >
-                            <View
-                                style={{
-                                    backgroundColor:
-                                        themeColor('secondaryText'),
-                                    marginTop: 40,
-                                    width: 136,
-                                    height: 136,
-                                    borderRadius: 68,
-                                    justifyContent: 'center'
-                                }}
-                            >
-                                {this.state.photo ? (
-                                    <TouchableOpacity
-                                        onPress={this.selectPhoto}
-                                    >
+                            <TouchableOpacity onPress={this.selectPhoto}>
+                                <View
+                                    style={{
+                                        backgroundColor:
+                                            themeColor('secondaryText'),
+                                        marginTop: 40,
+                                        width: 136,
+                                        height: 136,
+                                        borderRadius: 68,
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    {this.state.photo ? (
                                         <Image
-                                            source={{ uri: this.state.photo }}
+                                            source={{
+                                                uri: this.state.photo
+                                            }}
                                             style={styles.photo}
                                         />
-                                    </TouchableOpacity>
-                                ) : (
-                                    <AddPhotos />
-                                )}
-                            </View>
+                                    ) : (
+                                        <AddPhotos />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
                         </View>
 
                         <View
