@@ -194,7 +194,9 @@ export default class SendingLightning extends React.Component<
                                 {localeString('views.SendingLightning.success')}
                             </Text>
                         )}
-                        {!!payment_preimage &&
+                        {!!success &&
+                            !error &&
+                            !!payment_preimage &&
                             payment_hash === LnurlPayStore.paymentHash &&
                             LnurlPayStore.successAction && (
                                 <LnurlPaySuccess
