@@ -163,6 +163,7 @@ export default class ContactDetails extends React.Component<
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={35}
             />
         );
         const StarButton = () => (
@@ -171,7 +172,7 @@ export default class ContactDetails extends React.Component<
                 onPress={this.toggleFavorite}
                 color={themeColor('text')}
                 underlayColor="transparent"
-                size={28}
+                size={32}
             />
         );
         const EditContactButton = () => (
@@ -183,7 +184,7 @@ export default class ContactDetails extends React.Component<
                     })
                 }
             >
-                <EditContact height={36} width={36} />
+                <EditContact height={40} width={40} />
             </TouchableOpacity>
         );
         return (

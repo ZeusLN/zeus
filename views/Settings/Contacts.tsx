@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, View, TouchableOpacity, FlatList, Image } from 'react-native';
-import { Header, Icon, SearchBar, Chip, Divider } from 'react-native-elements';
+import { Header, Icon, SearchBar, Divider } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
@@ -74,14 +74,85 @@ export default class Contacts extends React.Component<
             }
         });
     };
+    displayAddress = (item) => {
+        const hasLnAddress =
+            item.lnAddress &&
+            item.lnAddress.length === 1 &&
+            item.lnAddress[0] !== '';
+        const hasOnchainAddress =
+            item.onchainAddress &&
+            item.onchainAddress.length === 1 &&
+            item.onchainAddress[0] !== '';
+        const hasPubkey =
+            item.pubkey && item.pubkey.length === 1 && item.pubkey[0] !== '';
+
+        if (hasLnAddress + hasOnchainAddress + hasPubkey >= 2) {
+            return localeString('views.Settings.Contacts.multipleAddresses');
+        }
+
+        if (hasLnAddress) {
+            return item.lnAddress[0].length > 15
+                ? `${item.lnAddress[0].slice(0, 4)}...${item.lnAddress[0].slice(
+                      -4
+                  )}`
+                : item.lnAddress[0];
+        }
+
+        if (hasOnchainAddress) {
+            return item.onchainAddress[0].length > 15
+                ? `${item.onchainAddress[0].slice(
+                      0,
+                      4
+                  )}...${item.onchainAddress[0].slice(-4)}`
+                : item.onchainAddress[0];
+        }
+
+        if (hasPubkey) {
+            return item.pubkey[0].length > 15
+                ? `${item.pubkey[0].slice(0, 4)}...${item.pubkey[0].slice(-4)}`
+                : item.pubkey[0];
+        }
+
+        return localeString('views.Settings.Contacts.multipleAddresses');
+    };
 
     renderContactItem = ({ item }: { item: ContactItem }) => (
         <TouchableOpacity
-            onPress={() =>
-                this.props.navigation.navigate('ContactDetails', {
-                    contactId: item.id
-                })
-            }
+            onPress={() => {
+                (item.lnAddress &&
+                    item.lnAddress.length === 1 &&
+                    item.lnAddress[0] !== '' &&
+                    item.onchainAddress[0] === '' &&
+                    item.pubkey[0] === '' &&
+                    this.state.SendScreen &&
+                    this.props.navigation.navigate('Send', {
+                        destination: item.lnAddress[0],
+                        contactName: item.name
+                    })) ||
+                    (item.onchainAddress &&
+                        item.onchainAddress.length === 1 &&
+                        item.onchainAddress[0] !== '' &&
+                        item.lnAddress[0] === '' &&
+                        item.pubkey[0] === '' &&
+                        this.state.SendScreen &&
+                        this.props.navigation.navigate('Send', {
+                            destination: item.onchainAddress[0],
+                            contactName: item.name
+                        })) ||
+                    (item.pubkey &&
+                        item.pubkey.length === 1 &&
+                        item.pubkey[0] !== '' &&
+                        item.lnAddress[0] === '' &&
+                        item.onchainAddress[0] === '' &&
+                        this.state.SendScreen &&
+                        this.props.navigation.navigate('Send', {
+                            destination: item.pubkey[0],
+                            contactName: item.name
+                        })) ||
+                    this.props.navigation.navigate('ContactDetails', {
+                        contactId: item.id
+                    });
+            }}
         >
             <View
                 style={{
@@ -112,33 +183,7 @@ export default class Contacts extends React.Component<
                             color: themeColor('secondaryText')
                         }}
                     >
-                        {item.lnAddress &&
-                        item.lnAddress.length === 1 &&
-                        item.lnAddress[0] !== '' &&
-                        item.onchainAddress[0] === ''
-                            ? item.lnAddress[0].length > 15
-                                ? `${item.lnAddress[0].slice(
-                                      0,
-                                      4
-                                  )}...${item.lnAddress[0].slice(-4)}`
-                                : item.lnAddress[0]
-                            : item.lnAddress.length > 1
-                            ? `${localeString(
-                                  'views.Settings.Contacts.multipleAddresses'
-                              )}`
-                            : item.onchainAddress &&
-                              item.onchainAddress.length === 1 &&
-                              item.onchainAddress[0] !== '' &&
-                              item.lnAddress[0] === ''
-                            ? item.onchainAddress[0].length > 15
-                                ? `${item.onchainAddress[0].slice(
-                                      0,
-                                      4
-                                  )}...${item.onchainAddress[0].slice(-4)}`
-                                : item.onchainAddress[0]
-                            : `${localeString(
-                                  'views.Settings.Contacts.multipleAddresses'
-                              )}`}
+                        {this.displayAddress(item)}
                     </Text>
                 </View>
             </View>
@@ -181,14 +226,15 @@ export default class Contacts extends React.Component<
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={35}
             />
         );
         const Add = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity onPress={() => navigation.navigate('AddContact')}>
                 <View
                     style={{
-                        width: 30,
-                        height: 30,
+                        width: 35,
+                        height: 35,
                         borderRadius: 25,
                         backgroundColor: themeColor('chain'),
                         justifyContent: 'center',
@@ -197,23 +243,12 @@ export default class Contacts extends React.Component<
                 >
                     <AddIcon
                         fill={themeColor('background')}
-                        width={12}
-                        height={12}
+                        width={16}
+                        height={16}
                         style={{ alignSelf: 'center' }}
                     />
                 </View>
             </TouchableOpacity>
-        );
-        const PayButton = ({ navigation }: { navigation: any }) => (
-            <Chip
-                title="Pay"
-                titleStyle={{ color: 'black', fontSize: 16 }}
-                buttonStyle={{
-                    backgroundColor: themeColor('chain'),
-                    minWidth: 70
-                }}
-                onPress={() => navigation.navigate('AddContact')}
-            />
         );
 
         const favoriteContacts = filteredContacts.filter(
@@ -237,11 +272,7 @@ export default class Contacts extends React.Component<
                         borderBottomWidth: 0
                     }}
                     rightComponent={
-                        SendScreen ? (
-                            <PayButton navigation={navigation} />
-                        ) : (
-                            <Add navigation={navigation} />
-                        )
+                        !SendScreen && <Add navigation={navigation} />
                     }
                 />
                 <View>
