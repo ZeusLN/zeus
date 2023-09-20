@@ -33,11 +33,11 @@ interface AddContactProps {
 }
 
 interface Contact {
-    lnAddress: string;
-    onchainAddress: string;
-    nip05: string;
-    nostrNpub: string;
-    pubkey: string;
+    lnAddress: string[];
+    onchainAddress: string[];
+    nip05: string[];
+    nostrNpub: string[];
+    pubkey: string[];
     name: string;
     description: string;
     id: string;
@@ -327,18 +327,17 @@ export default class AddContact extends React.Component<
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={35}
             />
         );
 
         const AddPhotos = () => (
-            <TouchableOpacity onPress={this.selectPhoto}>
-                <AddIcon
-                    fill={themeColor('background')}
-                    width="20"
-                    height="20"
-                    style={{ alignSelf: 'center' }}
-                />
-            </TouchableOpacity>
+            <AddIcon
+                fill={themeColor('background')}
+                width="20"
+                height="20"
+                style={{ alignSelf: 'center' }}
+            />
         );
 
         const StarButton = ({ isFavourite, onPress }) => (
@@ -347,6 +346,7 @@ export default class AddContact extends React.Component<
                 onPress={onPress}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={35}
             />
         );
 
@@ -383,30 +383,30 @@ export default class AddContact extends React.Component<
                                 alignItems: 'center'
                             }}
                         >
-                            <View
-                                style={{
-                                    backgroundColor:
-                                        themeColor('secondaryText'),
-                                    marginTop: 40,
-                                    width: 136,
-                                    height: 136,
-                                    borderRadius: 68,
-                                    justifyContent: 'center'
-                                }}
-                            >
-                                {this.state.photo ? (
-                                    <TouchableOpacity
-                                        onPress={this.selectPhoto}
-                                    >
+                            <TouchableOpacity onPress={this.selectPhoto}>
+                                <View
+                                    style={{
+                                        backgroundColor:
+                                            themeColor('secondaryText'),
+                                        marginTop: 40,
+                                        width: 136,
+                                        height: 136,
+                                        borderRadius: 68,
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    {this.state.photo ? (
                                         <Image
-                                            source={{ uri: this.state.photo }}
+                                            source={{
+                                                uri: this.state.photo
+                                            }}
                                             style={styles.photo}
                                         />
-                                    </TouchableOpacity>
-                                ) : (
-                                    <AddPhotos />
-                                )}
-                            </View>
+                                    ) : (
+                                        <AddPhotos />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
                         </View>
 
                         <View
@@ -1066,17 +1066,23 @@ export default class AddContact extends React.Component<
                                 !isValidNIP05 ||
                                 !isValidNpub ||
                                 !isValidPubkey ||
-                                (lnAddress.length > 1 &&
+                                (lnAddress?.length > 1 &&
                                     lnAddress[lnAddress.length - 1] === '') ||
-                                (onchainAddress.length > 1 &&
+                                (pubkey?.length > 1 &&
+                                    pubkey[pubkey.length - 1] === '') ||
+                                (onchainAddress?.length > 1 &&
                                     onchainAddress[
                                         onchainAddress.length - 1
                                     ]) === '' ||
-                                (nip05.length > 1 &&
+                                (nip05?.length > 1 &&
                                     nip05[nip05.length - 1] === '') ||
-                                (nostrNpub.length > 1 &&
+                                (nostrNpub?.length > 1 &&
                                     nostrNpub[nostrNpub.length - 1] === '') ||
-                                !(lnAddress[0] || onchainAddress[0])
+                                !(
+                                    lnAddress[0] ||
+                                    onchainAddress[0] ||
+                                    pubkey[0]
+                                )
                             }
                         />
                     </View>
