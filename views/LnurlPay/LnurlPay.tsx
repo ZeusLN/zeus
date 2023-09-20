@@ -120,7 +120,7 @@ export default class LnurlPay extends React.Component<
                     tag: 'noop'
                 };
 
-                InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
+                InvoicesStore.getPayReq(pr).then(() => {
                     if (InvoicesStore.getPayReqError) {
                         Alert.alert(
                             localeString(
