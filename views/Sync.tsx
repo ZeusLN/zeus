@@ -92,7 +92,7 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                             value={bestBlockHeight}
                         />
                     )}
-                    {numBlocksUntilSynced && numBlocksUntilSynced > 0 && (
+                    {!!numBlocksUntilSynced && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Sync.numBlocksUntilSynced'
