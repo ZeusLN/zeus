@@ -1,8 +1,28 @@
 import Base64Utils from './Base64Utils';
 
 describe('Base64Utils', () => {
+    describe('encodeStringToBase64', () => {
+        it('Converts string to Base64', () => {
+            expect(Base64Utils.encodeStringToBase64('test1234')).toEqual(
+                'dGVzdDEyMzQ='
+            );
+            expect(Base64Utils.encodeStringToBase64('✓')).toEqual('4pyT');
+            expect(Base64Utils.encodeStringToBase64('™“')).toEqual('4oSi4oCc');
+        });
+    });
+
+    describe('decodeBase64ToString', () => {
+        it('Converts Base64 to utf8 string', () => {
+            expect(Base64Utils.decodeBase64ToString('dGVzdDEyMzQ=')).toEqual(
+                'test1234'
+            );
+            expect(Base64Utils.decodeBase64ToString('4pyT')).toEqual('✓');
+            expect(Base64Utils.decodeBase64ToString('4oSi4oCc')).toEqual('™“');
+        });
+    });
+
     describe('utf8ToHexString', () => {
-        it('Converts utf8 string to hexidecimal string', () => {
+        it('Converts utf8 string to hexadecimal string', () => {
             expect(
                 Base64Utils.utf8ToHexString('Test string with punctuation.')
             ).toEqual(
@@ -21,7 +41,7 @@ describe('Base64Utils', () => {
     });
 
     describe('base64ToHex', () => {
-        it('Converts base64 string to hexidecimal string', () => {
+        it('Converts base64 string to hexadecimal string', () => {
             expect(
                 Base64Utils.base64ToHex('VGhpcyBpcyB0aGUgZmlyc3QgdGVzdA==')
             ).toEqual('54686973206973207468652066697273742074657374');

@@ -45,7 +45,7 @@ class ConnectionFormatUtils {
         const encodedParams = input.split(
             'https://terminal.lightning.engineering#/connect/pair/'
         )[1];
-        const decodedParams = Base64Utils.atob(encodedParams);
+        const decodedParams = Base64Utils.decodeBase64ToString(encodedParams);
         const [pairingPhrase, server] = decodedParams.split('||');
 
         if (
