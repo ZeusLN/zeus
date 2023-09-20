@@ -113,11 +113,11 @@ export default function TextInput(props: TextInputProps) {
     return (
         <View
             style={{
+                backgroundColor: themeColor('secondary'),
+                opacity: locked ? 0.8 : 1,
                 ...style,
                 ...defaultStyle,
-                ...styles.wrapper,
-                backgroundColor: themeColor('secondary'),
-                opacity: locked ? 0.8 : 1
+                ...styles.wrapper
             }}
         >
             {prefix ? (
