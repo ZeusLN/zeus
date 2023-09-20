@@ -275,8 +275,7 @@ export default class Invoice extends BaseModel {
             const encodedMessage =
                 this.htlcs[0].custom_records[keySendMessageType];
             try {
-                const decoded = Base64Utils.atob(encodedMessage);
-                return decoded;
+                return Base64Utils.decodeBase64ToString(encodedMessage);
             } catch (e) {
                 return '';
             }

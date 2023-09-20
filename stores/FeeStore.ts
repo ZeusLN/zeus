@@ -144,7 +144,8 @@ export default class FeeStore {
             data.chan_point = {
                 output_index: Number(output_index),
                 funding_txid_str: funding_txid,
-                funding_txid_bytes: Base64Utils.btoa(funding_txid) // must encode in base64
+                funding_txid_bytes:
+                    Base64Utils.encodeStringToBase64(funding_txid) // must encode in base64
             };
         }
 

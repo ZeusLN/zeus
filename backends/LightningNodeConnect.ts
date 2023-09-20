@@ -332,14 +332,14 @@ export default class LightningNodeConnect {
             .then((data: walletrpc.ImportAccountResponse) => snakeize(data));
     signMessage = async (message: string) =>
         await this.lnc.lnd.lightning
-            .signMessage({ msg: Base64Utils.btoa(message) })
+            .signMessage({ msg: Base64Utils.encodeStringToBase64(message) })
             .then((data: lnrpc.SignMessageResponse) => snakeize(data));
     verifyMessage = async (req: lnrpc.VerifyMessageRequest) =>
         await this.lnc.lnd.lightning
             .verifyMessage({
                 msg:
                     typeof req.msg === 'string'
-                        ? Base64Utils.btoa(req.msg)
+                        ? Base64Utils.encodeStringToBase64(req.msg)
                         : req.msg,
                 signature: req.signature
             })

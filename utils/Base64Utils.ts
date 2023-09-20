@@ -1,50 +1,8 @@
-const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 class Base64Utils {
-    btoa = (input = '') => {
-        const str = input;
-        let output = '';
-
-        for (
-            let block = 0, charCode, i = 0, map = chars;
-            str.charAt(i | 0) || ((map = '='), i % 1);
-            output += map.charAt(63 & (block >> (8 - (i % 1) * 8)))
-        ) {
-            charCode = str.charCodeAt((i += 3 / 4));
-
-            if (charCode > 0xff) {
-                throw new Error(
-                    "'btoa' failed: The string to be encoded contains characters outside of the Latin1 range."
-                );
-            }
-
-            block = (block << 8) | charCode;
-        }
-
-        return output;
-    };
-
-    atob = (input = '') => {
-        const str = input.replace(/=+$/, '');
-        let output = '';
-
-        if (str.length % 4 == 1) {
-            throw new Error(
-                "'atob' failed: The string to be decoded is not correctly encoded."
-            );
-        }
-        for (
-            let bc = 0, bs = 0, buffer, i = 0;
-            (buffer = str.charAt(i++));
-            ~buffer && ((bs = bc % 4 ? bs * 64 + buffer : buffer), bc++ % 4)
-                ? (output += String.fromCharCode(255 & (bs >> ((-2 * bc) & 6))))
-                : 0
-        ) {
-            buffer = chars.indexOf(buffer);
-        }
-
-        return output;
-    };
+    encodeStringToBase64 = (input = '') =>
+        Buffer.from(input).toString('base64');
+    decodeBase64ToString = (input = '') =>
+        Buffer.from(input, 'base64').toString('utf8');
 
     hexStringToByte = (str = '') => {
         if (!str) {
@@ -53,7 +11,7 @@ class Base64Utils {
 
         const a = [];
         for (let i = 0, len = str.length; i < len; i += 2) {
-            a.push(parseInt(str.substr(i, 2), 16));
+            a.push(parseInt(str.substring(i, i + 2), 16));
         }
 
         return new Uint8Array(a);
@@ -66,7 +24,7 @@ class Base64Utils {
         for (let i = 0; i < len; i++) {
             binary += String.fromCharCode(bytes[i]);
         }
-        return this.btoa(binary);
+        return this.encodeStringToBase64(binary);
     };
 
     hexToBase64 = (str = '') => this.byteToBase64(this.hexStringToByte(str));
@@ -89,7 +47,7 @@ class Base64Utils {
         Buffer.from(hexString, 'utf8').toString('hex');
 
     base64ToHex = (base64String: string) => {
-        const raw = this.atob(base64String);
+        const raw = this.decodeBase64ToString(base64String);
         let result = '';
         for (let i = 0; i < raw.length; i++) {
             const hex = raw.charCodeAt(i).toString(16);
