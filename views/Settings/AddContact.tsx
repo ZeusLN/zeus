@@ -33,11 +33,11 @@ interface AddContactProps {
 }
 
 interface Contact {
-    lnAddress: string;
-    onchainAddress: string;
-    nip05: string;
-    nostrNpub: string;
-    pubkey: string;
+    lnAddress: string[];
+    onchainAddress: string[];
+    nip05: string[];
+    nostrNpub: string[];
+    pubkey: string[];
     name: string;
     description: string;
     id: string;
@@ -1078,7 +1078,11 @@ export default class AddContact extends React.Component<
                                     nip05[nip05.length - 1] === '') ||
                                 (nostrNpub?.length > 1 &&
                                     nostrNpub[nostrNpub.length - 1] === '') ||
-                                !(lnAddress[0] || onchainAddress[0])
+                                !(
+                                    lnAddress[0] ||
+                                    onchainAddress[0] ||
+                                    pubkey[0]
+                                )
                             }
                         />
                     </View>
