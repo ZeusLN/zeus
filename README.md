@@ -77,7 +77,7 @@ You must provide Zeus with your node's hostname, port number, and the macaroon y
 
 ### Tor Connection Guides
 
-Zeus has support for connecting to you node entirely over the Tor network. You can refer to these guides to set up a Tor hidden service on your lnd node. The instructions are generally interchangable and typically only require you to change your Tor path.
+Zeus has support for connecting to you node entirely over the Tor network. You can refer to these guides to set up a Tor hidden service on your lnd node. The instructions are generally interchangeable and typically only require you to change your Tor path.
 
 * [Zeus over Tor guide for RaspiBolt](https://raspibolt.org/guide/lightning/mobile-app.html)
 * [Zeus over Tor guide for FreeNAS by Seth586](https://github.com/seth586/guides/blob/master/FreeNAS/wallets/zeusln.md)
@@ -142,7 +142,7 @@ Reproducible builds are available for Android only right now. You'll need Docker
 2. Change to the zeus directory: `cd zeus`
 3. Execute the build script: `./build.sh`
 4. If everything goes well, the script will print a list of all the generated APK files and SHA256 hashes for each one of them: armv7, armv8, x86, x86_64, universal. The equivalent to the one provided in the web page is the one ending in 'universal'. You can compare SHA256 hashes with the ones provided on the [GitHub releases page](https://github.com/ZeusLN/zeus/releases)
-5. Download the oficial apk from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [Zeus homepage](https://zeusln.app/): `wget https://zeusln.app/zeus-v0.7.0.apk`
+5. Download the oficial APK from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [Zeus homepage](https://zeusln.app/): `wget https://zeusln.app/zeus-v0.7.0.apk`
 6. Compare both APKs with a suitable utility like `diffoscope`, `apksigcopier` or by running `diff --brief --recursive ./unpacked_oficial_apk ./unpacked_built_apk`. You should only get differences for the certificates used to sign the official APK
 
 If you want to install the APK built this way onto your own smartphone, you'll need to sign it yourself (see next section). Note that the first time you install a build made using this procedure, you'll need to uninstall your current version of Zeus and then install the one built here because certificates will not match. You'll lose your connection details and you'll need to reconfigure Zeus again to connect to your nodes.
