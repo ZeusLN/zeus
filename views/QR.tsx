@@ -30,7 +30,6 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
             <Screen>
                 <Header
                     leftComponent="Back"
-                    backgroundColor="transparent"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}

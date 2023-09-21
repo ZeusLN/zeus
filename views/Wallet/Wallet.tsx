@@ -6,6 +6,7 @@ import {
     Linking,
     NativeEventSubscription,
     PanResponder,
+    PanResponderInstance,
     Platform,
     Text,
     TouchableOpacity,
@@ -103,6 +104,9 @@ interface WalletState {
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
     private tabNavigationRef = React.createRef<NavigationContainerRef<any>>();
+    private pan: Animated.ValueXY;
+    private panResponder: PanResponderInstance;
+    private handleAppStateChangeSubscription: NativeEventSubscription;
     private backPressSubscription: NativeEventSubscription;
 
     constructor(props) {
@@ -183,7 +187,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.getSettingsAndNavigate();
         });
 
-        AppState.addEventListener('change', this.handleAppStateChange);
+        this.handleAppStateChangeSubscription = AppState.addEventListener(
+            'change',
+            this.handleAppStateChange
+        );
         this.backPressSubscription = BackHandler.addEventListener(
             'hardwareBackPress',
             this.handleBackButton.bind(this)
@@ -193,8 +200,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     componentWillUnmount() {
         this.props.navigation.removeListener &&
             this.props.navigation.removeListener('didFocus');
-        AppState.removeEventListener &&
-            AppState.removeEventListener('change', this.handleAppStateChange);
+        this.handleAppStateChangeSubscription?.remove();
         this.backPressSubscription?.remove();
     }
 
@@ -445,7 +451,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     <BalancePane
                         navigation={navigation}
                         NodeInfoStore={NodeInfoStore}
-                        UnitsStore={UnitsStore}
                         BalanceStore={BalanceStore}
                         SettingsStore={SettingsStore}
                         SyncStore={SyncStore}
@@ -477,7 +482,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 navigation={navigation}
                                 BalanceStore={BalanceStore}
                                 UnitsStore={UnitsStore}
-                                SettingsStore={SettingsStore}
                                 onRefresh={() => this.refresh()}
                                 locked={isSyncing}
                             />

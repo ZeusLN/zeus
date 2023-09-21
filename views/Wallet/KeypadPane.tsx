@@ -22,10 +22,10 @@ import BigNumber from 'bignumber.js';
 
 interface KeypadPaneProps {
     navigation: any;
-    ChannelsStore: ChannelsStore;
-    FiatStore: FiatStore;
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
+    ChannelsStore?: ChannelsStore;
+    FiatStore?: FiatStore;
+    UnitsStore?: UnitsStore;
+    SettingsStore?: SettingsStore;
 }
 
 interface KeypadPaneState {
@@ -86,10 +86,10 @@ export default class KeypadPane extends React.PureComponent<
         let belowMinAmount = false;
         if (
             BackendUtils.supportsLSPs() &&
-            this.props.SettingsStore.settings?.enableLSP &&
+            this.props.SettingsStore!.settings?.enableLSP &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
-                this.props.ChannelsStore.totalInbound
+                this.props.ChannelsStore!.totalInbound
             )
         ) {
             needInbound = true;
@@ -128,10 +128,10 @@ export default class KeypadPane extends React.PureComponent<
         let belowMinAmount = false;
         if (
             BackendUtils.supportsLSPs() &&
-            this.props.SettingsStore.settings?.enableLSP &&
+            this.props.SettingsStore!.settings?.enableLSP &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
-                this.props.ChannelsStore.totalInbound
+                this.props.ChannelsStore!.totalInbound
             )
         ) {
             needInbound = true;
@@ -149,7 +149,7 @@ export default class KeypadPane extends React.PureComponent<
 
     amountSize = () => {
         const { amount, needInbound } = this.state;
-        const { units } = this.props.UnitsStore;
+        const { units } = this.props.UnitsStore!;
         switch (amount.length + getDecimalPlaceholder(amount, units).count) {
             case 1:
             case 2:
@@ -209,9 +209,9 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     render() {
-        const { FiatStore, SettingsStore, UnitsStore, navigation } = this.props;
+        const { FiatStore, UnitsStore, navigation } = this.props;
         const { amount, needInbound, belowMinAmount } = this.state;
-        const { units } = UnitsStore;
+        const { units } = UnitsStore!;
 
         const color = this.textAnimation.interpolate({
             inputRange: [0, 1],
@@ -220,10 +220,7 @@ export default class KeypadPane extends React.PureComponent<
 
         return (
             <View style={{ flex: 1 }}>
-                <WalletHeader
-                    navigation={navigation}
-                    SettingsStore={SettingsStore}
-                />
+                <WalletHeader navigation={navigation} />
 
                 {needInbound && (
                     <TouchableOpacity
