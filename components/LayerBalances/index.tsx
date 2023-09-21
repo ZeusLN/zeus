@@ -19,6 +19,7 @@ import BlueWalletWarning from '../../components/BlueWalletWarning';
 
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
+import { localeString } from '../../utils/LocaleUtils';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
@@ -50,7 +51,9 @@ const Row = ({ item }: { item: DataRow }) => (
             {item.layer === 'On-chain' ? <OnChainSvg /> : <LightningSvg />}
             <Spacer width={5} />
             <Text style={{ ...styles.layerText, color: themeColor('text') }}>
-                {item.layer}
+                {item.layer === 'Lightning'
+                    ? localeString('general.lightning')
+                    : localeString('general.onchain')}
             </Text>
         </View>
 
@@ -116,27 +119,19 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         const { totalBlockchainBalance, lightningBalance } = BalanceStore;
 
-        let DATA: DataRow[];
+        let DATA: DataRow[] = [
+            {
+                layer: 'Lightning',
+                balance: Number(lightningBalance).toFixed(3)
+            }
+        ];
 
-        // hide on-chain balance for Lnbank accounts
-        if (!BackendUtils.supportsOnchainReceiving()) {
-            DATA = [
-                {
-                    layer: 'Lightning',
-                    balance: Number(lightningBalance).toFixed(3)
-                }
-            ];
-        } else {
-            DATA = [
-                {
-                    layer: 'Lightning',
-                    balance: Number(lightningBalance).toFixed(3)
-                },
-                {
-                    layer: 'On-chain',
-                    balance: Number(totalBlockchainBalance).toFixed(3)
-                }
-            ];
+        // Only show on-chain balance for non-Lnbank accounts
+        if (BackendUtils.supportsOnchainReceiving()) {
+            DATA.push({
+                layer: 'On-chain',
+                balance: Number(totalBlockchainBalance).toFixed(3)
+            });
         }
 
         return (
