@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, { BLOCK_EXPLORER_KEYS } from '../../stores/SettingsStore';
@@ -10,6 +10,7 @@ import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
+import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
 interface PrivacyProps {
@@ -163,15 +164,19 @@ export default class Privacy extends React.Component<
                             backgroundColor: 'transparent'
                         }}
                     >
-                        <ListItem.Title
+                        <Text
                             style={{
                                 color: themeColor('secondaryText'),
+                                fontSize: 17,
                                 fontFamily: 'Lato-Regular',
                                 left: -10
                             }}
+                            infoText={localeString(
+                                'views.Settings.Privacy.clipboard.explainer'
+                            )}
                         >
                             {localeString('views.Settings.Privacy.clipboard')}
-                        </ListItem.Title>
+                        </Text>
                         <View
                             style={{
                                 flex: 1,
@@ -204,15 +209,24 @@ export default class Privacy extends React.Component<
                             backgroundColor: 'transparent'
                         }}
                     >
-                        <ListItem.Title
+                        <Text
                             style={{
                                 color: themeColor('secondaryText'),
+                                fontSize: 17,
                                 fontFamily: 'Lato-Regular',
                                 left: -10
                             }}
+                            infoText={[
+                                localeString(
+                                    'views.Settings.Privacy.lurkerMode.explainer1'
+                                ),
+                                localeString(
+                                    'views.Settings.Privacy.lurkerMode.explainer2'
+                                )
+                            ]}
                         >
                             {localeString('views.Settings.Privacy.lurkerMode')}
-                        </ListItem.Title>
+                        </Text>
                         <View
                             style={{
                                 flex: 1,
