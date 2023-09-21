@@ -5,7 +5,6 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
-import hashjs from 'hash.js';
 
 import Invoice from '../models/Invoice';
 import SettingsStore from './SettingsStore';
@@ -384,10 +383,7 @@ export default class InvoicesStore {
     };
 
     @action
-    public getPayReq = (
-        paymentRequest: string,
-        descriptionPreimage?: string
-    ) => {
+    public getPayReq = (paymentRequest: string) => {
         this.loading = true;
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
@@ -396,21 +392,6 @@ export default class InvoicesStore {
         return BackendUtils.decodePaymentRequest([paymentRequest])
             .then((data: any) => {
                 this.pay_req = new Invoice(data);
-
-                // check description_hash if asked for
-                const needed = hashjs
-                    .sha256()
-                    .update(descriptionPreimage)
-                    .digest('hex');
-                if (
-                    descriptionPreimage &&
-                    this.pay_req.description_hash !== needed
-                ) {
-                    throw new Error(
-                        `wrong description_hash! got ${this.pay_req.description_hash}, needed ${needed}.`
-                    );
-                }
-
                 this.getPayReqError = null;
                 this.loading = false;
             })
