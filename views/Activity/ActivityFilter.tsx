@@ -264,7 +264,7 @@ export default class ActivityFilter extends React.Component<
 
         const ClearButton = () => (
             <Icon
-                name="cancel"
+                name="delete"
                 onPress={async () => await ActivityStore.resetFilters()}
                 color={themeColor('text')}
                 underlayColor="transparent"
