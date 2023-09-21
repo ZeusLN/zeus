@@ -145,8 +145,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                 )}
                             </Text>
                             {(settings.scramblePin ||
-                                typeof typeof settings.scramblePin ===
-                                    'undefined') && (
+                                settings.scramblePin == null) && (
                                 <Text
                                     style={{
                                         ...styles.secondaryText,
@@ -192,18 +191,21 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                     'views.Settings.SetPin.confirmPin'
                                 )}
                             </Text>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText'),
-                                    flex: 1,
-                                    justifyContent: 'flex-end'
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.SetPin.scramblePin'
-                                )}
-                            </Text>
+                            {(settings.scramblePin ||
+                                settings.scramblePin == null) && (
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText'),
+                                        flex: 1,
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.SetPin.scramblePin'
+                                    )}
+                                </Text>
+                            )}
                             <View
                                 style={{
                                     flex: 6,
