@@ -64,7 +64,8 @@ export default class Lockscreen extends React.Component<
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore, navigation } = this.props;
-        const { settings } = SettingsStore;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
         const modifySecurityScreen: string = navigation.getParam(
             'modifySecurityScreen'
         );
