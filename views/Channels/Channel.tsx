@@ -311,7 +311,7 @@ export default class ChannelView extends React.Component<
                                 sensitive
                             />
                         )}
-                        {closeHeight && (
+                        {!!closeHeight && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Channel.closeHeight'
