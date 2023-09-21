@@ -1276,7 +1276,11 @@ export default class Receive extends React.Component<
                                                     new BigNumber(
                                                         zeroConfFee
                                                     ).gt(1000)
-                                                        ? 'views.Receive.lspExplainer'
+                                                        ? selectedIndex === 0
+                                                            ? 'views.Receive.lspExplainerUnified'
+                                                            : 'views.Receive.lspExplainer'
+                                                        : selectedIndex === 0
+                                                        ? 'views.Receive.lspExplainerRoutingUnified'
                                                         : 'views.Receive.lspExplainerRouting'
                                                 )}
                                             </Text>
