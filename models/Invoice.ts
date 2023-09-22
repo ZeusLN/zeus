@@ -173,7 +173,7 @@ export default class Invoice extends BaseModel {
 
     @computed public get getDisplayTime(): string {
         return this.isPaid
-            ? this.settleDate
+            ? this.formattedSettleDate
             : DateTimeUtils.listFormattedDate(
                   this.expires_at || this.creation_date || this.timestamp || 0
               );
@@ -218,12 +218,18 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get settleDate(): Date {
+        return DateTimeUtils.listDate(
+            this.settle_date || this.paid_at || this.timestamp || 0
+        );
+    }
+
+    @computed public get formattedSettleDate(): string {
         return DateTimeUtils.listFormattedDate(
             this.settle_date || this.paid_at || this.timestamp || 0
         );
     }
 
-    @computed public get creationDate(): Date {
+    @computed public get formattedCreationDate(): string {
         return DateTimeUtils.listFormattedDate(this.creation_date);
     }
 
@@ -250,8 +256,7 @@ export default class Invoice extends BaseModel {
 
         if (expiry && new BigNumber(expiry).gte(1600000000)) {
             return (
-                new Date().getTime() / 1000 >
-                DateTimeUtils.listFormattedDate(expiry)
+                new Date().getTime() > DateTimeUtils.listDate(expiry).getTime()
             );
         }
 
