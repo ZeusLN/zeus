@@ -32,7 +32,9 @@ export default class LSPStore {
         this.error = false;
         this.error_msg = '';
         this.showLspSettings = false;
-        this.channelAcceptor = undefined;
+        // TODO Pegasus clear channel acceptor when
+        // it's supported by other backends
+        // this.channelAcceptor = undefined;
     };
 
     getLSPHost = () =>
