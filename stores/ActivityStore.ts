@@ -14,6 +14,7 @@ import TransactionsStore from './TransactionsStore';
 
 import { localeString } from './../utils/LocaleUtils';
 import BackendUtils from './../utils/BackendUtils';
+import moment from 'moment';
 
 const STORAGE_KEY = 'zeus-activity-filters';
 
@@ -25,8 +26,8 @@ export interface Filter {
     received: boolean;
     unpaid: boolean;
     minimumAmount: number;
-    startDate: any;
-    endDate: any;
+    startDate?: Date;
+    endDate?: Date;
 }
 
 export const DEFAULT_FILTERS = {
@@ -36,8 +37,8 @@ export const DEFAULT_FILTERS = {
     received: true,
     unpaid: true,
     minimumAmount: 0,
-    startDate: null,
-    endDate: null
+    startDate: undefined,
+    endDate: undefined
 };
 
 export default class ActivityStore {
@@ -72,6 +73,7 @@ export default class ActivityStore {
             STORAGE_KEY,
             JSON.stringify(this.filters)
         );
+        this.setFilters(this.filters);
     };
 
     @action
@@ -83,8 +85,8 @@ export default class ActivityStore {
             received: true,
             unpaid: false,
             minimumAmount: 0,
-            startDate: null,
-            endDate: null
+            startDate: undefined,
+            endDate: undefined
         };
         await EncryptedStorage.setItem(
             STORAGE_KEY,
@@ -112,12 +114,14 @@ export default class ActivityStore {
 
     @action
     public clearStartDateFilter = () => {
-        this.filters.startDate = null;
+        this.filters.startDate = undefined;
+        this.setFilters(this.filters);
     };
 
     @action
     public clearEndDateFilter = () => {
-        this.filters.endDate = null;
+        this.filters.endDate = undefined;
+        this.setFilters(this.filters);
     };
 
     getSortedActivity = () => {
@@ -175,15 +179,18 @@ export default class ActivityStore {
     public async getFilters() {
         this.loading = true;
         try {
-            // Retrieve the credentials
-            const filters: any = await EncryptedStorage.getItem(STORAGE_KEY);
+            const filters = await EncryptedStorage.getItem(STORAGE_KEY);
             if (filters) {
-                this.filters = JSON.parse(filters);
+                this.filters = JSON.parse(filters, (key, value) =>
+                    (key === 'startDate' || key === 'endDate') && value
+                        ? new Date(value)
+                        : value
+                );
             } else {
                 console.log('No activity filters stored');
             }
         } catch (error) {
-            console.log("Keychain couldn't be accessed!", error);
+            console.log('Loading activity filters failed', error);
         } finally {
             this.loading = false;
         }
@@ -266,14 +273,28 @@ export default class ActivityStore {
         }
 
         if (filters.startDate) {
+            const startDate = new Date(
+                filters.startDate.getFullYear(),
+                filters.startDate.getMonth(),
+                filters.startDate.getDate()
+            );
             filteredActivity = filteredActivity.filter(
-                (activity: any) => +activity.getDate >= +filters.startDate
+                (activity) => activity.getDate.getTime() >= startDate.getTime()
             );
         }
 
         if (filters.endDate) {
+            const endDate = moment(
+                new Date(
+                    filters.endDate.getFullYear(),
+                    filters.endDate.getMonth(),
+                    filters.endDate.getDate()
+                )
+            )
+                .add(1, 'day')
+                .toDate();
             filteredActivity = filteredActivity.filter(
-                (activity: any) => +activity.getDate <= +filters.endDate
+                (activity) => activity.getDate.getTime() < endDate.getTime()
             );
         }
 
