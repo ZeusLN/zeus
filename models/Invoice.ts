@@ -209,7 +209,7 @@ export default class Invoice extends BaseModel {
             : '';
     }
 
-    @computed public get getDate(): string | number | Date {
+    @computed public get getDate(): Date {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listDate(

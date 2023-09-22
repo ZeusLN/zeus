@@ -16,7 +16,7 @@ interface TextInputProps {
     value?: string;
     onChangeText?: any;
     numberOfLines?: number;
-    style?: StyleProp<ViewStyle>;
+    style?: ViewStyle;
     textInputStyle?: StyleProp<TextStyle>;
     placeholderTextColor?: string;
     locked?: boolean;
@@ -115,9 +115,9 @@ export default function TextInput(props: TextInputProps) {
             style={{
                 backgroundColor: themeColor('secondary'),
                 opacity: locked ? 0.8 : 1,
-                ...style,
                 ...defaultStyle,
-                ...styles.wrapper
+                ...styles.wrapper,
+                ...style
             }}
         >
             {prefix ? (
