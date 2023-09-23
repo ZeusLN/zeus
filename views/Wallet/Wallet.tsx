@@ -57,6 +57,13 @@ import Temple from '../../assets/images/SVG/Temple.svg';
 import WordLogo from '../../assets/images/SVG/Word Logo.svg';
 
 import {
+    relayInit,
+    finishEvent,
+    generatePrivateKey,
+    getPublicKey
+} from 'nostr-tools';
+
+import {
     initializeLnd,
     startLnd,
     expressGraphSync
@@ -325,6 +332,65 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         if (implementation === 'embedded-lnd') {
+            //
+            const relay = relayInit('wss://nostr.mutinywallet.com');
+            relay.on('connect', () => {
+                console.log(`connected to ${relay.url}`);
+            });
+            relay.on('error', () => {
+                console.log(`failed to connect to ${relay.url}`);
+            });
+
+            await relay.connect();
+
+            // // let's query for an event that exists
+            // let sub = relay.sub([
+            // {
+            //     ids: ['g59y4f0qshqfs5tdajhl2u24svffl6lrh9m6dtr7wtxrrj753cvsgnn9g5'],
+            // },
+            // ])
+            // sub.on('event', event => {
+            //     console.log('we got the event we wanted:', event)
+            // })
+            // sub.on('eose', () => {
+            //     console.log('bac');
+            //     sub.unsub();
+            // })
+
+            let sk = generatePrivateKey();
+            let pk = getPublicKey(sk);
+
+            let sub = relay.sub([
+                {
+                    kinds: [1],
+                    authors: [pk]
+                }
+            ]);
+
+            sub.on('event', (event) => {
+                console.log('got event:', event);
+            });
+
+            let event = {
+                kind: 1,
+                pubkey: pk,
+                created_at: Math.floor(Date.now() / 1000),
+                tags: [],
+                content: 'hello #zeus'
+            };
+
+            // this calculates the event id and signs the event in a single step
+            const signedEvent = finishEvent(event, sk);
+            console.log('signedEvent', signedEvent);
+            await relay.publish(signedEvent);
+
+            console.log('event.id', signedEvent.id);
+            let eventReceived = await relay.get({
+                ids: [signedEvent.id]
+            });
+            console.log('eventReceived', eventReceived);
+
+            //
             if (connecting) {
                 await initializeLnd(embeddedLndNetwork === 'Testnet', rescan);
                 if (expressGraphSyncEnabled) await expressGraphSync();

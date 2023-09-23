@@ -254,6 +254,8 @@ PODS:
     - React-Core
   - react-native-encrypted-storage (4.0.2):
     - React-Core
+  - react-native-get-random-values (1.9.0):
+    - React-Core
   - react-native-hce (0.1.2):
     - React
   - react-native-image-picker (5.0.1):
@@ -428,6 +430,7 @@ DEPENDENCIES:
   - react-native-blob-util (from `../node_modules/react-native-blob-util`)
   - react-native-date-picker (from `../node_modules/react-native-date-picker`)
   - react-native-encrypted-storage (from `../node_modules/react-native-encrypted-storage`)
+  - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-hce (from `../node_modules/react-native-hce`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
@@ -529,6 +532,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-date-picker"
   react-native-encrypted-storage:
     :path: "../node_modules/react-native-encrypted-storage"
+  react-native-get-random-values:
+    :path: "../node_modules/react-native-get-random-values"
   react-native-hce:
     :path: "../node_modules/react-native-hce"
   react-native-image-picker:
@@ -634,6 +639,7 @@ SPEC CHECKSUMS:
   react-native-blob-util: 180714990c4563645fa70e9202cd32e27656a6e6
   react-native-date-picker: 93e43b3084cea595b4d68b1405d6d99849663bd6
   react-native-encrypted-storage: e78d848ce0fb663c2ce306e37921d026809322e6
+  react-native-get-random-values: dee677497c6a740b71e5612e8dbd83e7539ed5bb
   react-native-hce: 677aa1c41edf183523bb7b1014d106a08631ff88
   react-native-image-picker: 8cb4280e2c1efc3daeb2d9d597f9429a60472e40
   react-native-netinfo: fefd4e98d75cbdd6e85fc530f7111a8afdf2b0c5
