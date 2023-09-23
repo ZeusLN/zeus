@@ -56,6 +56,37 @@ describe('Base64Utils', () => {
                 '4465636f64696e672074686973204261736536343f2051756974652073706f6f6b792e'
             );
             expect(Base64Utils.base64ToHex('WkVVUw==')).toEqual('5a455553');
+            expect(
+                Base64Utils.base64ToHex(
+                    'AoJXmNvi6wDqzNnB9rrptOrK1T+20beEtJ/HCtFt4gWE'
+                )
+            ).toEqual(
+                '02825798dbe2eb00eaccd9c1f6bae9b4eacad53fb6d1b784b49fc70ad16de20584'
+            );
+        });
+    });
+
+    describe('hexToBase64', () => {
+        it('Converts hexadecimal string to base64 string', () => {
+            expect(
+                Base64Utils.hexToBase64(
+                    '54686973206973207468652066697273742074657374'
+                )
+            ).toEqual('VGhpcyBpcyB0aGUgZmlyc3QgdGVzdA==');
+            expect(Base64Utils.hexToBase64('456e642074686520466564')).toEqual(
+                'RW5kIHRoZSBGZWQ='
+            );
+            expect(
+                Base64Utils.hexToBase64(
+                    '4465636f64696e672074686973204261736536343f2051756974652073706f6f6b792e'
+                )
+            ).toEqual('RGVjb2RpbmcgdGhpcyBCYXNlNjQ/IFF1aXRlIHNwb29reS4=');
+            expect(Base64Utils.hexToBase64('5a455553')).toEqual('WkVVUw==');
+            expect(
+                Base64Utils.hexToBase64(
+                    '02825798dbe2eb00eaccd9c1f6bae9b4eacad53fb6d1b784b49fc70ad16de20584'
+                )
+            ).toEqual('AoJXmNvi6wDqzNnB9rrptOrK1T+20beEtJ/HCtFt4gWE');
         });
     });
 });
