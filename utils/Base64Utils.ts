@@ -4,30 +4,7 @@ class Base64Utils {
     decodeBase64ToString = (input = '') =>
         Buffer.from(input, 'base64').toString('utf8');
 
-    hexStringToByte = (str = '') => {
-        if (!str) {
-            return new Uint8Array();
-        }
-
-        const a = [];
-        for (let i = 0, len = str.length; i < len; i += 2) {
-            a.push(parseInt(str.substring(i, i + 2), 16));
-        }
-
-        return new Uint8Array(a);
-    };
-
-    byteToBase64 = (buffer: Uint8Array) => {
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return this.encodeStringToBase64(binary);
-    };
-
-    hexToBase64 = (str = '') => this.byteToBase64(this.hexStringToByte(str));
+    hexToBase64 = (str = '') => Buffer.from(str, 'hex').toString('base64');
 
     stringToUint8Array = (str: string) =>
         Uint8Array.from(str, (x) => x.charCodeAt(0));
@@ -46,15 +23,8 @@ class Base64Utils {
     utf8ToHexString = (hexString: string) =>
         Buffer.from(hexString, 'utf8').toString('hex');
 
-    base64ToHex = (base64String: string) => {
-        const raw = this.decodeBase64ToString(base64String);
-        let result = '';
-        for (let i = 0; i < raw.length; i++) {
-            const hex = raw.charCodeAt(i).toString(16);
-            result += hex.length === 2 ? hex : '0' + hex;
-        }
-        return result;
-    };
+    base64ToHex = (base64String: string) =>
+        Buffer.from(base64String, 'base64').toString('hex');
 
     // from https://coolaj86.com/articles/unicode-string-to-a-utf-8-typed-array-buffer-in-javascript/
     unicodeStringToUint8Array = (s: string) => {
