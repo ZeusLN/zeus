@@ -5,7 +5,13 @@ class Base64Utils {
     decodeBase64ToString = (input = '') =>
         Buffer.from(input, 'base64').toString('utf8');
 
-    hexToBase64 = (str = '') => Buffer.from(str, 'hex').toString('base64');
+    base64ToBytes = (base64String: string) =>
+        Uint8Array.from(Buffer.from(base64String, 'base64'));
+    bytesToBase64 = (bytes: Uint8Array) =>
+        Buffer.from(bytes).toString('base64');
+
+    hexToBase64 = (hexString = '') =>
+        Buffer.from(hexString, 'hex').toString('base64');
 
     stringToUint8Array = (str: string) =>
         Uint8Array.from(str, (x) => x.charCodeAt(0));

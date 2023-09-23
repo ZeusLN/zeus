@@ -1,6 +1,6 @@
 import { NativeModules } from 'react-native';
-import * as base64 from 'base64-js';
 import * as $protobuf from 'protobufjs';
+import Base64Utils from '../utils/Base64Utils';
 
 const { LndMobile } = NativeModules;
 
@@ -54,9 +54,9 @@ export const sendCommand = async <IReq, Req, Res>({
         const instance = request.create(options);
         const b64 = await LndMobile.sendCommand(
             method,
-            base64.fromByteArray(request.encode(instance).finish())
+            Base64Utils.bytesToBase64(request.encode(instance).finish())
         );
-        return response.decode(base64.toByteArray(b64.data || ''));
+        return response.decode(Base64Utils.base64ToBytes(b64.data || ''));
     } catch (e) {
         throw e;
     }
@@ -69,7 +69,7 @@ export const sendStreamCommand = async <IReq, Req>(
     const instance = request.create(options);
     const response = await LndMobile.sendStreamCommand(
         method,
-        base64.fromByteArray(request.encode(instance).finish()),
+        Base64Utils.bytesToBase64(request.encode(instance).finish()),
         streamOnlyOnce
     );
     return response;
@@ -94,7 +94,7 @@ export const writeToStream = async <IReq, Req>({
     const instance = request.create(options);
     await LndMobile.writeToStream(
         method,
-        base64.fromByteArray(request.encode(instance).finish())
+        Base64Utils.bytesToBase64(request.encode(instance).finish())
     );
 };
 
@@ -102,5 +102,5 @@ export const decodeStreamResult = <Res>({
     base64Result,
     response
 }: IStreamResultOptions<Res>): Res => {
-    return response.decode(base64.toByteArray(base64Result));
+    return response.decode(Base64Utils.base64ToBytes(base64Result));
 };
