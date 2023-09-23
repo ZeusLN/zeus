@@ -1,5 +1,4 @@
 import Base64Utils from './Base64Utils';
-import MacaroonUtils from './MacaroonUtils';
 
 class ConnectionFormatUtils {
     processLndConnectUrl = (input: string) => {
@@ -30,7 +29,7 @@ class ConnectionFormatUtils {
                 lndconnect.split(':')[1].split('?')[0];
         }
         const macaroonHex =
-            result.macaroon && MacaroonUtils.base64UrlToHex(result.macaroon);
+            result.macaroon && Base64Utils.base64UrlToHex(result.macaroon);
 
         // prepend https by default
         host = 'https://' + host;
