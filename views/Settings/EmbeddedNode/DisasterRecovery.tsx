@@ -3,22 +3,22 @@ import { ScrollView, Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
-import * as base64 from 'base64-js';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import Button from '../../../components/Button';
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
+import Switch from '../../../components/Switch';
+import KeyValue from '../../../components/KeyValue';
 
 import SettingsStore from '../../../stores/SettingsStore';
+import stores from '../../../stores/Stores';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import Switch from '../../../components/Switch';
+import Base64Utils from '../../../utils/Base64Utils';
 
 import { exportAllChannelBackups } from '../../../lndmobile/channel';
-import stores from '../../../stores/Stores';
-import KeyValue from '../../../components/KeyValue';
 
 interface DisasterRecoveryProps {
     navigation: any;
@@ -245,7 +245,7 @@ export default class DisasterRecovery extends React.Component<
                                                         backup.multi_chan_backup
                                                             .multi_chan_backup;
                                                     const multiString =
-                                                        base64.fromByteArray(
+                                                        Base64Utils.bytesToBase64(
                                                             multi
                                                         );
 

@@ -102,4 +102,32 @@ describe('Base64Utils', () => {
             );
         });
     });
+
+    describe('toByteArray', () => {
+        it('converts base64 to byte array', () => {
+            expect(Base64Utils.base64ToBytes('RW5kIHRoZSBGZWQ=')).toEqual(
+                Uint8Array.from([
+                    69, 110, 100, 32, 116, 104, 101, 32, 70, 101, 100
+                ])
+            );
+            expect(Base64Utils.base64ToBytes('4pyT')).toEqual(
+                Uint8Array.from([226, 156, 147])
+            );
+        });
+    });
+
+    describe('fromByteArray', () => {
+        it('converts byte array to base64', () => {
+            expect(
+                Base64Utils.bytesToBase64(
+                    Uint8Array.from([
+                        69, 110, 100, 32, 116, 104, 101, 32, 70, 101, 100
+                    ])
+                )
+            ).toBe('RW5kIHRoZSBGZWQ=');
+            expect(
+                Base64Utils.bytesToBase64(Uint8Array.from([226, 156, 147]))
+            ).toBe('4pyT');
+        });
+    });
 });
