@@ -4,6 +4,7 @@ import {
     AppState,
     BackHandler,
     Linking,
+    NativeEventSubscription,
     PanResponder,
     Platform,
     Text,
@@ -102,6 +103,7 @@ interface WalletState {
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
     private tabNavigationRef = React.createRef<NavigationContainerRef<any>>();
+    private backPressSubscription: NativeEventSubscription;
 
     constructor(props) {
         super(props);
@@ -182,7 +184,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         });
 
         AppState.addEventListener('change', this.handleAppStateChange);
-        BackHandler.addEventListener(
+        this.backPressSubscription = BackHandler.addEventListener(
             'hardwareBackPress',
             this.handleBackButton.bind(this)
         );
@@ -193,10 +195,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.props.navigation.removeListener('didFocus');
         AppState.removeEventListener &&
             AppState.removeEventListener('change', this.handleAppStateChange);
-        BackHandler.removeEventListener(
-            'hardwareBackPress',
-            this.handleBackButton
-        );
+        this.backPressSubscription?.remove();
     }
 
     handleAppStateChange = (nextAppState: any) => {
