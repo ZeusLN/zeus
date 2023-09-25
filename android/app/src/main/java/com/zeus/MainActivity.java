@@ -2,15 +2,15 @@ package app.zeusln.zeus;
 
 import com.facebook.react.ReactActivity;
 import com.facebook.react.ReactActivityDelegate;
-import com.facebook.react.ReactRootView;
+import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint;
+import com.facebook.react.defaults.DefaultReactActivityDelegate;
 
-import android.app.Activity;
-import android.content.Intent;
-
-import android.net.Uri;
 import android.os.Bundle;
-import android.widget.Toast;
 
+import android.content.Intent;
+import android.app.Activity;
+import android.net.Uri;
+import android.widget.Toast;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -19,6 +19,30 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public class MainActivity extends ReactActivity {
+    /**
+     * Returns the name of the main component registered from JavaScript. This is used to schedule
+     * rendering of the component.
+     */
+    @Override
+    protected String getMainComponentName() {
+        return "zeus";
+    }
+
+    /**
+     * Returns the instance of the {@link ReactActivityDelegate}. Here we use a util class {@link
+     * DefaultReactActivityDelegate} which allows you to easily enable Fabric and Concurrent React
+     * (aka React 18) with two boolean flags.
+     */
+    @Override
+    protected ReactActivityDelegate createReactActivityDelegate() {
+        return new DefaultReactActivityDelegate(
+            this,
+            getMainComponentName(),
+            // If you opted-in for the New Architecture, we enable the Fabric Renderer.
+            DefaultNewArchitectureEntryPoint.getFabricEnabled());
+    }
+
+    static String TAG = "MainActivity";
     static boolean started = false;
 
     static int INTENT_COPYLNDLOG = 100;
@@ -34,15 +58,6 @@ public class MainActivity extends ReactActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(null);
         started = true;
-    }
-
-    /**
-     * Returns the name of the main component registered from JavaScript.
-     * This is used to schedule rendering of the component.
-     */
-    @Override
-    protected String getMainComponentName() {
-        return "zeus";
     }
 
     @Override
@@ -64,25 +79,7 @@ public class MainActivity extends ReactActivity {
                 byte[] buf = new byte[1024];
                 int len;
                 while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
-                }
-                in.close();
-                out.close();
-            }
-            catch(IOException e) {
-                Toast.makeText(this, "Error " + e.getMessage(), Toast.LENGTH_LONG).show();
-            }
-        } else if (requestCode == INTENT_COPYLNDLOGTESTNET && resultCode == Activity.RESULT_OK) {
-            Uri destUri = data.getData();
-            File sourceLocation = new File(getFilesDir().toString() + "/logs/bitcoin/testnet/lnd.log");
-            try {
-                InputStream in = new FileInputStream(sourceLocation);
-                OutputStream out = getContentResolver().openOutputStream(destUri);
-
-                byte[] buf = new byte[1024];
-                int len;
-                while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
+                out.write(buf, 0, len);
                 }
                 in.close();
                 out.close();
@@ -98,7 +95,7 @@ public class MainActivity extends ReactActivity {
                 byte[] buf = new byte[1024];
                 int len;
                 while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
+                out.write(buf, 0, len);
                 }
                 in.close();
                 out.close();
