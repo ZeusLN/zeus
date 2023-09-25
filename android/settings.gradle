@@ -1,4 +1,5 @@
 rootProject.name = 'zeus'
+apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
 include ':react-native-blob-util'
 project(':react-native-blob-util').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-blob-util/android')
 include ':react-native-gesture-handler'
@@ -6,7 +7,6 @@ project(':react-native-gesture-handler').projectDir = new File(rootProject.proje
 include ':react-native-randombytes'
 project(':react-native-randombytes').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-randombytes/android')
 apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
-include ':react-native-qrcode-local-image'
-project(':react-native-qrcode-local-image').projectDir = new File(rootProject.projectDir, '../node_modules/@remobile/react-native-qrcode-local-image/android')
 include ':lndmobile'
 include ':app'
+includeBuild('../node_modules/@react-native/gradle-plugin')
