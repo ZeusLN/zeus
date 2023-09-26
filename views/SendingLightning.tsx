@@ -1,7 +1,14 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    BackHandler,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import LnurlPaySuccess from './LnurlPay/Success';
 
@@ -21,6 +28,7 @@ import Error from '../assets/images/SVG/Error.svg';
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
 import CopyBox from '../components/CopyBox';
+import { NativeEventSubscription } from 'react-native';
 
 interface SendingLightningProps {
     navigation: any;
@@ -34,10 +42,12 @@ export default class SendingLightning extends React.Component<
     SendingLightningProps,
     {}
 > {
+    private backPressSubscription: NativeEventSubscription;
+
     state = {
         storedNotes: ''
     };
-    async componentDidMount() {
+    componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
         navigation.addListener('didFocus', () => {
@@ -55,7 +65,43 @@ export default class SendingLightning extends React.Component<
                     console.error('Error retrieving notes:', error);
                 });
         });
+
+        this.backPressSubscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.handleBackPress.bind(this)
+        );
     }
+
+    private handleBackPress(): boolean {
+        const { TransactionsStore, navigation } = this.props;
+        if (
+            !TransactionsStore.error &&
+            (this.successfullySent(TransactionsStore) ||
+                this.inTransit(TransactionsStore))
+        ) {
+            navigation.navigate('Wallet');
+            return true;
+        }
+        return false;
+    }
+
+    componentWillUnmount(): void {
+        this.backPressSubscription?.remove();
+    }
+
+    private successfullySent(transactionStore: TransactionsStore): boolean {
+        return (
+            transactionStore.payment_route ||
+            transactionStore.status === 'complete' ||
+            transactionStore.status === 'SUCCEEDED' ||
+            transactionStore.status === 2
+        );
+    }
+
+    private inTransit(transactionStore: TransactionsStore): boolean {
+        return transactionStore.status === 'IN_FLIGHT';
+    }
+
     render() {
         const { TransactionsStore, LnurlPayStore, navigation } = this.props;
         const {
@@ -63,19 +109,13 @@ export default class SendingLightning extends React.Component<
             error,
             error_msg,
             payment_hash,
-            payment_route,
             payment_preimage,
-            payment_error,
-            status
+            payment_error
         } = TransactionsStore;
         const { storedNotes } = this.state;
-        const success =
-            payment_route ||
-            status === 'complete' ||
-            status === 'SUCCEEDED' ||
-            status === 2;
 
-        const inTransit = status === 'IN_FLIGHT';
+        const success = this.successfullySent(TransactionsStore);
+        const inTransit = this.inTransit(TransactionsStore);
 
         const noteKey =
             typeof payment_hash === 'string'
