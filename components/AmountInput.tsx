@@ -179,7 +179,7 @@ export default class AmountInput extends React.Component<
                         onPress={() => !locked && this.onChangeUnits()}
                         style={{ marginTop: 22, marginLeft: 15 }}
                     >
-                        {fiatEnabled && units !== 'fiat' ? (
+                        {UnitsStore!.getNextUnit() === 'fiat' ? (
                             <ExchangeFiatSVG
                                 fill={themeColor('text')}
                                 width="35"
