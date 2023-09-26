@@ -904,6 +904,15 @@ export default class SettingsStore {
                     this.settings.fiatEnabled = true;
                 }
 
+                // TODO PEGASUS
+                // temporarily toggle all alpha users settings for now
+                const MOD_KEY_1 = 'neutrino-mod-1';
+                const mod1 = await EncryptedStorage.getItem(MOD_KEY_1);
+                if (!mod1) {
+                    this.settings.dontAllowOtherPeers = true;
+                    await EncryptedStorage.setItem(MOD_KEY_1, 'true');
+                }
+
                 // set default LSPs if not defined
                 if (this.settings.enableLSP === undefined) {
                     this.settings.enableLSP = true;
