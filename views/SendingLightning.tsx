@@ -99,7 +99,10 @@ export default class SendingLightning extends React.Component<
     }
 
     private inTransit(transactionStore: TransactionsStore): boolean {
-        return transactionStore.status === 'IN_FLIGHT';
+        return (
+            transactionStore.status === 'IN_FLIGHT' ||
+            transactionStore.status === 1
+        );
     }
 
     render() {
