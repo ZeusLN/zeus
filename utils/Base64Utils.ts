@@ -1,58 +1,11 @@
-const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-
 class Base64Utils {
     encodeStringToBase64 = (input = '') =>
         Buffer.from(input).toString('base64');
+
     decodeBase64ToString = (input = '') =>
         Buffer.from(input, 'base64').toString('utf8');
-    btoa = (input = '') => {
-        const str = input;
-        let output = '';
 
-        for (
-            let block = 0, charCode, i = 0, map = chars;
-            str.charAt(i | 0) || ((map = '='), i % 1);
-            output += map.charAt(63 & (block >> (8 - (i % 1) * 8)))
-        ) {
-            charCode = str.charCodeAt((i += 3 / 4));
-
-            if (charCode > 0xff) {
-                throw new Error(
-                    "'btoa' failed: The string to be encoded contains characters outside of the Latin1 range."
-                );
-            }
-
-            block = (block << 8) | charCode;
-        }
-
-        return output;
-    };
-
-    hexStringToByte = (str = '') => {
-        if (!str) {
-            return new Uint8Array();
-        }
-
-        const a = [];
-        for (let i = 0, len = str.length; i < len; i += 2) {
-            a.push(parseInt(str.substring(i, i + 2), 16));
-        }
-
-        return new Uint8Array(a);
-    };
-
-    byteToBase64 = (buffer: Uint8Array) => {
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return this.btoa(binary);
-    };
-
-    hexToBase64 = (str = '') => this.byteToBase64(this.hexStringToByte(str));
+    hexToBase64 = (str = '') => Buffer.from(str, 'hex').toString('base64');
 
     stringToUint8Array = (str: string) =>
         Uint8Array.from(str, (x) => x.charCodeAt(0));
@@ -71,15 +24,8 @@ class Base64Utils {
     utf8ToHexString = (hexString: string) =>
         Buffer.from(hexString, 'utf8').toString('hex');
 
-    base64ToHex = (base64String: string) => {
-        const raw = this.decodeBase64ToString(base64String);
-        let result = '';
-        for (let i = 0; i < raw.length; i++) {
-            const hex = raw.charCodeAt(i).toString(16);
-            result += hex.length === 2 ? hex : '0' + hex;
-        }
-        return result;
-    };
+    base64ToHex = (base64String: string) =>
+        Buffer.from(base64String, 'base64').toString('hex');
 
     // from https://coolaj86.com/articles/unicode-string-to-a-utf-8-typed-array-buffer-in-javascript/
     unicodeStringToUint8Array = (s: string) => {
