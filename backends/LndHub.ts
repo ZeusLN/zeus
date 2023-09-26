@@ -119,12 +119,12 @@ export default class LndHub extends LND {
     supportsOnchainSends = () => false;
     supportsOnchainReceiving = () =>
         !(
-            stores.settingsStore.lndhubUrl.includes('lnbank/api/lndhub') ||
-            stores.settingsStore.lndhubUrl.includes('lntxbot') ||
+            stores?.settingsStore?.lndhubUrl?.includes('lnbank/api/lndhub') ||
+            stores?.settingsStore?.lndhubUrl?.includes('lntxbot') ||
             // Alby
-            stores.settingsStore.lndhubUrl.includes('ln.getalby.com') ||
+            stores?.settingsStore?.lndhubUrl?.includes('ln.getalby.com') ||
             // LNBits
-            stores.settingsStore.lndhubUrl.includes('/lndhub/ext/')
+            stores?.settingsStore?.lndhubUrl?.includes('/lndhub/ext/')
         );
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
