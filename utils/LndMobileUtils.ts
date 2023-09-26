@@ -74,12 +74,12 @@ const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
             ? 'btcd-testnet.lightning.computer'
             : 'btcd-mainnet.lightning.computer'
     }
-    neutrino.${peerMode}=${isTestnet ? 'testnet.lnolymp.us' : 'node.lnolymp.us'}
-    neutrino.${peerMode}=${
-        isTestnet ? 'testnet.blixtwallet.com' : 'node.blixtwallet.com'
-    }
+    ${!isTestnet ? `neutrino.${peerMode}=btcd1.lnolymp.us` : ''}
+    ${!isTestnet ? `neutrino.${peerMode}=btcd2.lnolymp.us` : ''}
+    ${!isTestnet ? `neutrino.${peerMode}=node.eldamar.icu` : ''}
     ${!isTestnet ? `neutrino.${peerMode}=noad.sathoarder.com` : ''}
-    ${!isTestnet ? `neutrino.${peerMode}=btcd.lnolymp.us` : ''}`;
+    ${isTestnet ? `neutrino.${peerMode}=testnet.lnolymp.us` : ''}
+    ${isTestnet ? `neutrino.${peerMode}=testnet.blixtwallet.com` : ''}`;
 
     const config = `[Application Options]
     debuglevel=info
