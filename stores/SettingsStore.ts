@@ -706,7 +706,7 @@ export default class SettingsStore {
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: false,
-        dontAllowOtherPeers: false,
+        dontAllowOtherPeers: true,
         neutrinoPeers: [],
         zeroConfPeers: [],
         waitForGraphSync: false,
