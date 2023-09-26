@@ -44,16 +44,25 @@ export default class SyncStore {
             this.initialKnownBlockHeight = nodeInfo?.block_height ?? 0;
 
         if (this.currentBlockHeight !== nodeInfo?.block_height) {
-            this.currentBlockHeight = nodeInfo?.block_height;
+            this.currentBlockHeight = nodeInfo?.block_height || 0;
+
+            // set best block height to current block height if it's higher
+            if (
+                nodeInfo?.block_height &&
+                this.currentBlockHeight > nodeInfo.block_height
+            ) {
+                this.bestBlockHeight = this.currentBlockHeight;
+            }
+
             this.currentProgress =
-                (nodeInfo?.block_height ?? 0) - (this.bestBlockHeight ?? 0);
+                (this.currentBlockHeight ?? 0) - (this.bestBlockHeight ?? 0);
             this.numBlocksUntilSynced =
                 (this.bestBlockHeight ?? 0) - this.currentBlockHeight;
         }
 
-        // PEGASUS TODO get new best block height when we hit 0 or lower
-        if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced <= 0)
+        if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced <= 0) {
             this.isSyncing = false;
+        }
 
         return;
     };
