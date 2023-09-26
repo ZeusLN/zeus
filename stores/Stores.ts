@@ -50,7 +50,7 @@ class Stores {
             this.channelsStore,
             this.settingsStore
         );
-        this.lspStore = new LSPStore(this.settingsStore);
+        this.lspStore = new LSPStore(this.settingsStore, this.channelsStore);
         this.channelBackupStore = new ChannelBackupStore(
             this.nodeInfoStore,
             this.settingsStore

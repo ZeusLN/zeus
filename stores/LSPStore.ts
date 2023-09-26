@@ -2,6 +2,7 @@ import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import SettingsStore from './SettingsStore';
+import ChannelsStore from './ChannelsStore';
 import stores from './Stores';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
@@ -20,9 +21,11 @@ export default class LSPStore {
     @observable public channelAcceptor: any;
 
     settingsStore: SettingsStore;
+    channelsStore: ChannelsStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, channelsStore: ChannelsStore) {
         this.settingsStore = settingsStore;
+        this.channelsStore = channelsStore;
     }
 
     @action
@@ -52,12 +55,28 @@ export default class LSPStore {
                     'Content-Type': 'application/json'
                 }
             )
-                .then((response: any) => {
+                .then(async (response: any) => {
                     const status = response.info().status;
                     const data = response.json();
                     if (status == 200) {
                         this.info = data;
                         resolve(this.info);
+
+                        const method =
+                            this.info.connection_methods &&
+                            this.info.connection_methods[0];
+
+                        try {
+                            await this.channelsStore.connectPeer(
+                                {
+                                    host: `${method.address}:${method.port}`,
+                                    node_pubkey_string: this.info.pubkey,
+                                    local_funding_amount: ''
+                                },
+                                false,
+                                true
+                            );
+                        } catch (e) {}
                     } else {
                         this.error = true;
                         this.error_msg = data.message;
