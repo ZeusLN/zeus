@@ -260,11 +260,24 @@ export default class InvoicesStore {
 
                 if (!unified) this.creatingInvoice = false;
 
+                let jit_bolt11: string = '';
+                if (
+                    BackendUtils.supportsLSPs() &&
+                    this.settingsStore.settings?.enableLSP &&
+                    value !== '0'
+                ) {
+                    await this.lspStore
+                        .getZeroConfInvoice(invoice.getPaymentRequest)
+                        .then((response: any) => {
+                            jit_bolt11 = response;
+                        });
+                }
+
                 if (lnurl) {
                     const u = url.parse(lnurl.callback);
                     const qs = querystring.parse(u.query);
                     qs.k1 = lnurl.k1;
-                    qs.pr = invoice.getPaymentRequest;
+                    qs.pr = jit_bolt11 || invoice.getPaymentRequest;
                     u.search = querystring.stringify(qs);
                     u.query = querystring.stringify(qs);
 
@@ -301,25 +314,11 @@ export default class InvoicesStore {
                         });
                 }
 
-                if (
-                    BackendUtils.supportsLSPs() &&
-                    this.settingsStore.settings?.enableLSP &&
-                    value !== '0'
-                ) {
-                    return await this.lspStore
-                        .getZeroConfInvoice(invoice.getPaymentRequest)
-                        .then((response: any) => {
-                            const jit_bolt11: string = response;
-                            return {
-                                rHash: invoice.getFormattedRhash,
-                                paymentRequest: jit_bolt11
-                            };
-                        });
-                }
-
                 return {
                     rHash: invoice.getFormattedRhash,
-                    paymentRequest: invoice.getPaymentRequest
+                    paymentRequest: jit_bolt11
+                        ? jit_bolt11
+                        : invoice.getPaymentRequest
                 };
             })
             .catch((error: any) => {
