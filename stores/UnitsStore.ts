@@ -29,23 +29,22 @@ export default class UnitsStore {
     }
 
     @action
-    public changeUnits = () => {
+    public changeUnits = () => (this.units = this.getNextUnit());
+
+    public getNextUnit = () => {
         const { settings } = this.settingsStore;
         const { fiatEnabled } = settings;
 
         if (!fiatEnabled) {
-            this.units = this.units == 'sats' ? 'BTC' : 'sats';
+            return this.units === 'sats' ? 'BTC' : 'sats';
         } else {
             switch (this.units) {
                 case 'sats':
-                    this.units = 'BTC';
-                    break;
+                    return 'BTC';
                 case 'BTC':
-                    this.units = 'fiat';
-                    break;
-                case 'fiat':
-                    this.units = 'sats';
-                    break;
+                    return 'fiat';
+                default:
+                    return 'sats';
             }
         }
     };

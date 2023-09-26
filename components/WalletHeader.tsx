@@ -22,7 +22,7 @@ import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
-import { isClipboardValue } from '../utils/handleAnything';
+import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 import { localeString } from '../utils/LocaleUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -106,7 +106,11 @@ const ClipboardBadge = ({
     clipboard: string;
 }) => (
     <TouchableOpacity
-        onPress={() => navigation.navigate('Send', { destination: clipboard })}
+        onPress={async () => {
+            const response = await handleAnything(clipboard);
+            const [route, props] = response;
+            navigation.navigate(route, props);
+        }}
     >
         <ClipboardSVG fill={themeColor('text')} width="30" height="30" />
     </TouchableOpacity>

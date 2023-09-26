@@ -1,6 +1,7 @@
 class Base64Utils {
     encodeStringToBase64 = (input = '') =>
         Buffer.from(input).toString('base64');
+
     decodeBase64ToString = (input = '') =>
         Buffer.from(input, 'base64').toString('utf8');
 
