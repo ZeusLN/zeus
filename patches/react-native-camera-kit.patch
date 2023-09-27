@@ -1,0 +1,28 @@
+From 30feb1c4bc1ee7c973d51eaa50cc858c6fdef967 Mon Sep 17 00:00:00 2001
+From: Corey Phillips <corey.lyle.phillips@proton.me>
+Date: Thu, 29 Jun 2023 11:06:40 -0400
+Subject: [PATCH] Fix: Correct onScale method signature in CKCamera.kt
+
+The 'onScale' method was attempting to override the interface method with a nullable parameter, causing a mismatch with the parent interface. This change corrects the method signature by changing the nullable parameter to non-nullable, aligning it with the interface and ensuring proper method overriding.
+---
+ android/src/main/java/com/rncamerakit/CKCamera.kt | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/node_modules/react-native-camera-kit/android/src/main/java/com/rncamerakit/CKCamera.kt b/node_modules/react-native-camera-kit/android/src/main/java/com/rncamerakit/CKCamera.kt
+index 294df4f1f..2023e0bad 100644
+--- a/node_modules/react-native-camera-kit/android/src/main/java/com/rncamerakit/CKCamera.kt
++++ b/node_modules/react-native-camera-kit/android/src/main/java/com/rncamerakit/CKCamera.kt
+@@ -180,11 +180,11 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
+             orientationListener!!.enable()
+ 
+             val scaleDetector =  ScaleGestureDetector(context, object: ScaleGestureDetector.SimpleOnScaleGestureListener() {
+-                override fun onScale(detector: ScaleGestureDetector?): Boolean {
++                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                     if (zoomMode == "off") return true
+                     val cameraControl = camera?.cameraControl ?: return true
+                     val zoom = camera?.cameraInfo?.zoomState?.value?.zoomRatio ?: return true
+-                    val scaleFactor = detector?.scaleFactor ?: return true
++                    val scaleFactor = detector.scaleFactor
+                     val scale = zoom * scaleFactor
+                     cameraControl.setZoomRatio(scale)
+                     return true
