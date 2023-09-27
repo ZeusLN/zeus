@@ -556,8 +556,7 @@ export default class Receive extends React.Component<
 
                             if (
                                 invoice.settled &&
-                                Base64Utils.bytesToHexString(invoice.r_hash) ===
-                                    rHash
+                                Base64Utils.bytesToHex(invoice.r_hash) === rHash
                             ) {
                                 setWatchedInvoicePaid(
                                     Number(invoice.amt_paid_sat)

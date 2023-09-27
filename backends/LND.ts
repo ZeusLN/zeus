@@ -391,11 +391,11 @@ export default class LND {
         this.postRequest('/v2/wallet/accounts/import', data);
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
-            msg: Base64Utils.encodeStringToBase64(message)
+            msg: Base64Utils.utf8ToBase64(message)
         });
     verifyMessage = (data: any) =>
         this.postRequest('/v1/verifymessage', {
-            msg: Base64Utils.encodeStringToBase64(data.msg),
+            msg: Base64Utils.utf8ToBase64(data.msg),
             signature: data.signature
         });
     lnurlAuth = async (r_hash: string) => {

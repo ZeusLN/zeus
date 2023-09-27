@@ -138,7 +138,7 @@ export default class LSPStore {
 
     handleChannelAcceptorEvent = async (channelAcceptRequest: any) => {
         try {
-            const requestPubkey = Base64Utils.bytesToHexString(
+            const requestPubkey = Base64Utils.bytesToHex(
                 channelAcceptRequest.node_pubkey
             );
 

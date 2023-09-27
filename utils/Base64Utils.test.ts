@@ -1,40 +1,40 @@
 import Base64Utils from './Base64Utils';
 
 describe('Base64Utils', () => {
-    describe('encodeStringToBase64', () => {
-        it('Converts string to Base64', () => {
-            expect(Base64Utils.encodeStringToBase64('test1234')).toEqual(
+    describe('utf8ToBase64', () => {
+        it('Converts utf8 string to Base64', () => {
+            expect(Base64Utils.utf8ToBase64('test1234')).toEqual(
                 'dGVzdDEyMzQ='
             );
-            expect(Base64Utils.encodeStringToBase64('✓')).toEqual('4pyT');
-            expect(Base64Utils.encodeStringToBase64('™“')).toEqual('4oSi4oCc');
+            expect(Base64Utils.utf8ToBase64('✓')).toEqual('4pyT');
+            expect(Base64Utils.utf8ToBase64('™“')).toEqual('4oSi4oCc');
         });
     });
 
-    describe('decodeBase64ToString', () => {
+    describe('base64ToUtf8', () => {
         it('Converts Base64 to utf8 string', () => {
-            expect(Base64Utils.decodeBase64ToString('dGVzdDEyMzQ=')).toEqual(
+            expect(Base64Utils.base64ToUtf8('dGVzdDEyMzQ=')).toEqual(
                 'test1234'
             );
-            expect(Base64Utils.decodeBase64ToString('4pyT')).toEqual('✓');
-            expect(Base64Utils.decodeBase64ToString('4oSi4oCc')).toEqual('™“');
+            expect(Base64Utils.base64ToUtf8('4pyT')).toEqual('✓');
+            expect(Base64Utils.base64ToUtf8('4oSi4oCc')).toEqual('™“');
         });
     });
 
-    describe('utf8ToHexString', () => {
+    describe('utf8ToHex', () => {
         it('Converts utf8 string to hexadecimal string', () => {
             expect(
-                Base64Utils.utf8ToHexString('Test string with punctuation.')
+                Base64Utils.utf8ToHex('Test string with punctuation.')
             ).toEqual(
                 '5465737420737472696e6720776974682070756e6374756174696f6e2e'
             );
-            expect(Base64Utils.utf8ToHexString('1234567890')).toEqual(
+            expect(Base64Utils.utf8ToHex('1234567890')).toEqual(
                 '31323334353637383930'
             );
-            expect(Base64Utils.utf8ToHexString('!@#$%^&*')).toEqual(
+            expect(Base64Utils.utf8ToHex('!@#$%^&*')).toEqual(
                 '21402324255e262a'
             );
-            expect(Base64Utils.utf8ToHexString('áéíÓÚ àèìÒÙ âêîÔÛ')).toEqual(
+            expect(Base64Utils.utf8ToHex('áéíÓÚ àèìÒÙ âêîÔÛ')).toEqual(
                 'c3a1c3a9c3adc393c39a20c3a0c3a8c3acc392c39920c3a2c3aac3aec394c39b'
             );
         });
@@ -103,7 +103,7 @@ describe('Base64Utils', () => {
         });
     });
 
-    describe('toByteArray', () => {
+    describe('base64ToBytes', () => {
         it('converts base64 to byte array', () => {
             expect(Base64Utils.base64ToBytes('RW5kIHRoZSBGZWQ=')).toEqual(
                 Uint8Array.from([
@@ -116,7 +116,7 @@ describe('Base64Utils', () => {
         });
     });
 
-    describe('fromByteArray', () => {
+    describe('bytesToBase64', () => {
         it('converts byte array to base64', () => {
             expect(
                 Base64Utils.bytesToBase64(
@@ -128,6 +128,21 @@ describe('Base64Utils', () => {
             expect(
                 Base64Utils.bytesToBase64(Uint8Array.from([226, 156, 147]))
             ).toBe('4pyT');
+        });
+    });
+
+    describe('utf8ToBytes', () => {
+        it('converts unicode string to bytes', () => {
+            const input = 'I ½ ♥ 💩 ⚡️';
+
+            const bytes = Base64Utils.utf8ToBytes(input);
+
+            expect(bytes).toEqual(
+                Uint8Array.from([
+                    73, 32, 194, 189, 32, 226, 153, 165, 32, 240, 159, 146, 169,
+                    32, 226, 154, 161, 239, 184, 143
+                ])
+            );
         });
     });
 });
