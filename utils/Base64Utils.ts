@@ -1,53 +1,38 @@
 class Base64Utils {
-    encodeStringToBase64 = (input = '') =>
-        Buffer.from(input).toString('base64');
-
-    decodeBase64ToString = (input = '') =>
+    utf8ToBase64 = (input = '') => Buffer.from(input).toString('base64');
+    base64ToUtf8 = (input = '') =>
         Buffer.from(input, 'base64').toString('utf8');
 
-    base64ToBytes = (base64String: string) =>
-        Uint8Array.from(Buffer.from(base64String, 'base64'));
-    bytesToBase64 = (bytes: Uint8Array) =>
-        Buffer.from(bytes).toString('base64');
+    base64ToBytes = (input: string) =>
+        Uint8Array.from(Buffer.from(input, 'base64'));
+    bytesToBase64 = (input: Uint8Array) =>
+        Buffer.from(input).toString('base64');
 
-    hexToBase64 = (hexString = '') =>
-        Buffer.from(hexString, 'hex').toString('base64');
+    hexToBase64 = (input = '') => Buffer.from(input, 'hex').toString('base64');
+    base64ToHex = (input: string) =>
+        Buffer.from(input, 'base64').toString('hex');
 
-    stringToUint8Array = (str: string) =>
-        Uint8Array.from(str, (x) => x.charCodeAt(0));
+    // TODO: rename to better describe the input
+    stringToUint8Array = (input: string) =>
+        Uint8Array.from(input, (x) => x.charCodeAt(0));
 
-    hexToUint8Array = (hexString: string) =>
+    hexToBytes = (input: string) =>
         new Uint8Array(
-            hexString.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+            input.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
         );
-
-    bytesToHexString = (bytes: any) =>
-        bytes.reduce(
+    bytesToHex = (input: any) =>
+        input.reduce(
             (memo: any, i: number) => memo + ('0' + i.toString(16)).slice(-2),
             ''
         );
 
-    utf8ToHexString = (hexString: string) =>
-        Buffer.from(hexString, 'utf8').toString('hex');
-
-    base64ToHex = (base64String: string) =>
-        Buffer.from(base64String, 'base64').toString('hex');
-
-    // from https://coolaj86.com/articles/unicode-string-to-a-utf-8-typed-array-buffer-in-javascript/
-    unicodeStringToUint8Array = (s: string) => {
-        const escstr = encodeURIComponent(s);
-        const binstr = escstr.replace(/%([0-9A-F]{2})/g, function (_, p1) {
-            return String.fromCharCode(('0x' + p1) as any);
-        });
-        const ua = new Uint8Array(binstr.length);
-        Array.prototype.forEach.call(binstr, function (ch, i) {
-            ua[i] = ch.charCodeAt(0);
-        });
-        return ua;
-    };
+    utf8ToHex = (input: string) => Buffer.from(input, 'utf8').toString('hex');
 
     base64UrlToHex = (input: string) =>
         Buffer.from(this.base64UrlToBase64(input), 'base64').toString('hex');
+
+    utf8ToBytes = (input: string) =>
+        Uint8Array.from(Buffer.from(input, 'utf-8'));
 
     base64UrlToBase64 = (input: string) => {
         // Replace non-url compatible chars with base64 standard chars
