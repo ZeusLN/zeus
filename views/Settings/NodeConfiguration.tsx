@@ -1492,6 +1492,8 @@ export default class NodeConfiguration extends React.Component<
                                                             true
                                                     });
                                                 }
+
+                                                navigation.navigate('Wallet');
                                             }}
                                             tertiary
                                         />
@@ -1550,6 +1552,8 @@ export default class NodeConfiguration extends React.Component<
                                                             true
                                                     });
                                                 }
+
+                                                navigation.navigate('Wallet');
                                             }}
                                             tertiary
                                         />
