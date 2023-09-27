@@ -6,6 +6,7 @@ apply plugin: "com.google.protobuf"
 apply plugin: "kotlin-android"
 apply plugin: "kotlin-android-extensions"
 
+import com.android.build.OutputFile
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -132,6 +133,20 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             //signingConfig signingConfigs.release
+        }
+    }
+    // applicationVariants are e.g. debug, release
+    applicationVariants.configureEach { variant ->
+        variant.outputs.each { output ->
+            // For each separate APK per architecture, set a unique version code as described here:
+            // https://developer.android.com/studio/build/configure-apk-splits.html
+            // Example: versionCode 1 will generate 1001 for armeabi-v7a, 1002 for x86, etc.
+            def versionCodes = ["armeabi-v7a": 1, "x86": 2, "arm64-v8a": 3, "x86_64": 4]
+            def abi = output.getFilter(OutputFile.ABI)
+            if (abi != null) {  // null for the universal-debug, universal-release variants
+                output.versionCodeOverride =
+                        defaultConfig.versionCode * 1000 + versionCodes.get(abi)
+            }
         }
     }
 
