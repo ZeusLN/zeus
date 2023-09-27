@@ -133,7 +133,7 @@ export default class ActivityStore {
     };
 
     getSortedActivity = () => {
-        const activity: any = [];
+        const activity: any[] = [];
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
         const invoices = this.invoicesStore.invoices;
@@ -169,18 +169,18 @@ export default class ActivityStore {
     };
 
     @action
-    public updateInvoices = async () => {
+    public updateInvoices = async (locale: string | undefined) => {
         await this.invoicesStore.getInvoices();
         this.activity = this.getSortedActivity();
-        await this.setFilters(this.filters);
+        await this.setFilters(this.filters, locale);
     };
 
     @action
-    public updateTransactions = async () => {
+    public updateTransactions = async (locale: string | undefined) => {
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         this.activity = this.getSortedActivity();
-        await this.setFilters(this.filters);
+        await this.setFilters(this.filters, locale);
     };
 
     @action
@@ -207,20 +207,28 @@ export default class ActivityStore {
     }
 
     @action
-    public setFilters = async (filters: Filter) => {
+    public setFilters = async (filters: Filter, locale: string | undefined) => {
         this.loading = true;
         this.filters = filters;
         this.filteredActivity = ActivityFilterUtils.filterActivities(
             this.activity,
             filters
         );
+        this.filteredActivity.forEach((activity) => {
+            if (activity instanceof Invoice) {
+                activity.determineFormattedRemainingTimeUntilExpiry(locale);
+            }
+        });
         await EncryptedStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
         this.loading = false;
     };
 
     @action
-    public getActivityAndFilter = async (filters: Filter = this.filters) => {
+    public getActivityAndFilter = async (
+        locale: string | undefined,
+        filters: Filter = this.filters
+    ) => {
         await this.getActivity();
-        await this.setFilters(filters);
+        await this.setFilters(filters, locale);
     };
 }
