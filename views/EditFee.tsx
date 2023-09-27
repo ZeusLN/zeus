@@ -147,8 +147,7 @@ export default class EditFee extends React.Component<
                                                 !displayOnly &&
                                                 selectedFee === 'fastestFee'
                                                     ? themeColor('highlight')
-                                                    : '#A7A9AC',
-                                            borderWidth: 3
+                                                    : '#A7A9AC'
                                         }}
                                     >
                                         <Text
@@ -188,8 +187,7 @@ export default class EditFee extends React.Component<
                                                 !displayOnly &&
                                                 selectedFee === 'halfHourFee'
                                                     ? themeColor('highlight')
-                                                    : '#A7A9AC',
-                                            borderWidth: 3
+                                                    : '#A7A9AC'
                                         }}
                                     >
                                         <Text
@@ -230,8 +228,7 @@ export default class EditFee extends React.Component<
                                                 !displayOnly &&
                                                 selectedFee === 'hourFee'
                                                     ? themeColor('highlight')
-                                                    : '#A7A9AC',
-                                            borderWidth: 3
+                                                    : '#A7A9AC'
                                         }}
                                     >
                                         <Text
@@ -271,8 +268,7 @@ export default class EditFee extends React.Component<
                                                 !displayOnly &&
                                                 selectedFee === 'minimumFee'
                                                     ? themeColor('highlight')
-                                                    : '#A7A9AC',
-                                            borderWidth: 3
+                                                    : '#A7A9AC'
                                         }}
                                     >
                                         <Text
@@ -298,12 +294,7 @@ export default class EditFee extends React.Component<
 
                                 {!displayOnly && (
                                     <>
-                                        <Text
-                                            style={{
-                                                ...styles.custom,
-                                                color: themeColor('text')
-                                            }}
-                                        >
+                                        <Text style={styles.custom}>
                                             {localeString(
                                                 'views.EditFee.custom'
                                             )}
@@ -320,7 +311,6 @@ export default class EditFee extends React.Component<
                                                                   'highlight'
                                                               )
                                                             : '#A7A9AC',
-                                                    borderWidth: 3,
                                                     color: themeColor('text'),
                                                     fontSize: 18,
                                                     height: 52
@@ -333,6 +323,11 @@ export default class EditFee extends React.Component<
                                                     this.setState({
                                                         customFee: text,
                                                         fee: text,
+                                                        selectedFee: 'custom'
+                                                    })
+                                                }
+                                                onFocus={() =>
+                                                    this.setState({
                                                         selectedFee: 'custom'
                                                     })
                                                 }
@@ -386,23 +381,25 @@ export default class EditFee extends React.Component<
 const styles = StyleSheet.create({
     feeBox: {
         width: 350,
+        borderWidth: 3,
         borderRadius: 4,
         marginTop: 10,
-        marginBottom: 10
+        marginBottom: 10,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingLeft: 15,
+        paddingRight: 15,
+        paddingTop: 10,
+        paddingBottom: 10
     },
     feeTitle: {
-        fontSize: 18,
-        left: 10,
-        top: 10
+        fontSize: 18
     },
     feeText: {
-        top: -12,
-        fontSize: 18,
-        textAlign: 'right',
-        paddingRight: 15
+        fontSize: 18
     },
     custom: {
-        color: '#A7A9AC',
+        color: themeColor('text'),
         fontSize: 18,
         top: 48,
         left: 15
