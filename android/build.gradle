@@ -2,22 +2,33 @@
 
 buildscript {
     ext {
+        buildToolsVersion = "33.0.0"
         minSdkVersion = 28
         compileSdkVersion = 33
         targetSdkVersion = 33
-        ndkVersion = "22.1.7171670"
-        kotlinVersion = "1.6.21"
-        // hack for react-native-camera-kit
-        kotlin_version = kotlinVersion
+        ndkVersion = "23.1.7779620"
+    }
+    subprojects { subproject ->
+        afterEvaluate{
+            if((subproject.plugins.hasPlugin('android') || subproject.plugins.hasPlugin('android-library'))) {
+                android {
+                    compileSdkVersion rootProject.ext.compileSdkVersion
+                    buildToolsVersion rootProject.ext.buildToolsVersion
+                }
+            }
+        }
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:7.2.2")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-        classpath "com.google.protobuf:protobuf-gradle-plugin:0.8.12"
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+
+        // Needed for react-native-camera-kit
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
+        classpath("com.google.protobuf:protobuf-gradle-plugin:0.9.3")
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -25,31 +36,10 @@ buildscript {
 }
 
 allprojects {
-    def REACT_NATIVE_VERSION = new File(['node', '--print',"JSON.parse(require('fs').readFileSync(require.resolve('react-native/package.json'), 'utf-8')).version"].execute(null, rootDir).text.trim())
-
-    configurations.configureEach {
-        resolutionStrategy {
-            force "com.facebook.react:react-native:" + REACT_NATIVE_VERSION
-        }
-    }
-
     repositories {
-        mavenCentral()
-        mavenLocal()
-        maven {
-            // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
-            url("$rootDir/../node_modules/react-native/android")
-        }
-        maven {
-            // Android JSC is installed from npm
-            url("$rootDir/../node_modules/jsc-android/dist")
-        }
-        maven {
-            url "https://raw.githubusercontent.com/guardianproject/gpmaven/master"
-        }
-        google()
-        maven {
-            url "https://www.jitpack.io"
+        jcenter()
+        flatDir {
+            dirs("lndmobile")
         }
     }
 }
