@@ -6,6 +6,9 @@
     "preset": "react-native",
     "watchPathIgnorePatterns": [
       "<rootDir>/node_modules"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes)/)"
     ]
   },
   "scripts": {

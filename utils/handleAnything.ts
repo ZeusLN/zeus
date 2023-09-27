@@ -1,14 +1,14 @@
 import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { doTorRequest, RequestMethod } from './../utils/TorUtils';
 
 import stores from '../stores/Stores';
-import AddressUtils from './../utils/AddressUtils';
-import ConnectionFormatUtils from './../utils/ConnectionFormatUtils';
-import NodeUriUtils from './../utils/NodeUriUtils';
-import { localeString } from './../utils/LocaleUtils';
-import BackendUtils from './../utils/BackendUtils';
+import { doTorRequest, RequestMethod } from './TorUtils';
+import AddressUtils from './AddressUtils';
+import ConnectionFormatUtils from './ConnectionFormatUtils';
+import NodeUriUtils from './NodeUriUtils';
+import { localeString } from './LocaleUtils';
+import BackendUtils from './BackendUtils';
 
 const { nodeInfoStore, invoicesStore, settingsStore } = stores;
 
