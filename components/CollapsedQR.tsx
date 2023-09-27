@@ -4,11 +4,13 @@ import QRCode from 'react-native-qrcode-svg';
 
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
 
-import Button from './../components/Button';
+import Amount from './Amount';
+import Button from './Button';
 import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
+import Conversion from './Conversion';
 
 const logo = require('../assets/images/Launcher.png');
 
@@ -51,6 +53,7 @@ interface CollapsedQRProps {
     expanded?: boolean;
     textBottom?: boolean;
     truncateLongValue?: boolean;
+    satAmount?: string;
 }
 
 interface CollapsedQRState {
@@ -117,13 +120,27 @@ export default class CollapsedQR extends React.Component<
             hideText,
             expanded,
             textBottom,
-            truncateLongValue
+            truncateLongValue,
+            satAmount
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
 
         return (
             <React.Fragment>
+                {satAmount && (
+                    <View
+                        style={{
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <Amount sats={satAmount} toggleable></Amount>
+                        <View>
+                            <Conversion sats={satAmount} sensitive />
+                        </View>
+                    </View>
+                )}
                 {!hideText && !textBottom && (
                     <ValueText
                         value={value}
