@@ -66,6 +66,7 @@ interface InvoicesSettings {
     expiry?: string;
     routeHints?: boolean;
     ampInvoice?: boolean;
+    showCustomPreimageField?: boolean;
 }
 
 export interface Settings {
@@ -691,7 +692,8 @@ export default class SettingsStore {
             memo: '',
             expiry: '3600',
             routeHints: false,
-            ampInvoice: false
+            ampInvoice: false,
+            showCustomPreimageField: false
         },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
