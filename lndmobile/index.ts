@@ -480,7 +480,8 @@ export const addInvoice = async (
     memo: string,
     expiry: number = 3600,
     is_amp?: boolean,
-    is_private?: boolean
+    is_private?: boolean,
+    preimage?: string
 ): Promise<lnrpc.AddInvoiceResponse> => {
     const response = await sendCommand<
         lnrpc.IInvoice,
@@ -496,7 +497,10 @@ export const addInvoice = async (
             expiry: Long.fromValue(expiry),
             private: is_private,
             min_hop_hints: is_private ? 6 : 0,
-            is_amp
+            is_amp,
+            r_preimage: preimage
+                ? Base64Utils.hexToUint8Array(preimage)
+                : undefined
         }
     });
     return response;
