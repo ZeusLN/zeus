@@ -56,7 +56,8 @@ export default class EmbeddedLND extends LND {
             data.memo,
             data.expiry,
             data.is_amp,
-            data.private
+            data.private,
+            data.preimage
         );
     getPayments = async () => await listPayments();
     getNewAddress = async (data: any) => await newAddress(data.type);
@@ -188,6 +189,7 @@ export default class EmbeddedLND extends LND {
     supportsBumpFee = () => true;
     supportsLSPs = () => true;
     supportsNetworkInfo = () => true;
-    supportsSimpleTaprootChannels = () => this.supports('v0.16.99');
+    supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
+    supportsCustomPreimages = () => true;
     isLNDBased = () => true;
 }

@@ -246,7 +246,10 @@ export default class LND {
             value_msat: Number(data.value) * 1000,
             expiry: data.expiry,
             is_amp: data.is_amp,
-            private: data.private
+            private: data.private,
+            r_preimage: data.preimage
+                ? Base64Utils.hexToBase64(data.preimage)
+                : undefined
         });
     getPayments = () => this.getRequest('/v1/payments');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
@@ -431,5 +434,6 @@ export default class LND {
     supportsLSPs = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
+    supportsCustomPreimages = () => true;
     isLNDBased = () => true;
 }

@@ -88,6 +88,7 @@ interface ReceiveState {
     value: string;
     satAmount: string | number;
     expiry: string;
+    customPreimage: string;
     ampInvoice: boolean;
     routeHints: boolean;
     // POS
@@ -127,6 +128,7 @@ export default class Receive extends React.Component<
         value: '',
         satAmount: '',
         expiry: '3600',
+        customPreimage: '',
         ampInvoice: false,
         routeHints: false,
         // POS
@@ -866,6 +868,7 @@ export default class Receive extends React.Component<
             value,
             satAmount,
             expiry,
+            customPreimage,
             ampInvoice,
             routeHints,
             needInbound,
@@ -892,6 +895,9 @@ export default class Receive extends React.Component<
         const address = onChainAddress;
 
         const error_msg = LSPStore.error_msg || InvoicesStore.error_msg;
+
+        const showCustomPreimageField =
+            settings?.invoices?.showCustomPreimageField;
 
         const lnOnly =
             settings &&
@@ -1635,6 +1641,34 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
+                                    {BackendUtils.supportsCustomPreimages() &&
+                                        showCustomPreimageField && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.secondaryText,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Receive.customPreimage'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    value={customPreimage}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            customPreimage: text
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )}
+
                                     {BackendUtils.isLNDBased() &&
                                         !(
                                             BackendUtils.supportsLSPs() &&
@@ -1742,6 +1776,10 @@ export default class Receive extends React.Component<
                                                     routeHints,
                                                     BackendUtils.supportsAddressTypeSelection()
                                                         ? addressType
+                                                        : undefined,
+                                                    BackendUtils.supportsCustomPreimages() &&
+                                                        showCustomPreimageField
+                                                        ? customPreimage
                                                         : undefined
                                                 ).then(
                                                     ({
