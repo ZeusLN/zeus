@@ -3,6 +3,9 @@
  * @lint-ignore-every XPLATJSCOPYRIGHT1
  */
 
+// polyfills
+import 'react-native-get-random-values';
+
 import {AppRegistry} from 'react-native';
 import 'react-native-gesture-handler';
 import './shim.js'

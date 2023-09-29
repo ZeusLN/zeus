@@ -27,6 +27,7 @@ import SendIcon from '../../assets/images/SVG/Send.svg';
 import KeyIcon from '../../assets/images/SVG/Key.svg';
 import NetworkIcon from '../../assets/images/SVG/Network.svg';
 import CloudIcon from '../../assets/images/SVG/Cloud.svg';
+import MailboxFlagIcon from '../../assets/images/SVG/MailboxFlag.svg';
 
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
@@ -256,6 +257,45 @@ export default class Settings extends React.Component<
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    {BackendUtils.supportsLSPs() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                height: 45,
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginTop: 5,
+                                marginBottom: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('LightningAddress')
+                                }
+                            >
+                                <View style={{ paddingLeft: 5, paddingTop: 3 }}>
+                                    <MailboxFlagIcon
+                                        fill={themeColor('text')}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('general.lightningAddress')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
                     {selectedNode && (
                         <View
                             style={{

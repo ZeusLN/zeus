@@ -108,6 +108,9 @@ export interface Settings {
     lspMainnet: string;
     lspTestnet: string;
     lspAccessKey: string;
+    // Lightning Address
+    automaticallyAccept: boolean;
+    verifyAllPaymentsWithNostr: boolean;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -718,7 +721,10 @@ export default class SettingsStore {
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
         lspTestnet: DEFAULT_LSP_TESTNET,
-        lspAccessKey: ''
+        lspAccessKey: '',
+        // Lightning Address
+        automaticallyAccept: true,
+        verifyAllPaymentsWithNostr: false
     };
     @observable public posStatus: string = 'unselected';
     @observable public loading = false;
