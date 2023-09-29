@@ -4,7 +4,7 @@ ANDROID_FILE=Lndmobile.aar
 IOS_FILE=Lndmobile.xcframework
 
 ANDROID_SHA256='cfe0c8748dad699621762f4672aec7e78f05b5d8884a7a945b7d42dfa9c5a6e3'
-IOS_SHA256='0eb8b898eb16b0d5eed88bc227bc67e2bede3646b7a73ece1b53caf7cdfe3653'
+IOS_SHA256='55fafeaaa0079b60c3affcebda40f9fc7cc90afbe1c8a8c92ca2ecf196125bc7'
 
 FILE_PATH=https://github.com/ZeusLN/lnd/releases/download/$VERSION/
 
