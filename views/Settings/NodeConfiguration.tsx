@@ -1198,7 +1198,10 @@ export default class NodeConfiguration extends React.Component<
                                     value={macaroonHex}
                                     onChangeText={(text: string) =>
                                         this.setState({
-                                            macaroonHex: text.trim(),
+                                            macaroonHex: text.replace(
+                                                /\s+/g,
+                                                ''
+                                            ),
                                             saved: false
                                         })
                                     }
