@@ -571,7 +571,8 @@ export default class NodeConfiguration extends React.Component<
             createAccountError,
             createAccountSuccess,
             createAccount,
-            seedPhrase
+            seedPhrase,
+            updateSettings
         } = SettingsStore;
 
         const supportsTor =
@@ -1458,14 +1459,6 @@ export default class NodeConfiguration extends React.Component<
                                                     randomBase64
                                                 }: any = response;
 
-                                                if (recoveryCipherSeed) {
-                                                    this.props.SettingsStore.updateSettings(
-                                                        {
-                                                            recovery: true
-                                                        }
-                                                    );
-                                                }
-
                                                 if (
                                                     wallet &&
                                                     wallet.admin_macaroon
@@ -1485,6 +1478,12 @@ export default class NodeConfiguration extends React.Component<
                                                     this.saveNodeConfiguration(
                                                         true
                                                     );
+
+                                                    if (recoveryCipherSeed) {
+                                                        await updateSettings({
+                                                            recovery: true
+                                                        });
+                                                    }
                                                 } else {
                                                     this.setState({
                                                         creatingWallet: false,
@@ -1519,11 +1518,13 @@ export default class NodeConfiguration extends React.Component<
                                                         true,
                                                         channelBackupsBase64
                                                     );
+
                                                 const {
                                                     wallet,
                                                     seed,
                                                     randomBase64
                                                 }: any = response;
+
                                                 if (
                                                     wallet &&
                                                     wallet.admin_macaroon
@@ -1543,6 +1544,12 @@ export default class NodeConfiguration extends React.Component<
                                                     this.saveNodeConfiguration(
                                                         true
                                                     );
+
+                                                    if (recoveryCipherSeed) {
+                                                        await updateSettings({
+                                                            recovery: true
+                                                        });
+                                                    }
                                                 } else {
                                                     this.setState({
                                                         creatingWallet: false,
