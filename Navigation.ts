@@ -53,6 +53,9 @@ import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
+import LightningAddress from './views/Settings/LightningAddress';
+import LightningAddressInfo from './views/Settings/LightningAddressInfo';
+import LightningAddressSettings from './views/Settings/LightningAddressSettings';
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
@@ -335,6 +338,15 @@ const AppScenes = {
     },
     LSPSettings: {
         screen: LSP
+    },
+    LightningAddress: {
+        screen: LightningAddress
+    },
+    LightningAddressInfo: {
+        screen: LightningAddressInfo
+    },
+    LightningAddressSettings: {
+        screen: LightningAddressSettings
     },
     Contacts: {
         screen: Contacts

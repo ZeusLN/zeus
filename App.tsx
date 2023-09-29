@@ -33,6 +33,7 @@ export default class App extends React.PureComponent {
                 NotesStore={Stores.notesStore}
                 SyncStore={Stores.syncStore}
                 LSPStore={Stores.lspStore}
+                LightningAddressStore={Stores.lightningAddressStore}
                 ChannelBackupStore={Stores.channelBackupStore}
             >
                 <AppContainer>

@@ -17,6 +17,7 @@ import ModalStore from './ModalStore';
 import NotesStore from './NotesStore';
 import SyncStore from './SyncStore';
 import LSPStore from './LSPStore';
+import LightningAddressStore from './LightningAddressStore';
 import ChannelBackupStore from './ChannelBackupStore';
 
 class Stores {
@@ -39,6 +40,7 @@ class Stores {
     public notesStore: NotesStore;
     public syncStore: SyncStore;
     public lspStore: LSPStore;
+    public lightningAddressStore: LightningAddressStore;
     public channelBackupStore: ChannelBackupStore;
 
     constructor() {
@@ -51,6 +53,10 @@ class Stores {
             this.settingsStore
         );
         this.lspStore = new LSPStore(this.settingsStore, this.channelsStore);
+        this.lightningAddressStore = new LightningAddressStore(
+            this.nodeInfoStore,
+            this.settingsStore
+        );
         this.channelBackupStore = new ChannelBackupStore(
             this.nodeInfoStore,
             this.settingsStore
