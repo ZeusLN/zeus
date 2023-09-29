@@ -1484,6 +1484,10 @@ export default class NodeConfiguration extends React.Component<
                                                             recovery: true
                                                         });
                                                     }
+
+                                                    navigation.navigate(
+                                                        'Wallet'
+                                                    );
                                                 } else {
                                                     this.setState({
                                                         creatingWallet: false,
@@ -1550,6 +1554,10 @@ export default class NodeConfiguration extends React.Component<
                                                             recovery: true
                                                         });
                                                     }
+
+                                                    navigation.navigate(
+                                                        'Wallet'
+                                                    );
                                                 } else {
                                                     this.setState({
                                                         creatingWallet: false,
