@@ -932,7 +932,7 @@ export default class SettingsStore {
                     this.settings.nostr = {
                         relays: DEFAULT_NOSTR_RELAYS,
                         nsec: ''
-                    }
+                    };
                 }
 
                 // TODO PEGASUS

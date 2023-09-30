@@ -28,10 +28,7 @@ interface NostrState {
 
 @inject('SettingsStore')
 @observer
-export default class Nostr extends React.Component<
-    NostrProps,
-    NostrState
-> {
+export default class Nostr extends React.Component<NostrProps, NostrState> {
     state = {
         nsec: '',
         relays: [],
@@ -80,7 +77,11 @@ export default class Nostr extends React.Component<
                                     'views.Settings.EmbeddedNode.Peers.addRelay'
                                 )}
                             </Text>
-                            <KeyValue keyValue={localeString('views.Settings.Nostr.addRelay')} />
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Settings.Nostr.addRelay'
+                                )}
+                            />
                             <Row align="flex-end">
                                 <TextInput
                                     placeholder="wss://relay.damus.io"
@@ -152,8 +153,7 @@ export default class Nostr extends React.Component<
                                                                 item
                                                             );
                                                         this.setState({
-                                                            relays:
-                                                                newNostr
+                                                            relays: newNostr
                                                         });
                                                         updateSettings({
                                                             nostr: {
