@@ -734,6 +734,7 @@
     "views.Settings.AddContact.nostrNpub": "Nostr npub",
     "views.Settings.AddContact.addExtraField": "add extra field",
     "views.Settings.AddContact.saveContact": "Save Contact",
+    "views.Settings.AddContact.deleteContact": "Delete Contact",
     "views.Settings.Contacts.multipleAddresses": "multiple addresses",
     "views.Settings.Contacts.searchBar1": "Nostr npub, NIP-05, LN address, Onchain address",
     "views.Settings.Contacts.searchBar2": "Search",
