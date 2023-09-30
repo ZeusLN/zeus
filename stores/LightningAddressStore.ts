@@ -1,6 +1,14 @@
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import bolt11 from 'bolt11';
+
+import {
+    relayInit,
+    finishEvent,
+    generatePrivateKey,
+    getPublicKey
+} from 'nostr-tools';
 
 const bip39 = require('bip39');
 
@@ -13,9 +21,11 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import BigNumber from 'bignumber.js';
 
-const LNURL_HOST = 'http://10.0.2.2:1337';
+const LNURL_HOST = 'http://localhost:1337';
 const ADDRESS_STORAGE_STRING = 'olympus-lightning-address';
 const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
+
+const RELAYS = ['wss://nostr.mutinywallet.com', 'wss://relay.damus.io'];
 
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
@@ -480,6 +490,187 @@ export default class LightningAddressStore {
                     reject(error);
                 });
         });
+    };
+
+    @action
+    public broadcastAttestation = async (hash: string, invoice: string) => {
+        // create ephemeral key
+        const sk = generatePrivateKey();
+        const pk = getPublicKey(sk);
+
+        const event = {
+            kind: 55869,
+            pubkey: pk,
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [['p', hash]],
+            content: invoice
+        };
+
+        // this calculates the event id and signs the event in a single step
+        const signedEvent = finishEvent(event, sk);
+
+        console.log('signedEvent', signedEvent);
+
+        await Promise.all(
+            RELAYS.map(async (relayItem) => {
+                const relay = relayInit(relayItem);
+                relay.on('connect', () => {
+                    console.log(`connected to ${relay.url}`);
+                });
+                relay.on('error', () => {
+                    console.log(`failed to connect to ${relay.url}`);
+                });
+
+                await relay.connect();
+
+                await relay.publish(signedEvent);
+
+                console.log('event.id', signedEvent.id);
+                const eventReceived = await relay.get({
+                    ids: [signedEvent.id]
+                });
+                console.log('eventReceived', eventReceived);
+                return;
+            })
+        );
+
+        console.log('broadcast complete');
+        return;
+    };
+
+    @action
+    public lookupAttestations = async (hash: string, amountMsat: number) => {
+        const attestations: any = {};
+
+        await Promise.all(
+            RELAYS.map(async (relayItem) => {
+                const relay = relayInit(relayItem);
+                relay.on('connect', () => {
+                    console.log(`connected to ${relay.url}`);
+                });
+                relay.on('error', () => {
+                    console.log(`failed to connect to ${relay.url}`);
+                });
+
+                await relay.connect();
+
+                const events = await relay.list([
+                    {
+                        kinds: [55869],
+                        '#p': [hash]
+                    }
+                ]);
+
+                events.map((event) => {
+                    attestations[event.id] = event;
+                });
+
+                relay.close();
+                return;
+            })
+        );
+
+        const attestationsArray: any = [];
+        Object.keys(attestations).map((key) => {
+            const attestation = this.analyzeAttestation(
+                attestations[key],
+                hash,
+                amountMsat
+            );
+            attestationsArray.push(attestation);
+        });
+
+        return attestationsArray;
+    };
+
+    calculateFeeMsat = (amountMsat: string | number) => {
+        for (let i = 0; i < this.fees.length; i++) {
+            const feeItem = this.fees[i];
+            const { limitAmount, limitQualifier, fee, feeQualifier } = feeItem;
+
+            let match;
+            if (limitQualifier === 'lt') {
+                match = new BigNumber(amountMsat).div(1000).lt(limitAmount);
+            } else if (limitQualifier === 'lte') {
+                match = new BigNumber(amountMsat).div(1000).lte(limitAmount);
+            } else if (limitQualifier === 'gt') {
+                match = new BigNumber(amountMsat).div(1000).gt(limitAmount);
+            } else if (limitQualifier === 'gte') {
+                match = new BigNumber(amountMsat).div(1000).gte(limitAmount);
+            }
+
+            if (match) {
+                if (feeQualifier === 'fixedSats') {
+                    return fee * 1000;
+                } else if (feeQualifier === 'percentage') {
+                    return Number(
+                        new BigNumber(amountMsat).times(fee).div(100)
+                    );
+                }
+            }
+        }
+
+        // return 100 sat fee in case of error
+        return 100000;
+    };
+
+    analyzeAttestation = (
+        attestation: any,
+        hash: string,
+        amountMsat: string | number
+    ) => {
+        const { content } = attestation;
+
+        // defaults
+        attestation.isValid = false;
+        attestation.isValidLightningInvoice = false;
+        attestation.isHashValid = false;
+        attestation.isAmountValid = false;
+
+        try {
+            const decoded: any = bolt11.decode(content);
+            for (let i = 0; i < decoded.tags.length; i++) {
+                const tag = decoded.tags[i];
+                switch (tag.tagName) {
+                    case 'payment_hash':
+                        decoded.payment_hash = tag.data;
+                        break;
+                }
+            }
+
+            attestation.isValidLightningInvoice = true;
+
+            if (decoded.payment_hash === hash) {
+                attestation.isHashValid = true;
+            }
+
+            if (decoded.millisatoshis) {
+                attestation.millisatoshis = decoded.millisatoshis;
+                attestation.feeMsat = this.calculateFeeMsat(
+                    decoded.millisatoshis
+                );
+
+                if (
+                    new BigNumber(amountMsat)
+                        .plus(attestation.feeMsat)
+                        .isEqualTo(decoded.millisatoshis)
+                ) {
+                    attestation.isAmountValid = true;
+                }
+            }
+
+            if (
+                attestation.isValidLightningInvoice &&
+                attestation.isHashValid &&
+                attestation.isAmountValid
+            ) {
+                attestation.isValid = true;
+            }
+        } catch (e) {
+            console.log('analyzeAttestation decode error', e);
+        }
+
+        return attestation;
     };
 
     @action

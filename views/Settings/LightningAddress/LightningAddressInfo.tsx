@@ -2,13 +2,13 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
-import Screen from '../../components/Screen';
-import Header from '../../components/Header';
-import KeyValue from '../../components/KeyValue';
+import Screen from '../../../components/Screen';
+import Header from '../../../components/Header';
+import KeyValue from '../../../components/KeyValue';
 
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
-import LightningAddressStore from '../../stores/LightningAddressStore';
+import { localeString } from '../../../utils/LocaleUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
+import LightningAddressStore from '../../../stores/LightningAddressStore';
 
 interface LightningAddressInfoProps {
     navigation: any;
