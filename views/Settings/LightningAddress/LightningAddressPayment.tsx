@@ -51,7 +51,7 @@ export default function LightningAddressPayment(props) {
             containerStyle={{
                 flex: 1,
                 borderBottomWidth: 0,
-                backgroundColor: themeColor('background')
+                backgroundColor: 'transparent'
             }}
             key={index}
         >
