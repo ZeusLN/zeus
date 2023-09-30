@@ -101,7 +101,11 @@ export default class LightningAddress extends React.Component<
         const QRButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('QR', { value: lightningAddress })
+                    navigation.navigate('QR', {
+                        value: lightningAddress,
+                        hideText: true,
+                        jumboLabel: true
+                    })
                 }
                 style={{ marginTop: 5 }}
             >
@@ -140,9 +144,7 @@ export default class LightningAddress extends React.Component<
                             : themeColor('text')
                 }}
             >
-                {`${localeString('general.settled')} (${
-                    settled.length
-                })`}
+                {`${localeString('general.settled')} (${settled.length})`}
             </Text>
         );
 
