@@ -3,13 +3,13 @@ import { Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Screen from '../../components/Screen';
-import Header from '../../components/Header';
-import SettingsStore from '../../stores/SettingsStore';
+import Screen from '../../../components/Screen';
+import Header from '../../../components/Header';
+import SettingsStore from '../../../stores/SettingsStore';
 
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
-import Switch from '../../components/Switch';
+import { localeString } from '../../../utils/LocaleUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
+import Switch from '../../../components/Switch';
 
 interface LightningAddressSettingsProps {
     navigation: any;

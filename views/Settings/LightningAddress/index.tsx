@@ -1,33 +1,23 @@
 import * as React from 'react';
-import {
-    FlatList,
-    TouchableHighlight,
-    TouchableOpacity,
-    View
-} from 'react-native';
-import { ButtonGroup, Icon, ListItem } from 'react-native-elements';
+import { FlatList, TouchableOpacity, View } from 'react-native';
+import { ButtonGroup, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import moment from 'moment';
 
-import Amount from '../../components/Amount';
-import Button from '../../components/Button';
-import Screen from '../../components/Screen';
-import Text from '../../components/Text';
-import Header from '../../components/Header';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import TextInput from '../../components/TextInput';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
-import { Row } from '../../components/layout/Row';
-import { Spacer } from '../../components/layout/Spacer';
+import LightningAddressPayment from './LightningAddressPayment';
+import Button from '../../../components/Button';
+import Screen from '../../../components/Screen';
+import Text from '../../../components/Text';
+import Header from '../../../components/Header';
+import LoadingIndicator from '../../../components/LoadingIndicator';
+import TextInput from '../../../components/TextInput';
+import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import { Row } from '../../../components/layout/Row';
+import { Spacer } from '../../../components/layout/Spacer';
 
-import LightningAddressStore from '../../stores/LightningAddressStore';
+import LightningAddressStore from '../../../stores/LightningAddressStore';
 
-import BackendUtils from '../../utils/BackendUtils';
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
-
-import Nostrich from '../../assets/images/SVG/Nostrich.svg';
-import Receive from '../../assets/images/SVG/Receive.svg';
+import { localeString } from '../../../utils/LocaleUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
 
 interface LightningAddressProps {
     navigation: any;
@@ -69,12 +59,11 @@ export default class LightningAddress extends React.Component<
         const {
             create,
             status,
-            redeem,
-            getPreimageMap,
             lightningAddress,
             availableHashes,
             paid,
             settled,
+            fees,
             error_msg,
             loading
         } = LightningAddressStore;
@@ -177,14 +166,14 @@ export default class LightningAddress extends React.Component<
                         rightComponent={
                             lightningAddress && (
                                 <Row>
-                                    <InfoButton />
+                                    {!loading && fees && <InfoButton />}
                                     <SettingsButton />
                                 </Row>
                             )
                         }
                         navigation={navigation}
                     />
-                    <View style={{ margin: 5 }}>
+                    <View style={{ flex: 1, margin: 5 }}>
                         {loading && <LoadingIndicator />}
                         {!loading && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
@@ -252,8 +241,12 @@ export default class LightningAddress extends React.Component<
                                             left: 5
                                         }}
                                         infoText={[
-                                            "This is the number of payments that can be made to you while you're offline.",
-                                            'You will send the server more payment hashes over time, as you run out, so that you can continue to receive payments.'
+                                            localeString(
+                                                'views.Settings.LightningAddress.statusExplainer1'
+                                            ),
+                                            localeString(
+                                                'views.Settings.LightningAddress.statusExplainer2'
+                                            )
                                         ]}
                                     >
                                         {` (${availableHashes})`}
@@ -327,11 +320,12 @@ export default class LightningAddress extends React.Component<
                                 {!loading &&
                                     selectedIndex === 0 &&
                                     paid.length === 0 && (
-                                        <View
+                                        <TouchableOpacity
                                             style={{
                                                 marginTop: 15,
                                                 alignItems: 'center'
                                             }}
+                                            onPress={() => status()}
                                         >
                                             <Text
                                                 style={{
@@ -340,18 +334,21 @@ export default class LightningAddress extends React.Component<
                                                     )
                                                 }}
                                             >
-                                                No open payments
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.noOpenPayments'
+                                                )}
                                             </Text>
-                                        </View>
+                                        </TouchableOpacity>
                                     )}
                                 {!loading &&
                                     selectedIndex === 1 &&
                                     settled.length === 0 && (
-                                        <View
+                                        <TouchableOpacity
                                             style={{
                                                 marginTop: 15,
                                                 alignItems: 'center'
                                             }}
+                                            onPress={() => status()}
                                         >
                                             <Text
                                                 style={{
@@ -360,15 +357,15 @@ export default class LightningAddress extends React.Component<
                                                     )
                                                 }}
                                             >
-                                                No settled payments
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.noSettledPayments'
+                                                )}
                                             </Text>
-                                        </View>
+                                        </TouchableOpacity>
                                     )}
-                                {!loading && (
+                                {!loading && selectedIndex === 0 && (
                                     <FlatList
-                                        data={
-                                            selectedIndex === 0 ? paid : settled
-                                        }
+                                        data={paid}
                                         renderItem={({
                                             item,
                                             index
@@ -377,147 +374,43 @@ export default class LightningAddress extends React.Component<
                                             index: number;
                                         }) => {
                                             return (
-                                                <ListItem
-                                                    containerStyle={{
-                                                        flex: 1,
-                                                        borderBottomWidth: 0,
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'background'
-                                                            )
-                                                    }}
-                                                    key={index}
-                                                >
-                                                    <ListItem.Content>
-                                                        <ListItem.Title>
-                                                            <Amount
-                                                                sats={
-                                                                    item.amountMsat /
-                                                                    1000
-                                                                }
-                                                            />
-                                                        </ListItem.Title>
-                                                        <ListItem.Subtitle>
-                                                            <Text
-                                                                style={{
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    )
-                                                                }}
-                                                            >
-                                                                {moment(
-                                                                    item.updated_at
-                                                                ).format(
-                                                                    'ddd, MMM DD, hh:mm a'
-                                                                )}
-                                                            </Text>
-                                                        </ListItem.Subtitle>
-                                                    </ListItem.Content>
-                                                    <ListItem.Content right>
-                                                        <Row>
-                                                            <TouchableHighlight
-                                                                onPress={() => {
-                                                                    // TODO make Nostr calls and componentize
-                                                                    console.log(
-                                                                        item.hash
-                                                                    );
-                                                                }}
-                                                                style={{
-                                                                    marginRight: 10,
-                                                                    width: 45,
-                                                                    height: 45,
-                                                                    alignItems:
-                                                                        'center',
-                                                                    justifyContent:
-                                                                        'center'
-                                                                }}
-                                                            >
-                                                                <Nostrich
-                                                                    fill={themeColor(
-                                                                        index ===
-                                                                            2
-                                                                            ? 'success'
-                                                                            : index ===
-                                                                              1
-                                                                            ? 'warning'
-                                                                            : 'error'
-                                                                    )}
-                                                                    width={32}
-                                                                    height={32}
-                                                                />
-                                                            </TouchableHighlight>
-                                                            {selectedIndex ===
-                                                                0 && (
-                                                                <TouchableHighlight
-                                                                    onPress={() => {
-                                                                        if (
-                                                                            selectedIndex ===
-                                                                            1
-                                                                        )
-                                                                            return;
-                                                                        getPreimageMap().then(
-                                                                            (
-                                                                                map
-                                                                            ) => {
-                                                                                const {
-                                                                                    hash
-                                                                                }: {
-                                                                                    hash: string;
-                                                                                } =
-                                                                                    item;
-                                                                                const preimage =
-                                                                                    map[
-                                                                                        hash
-                                                                                    ];
-
-                                                                                // TODO find way to submit existing invoice
-                                                                                BackendUtils.createInvoice(
-                                                                                    {
-                                                                                        expiry: '3600',
-                                                                                        value: (
-                                                                                            item.amountMsat /
-                                                                                            1000
-                                                                                        ).toString(),
-                                                                                        memo: `OLYMPUS LNURL redemption ${item.hash}`,
-                                                                                        preimage
-                                                                                    }
-                                                                                ).then(
-                                                                                    (
-                                                                                        result
-                                                                                    ) => {
-                                                                                        if (
-                                                                                            result.payment_request
-                                                                                        ) {
-                                                                                            redeem(
-                                                                                                hash,
-                                                                                                result.payment_request
-                                                                                            ).then(
-                                                                                                () =>
-                                                                                                    status()
-                                                                                            );
-                                                                                        }
-                                                                                    }
-                                                                                );
-                                                                            }
-                                                                        );
-                                                                    }}
-                                                                >
-                                                                    <Receive
-                                                                        fill={themeColor(
-                                                                            'text'
-                                                                        )}
-                                                                        width={
-                                                                            45
-                                                                        }
-                                                                        height={
-                                                                            45
-                                                                        }
-                                                                    />
-                                                                </TouchableHighlight>
-                                                            )}
-                                                        </Row>
-                                                    </ListItem.Content>
-                                                </ListItem>
+                                                <LightningAddressPayment
+                                                    index={index}
+                                                    item={item}
+                                                    selectedIndex={
+                                                        selectedIndex
+                                                    }
+                                                    navigation={navigation}
+                                                />
+                                            );
+                                        }}
+                                        ListFooterComponent={
+                                            <Spacer height={100} />
+                                        }
+                                        onRefresh={() => status()}
+                                        refreshing={loading}
+                                        keyExtractor={(_, index) => `${index}`}
+                                    />
+                                )}
+                                {!loading && selectedIndex === 1 && (
+                                    <FlatList
+                                        data={settled}
+                                        renderItem={({
+                                            item,
+                                            index
+                                        }: {
+                                            item: any;
+                                            index: number;
+                                        }) => {
+                                            return (
+                                                <LightningAddressPayment
+                                                    index={index}
+                                                    item={item}
+                                                    selectedIndex={
+                                                        selectedIndex
+                                                    }
+                                                    navigation={navigation}
+                                                />
                                             );
                                         }}
                                         ListFooterComponent={

@@ -54,8 +54,10 @@ import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 import LightningAddress from './views/Settings/LightningAddress';
-import LightningAddressInfo from './views/Settings/LightningAddressInfo';
-import LightningAddressSettings from './views/Settings/LightningAddressSettings';
+import LightningAddressInfo from './views/Settings/LightningAddress/LightningAddressInfo';
+import LightningAddressSettings from './views/Settings/LightningAddress/LightningAddressSettings';
+import Attestation from './views/Settings/LightningAddress/Attestation';
+import Attestations from './views/Settings/LightningAddress/Attestations';
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
@@ -347,6 +349,12 @@ const AppScenes = {
     },
     LightningAddressSettings: {
         screen: LightningAddressSettings
+    },
+    Attestations: {
+        screen: Attestations
+    },
+    Attestation: {
+        screen: Attestation
     },
     Contacts: {
         screen: Contacts

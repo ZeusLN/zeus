@@ -5,6 +5,8 @@
 
 // polyfills
 import 'react-native-get-random-values';
+import { TextDecoder } from 'text-encoding';
+global.TextDecoder = TextDecoder;
 
 import {AppRegistry} from 'react-native';
 import 'react-native-gesture-handler';
