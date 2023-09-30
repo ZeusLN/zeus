@@ -69,6 +69,11 @@ interface InvoicesSettings {
     showCustomPreimageField?: boolean;
 }
 
+interface NostrSettings {
+    nsec?: string;
+    relays?: Array<string>;
+}
+
 export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -88,6 +93,7 @@ export interface Settings {
     pos: PosSettings;
     payments: PaymentsSettings;
     invoices: InvoicesSettings;
+    nostr: NostrSettings;
     isBiometryEnabled: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
@@ -656,6 +662,12 @@ export const LNDHUB_AUTH_MODES = [
 const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
 const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
 
+const DEFAULT_NOSTR_RELAYS = [
+    'wss://relay.damus.io',
+    'wss://nostr.wine',
+    'wss://nostr.lnproxy.org'
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -697,6 +709,10 @@ export default class SettingsStore {
             routeHints: false,
             ampInvoice: false,
             showCustomPreimageField: false
+        },
+        nostr: {
+            nsec: '',
+            relays: DEFAULT_NOSTR_RELAYS
         },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
@@ -910,6 +926,13 @@ export default class SettingsStore {
                     this.settings.fiatEnabled = false;
                 } else if (this.settings.fiatEnabled == null) {
                     this.settings.fiatEnabled = true;
+                }
+
+                if (!this.settings.nostr) {
+                    this.settings.nostr = {
+                        relays: DEFAULT_NOSTR_RELAYS,
+                        nsec: ''
+                    }
                 }
 
                 // TODO PEGASUS

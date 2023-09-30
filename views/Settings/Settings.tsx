@@ -28,6 +28,7 @@ import KeyIcon from '../../assets/images/SVG/Key.svg';
 import NetworkIcon from '../../assets/images/SVG/Network.svg';
 import CloudIcon from '../../assets/images/SVG/Cloud.svg';
 import MailboxFlagIcon from '../../assets/images/SVG/MailboxFlag.svg';
+import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
@@ -895,6 +896,42 @@ export default class Settings extends React.Component<
                             </View>
                         </TouchableOpacity>
                     </View>
+
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginTop: 5,
+                            marginBottom: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Nostr')}
+                        >
+                            <View style={{ paddingLeft: 5, paddingTop: 2 }}>
+                                <NostrichIcon
+                                    fill={themeColor('text')}
+                                    width={23}
+                                    height={23}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Nostr
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
                     {(showHiddenSettings || posEnabled) && (
                         <View
                             style={{
