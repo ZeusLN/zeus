@@ -53,11 +53,15 @@ import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
+
+// Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
 import LightningAddressInfo from './views/Settings/LightningAddress/LightningAddressInfo';
 import LightningAddressSettings from './views/Settings/LightningAddress/LightningAddressSettings';
 import Attestation from './views/Settings/LightningAddress/Attestation';
 import Attestations from './views/Settings/LightningAddress/Attestations';
+import Nostr from './views/Settings/Nostr';
+
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
@@ -364,6 +368,9 @@ const AppScenes = {
     },
     ContactDetails: {
         screen: ContactDetails
+    },
+    Nostr: {
+        screen: Nostr
     }
 };
 

@@ -140,7 +140,7 @@ export default class LightningAddress extends React.Component<
                             : themeColor('text')
                 }}
             >
-                {`${localeString('views.Wallet.Invoices.paid')} (${
+                {`${localeString('general.settled')} (${
                     settled.length
                 })`}
             </Text>
