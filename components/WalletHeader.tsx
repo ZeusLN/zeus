@@ -352,7 +352,10 @@ export default class WalletHeader extends React.Component<
                     title ? (
                         <View style={{ top: 5 }}>
                             {toggle ? (
-                                <View style={{ top: -9, width: '100%' }}>
+                                <View
+                                    style={{ top: -9, width: '100%' }}
+                                    accessibilityLiveRegion="polite"
+                                >
                                     <Button
                                         onPress={() => toggle()}
                                         title={title}
