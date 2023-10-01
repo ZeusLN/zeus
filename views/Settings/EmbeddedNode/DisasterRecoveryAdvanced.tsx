@@ -170,7 +170,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                                                     {moment(
                                                         item.created_at
                                                     ).format(
-                                                        'ddd, MMM DD, hh:mm a'
+                                                        'ddd, MMM DD, hh:mm:ss a'
                                                     )}
                                                 </Text>
                                             </View>
