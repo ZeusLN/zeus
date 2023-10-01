@@ -335,7 +335,7 @@ export default class NodeConfiguration extends React.Component<
         }
     }
 
-    saveNodeConfiguration = (skipRedirect?: boolean) => {
+    saveNodeConfiguration = (recoveryCipherSeed?: string) => {
         const { SettingsStore, navigation } = this.props;
         const {
             nickname,
@@ -400,12 +400,16 @@ export default class NodeConfiguration extends React.Component<
             nodes = [node];
         }
 
-        updateSettings({ nodes }).then(() => {
+        updateSettings({ nodes }).then(async () => {
+            if (recoveryCipherSeed) {
+                await updateSettings({
+                    recovery: true
+                });
+            }
+
             this.setState({
                 saved: true
             });
-
-            if (skipRedirect) return;
 
             if (nodes.length === 1) {
                 if (implementation === 'lightning-node-connect') {
@@ -531,8 +535,6 @@ export default class NodeConfiguration extends React.Component<
 
     createNewWallet = async (network: string = 'Mainnet') => {
         const { recoveryCipherSeed, channelBackupsBase64 } = this.state;
-        const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
 
         this.setState({
             creatingWallet: true
@@ -556,15 +558,7 @@ export default class NodeConfiguration extends React.Component<
                 creatingWallet: false
             });
 
-            this.saveNodeConfiguration(true);
-
-            if (recoveryCipherSeed) {
-                await updateSettings({
-                    recovery: true
-                });
-            }
-
-            navigation.navigate('Wallet');
+            this.saveNodeConfiguration(recoveryCipherSeed);
         } else {
             this.setState({
                 creatingWallet: false,
