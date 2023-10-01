@@ -48,6 +48,7 @@ import ModalStore from '../../stores/ModalStore';
 import SyncStore from '../../stores/SyncStore';
 import LSPStore from '../../stores/LSPStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
@@ -79,6 +80,7 @@ interface WalletProps {
     SyncStore: SyncStore;
     LSPStore: LSPStore;
     ChannelBackupStore: ChannelBackupStore;
+    LightningAddressStore: LightningAddressStore;
 }
 
 interface WalletState {
@@ -98,7 +100,8 @@ interface WalletState {
     'ModalStore',
     'SyncStore',
     'LSPStore',
-    'ChannelBackupStore'
+    'ChannelBackupStore',
+    'LightningAddressStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -295,7 +298,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             FiatStore,
             LSPStore,
             ChannelBackupStore,
-            SyncStore
+            SyncStore,
+            LightningAddressStore
         } = this.props;
         const {
             settings,
@@ -359,6 +363,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
             if (isSyncing && syncStatusUpdatesPaused) {
                 resumeSyncingUpates();
+            }
+
+            // TODO add connection conditions
+            if (true) {
+                LightningAddressStore.subscribeUpdates();
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {

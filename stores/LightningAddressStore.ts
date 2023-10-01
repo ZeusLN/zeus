@@ -2,6 +2,7 @@ import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import bolt11 from 'bolt11';
+import { io } from 'socket.io-client';
 
 import {
     relayInit,
@@ -22,6 +23,8 @@ import Base64Utils from '../utils/Base64Utils';
 import BigNumber from 'bignumber.js';
 
 const LNURL_HOST = 'http://localhost:1337';
+const LNURL_SOCKET_HOST = 'http://localhost:8000';
+
 const ADDRESS_STORAGE_STRING = 'olympus-lightning-address';
 const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 
@@ -38,6 +41,7 @@ export default class LightningAddressStore {
     @observable public preimageMap: any = {};
     @observable public fees: any = {};
     @observable public minimumSats: number;
+    @observable public socket: any;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -674,6 +678,47 @@ export default class LightningAddressStore {
     };
 
     @action
+    public subscribeUpdates = () => {
+        if (this.socket) return;
+        ReactNativeBlobUtil.fetch(
+            'POST',
+            `${LNURL_HOST}/lnurl/auth`,
+            {
+                'Content-Type': 'application/json'
+            },
+            JSON.stringify({
+                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+            })
+        ).then((response: any) => {
+            const status = response.info().status;
+            if (status == 200) {
+                const data = response.json();
+                const { verification } = data;
+
+                BackendUtils.signMessage(verification).then((data: any) => {
+                    const signature = data.zbase || data.signature;
+
+                    this.socket = io.connect(LNURL_SOCKET_HOST);
+                    this.socket.emit('auth', {
+                        pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                        message: verification,
+                        signature
+                    });
+
+                    this.socket.on('paid', (data: any) => {
+                        console.log('paid', data);
+                        const { hash, req } = data;
+
+                        console.log('hash', hash);
+                        console.log('req', req);
+                        console.log('received_mtokens', req.received_mtokens);
+                    });
+                });
+            }
+        });
+    };
+
+    @action
     public reset = () => {
         this.loading = false;
         this.error = false;
@@ -682,5 +727,6 @@ export default class LightningAddressStore {
         this.paid = [];
         this.settled = [];
         this.preimageMap = {};
+        this.socket = undefined;
     };
 }
