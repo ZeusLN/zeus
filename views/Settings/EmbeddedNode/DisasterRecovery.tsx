@@ -448,6 +448,57 @@ export default class DisasterRecovery extends React.Component<
                                 </Text>
                             </View>
                         </>
+                        <>
+                            <View style={{ margin: 10 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.EmbeddedNode.initiateAdvancedDisasterRecoveryOlympus'
+                                    )}
+                                    onPress={() => {
+                                        navigation.navigate(
+                                            'DisasterRecoveryAdvanced'
+                                        );
+                                    }}
+                                    containerStyle={{
+                                        borderColor: themeColor('delete')
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('delete')
+                                    }}
+                                    secondary
+                                />
+                            </View>
+                            <View
+                                style={{
+                                    margin: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.initiateAdvancedDisasterRecoveryOlympus.subtitle'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{
+                                    margin: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus.subtitle2'
+                                    )}
+                                </Text>
+                            </View>
+                        </>
                     </ScrollView>
                 </View>
             </Screen>
