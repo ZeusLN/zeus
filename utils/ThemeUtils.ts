@@ -187,7 +187,6 @@ export function themeColor(themeString: string): any {
         generalStyle: 'dark',
         background: '#FF9C23',
         separator: '#141414',
-        highlight: '#fff',
         bolt: '#fff',
         chain: '#fff',
         secondaryText: 'lightgray'
