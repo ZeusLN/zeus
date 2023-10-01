@@ -703,7 +703,7 @@
     "views.Settings.EmbeddedNode.waitForGraphSync": "Wait for graph sync before paying",
     "views.Settings.EmbeddedNode.waitForGraphSync.subtitle": "Waiting for the lightning network graph to sync will increase your probability of payment success.",
     "views.Settings.EmbeddedNode.rescan": "Rescan wallet",
-    "views.Settings.EmbeddedNode.rescan.subtitle": "Rescan the wallet for wallet transactions. Restart the app to take effect. Will be unset upon completion.",
+    "views.Settings.EmbeddedNode.rescan.subtitle": "Rescan blockchain for your on-chain transactions. Restart the app to take effect. Will be unset upon completion.",
     "views.Settings.EmbeddedNode.resetMissionControl": "Reset payment routing profile",
     "views.Settings.EmbeddedNode.resetMissionControl.subtitle": "This will reset the mission control state. Can be helpful if you are having issues finding routes while making payments.",
     "views.Settings.EmbeddedNode.DisasterRecovery.title": "Disaster recovery",
