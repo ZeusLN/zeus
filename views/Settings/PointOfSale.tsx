@@ -17,7 +17,11 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
-import SettingsStore, { POS_CONF_PREF_KEYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    POS_CONF_PREF_KEYS,
+    POS_ENABLED_KEYS,
+    PosEnabled
+} from '../../stores/SettingsStore';
 
 interface PointOfSaleProps {
     navigation: any;
@@ -25,7 +29,7 @@ interface PointOfSaleProps {
 }
 
 interface PointOfSaleState {
-    squareEnabled: boolean;
+    posEnabled: PosEnabled;
     squareAccessToken: string;
     squareLocationId: string;
     merchantName: string;
@@ -41,7 +45,7 @@ export default class PointOfSale extends React.Component<
     PointOfSaleState
 > {
     state = {
-        squareEnabled: false,
+        posEnabled: PosEnabled.Disabled,
         squareAccessToken: '',
         squareLocationId: '',
         merchantName: '',
@@ -56,8 +60,9 @@ export default class PointOfSale extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            squareEnabled:
-                (settings.pos && settings.pos.squareEnabled) || false,
+            posEnabled:
+                (settings.pos && settings.pos.posEnabled) ||
+                PosEnabled.Disabled,
             squareAccessToken:
                 (settings.pos && settings.pos.squareAccessToken) || '',
             squareLocationId:
@@ -83,7 +88,7 @@ export default class PointOfSale extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const {
-            squareEnabled,
+            posEnabled,
             squareAccessToken,
             squareLocationId,
             merchantName,
@@ -100,6 +105,16 @@ export default class PointOfSale extends React.Component<
                 path: 'PointOfSaleRecon'
             }
         ];
+        if (posEnabled === PosEnabled.Standalone) {
+            LIST_ITEMS.push({
+                label: localeString('views.Settings.POS.Categories'),
+                path: 'Categories'
+            });
+            LIST_ITEMS.push({
+                label: localeString('views.Settings.POS.Products'),
+                path: 'Products'
+            });
+        }
 
         return (
             <Screen>
@@ -142,54 +157,32 @@ export default class PointOfSale extends React.Component<
                                     )}
                                 />
                             )}
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                            >
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        left: -10
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.POS.enableSquare'
-                                    )}
-                                </ListItem.Title>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        flexDirection: 'row',
-                                        justifyContent: 'flex-end'
-                                    }}
-                                >
-                                    <Switch
-                                        value={squareEnabled}
-                                        onValueChange={async () => {
-                                            this.setState({
-                                                squareEnabled: !squareEnabled
-                                            });
-                                            await updateSettings({
-                                                pos: {
-                                                    squareAccessToken,
-                                                    squareLocationId,
-                                                    merchantName,
-                                                    squareEnabled:
-                                                        !squareEnabled,
-                                                    confirmationPreference,
-                                                    disableTips,
-                                                    squareDevMode
-                                                }
-                                            });
-                                        }}
-                                    />
-                                </View>
-                            </ListItem>
 
-                            {squareEnabled && (
+                            <DropdownSetting
+                                title={localeString(
+                                    'views.Settings.POS.enablePos'
+                                )}
+                                selectedValue={posEnabled}
+                                onValueChange={async (value: PosEnabled) => {
+                                    this.setState({
+                                        posEnabled: value
+                                    });
+                                    await updateSettings({
+                                        pos: {
+                                            posEnabled: value,
+                                            squareAccessToken,
+                                            squareLocationId,
+                                            merchantName,
+                                            confirmationPreference,
+                                            disableTips,
+                                            squareDevMode
+                                        }
+                                    });
+                                }}
+                                values={POS_ENABLED_KEYS}
+                            />
+
+                            {posEnabled === PosEnabled.Square && (
                                 <>
                                     <Text
                                         style={{
@@ -210,7 +203,7 @@ export default class PointOfSale extends React.Component<
 
                                             await updateSettings({
                                                 pos: {
-                                                    squareEnabled,
+                                                    posEnabled,
                                                     squareAccessToken: text,
                                                     squareLocationId,
                                                     merchantName,
@@ -241,7 +234,7 @@ export default class PointOfSale extends React.Component<
 
                                             await updateSettings({
                                                 pos: {
-                                                    squareEnabled,
+                                                    posEnabled,
                                                     squareAccessToken,
                                                     squareLocationId: text,
                                                     merchantName,
@@ -272,7 +265,7 @@ export default class PointOfSale extends React.Component<
 
                                             await updateSettings({
                                                 pos: {
-                                                    squareEnabled,
+                                                    posEnabled,
                                                     squareAccessToken,
                                                     squareLocationId,
                                                     merchantName: text,
@@ -297,7 +290,7 @@ export default class PointOfSale extends React.Component<
                                             });
                                             await updateSettings({
                                                 pos: {
-                                                    squareEnabled,
+                                                    posEnabled,
                                                     squareAccessToken,
                                                     squareLocationId,
                                                     merchantName,
@@ -350,7 +343,7 @@ export default class PointOfSale extends React.Component<
                                                         pos: {
                                                             squareAccessToken,
                                                             squareLocationId,
-                                                            squareEnabled,
+                                                            posEnabled,
                                                             merchantName,
                                                             confirmationPreference,
                                                             disableTips:
@@ -402,7 +395,7 @@ export default class PointOfSale extends React.Component<
                                                         pos: {
                                                             squareAccessToken,
                                                             squareLocationId,
-                                                            squareEnabled,
+                                                            posEnabled,
                                                             merchantName,
                                                             confirmationPreference,
                                                             disableTips,
@@ -417,7 +410,7 @@ export default class PointOfSale extends React.Component<
                                 </>
                             )}
                         </View>
-                        {squareEnabled && (
+                        {posEnabled !== PosEnabled.Disabled && (
                             <FlatList
                                 data={LIST_ITEMS}
                                 renderItem={({ item }) => (

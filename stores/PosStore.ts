@@ -4,8 +4,10 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
 import { SATS_PER_BTC } from './UnitsStore';
-import SettingsStore from './SettingsStore';
+import SettingsStore, { PosEnabled } from './SettingsStore';
 import Order from '../models/Order';
+import { v4 as uuidv4 } from 'uuid';
+import FiatStore from './FiatStore';
 
 export interface orderPaymentInfo {
     orderId: string;
@@ -18,8 +20,10 @@ export interface orderPaymentInfo {
 }
 
 const POS_HIDDEN_KEY = 'pos-hidden';
+const POS_STANDALONE_KEY = 'pos-standalone';
 
 export default class PosStore {
+    @observable public currentOrder: Order | null = null;
     @observable public openOrders: Array<Order> = [];
     @observable public paidOrders: Array<Order> = [];
     @observable public filteredOpenOrders: Array<Order> = [];
@@ -35,9 +39,11 @@ export default class PosStore {
     @observable public error = false;
 
     settingsStore: SettingsStore;
+    fiatStore: FiatStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, fiatStore: FiatStore) {
         this.settingsStore = settingsStore;
+        this.fiatStore = fiatStore;
     }
 
     @action
@@ -89,7 +95,195 @@ export default class PosStore {
         );
 
     @action
+    public clearCurrentOrder = () => (this.currentOrder = null);
+
+    @action
+    public createCurrentOrder = (currency: string) => {
+        this.currentOrder = new Order({
+            id: uuidv4(),
+            created_at: new Date(Date.now()).toISOString(),
+            updated_at: new Date(Date.now()).toISOString(),
+            line_items: [],
+            total_tax_money: {
+                amount: 0,
+                currency
+            },
+            total_money: {
+                amount: 0,
+                currency
+            }
+        });
+    };
+
+    @action
+    calcFiatAmountFromSats = (amount: string | number) => {
+        const { fiatRates } = this.fiatStore;
+        const { settings } = this.settingsStore;
+        const { fiat } = settings;
+
+        // replace , with . for unit separator
+        const value = amount || '0';
+
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
+        const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+        const fiatAmount: string | number = rate
+            ? new BigNumber(value.toString().replace(/,/g, '.'))
+                  .dividedBy(SATS_PER_BTC)
+                  .multipliedBy(rate)
+                  .toNumber()
+                  .toFixed(0)
+            : 0;
+
+        return fiatAmount;
+    };
+
+    calcSatsAmountFromFiat = (amount: string | number) => {
+        const { fiatRates } = this.fiatStore;
+        const { settings } = this.settingsStore;
+        const { fiat } = settings;
+
+        // replace , with . for unit separator
+        const value = amount || '0';
+
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
+        const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+        const satsAmount: string | number = rate
+            ? new BigNumber(value.toString().replace(/,/g, '.'))
+                  .dividedBy(rate)
+                  .multipliedBy(SATS_PER_BTC)
+                  .toNumber()
+                  .toFixed(0)
+            : 0;
+
+        return satsAmount;
+    };
+
+    @action recalculateCurrentOrder = () => {
+        if (this.currentOrder) {
+            let totalFiat = new BigNumber(0);
+            let totalSats = new BigNumber(0);
+            this.currentOrder.line_items.forEach((item) => {
+                if (item.base_price_money.sats! > 0) {
+                    totalSats = totalSats.plus(
+                        (item.base_price_money.sats || 0) * item.quantity
+                    );
+                    totalFiat = totalFiat.plus(
+                        this.calcFiatAmountFromSats(
+                            (item.base_price_money.sats || 0) * item.quantity
+                        )
+                    );
+                } else {
+                    totalFiat = totalFiat.plus(
+                        (item.base_price_money.amount || 0) *
+                            item.quantity *
+                            100
+                    );
+                    totalSats = totalSats.plus(
+                        this.calcSatsAmountFromFiat(
+                            (item.base_price_money.amount || 0) * item.quantity
+                        )
+                    );
+                }
+            });
+            this.currentOrder.total_money.amount = totalFiat.toNumber();
+            this.currentOrder.total_money.sats = totalSats.toNumber();
+        }
+    };
+
+    @action
+    public saveStandaloneOrder = async (updateOrder: Order) => {
+        const order = this.openOrders.find((o) => o.id === updateOrder.id);
+
+        if (order) {
+            order.line_items = updateOrder.line_items;
+            order.updated_at = new Date(Date.now()).toISOString();
+            order.total_money = updateOrder.total_money;
+        } else {
+            this.openOrders.push(updateOrder);
+        }
+
+        await EncryptedStorage.setItem(
+            POS_STANDALONE_KEY,
+            JSON.stringify(this.openOrders.concat(this.paidOrders))
+        );
+
+        this.clearCurrentOrder();
+    };
+
+    @action
     public getOrders = async () => {
+        switch (this.settingsStore.settings.pos.posEnabled) {
+            case PosEnabled.Square:
+                this.getSquareOrders();
+                break;
+
+            case PosEnabled.Standalone:
+                this.getStandaloneOrders();
+                break;
+
+            default:
+                this.resetOrders();
+                break;
+        }
+    };
+
+    @action
+    public getStandaloneOrders = async () => {
+        this.loading = true;
+        this.error = false;
+
+        const soOrders = await EncryptedStorage.getItem(POS_STANDALONE_KEY);
+
+        // fetch hidden orders - orders customers couldn't pay
+        const hiddenOrdersItem = await EncryptedStorage.getItem(POS_HIDDEN_KEY);
+        const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
+
+        const orders = JSON.parse(soOrders || '[]').map(
+            (order: any) => new Order(order)
+        );
+
+        const enrichedOrders = await Promise.all(
+            orders.map(async (order: any) => {
+                const payment = await EncryptedStorage.getItem(
+                    `pos-${order.id}`
+                );
+                // mark order if hidden
+                if (hiddenOrders.includes(order.id)) {
+                    order.hidden = true;
+                }
+                if (payment) order.payment = JSON.parse(payment);
+
+                return order;
+            })
+        );
+
+        const openOrders = enrichedOrders.filter((order: any) => {
+            return !order.payment && !order.hidden;
+        });
+        const paidOrders = enrichedOrders.filter((order: any) => {
+            return order.payment;
+        });
+
+        this.openOrders = openOrders;
+        this.filteredOpenOrders = openOrders;
+        this.paidOrders = paidOrders;
+        this.filteredPaidOrders = paidOrders;
+
+        this.loading = false;
+    };
+
+    @action
+    public getSquareOrders = async () => {
         const { squareAccessToken, squareLocationId, squareDevMode } =
             this.settingsStore.settings.pos;
         this.loading = true;

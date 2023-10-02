@@ -42,7 +42,10 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
-import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    INTERFACE_KEYS,
+    PosEnabled
+} from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import { version } from '../../package.json';
@@ -104,7 +107,10 @@ export default class Settings extends React.Component<
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
-        const posEnabled = settings?.pos?.squareEnabled;
+        const posEnabled =
+            settings &&
+            settings.pos &&
+            settings.pos.posEnabled !== PosEnabled.Disabled;
 
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
