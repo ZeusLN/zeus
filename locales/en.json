@@ -725,6 +725,7 @@
     "views.Settings.LSP.enableLSP": "Enable Lightning Service Provider (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "The LSP will get you connected to the Lightning network by opening up payment channels for you.",
     "views.Settings.LSP.lspAccessKey": "LSP Access Key (if needed)",
+    "views.Settings.LSP.requestSimpleTaproot": "Request Simple Taproot Channels",
     "views.Settings.AddContact.name": "Name",
     "views.Settings.AddContact.description": "Description (max 120)",
     "views.Settings.AddContact.lnAddress": "LN address",
