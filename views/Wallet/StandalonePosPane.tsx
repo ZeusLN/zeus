@@ -5,7 +5,8 @@ import {
     View,
     Text,
     TouchableHighlight,
-    TouchableOpacity
+    TouchableOpacity,
+    SectionList
 } from 'react-native';
 import BigNumber from 'bignumber.js';
 import { ButtonGroup, SearchBar } from 'react-native-elements';
@@ -26,26 +27,40 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
 import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
+import InventoryStore from '../../stores/InventoryStore';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import { version } from './../../package.json';
+import Product, { PricedIn } from '../../models/Product';
 
-interface PosPaneProps {
+interface StandalonePosPaneProps {
     navigation: any;
-    ActivityStore?: ActivityStore;
-    FiatStore?: FiatStore;
-    NodeInfoStore?: NodeInfoStore;
-    PosStore?: PosStore;
-    UnitsStore?: UnitsStore;
-    SettingsStore?: SettingsStore;
+    onOrderChange: () => void;
+    ActivityStore: ActivityStore;
+    FiatStore: FiatStore;
+    NodeInfoStore: NodeInfoStore;
+    PosStore: PosStore;
+    UnitsStore: UnitsStore;
+    SettingsStore: SettingsStore;
+    InventoryStore: InventoryStore;
 }
 
-interface PosPaneState {
+interface ProductDataItems {
+    items: Array<Product>;
+}
+
+interface ProductSectionList {
+    title: string;
+    data: ProductDataItems[];
+}
+
+interface StandalonePosPaneState {
     selectedIndex: number;
     search: string;
     fadeAnimation: any;
+    productsList: Array<ProductSectionList>;
 }
 
 @inject(
@@ -54,19 +69,21 @@ interface PosPaneState {
     'NodeInfoStore',
     'PosStore',
     'UnitsStore',
-    'SettingsStore'
+    'SettingsStore',
+    'InventoryStore'
 )
 @observer
-export default class PosPane extends React.PureComponent<
-    PosPaneProps,
-    PosPaneState
+export default class StandalonePosPane extends React.PureComponent<
+    StandalonePosPaneProps,
+    StandalonePosPaneState
 > {
     constructor(props: any) {
         super(props);
         this.state = {
             selectedIndex: 0,
             search: '',
-            fadeAnimation: new Animated.Value(1)
+            fadeAnimation: new Animated.Value(1),
+            productsList: []
         };
 
         Animated.loop(
@@ -86,9 +103,66 @@ export default class PosPane extends React.PureComponent<
         ).start();
     }
 
+    async UNSAFE_componentWillMount(): Promise<void> {
+        this.fetchProducts();
+    }
+
+    fetchProducts = async () => {
+        try {
+            const { InventoryStore } = this.props;
+            const { getInventory } = InventoryStore;
+            const { products } = await getInventory();
+
+            const uncategorized: Array<Product> = [];
+            const productsList: Array<ProductSectionList> = [];
+            products.forEach((product) => {
+                if (product.category === '') {
+                    uncategorized.push(product);
+                } else {
+                    const category = productsList.find(
+                        (c) => c.title === product.category
+                    );
+                    if (category) {
+                        category.data[0].items.push(product);
+                    } else {
+                        productsList.push({
+                            title: product.category,
+                            data: [{ items: [product] }]
+                        });
+                    }
+                }
+            });
+            if (uncategorized.length > 0) {
+                productsList.push({
+                    title: localeString(
+                        'pos.views.Wallet.PosPane.uncategorized'
+                    ),
+                    data: [
+                        {
+                            items: uncategorized.sort((a, b) =>
+                                a.name.localeCompare(b.name)
+                            )
+                        }
+                    ]
+                });
+            }
+
+            this.setState({
+                productsList: productsList.sort((a, b) => {
+                    a.data[0].items = a.data[0].items.sort((_a, _b) =>
+                        _a.name.localeCompare(_b.name)
+                    );
+                    return a.title.localeCompare(b.title);
+                })
+            });
+        } catch (e) {
+            console.log('error fetching products', e);
+        }
+    };
+
     renderItem = ({ item, index }, onClickPaid, onClickHide) => {
         const { navigation, FiatStore } = this.props;
-        const { getRate, getSymbol } = FiatStore!;
+        const { getRate, getSymbol } = FiatStore;
         const isPaid: boolean = item && item.payment;
 
         let row: Array<any> = [];
@@ -190,6 +264,134 @@ export default class PosPane extends React.PureComponent<
         );
     };
 
+    addProductToOrder = (product: Product) => {
+        const { PosStore, SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        const { fiat } = settings;
+        if (!PosStore.currentOrder) PosStore.createCurrentOrder(fiat || 'USD');
+        const order = PosStore.currentOrder;
+
+        if (!order) return;
+
+        const item = order.line_items.find(
+            (item) =>
+                item.name === product.name &&
+                (item.base_price_money.amount === product.price ||
+                    item.base_price_money.sats === product.price)
+        );
+
+        if (item) {
+            item.quantity++;
+        } else {
+            order.line_items.push({
+                name: product.name,
+                quantity: 1,
+                base_price_money: {
+                    amount:
+                        product.pricedIn === PricedIn.Fiat ? product.price : 0,
+                    sats: product.pricedIn === PricedIn.Sats ? product.price : 0
+                }
+            });
+        }
+
+        PosStore.recalculateCurrentOrder();
+        this.props.onOrderChange();
+    };
+
+    renderGridItem = ({ item }) => {
+        return (
+            <TouchableOpacity
+                style={{ flex: 1, maxWidth: '50%' }}
+                onPress={() => this.addProductToOrder(item)}
+            >
+                <View
+                    style={{
+                        backgroundColor: themeColor('secondary'),
+                        borderRadius: 25,
+                        minHeight: 100,
+                        alignItems: 'center',
+                        margin: 5,
+                        padding: 10,
+                        justifyContent: 'center'
+                    }}
+                >
+                    <Text
+                        style={{
+                            fontSize: 18,
+                            color: themeColor('text'),
+                            marginBottom: 5
+                        }}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                    >
+                        {item.name}
+                    </Text>
+                    <Text style={{ color: themeColor('text') }}>
+                        ${item.price}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    renderSectionHeader = ({ section }) => {
+        return (
+            <View
+                style={{
+                    padding: 10,
+                    borderColor: themeColor('secondary'),
+                    borderBottomWidth: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
+                <Text
+                    style={{
+                        fontSize: 15,
+                        fontWeight: '600',
+                        color: themeColor('text')
+                    }}
+                >
+                    {section.title}
+                </Text>
+            </View>
+        );
+    };
+
+    renderSection = ({ item }) => {
+        return (
+            <FlatList
+                data={item.items}
+                numColumns={2}
+                renderItem={this.renderGridItem}
+                keyExtractor={(x) => x.id}
+                style={{ marginTop: 10 }}
+            />
+        );
+    };
+
+    updateProductSearch = async (search: string) => {
+        this.setState({ search });
+        await this.fetchProducts();
+
+        const updatedProductList = this.state.productsList.filter((item) => {
+            if (item.title.toLowerCase().search(search.toLowerCase()) !== -1)
+                return true;
+
+            const items = item.data[0].items.find(
+                (product) =>
+                    product.name.toLowerCase().search(search.toLowerCase()) !==
+                    -1
+            );
+            if (items) {
+                item.data[0].items = [items];
+                return true;
+            }
+
+            return false;
+        });
+        this.setState({ productsList: updatedProductList });
+    };
+
     render() {
         const {
             ActivityStore,
@@ -200,7 +402,7 @@ export default class PosPane extends React.PureComponent<
             navigation
         } = this.props;
         const { search, selectedIndex } = this.state;
-        const { setFiltersPos } = ActivityStore!;
+        const { setFiltersPos } = ActivityStore;
         const {
             loading,
             getOrders,
@@ -208,23 +410,41 @@ export default class PosPane extends React.PureComponent<
             filteredPaidOrders,
             updateSearch,
             hideOrder
-        } = PosStore!;
-        const { getRate, getFiatRates } = FiatStore!;
+        } = PosStore;
+        const { getRate, getFiatRates } = FiatStore;
         const orders =
-            selectedIndex === 0 ? filteredOpenOrders : filteredPaidOrders;
+            selectedIndex === 0
+                ? []
+                : selectedIndex === 1
+                ? filteredOpenOrders
+                : filteredPaidOrders;
 
-        const headerString = `${localeString('general.orders')} (${
+        const headerString = `${localeString('general.pos')} (${
             orders.length || 0
         })`;
 
-        const error = NodeInfoStore!.error || SettingsStore!.error;
+        const error = NodeInfoStore.error || SettingsStore.error;
+
+        const newOrderButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'Lato-Regular',
+                    color:
+                        selectedIndex === 0
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {localeString('general.new')}
+            </Text>
+        );
 
         const openOrdersButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Lato-Regular',
                     color:
-                        selectedIndex === 0
+                        selectedIndex === 1
                             ? themeColor('background')
                             : themeColor('text')
                 }}
@@ -236,9 +456,9 @@ export default class PosPane extends React.PureComponent<
         const paidOrdersButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Lato-Regular',
                     color:
-                        selectedIndex === 1
+                        selectedIndex === 2
                             ? themeColor('background')
                             : themeColor('text')
                 }}
@@ -248,6 +468,7 @@ export default class PosPane extends React.PureComponent<
         );
 
         const buttons = [
+            { element: newOrderButton },
             { element: openOrdersButton },
             { element: paidOrdersButton }
         ];
@@ -264,17 +485,17 @@ export default class PosPane extends React.PureComponent<
                 >
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Lato-Regular',
                             color: '#fff',
                             fontSize: 20,
                             marginTop: 20,
                             marginBottom: 25
                         }}
                     >
-                        {SettingsStore!.errorMsg
-                            ? SettingsStore!.errorMsg
-                            : NodeInfoStore!.errorMsg
-                            ? NodeInfoStore!.errorMsg
+                        {SettingsStore.errorMsg
+                            ? SettingsStore.errorMsg
+                            : NodeInfoStore.errorMsg
+                            ? NodeInfoStore.errorMsg
                             : localeString('views.Wallet.MainPane.error')}
                     </Text>
                     <Button
@@ -295,7 +516,7 @@ export default class PosPane extends React.PureComponent<
                         }}
                         onPress={() => {
                             const { posStatus, settings } =
-                                this.props.SettingsStore!;
+                                this.props.SettingsStore;
                             const loginRequired =
                                 settings &&
                                 (settings.passphrase || settings.pin);
@@ -313,7 +534,7 @@ export default class PosPane extends React.PureComponent<
                     />
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Lato-Regular',
                             color: '#fff',
                             fontSize: 12,
                             marginTop: 20,
@@ -328,7 +549,11 @@ export default class PosPane extends React.PureComponent<
 
         return (
             <View style={{ flex: 1 }}>
-                <WalletHeader title={headerString} navigation={navigation} />
+                <WalletHeader
+                    title={headerString}
+                    navigation={navigation}
+                    SettingsStore={SettingsStore}
+                />
 
                 {getRate() === '$N/A' ? (
                     <Animated.View
@@ -399,6 +624,11 @@ export default class PosPane extends React.PureComponent<
                     <SearchBar
                         placeholder={localeString('general.search')}
                         onChangeText={(value: string) => {
+                            if (selectedIndex === 0) {
+                                this.updateProductSearch(value);
+                                return;
+                            }
+
                             updateSearch(value);
                             this.setState({
                                 search: value
@@ -421,35 +651,26 @@ export default class PosPane extends React.PureComponent<
                     />
                 )}
 
-                {!loading && orders && orders.length > 0 && (
-                    <FlatList
-                        data={orders}
-                        renderItem={(v: any) =>
-                            this.renderItem(
-                                v,
-                                () => {
-                                    setFiltersPos().then(() => {
-                                        navigation.navigate('Activity', {
-                                            order: v
-                                        });
-                                    });
-                                },
-                                () => {
-                                    hideOrder(v.item.id).then(() =>
-                                        getOrders()
-                                    );
-                                }
-                            )
-                        }
-                        ListFooterComponent={<Spacer height={100} />}
-                        onRefresh={() => getOrders()}
-                        refreshing={loading}
-                        keyExtractor={(_, index) => `${index}`}
-                    />
-                )}
+                {!loading &&
+                    selectedIndex === 0 &&
+                    this.state.productsList &&
+                    this.state.productsList.length > 0 && (
+                        <SectionList
+                            sections={this.state.productsList}
+                            renderSectionHeader={this.renderSectionHeader}
+                            renderItem={this.renderSection}
+                            keyExtractor={(item, index) => `${index}`}
+                            contentContainerStyle={{
+                                marginLeft: 10,
+                                marginRight: 10
+                            }}
+                        />
+                    )}
 
-                {!loading && orders && orders.length === 0 && (
-                    <TouchableOpacity onPress={() => getOrders()}>
+                {!loading &&
+                    selectedIndex === 0 &&
+                    this.state.productsList &&
+                    this.state.productsList.length === 0 && (
                         <Text
                             style={{
                                 color: themeColor('text'),
@@ -457,16 +678,64 @@ export default class PosPane extends React.PureComponent<
                                 textAlign: 'center'
                             }}
                         >
-                            {selectedIndex === 0
-                                ? localeString(
-                                      'pos.views.Wallet.PosPane.noOrders'
-                                  )
-                                : localeString(
-                                      'pos.views.Wallet.PosPane.noOrdersPaid'
-                                  )}
+                            {localeString(
+                                'pos.views.Wallet.PosPane.noProducts'
+                            )}
                         </Text>
-                    </TouchableOpacity>
-                )}
+                    )}
+
+                {!loading &&
+                    orders &&
+                    orders.length > 0 &&
+                    selectedIndex !== 0 && (
+                        <FlatList
+                            data={orders}
+                            renderItem={(v: any) =>
+                                this.renderItem(
+                                    v,
+                                    () => {
+                                        setFiltersPos().then(() => {
+                                            navigation.navigate('Activity', {
+                                                order: v
+                                            });
+                                        });
+                                    },
+                                    () => {
+                                        hideOrder(v.item.id).then(() =>
+                                            getOrders()
+                                        );
+                                    }
+                                )
+                            }
+                            ListFooterComponent={<Spacer height={100} />}
+                            onRefresh={() => getOrders()}
+                            refreshing={loading}
+                            keyExtractor={(_, index) => `${index}`}
+                        />
+                    )}
+
+                {!loading &&
+                    orders &&
+                    orders.length === 0 &&
+                    selectedIndex !== 0 && (
+                        <TouchableOpacity onPress={() => getOrders()}>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    margin: 10,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {selectedIndex === 1
+                                    ? localeString(
+                                          'pos.views.Wallet.PosPane.noOrdersStandalone'
+                                      )
+                                    : localeString(
+                                          'pos.views.Wallet.PosPane.noOrdersPaid'
+                                      )}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
             </View>
         );
     }
