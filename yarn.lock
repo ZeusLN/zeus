@@ -8165,6 +8165,11 @@ react-native-nfc-manager@3.13.0:
   dependencies:
     "@expo/config-plugins" "^4.0.16"
 
+react-native-notifications@5.1.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/react-native-notifications/-/react-native-notifications-5.1.0.tgz#8cba105fd57ab9d5df9d27284acf1e2b4f3d7ea3"
+  integrity sha512-laqDSDlCvEASmJR6cXpqaryK855ejQd07vrfYERzhv68YDOoSkKy/URExRP4vAfAOVqHhix80tLbNUcfvZk2VQ==
+
 react-native-os@aprock/react-native-os#5/head:
   version "1.2.2"
   resolved "https://codeload.github.com/aprock/react-native-os/tar.gz/4490cdae7c5575ab4ecce4b87558637ee52523fc"
