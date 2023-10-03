@@ -36,17 +36,17 @@ interface NodesState {
 @inject('BalanceStore', 'NodeInfoStore', 'ChannelsStore', 'SettingsStore')
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
+    isInitialFocus = true;
+
     state = {
         nodes: [],
         loading: false
     };
 
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         this.refreshSettings();
 
-        this.props.navigation.addListener('didFocus', () => {
-            this.refreshSettings();
-        });
+        this.props.navigation.addListener('didFocus', this.handleFocus);
     }
 
     componentWillUnmount() {
@@ -56,6 +56,14 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
     UNSAFE_componentWillReceiveProps = () => {
         this.refreshSettings();
+    };
+
+    handleFocus = () => {
+        if (this.isInitialFocus) {
+            this.isInitialFocus = false;
+        } else {
+            this.refreshSettings();
+        }
     };
 
     async refreshSettings() {
