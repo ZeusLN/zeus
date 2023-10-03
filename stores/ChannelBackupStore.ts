@@ -1,7 +1,6 @@
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import * as base64 from 'base64-js';
 import * as CryptoJS from 'crypto-js';
 
 import NodeInfoStore from './NodeInfoStore';
@@ -16,6 +15,7 @@ import {
 
 import BackendUtils from '../utils/BackendUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
+import Base64Utils from '../utils/Base64Utils';
 
 const BACKUPS_HOST = 'https://backups.lnolymp.us';
 
@@ -53,7 +53,7 @@ export default class ChannelBackupStore {
             if (backup) {
                 if (backup?.multi_chan_backup?.multi_chan_backup) {
                     const multi = backup.multi_chan_backup.multi_chan_backup;
-                    const multiString = base64.fromByteArray(multi);
+                    const multiString = Base64Utils.bytesToBase64(multi);
 
                     const encryptedBackup = CryptoJS.AES.encrypt(
                         multiString,

@@ -60,7 +60,7 @@ export default function NodeIdenticon({
 
     return (
         <View style={{ borderRadius: rounded ? width : 0, overflow: 'hidden' }}>
-            <SvgXml xml={Base64Utils.decodeBase64ToString(data)} />
+            <SvgXml xml={Base64Utils.base64ToUtf8(data)} />
         </View>
     );
 }

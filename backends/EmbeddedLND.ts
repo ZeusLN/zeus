@@ -91,9 +91,7 @@ export default class EmbeddedLND extends LND {
                 ? Base64Utils.base64ToHex(data?.last_hop_pubkey)
                 : undefined,
             message: data?.message
-                ? Base64Utils.hexToBase64(
-                      Base64Utils.utf8ToHexString(data?.message)
-                  )
+                ? Base64Utils.hexToBase64(Base64Utils.utf8ToHex(data?.message))
                 : undefined,
             amp: data?.amp,
             timeout_seconds: data?.timeout_seconds || 60,

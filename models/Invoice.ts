@@ -80,7 +80,7 @@ export default class Invoice extends BaseModel {
         if (!this.r_preimage) return '';
         const preimage = this.r_preimage.data || this.r_preimage;
         return typeof preimage === 'object'
-            ? Base64Utils.bytesToHexString(preimage)
+            ? Base64Utils.bytesToHex(preimage)
             : typeof preimage === 'string'
             ? preimage.includes('=')
                 ? Base64Utils.base64ToHex(preimage)
@@ -92,7 +92,7 @@ export default class Invoice extends BaseModel {
         if (!this.r_hash) return '';
         const hash = this.r_hash.data || this.r_hash;
         return typeof hash === 'object'
-            ? Base64Utils.bytesToHexString(hash)
+            ? Base64Utils.bytesToHex(hash)
             : typeof hash === 'string'
             ? hash.includes('=')
                 ? Base64Utils.base64ToHex(hash)
@@ -204,8 +204,8 @@ export default class Invoice extends BaseModel {
             ? typeof this.r_hash === 'string'
                 ? this.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
                 : this.r_hash.data
-                ? Base64Utils.bytesToHexString(this.r_hash.data)
-                : Base64Utils.bytesToHexString(this.r_hash)
+                ? Base64Utils.bytesToHex(this.r_hash.data)
+                : Base64Utils.bytesToHex(this.r_hash)
             : '';
     }
 
@@ -275,7 +275,7 @@ export default class Invoice extends BaseModel {
             const encodedMessage =
                 this.htlcs[0].custom_records[keySendMessageType];
             try {
-                return Base64Utils.decodeBase64ToString(encodedMessage);
+                return Base64Utils.base64ToUtf8(encodedMessage);
             } catch (e) {
                 return '';
             }

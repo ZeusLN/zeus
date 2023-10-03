@@ -9,7 +9,7 @@ describe('ConnectionFormatUtils', () => {
                 )
             ).toEqual({
                 host: 'https://8.8.0.0',
-                macaroonHex: 'D36D356F',
+                macaroonHex: 'd36d356f',
                 port: '2056',
                 enableTor: false
             });
@@ -22,7 +22,7 @@ describe('ConnectionFormatUtils', () => {
                 )
             ).toEqual({
                 host: 'https://[2604:2000::]',
-                macaroonHex: 'D36D356F',
+                macaroonHex: 'd36d356f',
                 port: '2056',
                 enableTor: false
             });
@@ -35,7 +35,7 @@ describe('ConnectionFormatUtils', () => {
                 )
             ).toEqual({
                 host: 'https://[2604:2000::]',
-                macaroonHex: 'D36D356F',
+                macaroonHex: 'd36d356f',
                 port: '2058',
                 enableTor: false
             });
@@ -48,7 +48,7 @@ describe('ConnectionFormatUtils', () => {
                 )
             ).toEqual({
                 host: 'https://8.8.8.8',
-                macaroonHex: 'D36D356F',
+                macaroonHex: 'd36d356f',
                 port: '2059',
                 enableTor: false
             });
@@ -61,7 +61,7 @@ describe('ConnectionFormatUtils', () => {
                 )
             ).toEqual({
                 host: 'https://fasm2nfsakmn2dd.onion',
-                macaroonHex: 'D36D356F',
+                macaroonHex: 'd36d356f',
                 port: '2059',
                 enableTor: true
             });
