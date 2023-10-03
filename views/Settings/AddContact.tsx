@@ -56,6 +56,7 @@ interface AddContactState {
     description: string;
     photo: string | null;
     showExtraFieldModal: boolean;
+    confirmDelete: boolean;
     isFavourite: boolean;
     isValidOnchainAddress: boolean;
     isValidLightningAddress: boolean;
@@ -81,6 +82,7 @@ export default class AddContact extends React.Component<
             description: '',
             photo: null,
             showExtraFieldModal: false,
+            confirmDelete: false,
             isFavourite: false,
             isValidOnchainAddress: true,
             isValidLightningAddress: true,
@@ -95,6 +97,7 @@ export default class AddContact extends React.Component<
             [field]: [...prevState[field], '']
         }));
     };
+
     removeExtraField = (field, index) => {
         const updatedAddresses = [...this.state[field]];
         updatedAddresses.splice(index + 1, 1); // Remove the element at index
@@ -207,6 +210,38 @@ export default class AddContact extends React.Component<
         }
     };
 
+    deleteContact = async () => {
+        const prefillContact = this.props.navigation.getParam(
+            'prefillContact',
+            null
+        );
+
+        if (prefillContact) {
+            try {
+                const contactsString = await EncryptedStorage.getItem(
+                    'zeus-contacts'
+                );
+                const existingContacts: Contact[] = contactsString
+                    ? JSON.parse(contactsString)
+                    : [];
+
+                const updatedContacts = existingContacts.filter(
+                    (contact) => contact.id !== prefillContact.id
+                );
+
+                await EncryptedStorage.setItem(
+                    'zeus-contacts',
+                    JSON.stringify(updatedContacts)
+                );
+
+                console.log('Contact deleted successfully!');
+                this.props.navigation.navigate('Contacts');
+            } catch (error) {
+                console.log('Error deleting contact:', error);
+            }
+        }
+    };
+
     selectPhoto = () => {
         launchImageLibrary(
             {
@@ -235,6 +270,7 @@ export default class AddContact extends React.Component<
             isValidOnchainAddress: isValid
         });
     };
+
     onChangeLightningAddress = (text: string) => {
         const isValid =
             AddressUtils.isValidLightningPaymentRequest(text) ||
@@ -244,6 +280,7 @@ export default class AddContact extends React.Component<
             isValidLightningAddress: isValid
         });
     };
+
     onChangeNIP05 = (text: string) => {
         const isValid = AddressUtils.isValidLightningAddress(text);
         this.setState({
@@ -256,6 +293,7 @@ export default class AddContact extends React.Component<
             isValidNpub: isValid
         });
     };
+
     onChangePubkey = (text: string) => {
         const isValid = AddressUtils.isValidLightningPubKey(text);
         this.setState({
@@ -282,6 +320,7 @@ export default class AddContact extends React.Component<
             });
         }
     }
+
     toggleFavorite = () => {
         this.setState((prevState) => ({
             isFavourite: !prevState.isFavourite
@@ -348,6 +387,11 @@ export default class AddContact extends React.Component<
                 underlayColor="transparent"
                 size={35}
             />
+        );
+        const isEdit = !!this.props.navigation.getParam('isEdit', false);
+        const prefillContact = this.props.navigation.getParam(
+            'prefillContact',
+            null
         );
 
         return (
@@ -1036,17 +1080,11 @@ export default class AddContact extends React.Component<
                             </TouchableOpacity>
                         )}
 
-                    <View
-                        style={{
-                            paddingHorizontal: 20,
-                            paddingVertical: 20
-                        }}
-                    >
+                    <View style={styles.button}>
                         <Button
                             title={localeString(
                                 'views.Settings.AddContact.saveContact'
                             )}
-                            buttonStyle={{ padding: 14 }}
                             onPress={async () => {
                                 this.saveContact();
                             }}
@@ -1086,6 +1124,37 @@ export default class AddContact extends React.Component<
                             }
                         />
                     </View>
+                    {isEdit && prefillContact && (
+                        <View style={styles.button}>
+                            <Button
+                                title={
+                                    this.state.confirmDelete
+                                        ? localeString(
+                                              'views.Settings.AddEditNode.tapToConfirm'
+                                          )
+                                        : localeString(
+                                              'views.Settings.AddContact.deleteContact'
+                                          )
+                                }
+                                onPress={() => {
+                                    if (!this.state.confirmDelete) {
+                                        this.setState({
+                                            confirmDelete: true
+                                        });
+                                    } else {
+                                        this.deleteContact();
+                                    }
+                                }}
+                                containerStyle={{
+                                    borderColor: themeColor('delete')
+                                }}
+                                titleStyle={{
+                                    color: themeColor('delete')
+                                }}
+                                secondary
+                            />
+                        </View>
+                    )}
                 </KeyboardAvoidingView>
             </Screen>
         );
@@ -1149,5 +1218,11 @@ const styles = StyleSheet.create({
         width: 136,
         height: 136,
         borderRadius: 68
+    },
+    button: {
+        paddingTop: 10,
+        paddingBottom: 10,
+        width: 350,
+        alignSelf: 'center'
     }
 });
