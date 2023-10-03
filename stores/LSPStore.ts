@@ -185,24 +185,24 @@ export default class LSPStore {
         this.error = false;
         this.error_msg = '';
         this.showLspSettings = false;
+
+        const { settings } = this.settingsStore;
+
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
                 `${this.getLSPHost()}/api/v1/proposal`,
-                this.settingsStore.settings.lspAccessKey
+                settings.lspAccessKey
                     ? {
                           'Content-Type': 'application/json',
-                          'x-auth-token':
-                              this.settingsStore.settings.lspAccessKey
+                          'x-auth-token': settings.lspAccessKey
                       }
                     : {
                           'Content-Type': 'application/json'
                       },
                 JSON.stringify({
                     bolt11,
-                    // TODO investigate why Taproot chans from LSP
-                    // result in unsettled funds
-                    simpleTaproot: false
+                    simpleTaproot: settings.requestSimpleTaproot
                 })
             )
                 .then(async (response: any) => {
