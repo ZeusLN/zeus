@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import CircularProgress from 'react-native-circular-progress-indicator';
 
+import Button from '../components/Button';
 import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
 import Header from '../components/Header';
@@ -38,8 +39,8 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                     }}
                     navigation={navigation}
                 />
-                <View style={{ margin: 10, flex: 1, marginTop: '35%' }}>
-                    <View style={{ alignSelf: 'center', marginBottom: 40 }}>
+                <View style={{ flex: 1, justifyContent: 'center' }}>
+                    <View style={{ alignItems: 'center', marginBottom: 40 }}>
                         <CircularProgress
                             value={
                                 currentBlockHeight && bestBlockHeight
@@ -78,28 +79,36 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                         />
                     </View>
 
-                    {currentBlockHeight && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Sync.currentBlockHeight'
-                            )}
-                            value={currentBlockHeight}
-                        />
-                    )}
-                    {bestBlockHeight && (
-                        <KeyValue
-                            keyValue={localeString('views.Sync.tip')}
-                            value={bestBlockHeight}
-                        />
-                    )}
-                    {!!numBlocksUntilSynced && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Sync.numBlocksUntilSynced'
-                            )}
-                            value={numBlocksUntilSynced}
-                        />
-                    )}
+                    <View style={{ marginLeft: 20, marginRight: 20 }}>
+                        {currentBlockHeight && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Sync.currentBlockHeight'
+                                )}
+                                value={currentBlockHeight}
+                            />
+                        )}
+                        {bestBlockHeight && (
+                            <KeyValue
+                                keyValue={localeString('views.Sync.tip')}
+                                value={bestBlockHeight}
+                            />
+                        )}
+                        {!!numBlocksUntilSynced && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Sync.numBlocksUntilSynced'
+                                )}
+                                value={numBlocksUntilSynced}
+                            />
+                        )}
+                    </View>
+                </View>
+                <View style={{ bottom: 15 }}>
+                    <Button
+                        title={localeString('general.goBack')}
+                        onPress={() => navigation.goBack()}
+                    />
                 </View>
             </Screen>
         );
