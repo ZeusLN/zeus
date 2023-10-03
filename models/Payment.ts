@@ -67,7 +67,7 @@ export default class Payment extends BaseModel {
         return this.creation_date || this.created_at || this.timestamp || 0;
     }
 
-    @computed public get getDate(): string | Date {
+    @computed public get getDate(): Date {
         return DateTimeUtils.listDate(this.getTimestamp);
     }
 

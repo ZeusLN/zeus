@@ -150,7 +150,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 keyValue={localeString(
                                     'views.Invoice.settleDate'
                                 )}
-                                value={invoice.settleDate}
+                                value={invoice.formattedSettleDate}
                                 sensitive
                             />
                         )}
@@ -160,7 +160,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 keyValue={localeString(
                                     'views.Invoice.creationDate'
                                 )}
-                                value={invoice.creationDate}
+                                value={invoice.formattedCreationDate}
                                 sensitive
                             />
                         )}
