@@ -229,7 +229,7 @@ export async function startLnd(walletPassword: string) {
                     log.d('Got lnrpc.WalletState.UNLOCKED');
                 } else if (state.state === lnrpc.WalletState.RPC_ACTIVE) {
                     log.d('Got lnrpc.WalletState.RPC_ACTIVE');
-                    stores.syncStore.startSyncing();
+                    await stores.syncStore.startSyncing();
                     res(true);
                 } else if (state.state === lnrpc.WalletState.SERVER_ACTIVE) {
                     log.d('Got lnrpc.WalletState.SERVER_ACTIVE');
@@ -275,7 +275,7 @@ export async function createLndWallet(
     ) {
         await startLnd('');
     }
-    sleep(2000);
+    await sleep(2000);
 
     let seed: any;
     if (!seedMnemonic) {

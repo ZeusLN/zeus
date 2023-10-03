@@ -87,9 +87,9 @@ export default class SyncStore {
     };
 
     @action
-    public startSyncing = (skipWait?: boolean) => {
+    public startSyncing = async (skipWait?: boolean) => {
         this.isSyncing = true;
-        if (!skipWait) sleep(6000);
+        if (!skipWait) await sleep(6000);
 
         ReactNativeBlobUtil.fetch(
             'get',
@@ -111,7 +111,7 @@ export default class SyncStore {
                         this.numBlocksUntilSynced > 0 &&
                         !this.syncStatusUpdatesPaused
                     ) {
-                        sleep(2000);
+                        await sleep(2000);
                         await this.getNodeInfo().then(() => this.setSyncInfo());
                     }
                 } else {
