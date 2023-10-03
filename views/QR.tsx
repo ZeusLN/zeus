@@ -11,20 +11,25 @@ interface QRProps {
 
 interface QRState {
     value: string;
+    satAmount?: number;
 }
 
 export default class QR extends React.PureComponent<QRProps, QRState> {
     constructor(props: any) {
         super(props);
         const value: string = this.props.navigation.getParam('value', '');
+        const satAmount: number | undefined =
+            this.props.navigation.getParam('satAmount');
+
         this.state = {
-            value
+            value,
+            satAmount
         };
     }
 
     render() {
         const { navigation } = this.props;
-        const { value } = this.state;
+        const { value, satAmount } = this.state;
 
         return (
             <Screen>
@@ -38,11 +43,16 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                 />
                 <View
                     style={{
-                        top: 5,
-                        padding: 15
+                        paddingLeft: 15,
+                        paddingRight: 15
                     }}
                 >
-                    <CollapsedQR value={value} expanded textBottom />
+                    <CollapsedQR
+                        value={value}
+                        satAmount={satAmount}
+                        expanded
+                        textBottom
+                    />
                 </View>
             </Screen>
         );

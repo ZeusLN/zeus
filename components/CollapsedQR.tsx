@@ -53,7 +53,7 @@ interface CollapsedQRProps {
     expanded?: boolean;
     textBottom?: boolean;
     truncateLongValue?: boolean;
-    satAmount?: string;
+    satAmount?: string | number;
 }
 
 interface CollapsedQRState {
