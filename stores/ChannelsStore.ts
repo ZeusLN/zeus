@@ -523,9 +523,13 @@ export default class ChannelsStore {
     };
 
     @action
-    public getChannelInfo = (chanId: string) => {
+    public loadChannelInfo = (chanId: string, deleteBeforeLoading = false) => {
         this.loading = true;
-        if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
+
+        if (deleteBeforeLoading) {
+            if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
+        }
+
         BackendUtils.getChannelInfo(chanId)
             .then((data: any) => {
                 this.chanInfo[chanId] = new ChannelInfo(data);
