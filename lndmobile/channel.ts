@@ -7,7 +7,7 @@ import {
 } from './utils';
 import { lnrpc } from './../proto/lightning';
 import Long from 'long';
-import * as base64 from 'base64-js';
+import Base64Utils from '../utils/Base64Utils';
 
 /**
  * @throws
@@ -315,7 +315,7 @@ export const restoreChannelBackups = async (
         response: lnrpc.RestoreBackupResponse,
         method: 'RestoreChannelBackups',
         options: {
-            multi_chan_backup: base64.toByteArray(channels_backup_base64)
+            multi_chan_backup: Base64Utils.base64ToBytes(channels_backup_base64)
         }
     });
     return response;
@@ -337,7 +337,9 @@ export const verifyChanBackup = async (
         method: 'VerifyChanBackup',
         options: {
             multi_chan_backup: {
-                multi_chan_backup: base64.toByteArray(channels_backup_base64)
+                multi_chan_backup: Base64Utils.base64ToBytes(
+                    channels_backup_base64
+                )
             }
         }
     });

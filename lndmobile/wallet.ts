@@ -1,4 +1,3 @@
-import * as base64 from 'base64-js';
 import Long from 'long';
 
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
@@ -88,7 +87,8 @@ export const initWallet = async (
     if (channelBackupsBase64) {
         options.channel_backups = {
             multi_chan_backup: {
-                multi_chan_backup: base64.toByteArray(channelBackupsBase64)
+                multi_chan_backup:
+                    Base64Utils.base64ToBytes(channelBackupsBase64)
             }
         };
     }

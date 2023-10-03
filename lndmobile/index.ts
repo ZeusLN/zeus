@@ -221,8 +221,7 @@ export const sendPaymentSync = async (
     };
     if (tlv_record_name && tlv_record_name.length > 0) {
         options.dest_custom_records = {
-            [TLV_RECORD_NAME]:
-                Base64Utils.unicodeStringToUint8Array(tlv_record_name)
+            [TLV_RECORD_NAME]: Base64Utils.utf8ToBytes(tlv_record_name)
         };
     }
     if (amount) {
@@ -344,7 +343,7 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
     } = request;
 
     const options: routerrpc.ISendPaymentRequest = {
-        dest: Base64Utils.hexToUint8Array(dest),
+        dest: Base64Utils.hexToBytes(dest),
         amt,
         dest_custom_records,
         payment_hash,
@@ -573,7 +572,7 @@ export const cancelInvoice = async (
         response: invoicesrpc.CancelInvoiceResp,
         method: 'InvoicesCancelInvoice',
         options: {
-            payment_hash: Base64Utils.hexToUint8Array(paymentHash)
+            payment_hash: Base64Utils.hexToBytes(paymentHash)
         }
     });
     return response;
