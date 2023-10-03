@@ -1,9 +1,4 @@
-const sleep = (milliseconds: number) => {
-    const date = Date.now();
-    let currentDate: any = null;
-    do {
-        currentDate = Date.now();
-    } while (currentDate - date < milliseconds);
-};
+const sleep = (milliseconds: number) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export { sleep };
