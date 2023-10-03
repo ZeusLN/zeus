@@ -15,8 +15,6 @@ import UnitsStore from './../../stores/UnitsStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import BlueWalletWarning from '../../components/BlueWalletWarning';
-
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import { localeString } from '../../utils/LocaleUtils';
@@ -136,7 +134,6 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         return (
             <>
-                <BlueWalletWarning />
                 <FlatList
                     data={DATA}
                     ItemSeparatorComponent={() => (
