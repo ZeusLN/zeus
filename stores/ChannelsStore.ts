@@ -11,6 +11,7 @@ import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
 
 import BackendUtils from './../utils/BackendUtils';
+import _ from 'lodash';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
@@ -254,35 +255,50 @@ export default class ChannelsStore {
 
     @action
     enrichChannels = async (channels: Array<Channel>) => {
+        if (channels.length === 0) return;
+
+        const channelsWithMissingAliases = channels.filter(
+            (c) => this.aliasesById[c.channelId] == null
+        );
+        const channelsWithMissingNodeInfos = channels.filter(
+            (c) => this.nodes[c.remotePubkey] == null
+        );
+        const publicKeysOfToBeLoadedNodeInfos = _.chain(
+            channelsWithMissingAliases.concat(channelsWithMissingNodeInfos)
+        )
+            .map((c) => c.remotePubkey)
+            .uniq()
+            .value();
+
         this.loading = true;
         await Promise.all(
-            channels.map(async (channel: Channel) => {
-                if (!channel.remotePubkey) return;
-                if (
-                    this.settingsStore.implementation !== 'c-lightning-REST' &&
-                    !this.nodes[channel.remotePubkey]
-                ) {
-                    await this.getNodeInfo(channel.remotePubkey)
-                        .then((nodeInfo: any) => {
-                            if (!nodeInfo) return;
-                            this.nodes[channel.remotePubkey] = nodeInfo;
-                            this.aliasesById[channel.channelId] =
-                                nodeInfo.alias;
-                        })
-                        .catch(() => {
-                            // console.log(
-                            //     `Couldn't find node alias for ${channel.remotePubkey}`,
-                            //     err
-                            // );
-                        });
+            publicKeysOfToBeLoadedNodeInfos.map(
+                async (remotePubKey: string) => {
+                    if (
+                        this.settingsStore.implementation !== 'c-lightning-REST'
+                    ) {
+                        const nodeInfo = await this.getNodeInfo(remotePubKey);
+                        if (!nodeInfo) return;
+                        this.nodes[remotePubKey] = nodeInfo;
+                    }
                 }
-                if (!channel.alias && this.aliasesById[channel.channelId]) {
-                    channel.alias = this.aliasesById[channel.channelId];
-                }
-                channel.displayName =
-                    channel.alias || channel.remotePubkey || channel.channelId;
-            })
+            )
         );
+
+        for (const channel of channelsWithMissingAliases) {
+            const nodeInfo = this.nodes[channel.remotePubkey];
+            if (!nodeInfo) continue;
+            this.aliasesById[channel.channelId] = nodeInfo.alias;
+        }
+
+        for (const channel of channels) {
+            if (channel.alias == null) {
+                channel.alias = this.aliasesById[channel.channelId];
+            }
+            channel.displayName =
+                channel.alias || channel.remotePubkey || channel.channelId;
+        }
+
         this.loading = false;
         return channels;
     };
