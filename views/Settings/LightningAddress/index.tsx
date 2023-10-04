@@ -42,11 +42,9 @@ export default class LightningAddress extends React.Component<
 
     async UNSAFE_componentWillMount() {
         const { LightningAddressStore } = this.props;
-        const { getLightningAddressActivated, status } = LightningAddressStore;
+        const { status } = LightningAddressStore;
 
-        getLightningAddressActivated().then((result) => {
-            if (result) status();
-        });
+        status();
 
         this.setState({
             newLightningAddress: ''
@@ -166,12 +164,10 @@ export default class LightningAddress extends React.Component<
                             }
                         }}
                         rightComponent={
-                            lightningAddress && (
-                                <Row>
-                                    {!loading && fees && <InfoButton />}
-                                    <SettingsButton />
-                                </Row>
-                            )
+                            <Row>
+                                {!loading && fees && <InfoButton />}
+                                {lightningAddress && <SettingsButton />}
+                            </Row>
                         }
                         navigation={navigation}
                     />
