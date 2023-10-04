@@ -124,7 +124,7 @@ export default class LightningAddressStore {
                 const preimage = preimages[i];
                 const hash = sha256
                     .create()
-                    .update(Base64Utils.hexToUint8Array(preimage))
+                    .update(Base64Utils.hexToBytes(preimage))
                     .hex();
                 preimageHashMap[hash] = preimage;
                 hashes.push(hash);
