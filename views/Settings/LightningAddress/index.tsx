@@ -196,7 +196,7 @@ export default class LightningAddress extends React.Component<
                                     <Text
                                         style={{
                                             fontFamily: 'Lato-Regular',
-                                            fontSize: 25,
+                                            fontSize: 16,
                                             color: themeColor('text'),
                                             textAlign: 'center'
                                         }}
