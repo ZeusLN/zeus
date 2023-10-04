@@ -257,13 +257,14 @@ export const sendPaymentV2Sync = async (
         max_shard_size_msat,
         payment_hash,
         amp,
-        dest
+        dest,
+        timeout_seconds
     } = sendPaymentReq;
 
     const options: routerrpc.ISendPaymentRequest = {
         payment_request,
         no_inflight_updates: true,
-        timeout_seconds: 60,
+        timeout_seconds,
         max_parts,
         fee_limit_sat,
         route_hints,
