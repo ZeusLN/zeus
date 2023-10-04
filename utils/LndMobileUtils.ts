@@ -229,7 +229,7 @@ export async function startLnd(walletPassword: string) {
                     log.d('Got lnrpc.WalletState.UNLOCKED');
                 } else if (state.state === lnrpc.WalletState.RPC_ACTIVE) {
                     log.d('Got lnrpc.WalletState.RPC_ACTIVE');
-                    await stores.syncStore.startSyncing();
+                    stores.syncStore.startSyncing();
                     res(true);
                 } else if (state.state === lnrpc.WalletState.SERVER_ACTIVE) {
                     log.d('Got lnrpc.WalletState.SERVER_ACTIVE');
