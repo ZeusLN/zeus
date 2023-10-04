@@ -411,7 +411,7 @@ export default class LightningAddressStore {
     };
 
     @action
-    public redeem = async (hash: string, payReq: string) => {
+    public redeem = async (hash: string, payReq?: string) => {
         this.error = false;
         this.error_msg = '';
         this.loading = true;

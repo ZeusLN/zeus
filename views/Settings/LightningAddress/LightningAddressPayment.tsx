@@ -148,14 +148,19 @@ export default function LightningAddressPayment(props) {
                                         ).toString(),
                                         memo: `OLYMPUS LNURL redemption ${item.hash}`,
                                         preimage
-                                    }).then((result) => {
-                                        if (result.payment_request) {
-                                            redeem(
-                                                hash,
-                                                result.payment_request
-                                            ).then(() => status());
-                                        }
-                                    });
+                                    })
+                                        .then((result) => {
+                                            if (result.payment_request) {
+                                                redeem(
+                                                    hash,
+                                                    result.payment_request
+                                                ).then(() => status());
+                                            }
+                                        })
+                                        .catch(() => {
+                                            // if payment request has already been submitted, try to redeem without new pay req
+                                            redeem(hash).then(() => status());
+                                        });
                                 });
                             }}
                         >
