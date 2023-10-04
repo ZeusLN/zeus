@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -22,8 +23,10 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import BigNumber from 'bignumber.js';
 
-const LNURL_HOST = 'http://localhost:1337';
-const LNURL_SOCKET_HOST = 'http://localhost:8000';
+const LNURL_HOST =
+    Platform.OS === 'ios' ? 'http://localhost:1337' : 'http://10.0.2.2:1337';
+const LNURL_SOCKET_HOST =
+    Platform.OS === 'ios' ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
 
 const ADDRESS_STORAGE_STRING = 'olympus-lightning-address';
 const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
@@ -96,11 +99,9 @@ export default class LightningAddressStore {
             return;
         }
 
-        const newAddress = `${handle}@lnolymp.us`;
+        await EncryptedStorage.setItem(ADDRESS_STORAGE_STRING, handle);
 
-        await EncryptedStorage.setItem(ADDRESS_STORAGE_STRING, newAddress);
-
-        this.lightningAddress = newAddress;
+        this.lightningAddress = handle;
     };
 
     @action
@@ -266,7 +267,7 @@ export default class LightningAddressStore {
                                             .identity_pubkey,
                                         message: verification,
                                         signature,
-                                        handle
+                                        handle: `${handle}@zeuspay.com`
                                     })
                                 )
                                     .then(async (response: any) => {
