@@ -1,7 +1,6 @@
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import * as base64 from 'base64-js';
 import * as CryptoJS from 'crypto-js';
 
 import NodeInfoStore from './NodeInfoStore';
@@ -16,11 +15,15 @@ import {
 
 import BackendUtils from '../utils/BackendUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
+import Base64Utils from '../utils/Base64Utils';
 
 const BACKUPS_HOST = 'https://backups.lnolymp.us';
 
 export default class ChannelBackupStore {
     @observable public channelEventsSubscription: any;
+    @observable public backups: Array<any> = [];
+    @observable public loading: boolean = false;
+    @observable public error: boolean = false;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -50,7 +53,7 @@ export default class ChannelBackupStore {
             if (backup) {
                 if (backup?.multi_chan_backup?.multi_chan_backup) {
                     const multi = backup.multi_chan_backup.multi_chan_backup;
-                    const multiString = base64.fromByteArray(multi);
+                    const multiString = Base64Utils.bytesToBase64(multi);
 
                     const encryptedBackup = CryptoJS.AES.encrypt(
                         multiString,
@@ -169,21 +172,10 @@ export default class ChannelBackupStore {
                                     const { backup, created_at, success } =
                                         data;
                                     if (status === 200 && success && backup) {
-                                        const decryptedBytes =
-                                            CryptoJS.AES.decrypt(
-                                                backup,
-                                                this.settingsStore.seedPhrase.toString()
-                                            );
-                                        const decryptedString =
-                                            decryptedBytes.toString(
-                                                CryptoJS.enc.Utf8
-                                            );
+                                        await this.triggerRecovery(backup);
 
-                                        await restoreChannelBackups(
-                                            decryptedString
-                                        );
                                         resolve({
-                                            backup: decryptedString,
+                                            backup,
                                             created_at
                                         });
                                     } else {
@@ -199,6 +191,103 @@ export default class ChannelBackupStore {
                         });
                 }
             });
+        });
+    };
+
+    @action
+    public triggerRecovery = async (backup: string) => {
+        const decryptedBytes = CryptoJS.AES.decrypt(
+            backup,
+            this.settingsStore.seedPhrase.toString()
+        );
+        const decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
+
+        await restoreChannelBackups(decryptedString);
+
+        return;
+    };
+
+    @action
+    public advancedRecoveryList = async () => {
+        this.loading = true;
+        this.error = false;
+        this.backups = [];
+        return new Promise((resolve, reject) => {
+            ReactNativeBlobUtil.fetch(
+                'POST',
+                `${BACKUPS_HOST}/api/auth`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+                })
+            )
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        const { verification } = data;
+
+                        BackendUtils.signMessage(verification)
+                            .then((data: any) => {
+                                const signature = data.zbase || data.signature;
+                                ReactNativeBlobUtil.fetch(
+                                    'POST',
+                                    `${BACKUPS_HOST}/api/recoverAdvanced`,
+                                    {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    JSON.stringify({
+                                        pubkey: this.nodeInfoStore.nodeInfo
+                                            .identity_pubkey,
+                                        message: verification,
+                                        signature
+                                    })
+                                )
+                                    .then(async (response: any) => {
+                                        const data = response.json();
+                                        const { backups } = data;
+                                        if (status === 200 && backups) {
+                                            this.backups = backups;
+                                            this.loading = false;
+                                            resolve({
+                                                backups
+                                            });
+                                        } else {
+                                            this.error = true;
+                                            this.loading = false;
+                                            reject(data.error);
+                                        }
+                                    })
+                                    .catch((error: any) => {
+                                        this.backups = [];
+                                        this.error = true;
+                                        this.loading = false;
+                                        reject(error);
+                                    });
+                            })
+                            .catch((error: any) => {
+                                this.backups = [];
+                                this.error = true;
+                                this.loading = false;
+                                reject(error);
+                            });
+                    } else {
+                        this.backups = [];
+                        this.error = true;
+                        this.loading = false;
+                    }
+                })
+                .catch(() => {
+                    this.backups = [];
+                    this.error = true;
+                    this.loading = false;
+                });
+        }).catch(() => {
+            this.backups = [];
+            this.error = true;
+            this.loading = false;
         });
     };
 

@@ -40,7 +40,6 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
-import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import { version } from '../../package.json';
@@ -48,7 +47,6 @@ import { version } from '../../package.json';
 interface SettingsProps {
     navigation: any;
     SettingsStore: SettingsStore;
-    SyncStore: SyncStore;
     UnitsStore: UnitsStore;
 }
 
@@ -57,7 +55,7 @@ interface SettingsState {
     easterEggCount: number;
 }
 
-@inject('SettingsStore', 'SyncStore', 'UnitsStore')
+@inject('SettingsStore', 'UnitsStore')
 @observer
 export default class Settings extends React.Component<
     SettingsProps,
@@ -68,8 +66,8 @@ export default class Settings extends React.Component<
         easterEggCount: 0
     };
 
-    UNSAFE_componentDidMount() {
-        const { SettingsStore, SyncStore, navigation } = this.props;
+    UNSAFE_componentWillMount() {
+        const { SettingsStore, navigation } = this.props;
 
         SettingsStore.getSettings();
 
@@ -77,13 +75,6 @@ export default class Settings extends React.Component<
         navigation.addListener('didFocus', () => {
             SettingsStore.getSettings();
         });
-
-        // pause syncing updates if necessary
-        const { isSyncing, syncStatusUpdatesPaused, pauseSyncingUpates } =
-            SyncStore;
-        if (isSyncing && !syncStatusUpdatesPaused) {
-            pauseSyncingUpates();
-        }
     }
 
     componentWillUnmount() {
