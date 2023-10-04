@@ -42,9 +42,9 @@ export default class LightningAddress extends React.Component<
 
     async UNSAFE_componentWillMount() {
         const { LightningAddressStore } = this.props;
-        const { getLightningAddress, status } = LightningAddressStore;
+        const { getLightningAddressActivated, status } = LightningAddressStore;
 
-        getLightningAddress().then((result) => {
+        getLightningAddressActivated().then((result) => {
             if (result) status();
         });
 
@@ -74,8 +74,8 @@ export default class LightningAddress extends React.Component<
                     name="info"
                     onPress={() => {
                         // TODO reset
-                        navigation.navigate('LightningAddressInfo');
-                        // this.props.LightningAddressStore.test_DELETE();
+                        // navigation.navigate('LightningAddressInfo');
+                        this.props.LightningAddressStore.test_DELETE();
                     }}
                     color={themeColor('text')}
                     underlayColor="transparent"

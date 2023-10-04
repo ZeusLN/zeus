@@ -28,13 +28,14 @@ const LNURL_HOST =
 const LNURL_SOCKET_HOST =
     Platform.OS === 'ios' ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
 
-const ADDRESS_STORAGE_STRING = 'olympus-lightning-address';
+const ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 
 const RELAYS = ['wss://nostr.mutinywallet.com', 'wss://relay.damus.io'];
 
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
+    @observable public lightningAddressActivated: boolean = false;
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
@@ -69,16 +70,16 @@ export default class LightningAddressStore {
     };
 
     @action
-    public getLightningAddress = async () => {
+    public getLightningAddressActivated = async () => {
         this.loading = true;
-        const lightningAddress = await EncryptedStorage.getItem(
-            ADDRESS_STORAGE_STRING
+        const lightningAddressActivated = await EncryptedStorage.getItem(
+            ADDRESS_ACTIVATED_STRING
         );
 
-        if (lightningAddress) {
-            this.lightningAddress = lightningAddress;
+        if (lightningAddressActivated) {
+            this.lightningAddressActivated = Boolean(lightningAddressActivated);
             this.loading = false;
-            return this.lightningAddress;
+            return this.lightningAddressActivated;
         } else {
             this.loading = false;
         }
@@ -86,21 +87,13 @@ export default class LightningAddressStore {
 
     // TODO remove
     test_DELETE = async () => {
-        await EncryptedStorage.setItem(ADDRESS_STORAGE_STRING, '');
+        await EncryptedStorage.setItem(ADDRESS_ACTIVATED_STRING, '');
+        this.lightningAddress = '';
     };
 
     setLightningAddress = async (handle: string) => {
-        const lightningAddress = await EncryptedStorage.getItem(
-            ADDRESS_STORAGE_STRING
-        );
-
-        if (lightningAddress) {
-            this.lightningAddress = lightningAddress;
-            return;
-        }
-
-        await EncryptedStorage.setItem(ADDRESS_STORAGE_STRING, handle);
-
+        await EncryptedStorage.setItem(ADDRESS_ACTIVATED_STRING, 'true');
+        this.lightningAddressActivated = true;
         this.lightningAddress = handle;
     };
 
@@ -360,7 +353,8 @@ export default class LightningAddressStore {
                                             paid,
                                             settled,
                                             fees,
-                                            minimumSats
+                                            minimumSats,
+                                            handle
                                         } = data;
 
                                         if (status === 200 && success) {
@@ -372,6 +366,7 @@ export default class LightningAddressStore {
                                             this.settled = settled;
                                             this.fees = fees;
                                             this.minimumSats = minimumSats;
+                                            this.lightningAddress = handle;
 
                                             if (
                                                 new BigNumber(
