@@ -276,8 +276,8 @@ export default class LightningAddress extends React.Component<
                                         }}
                                         autoCapitalize="none"
                                         autoCorrect={false}
-                                        suffix="@lnolymp.us"
-                                        right={150}
+                                        suffix="@zeuspay.com"
+                                        right={170}
                                     />
                                 </View>
                                 <View style={{ margin: 10 }}>
