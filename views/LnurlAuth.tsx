@@ -128,7 +128,7 @@ export default class LnurlAuth extends React.Component<
                 const linkingKeyPub = pubPoint.encodeCompressed('hex');
 
                 const signedMessage = ec.sign(
-                    Base64Utils.hexToUint8Array(this.state.k1),
+                    Base64Utils.hexToBytes(this.state.k1),
                     linkingKeyPriv,
                     { canonical: true }
                 );
@@ -136,8 +136,7 @@ export default class LnurlAuth extends React.Component<
 
                 this.setState({
                     linkingKeyPub,
-                    signedMessageDER:
-                        Base64Utils.bytesToHexString(signedMessageDER),
+                    signedMessageDER: Base64Utils.bytesToHex(signedMessageDER),
                     preparingSignature: false,
                     signatureSuccess: true
                 });

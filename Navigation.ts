@@ -65,6 +65,7 @@ import Nostr from './views/Settings/Nostr';
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
+import DisasterRecoveryAdvanced from './views/Settings/EmbeddedNode/DisasterRecoveryAdvanced';
 import Pathfinding from './views/Settings/EmbeddedNode/Pathfinding';
 import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
 import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
@@ -323,6 +324,9 @@ const AppScenes = {
     },
     DisasterRecovery: {
         screen: DisasterRecovery
+    },
+    DisasterRecoveryAdvanced: {
+        screen: DisasterRecoveryAdvanced
     },
     Pathfinding: {
         screen: Pathfinding

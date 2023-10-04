@@ -140,7 +140,7 @@ export default class PaymentRequest extends React.Component<
             this.isComponentMounted &&
             !noBalance
         ) {
-            sleep(7000);
+            await sleep(7000);
             const isReady = await isLightningReadyToSend();
             if (isReady) {
                 this.setState({
@@ -963,10 +963,14 @@ export default class PaymentRequest extends React.Component<
                                         title={localeString(
                                             'views.PaymentRequest.payInvoice'
                                         )}
-                                        icon={{
-                                            name: 'send',
-                                            size: 25
-                                        }}
+                                        icon={
+                                            lightningReadyToSend
+                                                ? {
+                                                      name: 'send',
+                                                      size: 25
+                                                  }
+                                                : undefined
+                                        }
                                         onPress={() => {
                                             this.sendPayment(
                                                 feeOption,

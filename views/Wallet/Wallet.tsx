@@ -315,8 +315,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             embeddedLndNetwork,
             updateSettings
         } = SettingsStore;
-        const { isSyncing, syncStatusUpdatesPaused, resumeSyncingUpates } =
-            SyncStore;
+        const { isSyncing } = SyncStore;
         const { fiatEnabled, pos, rescan, recovery } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
 
@@ -333,8 +332,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (expressGraphSyncEnabled) await expressGraphSync();
                 await startLnd(walletPassword);
             }
-            if (SettingsStore.settings.automaticDisasterRecoveryBackup)
-                ChannelBackupStore.initSubscribeChannelEvents();
             if (BackendUtils.supportsLSPs()) {
                 if (SettingsStore.settings.enableLSP) {
                     LSPStore.getLSPInfo();
@@ -352,17 +349,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 });
             }
             if (recovery) {
+                if (isSyncing) return;
                 try {
                     await ChannelBackupStore.recoverStaticChannelBackup();
-                } catch (e) {}
 
-                await updateSettings({
-                    recovery: false
-                });
-            }
+                    await updateSettings({
+                        recovery: false
+                    });
 
-            if (isSyncing && syncStatusUpdatesPaused) {
-                resumeSyncingUpates();
+                    if (SettingsStore.settings.automaticDisasterRecoveryBackup)
+                        ChannelBackupStore.initSubscribeChannelEvents();
+                } catch (e) {
+                    console.log('recover error', e);
+                }
+            } else {
+                if (SettingsStore.settings.automaticDisasterRecoveryBackup)
+                    ChannelBackupStore.initSubscribeChannelEvents();
             }
 
             // TODO add connection conditions

@@ -114,6 +114,7 @@ export interface Settings {
     lspMainnet: string;
     lspTestnet: string;
     lspAccessKey: string;
+    requestSimpleTaproot: boolean;
     // Lightning Address
     automaticallyAccept: boolean;
     verifyAllPaymentsWithNostr: boolean;
@@ -726,7 +727,7 @@ export default class SettingsStore {
         expressGraphSync: false,
         expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
-        bimodalPathfinding: false,
+        bimodalPathfinding: true,
         dontAllowOtherPeers: true,
         neutrinoPeers: [],
         zeroConfPeers: [],
@@ -738,6 +739,7 @@ export default class SettingsStore {
         lspMainnet: DEFAULT_LSP_MAINNET,
         lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: '',
+        requestSimpleTaproot: false,
         // Lightning Address
         automaticallyAccept: true,
         verifyAllPaymentsWithNostr: false

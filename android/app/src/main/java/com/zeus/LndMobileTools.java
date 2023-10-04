@@ -104,7 +104,7 @@ class LndMobileTools extends ReactContextBaseJavaModule {
     String packageName = getReactApplicationContext().getPackageName();
     ActivityManager am = (ActivityManager) getCurrentActivity().getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      if (p.processName.equals(packageName + ":blixtLndMobile")) {
+      if (p.processName.equals(packageName + ":zeusLndMobile")) {
         Process.killProcess(p.pid);
         return true;
       }
@@ -433,7 +433,7 @@ class LndMobileTools extends ReactContextBaseJavaModule {
     String packageName = getReactApplicationContext().getPackageName();
     ActivityManager am = (ActivityManager) getReactApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      if (p.processName.equals(packageName + ":blixtLndMobile")) {
+      if (p.processName.equals(packageName + ":zeusLndMobile")) {
         promise.resolve(true);
         return;
       }
