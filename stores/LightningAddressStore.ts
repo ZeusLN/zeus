@@ -225,7 +225,11 @@ export default class LightningAddressStore {
     };
 
     @action
-    public create = async (handle: string) => {
+    public create = async (
+        handle: string,
+        nostr_pk?: string,
+        relays?: Array<string>
+    ) => {
         this.error = false;
         this.error_msg = '';
         this.loading = true;
@@ -260,7 +264,9 @@ export default class LightningAddressStore {
                                             .identity_pubkey,
                                         message: verification,
                                         signature,
-                                        handle: `${handle}@zeuspay.com`
+                                        handle: `${handle}@zeuspay.com`,
+                                        nostr_pk,
+                                        relays
                                     })
                                 )
                                     .then(async (response: any) => {
