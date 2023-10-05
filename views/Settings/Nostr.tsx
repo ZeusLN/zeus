@@ -23,14 +23,14 @@ interface NostrProps {
 interface NostrState {
     relays: Array<string>;
     addRelay: string;
-    nsec: string;
+    nostrPrivateKey: string;
 }
 
 @inject('SettingsStore')
 @observer
 export default class Nostr extends React.Component<NostrProps, NostrState> {
     state = {
-        nsec: '',
+        nostrPrivateKey: '',
         relays: [],
         addRelay: ''
     };
@@ -49,13 +49,13 @@ export default class Nostr extends React.Component<NostrProps, NostrState> {
 
         this.setState({
             relays: settings.nostr.relays || [],
-            nsec: settings.nostr.nsec || ''
+            nostrPrivateKey: settings.nostr.nostrPrivateKey || ''
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { relays, nsec, addRelay } = this.state;
+        const { relays, nostrPrivateKey, addRelay } = this.state;
         const { updateSettings }: any = SettingsStore;
 
         return (
@@ -128,7 +128,7 @@ export default class Nostr extends React.Component<NostrProps, NostrState> {
                                             updateSettings({
                                                 nostr: {
                                                     relays: newRelays,
-                                                    nsec
+                                                    nostrPrivateKey
                                                 }
                                             });
                                         }}
@@ -175,7 +175,7 @@ export default class Nostr extends React.Component<NostrProps, NostrState> {
                                                         updateSettings({
                                                             nostr: {
                                                                 relays: newNostr,
-                                                                nsec
+                                                                nostrPrivateKey
                                                             }
                                                         });
                                                     }}

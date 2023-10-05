@@ -70,7 +70,7 @@ interface InvoicesSettings {
 }
 
 interface NostrSettings {
-    nsec?: string;
+    nostrPrivateKey?: string;
     relays?: Array<string>;
 }
 
@@ -712,7 +712,7 @@ export default class SettingsStore {
             showCustomPreimageField: false
         },
         nostr: {
-            nsec: '',
+            nostrPrivateKey: '',
             relays: DEFAULT_NOSTR_RELAYS
         },
         supportedBiometryType: undefined,
@@ -933,7 +933,7 @@ export default class SettingsStore {
                 if (!this.settings.nostr) {
                     this.settings.nostr = {
                         relays: DEFAULT_NOSTR_RELAYS,
-                        nsec: ''
+                        nostrPrivateKey: ''
                     };
                 }
 

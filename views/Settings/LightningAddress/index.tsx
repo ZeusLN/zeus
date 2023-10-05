@@ -103,7 +103,7 @@ export default class LightningAddress extends React.Component<
             error_msg,
             loading
         } = LightningAddressStore;
-        const { settings } = SettingsStore;
+        const { settings, updateSettings } = SettingsStore;
         const { nostr } = settings;
         const { relays } = nostr;
 
@@ -420,6 +420,12 @@ export default class LightningAddress extends React.Component<
                                                                     nip19.npubEncode(
                                                                         nostrPublicKey
                                                                     );
+                                                                updateSettings({
+                                                                    nostr: {
+                                                                        relays,
+                                                                        nostrPrivateKey
+                                                                    }
+                                                                });
                                                             } catch (e) {}
                                                             this.setState({
                                                                 nostrPrivateKey,
