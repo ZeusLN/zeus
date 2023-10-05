@@ -140,7 +140,6 @@ export default function LightningAddressPayment(props) {
                                     } = item;
                                     const preimage = map[hash];
 
-                                    // TODO find way to submit existing invoice
                                     BackendUtils.createInvoice({
                                         expiry: '3600',
                                         value: (
