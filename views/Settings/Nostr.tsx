@@ -91,7 +91,15 @@ export default class Nostr extends React.Component<NostrProps, NostrState> {
                                         this.setState({ addRelay: text })
                                     }
                                     value={addRelay}
-                                    style={{ flex: 1 }}
+                                    style={{
+                                        flex: 1,
+                                        borderWidth:
+                                            !addRelay ||
+                                            addRelay.startsWith('wss://')
+                                                ? 0
+                                                : 3,
+                                        borderColor: themeColor('warning')
+                                    }}
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                 />
@@ -104,7 +112,11 @@ export default class Nostr extends React.Component<NostrProps, NostrState> {
                                         }}
                                         iconOnly
                                         onPress={() => {
-                                            if (!addRelay) return;
+                                            if (
+                                                !addRelay ||
+                                                !addRelay.startsWith('wss://')
+                                            )
+                                                return;
                                             const newRelays = [
                                                 ...relays,
                                                 addRelay
