@@ -57,7 +57,7 @@ export default function LightningAddressPayment(props) {
         >
             <ListItem.Content>
                 <ListItem.Title>
-                    <Amount sats={item.amountMsat / 1000} />
+                    <Amount sats={item.amount_msat / 1000} />
                 </ListItem.Title>
                 <ListItem.Subtitle>
                     <Text
@@ -92,7 +92,7 @@ export default function LightningAddressPayment(props) {
                         onPress={() => {
                             if (attestationStatus === 'neutral') {
                                 setLoading(true);
-                                lookupAttestations(item.hash, item.amountMsat)
+                                lookupAttestations(item.hash, item.amount_msat)
                                     .then((attestations: Array<any>) => {
                                         processAttestations(attestations);
                                         setLoading(false);
@@ -144,7 +144,7 @@ export default function LightningAddressPayment(props) {
                                     BackendUtils.createInvoice({
                                         expiry: '3600',
                                         value: (
-                                            item.amountMsat / 1000
+                                            item.amount_msat / 1000
                                         ).toString(),
                                         memo: `OLYMPUS LNURL redemption ${item.hash}`,
                                         preimage
