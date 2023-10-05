@@ -104,6 +104,7 @@ export default class Settings extends React.Component<
         const OlympusButton = () => (
             <TouchableOpacity
                 onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
+                onLongPress={() => navigation.navigate('LightningAddress')}
             >
                 <View style={{ top: -7 }}>
                     <Olympus width="45" height="45" fill={themeColor('text')} />
@@ -250,7 +251,7 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {BackendUtils.supportsLSPs() && (
+                    {false && BackendUtils.supportsLSPs() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
