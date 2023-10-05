@@ -65,8 +65,8 @@ export default class PointOfSaleRecon extends React.PureComponent<
     }
 
     renderItem = (order) => {
-        const { navigation, FiatStore } = this.props;
-        const { getSymbol } = FiatStore;
+        const { navigation } = this.props;
+        const { getSymbol } = this.props.FiatStore;
         const { item } = order;
         const isPaid: boolean = item && item.payment;
 
@@ -103,7 +103,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
     };
 
     render() {
-        const { FiatStore, PosStore, navigation } = this.props;
+        const { FiatStore, navigation } = this.props;
         const { selectedIndex } = this.state;
         const {
             completedOrders,
@@ -112,7 +112,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
             reconTax,
             reconTips,
             loading
-        } = PosStore;
+        } = this.props.PosStore;
 
         const orders = completedOrders;
 

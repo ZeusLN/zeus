@@ -34,8 +34,7 @@ export default class EmbeddedNode extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
 
         this.setState({
             waitForGraphSync: settings.waitForGraphSync,
@@ -44,10 +43,10 @@ export default class EmbeddedNode extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const { waitForGraphSync, rescan } = this.state;
         const { updateSettings, embeddedLndNetwork, settings }: any =
-            SettingsStore;
+            this.props.SettingsStore;
         const {
             automaticDisasterRecoveryBackup,
             bimodalPathfinding,

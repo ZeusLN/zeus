@@ -7,7 +7,6 @@ import NodeInfoStore from './NodeInfoStore';
 import SettingsStore from './SettingsStore';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-const { channel } = lndMobile;
 import {
     exportAllChannelBackups,
     restoreChannelBackups
@@ -293,6 +292,7 @@ export default class ChannelBackupStore {
 
     @action
     public initSubscribeChannelEvents = async () => {
+        const { channel } = lndMobile;
         // Check if latest channel backup status is success
         // or if it's over three days ago and trigger backup
         const status = await EncryptedStorage.getItem(

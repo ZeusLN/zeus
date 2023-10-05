@@ -69,9 +69,7 @@ export default class SetFeesForm extends React.Component<
             newMaxHtlc
         } = this.state;
         const {
-            FeeStore,
             ChannelsStore,
-            SettingsStore,
             baseFee,
             feeRate,
             timeLockDelta,
@@ -86,8 +84,8 @@ export default class SetFeesForm extends React.Component<
             setFeesError,
             setFeesErrorMsg,
             setFeesSuccess
-        } = FeeStore;
-        const { implementation } = SettingsStore;
+        } = this.props.FeeStore;
+        const { implementation } = this.props.SettingsStore;
 
         return (
             <React.Fragment>

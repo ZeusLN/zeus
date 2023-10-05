@@ -80,8 +80,7 @@ export default class Security extends React.Component<
     };
 
     async componentDidMount() {
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
+        const { getSettings } = this.props.SettingsStore;
         const settings = await getSettings();
 
         this.setState({
@@ -166,8 +165,8 @@ export default class Security extends React.Component<
     );
 
     navigateSecurity = (item: any) => {
-        const { navigation, SettingsStore } = this.props;
-        const { settings }: any = SettingsStore;
+        const { navigation } = this.props;
+        const { settings }: any = this.props.SettingsStore;
 
         if (!(settings.passphrase || settings.pin)) {
             navigation.navigate(item.screen);
@@ -215,7 +214,7 @@ export default class Security extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const {
             scramblePin,
             displaySecurityItems,
@@ -224,7 +223,7 @@ export default class Security extends React.Component<
             loginBackground,
             isBiometryEnabled = false
         } = this.state;
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettings, settings } = this.props.SettingsStore;
 
         return (
             <Screen>

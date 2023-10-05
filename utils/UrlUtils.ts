@@ -6,8 +6,7 @@ const goToBlockExplorer = (
     value: string | number,
     testnet: boolean
 ) => {
-    const { settings } = stores.settingsStore;
-    const { privacy } = settings;
+    const { privacy } = stores.settingsStore.settings;
     const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
     const host = custom
         ? privacy.customBlockExplorer

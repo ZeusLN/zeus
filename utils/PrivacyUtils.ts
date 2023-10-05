@@ -12,8 +12,7 @@ class PrivacyUtils {
         fixedLength?: number | null,
         numberSet?: boolean
     ) => {
-        const { settings } = stores.settingsStore;
-        const { privacy } = settings;
+        const { privacy } = stores.settingsStore.settings;
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
         if (!lurkerMode) return input;
 

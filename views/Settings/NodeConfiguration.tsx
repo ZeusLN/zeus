@@ -142,8 +142,7 @@ export default class NodeConfiguration extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
@@ -234,8 +233,7 @@ export default class NodeConfiguration extends React.Component<
         let interfaceKeys = cloneDeep(INTERFACE_KEYS);
 
         // remove option to add a new embedded node if initialized already
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
         const { embeddedLndNetwork } = this.state;
         if (settings.nodes) {
             const result = settings?.nodes?.filter(
@@ -336,7 +334,7 @@ export default class NodeConfiguration extends React.Component<
     }
 
     saveNodeConfiguration = (recoveryCipherSeed?: string) => {
-        const { SettingsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const {
             nickname,
             host,
@@ -360,7 +358,8 @@ export default class NodeConfiguration extends React.Component<
             adminMacaroon,
             embeddedLndNetwork
         } = this.state;
-        const { setConnectingStatus, updateSettings, settings } = SettingsStore;
+        const { setConnectingStatus, updateSettings, settings } =
+            this.props.SettingsStore;
 
         if (
             implementation === 'lndhub' &&
@@ -424,8 +423,7 @@ export default class NodeConfiguration extends React.Component<
     };
 
     copyNodeConfig = () => {
-        const { SettingsStore, navigation } = this.props;
-        const { settings } = SettingsStore;
+        const { navigation } = this.props;
         const {
             nickname,
             host,
@@ -444,7 +442,7 @@ export default class NodeConfiguration extends React.Component<
             mailboxServer,
             customMailboxServer
         } = this.state;
-        const { nodes } = settings;
+        const { nodes } = this.props.SettingsStore.settings;
 
         const node = {
             nickname: `${nickname} copy`,
@@ -474,8 +472,8 @@ export default class NodeConfiguration extends React.Component<
     };
 
     deleteNodeConfig = () => {
-        const { SettingsStore, navigation } = this.props;
-        const { updateSettings, settings } = SettingsStore;
+        const { navigation } = this.props;
+        const { updateSettings, settings } = this.props.SettingsStore;
         const { index } = this.state;
         const { nodes } = settings;
 
@@ -518,8 +516,8 @@ export default class NodeConfiguration extends React.Component<
     }
 
     setNodeConfigurationAsActive = () => {
-        const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { navigation } = this.props;
+        const { updateSettings } = this.props.SettingsStore;
         const { index } = this.state;
 
         updateSettings({
@@ -568,7 +566,7 @@ export default class NodeConfiguration extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const {
             nickname,
             host,
@@ -610,7 +608,7 @@ export default class NodeConfiguration extends React.Component<
             createAccountSuccess,
             createAccount,
             seedPhrase
-        } = SettingsStore;
+        } = this.props.SettingsStore;
 
         const supportsTor =
             implementation !== 'lightning-node-connect' &&

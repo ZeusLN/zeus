@@ -114,13 +114,13 @@ export default class ChannelView extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore, NodeInfoStore } = this.props;
+        const { navigation } = this.props;
         const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
             this.state;
-        const { settings, implementation } = SettingsStore;
-        const { privacy } = settings;
+        const { implementation } = this.props.SettingsStore;
+        const { privacy } = this.props.SettingsStore.settings;
         const lurkerMode = privacy && privacy.lurkerMode;
-        const { testnet } = NodeInfoStore;
+        const { testnet } = this.props.NodeInfoStore;
 
         const {
             channel_point,

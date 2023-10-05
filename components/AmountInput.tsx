@@ -36,11 +36,9 @@ interface AmountInputState {
 }
 
 const getSatAmount = (amount: string | number) => {
-    const { fiatStore, settingsStore, unitsStore } = Stores;
-    const { fiatRates } = fiatStore;
-    const { settings } = settingsStore;
-    const { fiat } = settings;
-    const { units } = unitsStore;
+    const { fiatRates } = Stores.fiatStore;
+    const { fiat } = Stores.settingsStore.settings;
+    const { units } = Stores.unitsStore;
 
     // replace , with . for unit separator
     const value = amount ? amount.toString().replace(/,/g, ',') : '0';
@@ -125,13 +123,11 @@ export default class AmountInput extends React.Component<
             title,
             locked,
             hideConversion,
-            FiatStore,
-            UnitsStore,
-            SettingsStore
+            UnitsStore
         } = this.props;
         const { units }: any = UnitsStore;
-        const { getRate, getSymbol }: any = FiatStore;
-        const { settings }: any = SettingsStore;
+        const { getRate, getSymbol }: any = this.props.FiatStore;
+        const { settings }: any = this.props.SettingsStore;
         const { fiatEnabled } = settings;
 
         return (

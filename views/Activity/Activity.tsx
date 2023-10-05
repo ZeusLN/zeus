@@ -55,8 +55,8 @@ export default class Activity extends React.PureComponent<
     };
 
     async UNSAFE_componentWillMount() {
-        const { ActivityStore, SettingsStore } = this.props;
-        const { getActivityAndFilter, getFilters } = ActivityStore;
+        const { SettingsStore } = this.props;
+        const { getActivityAndFilter, getFilters } = this.props.ActivityStore;
         const filters = await getFilters();
         await getActivityAndFilter(filters);
         if (SettingsStore.implementation === 'lightning-node-connect') {
@@ -65,8 +65,7 @@ export default class Activity extends React.PureComponent<
     }
 
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
-        const { ActivityStore } = newProps;
-        const { getActivityAndFilter } = ActivityStore;
+        const { getActivityAndFilter } = newProps.ActivityStore;
         getActivityAndFilter();
     };
 
@@ -132,19 +131,12 @@ export default class Activity extends React.PureComponent<
     };
 
     render() {
-        const {
-            navigation,
-            ActivityStore,
-            FiatStore,
-            PosStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, FiatStore } = this.props;
         const { selectedPaymentForOrder } = this.state;
         const { loading, filteredActivity, getActivityAndFilter } =
-            ActivityStore;
-        const { recordPayment } = PosStore;
-        const { settings } = SettingsStore;
-        const { fiat } = settings;
+            this.props.ActivityStore;
+        const { recordPayment } = this.props.PosStore;
+        const { fiat } = this.props.SettingsStore.settings;
 
         const order = navigation.getParam('order', null);
 

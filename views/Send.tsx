@@ -137,8 +137,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
@@ -270,8 +269,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
-        const { SettingsStore } = this.props;
-        const { implementation } = SettingsStore;
+        const { implementation } = this.props.SettingsStore;
         this.setState((prevState) => {
             ({
                 utxos,
@@ -345,8 +343,8 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendKeySendPayment = (satAmount: string | number) => {
-        const { TransactionsStore, SettingsStore, navigation } = this.props;
-        const { implementation } = SettingsStore;
+        const { TransactionsStore, navigation } = this.props;
+        const { implementation } = this.props.SettingsStore;
         const {
             destination,
             maxParts,
@@ -389,8 +387,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     render() {
-        const { SettingsStore, BalanceStore, UTXOsStore, navigation } =
-            this.props;
+        const { UTXOsStore, navigation } = this.props;
         const {
             isValid,
             transactionType,
@@ -415,8 +412,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             confirmedBlockchainBalance,
             unconfirmedBlockchainBalance,
             lightningBalance
-        } = BalanceStore;
-        const { implementation } = SettingsStore;
+        } = this.props.BalanceStore;
+        const { implementation } = this.props.SettingsStore;
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
 

@@ -27,8 +27,8 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { sponsorsError, olympians, loading } = SettingsStore;
+        const { navigation } = this.props;
+        const { sponsorsError, olympians, loading } = this.props.SettingsStore;
 
         return (
             <Screen>

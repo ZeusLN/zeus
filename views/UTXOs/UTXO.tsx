@@ -30,9 +30,9 @@ interface UTXOProps {
 @observer
 export default class UTXO extends React.Component<UTXOProps> {
     render() {
-        const { NodeInfoStore, navigation } = this.props;
+        const { navigation } = this.props;
         const utxo: Utxo = navigation.getParam('utxo', null);
-        const { testnet } = NodeInfoStore;
+        const { testnet } = this.props.NodeInfoStore;
 
         const { getOutpoint, address, getConfs, isUnconfirmed, blockheight } =
             utxo;

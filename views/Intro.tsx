@@ -126,11 +126,10 @@ const Intro: React.FC<IntroProps> = (props) => {
                                 title={localeString('views.Intro.quickStart')}
                                 onPress={async () => {
                                     setCreatingWallet(true);
-                                    const { settingsStore } = stores;
                                     const {
                                         setConnectingStatus,
                                         updateSettings
-                                    } = settingsStore;
+                                    } = stores.settingsStore;
                                     const response = await createLndWallet(
                                         undefined
                                     );

@@ -46,9 +46,9 @@ interface OrderState {
 export default class OrderView extends React.Component<OrderProps, OrderState> {
     constructor(props: any) {
         super(props);
-        const { SettingsStore, navigation } = props;
+        const { navigation } = props;
         const order = navigation.getParam('order', null);
-        const { settings } = SettingsStore;
+        const { settings } = props.SettingsStore;
         const disableTips: boolean =
             settings && settings.pos && settings.pos.disableTips;
 
@@ -63,7 +63,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
     }
 
     render() {
-        const { navigation, FiatStore, SettingsStore, UnitsStore } = this.props;
+        const { navigation } = this.props;
         const {
             order,
             selectedIndex,
@@ -72,9 +72,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             customType,
             bitcoinUnits
         } = this.state;
-        const { fiatRates, getRate, getSymbol }: any = FiatStore;
-        const { settings } = SettingsStore;
-        const { changeUnits, units } = UnitsStore;
+        const { fiatRates, getRate, getSymbol }: any = this.props.FiatStore;
+        const { settings } = this.props.SettingsStore;
+        const { changeUnits, units } = this.props.UnitsStore;
         const fiat = settings.fiat;
         const disableTips: boolean =
             (settings && settings.pos && settings.pos.disableTips) || false;

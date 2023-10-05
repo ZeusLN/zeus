@@ -53,13 +53,8 @@ export default class BalancePane extends React.PureComponent<
     }
 
     render() {
-        const {
-            NodeInfoStore,
-            BalanceStore,
-            SettingsStore,
-            SyncStore,
-            navigation
-        } = this.props;
+        const { NodeInfoStore, BalanceStore, SettingsStore, navigation } =
+            this.props;
         const { isBackedUp } = this.state;
         const {
             totalBlockchainBalance,
@@ -68,7 +63,8 @@ export default class BalancePane extends React.PureComponent<
             pendingOpenBalance
         } = BalanceStore;
         const { implementation } = SettingsStore;
-        const { currentBlockHeight, bestBlockHeight, isSyncing } = SyncStore;
+        const { currentBlockHeight, bestBlockHeight, isSyncing } =
+            this.props.SyncStore;
 
         const pendingUnconfirmedBalance = new BigNumber(pendingOpenBalance)
             .plus(unconfirmedBlockchainBalance)

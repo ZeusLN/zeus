@@ -61,8 +61,7 @@ const Hebrew: any = HE;
 const Croatian: any = HR;
 
 export function localeString(localeString: string): any {
-    const { settings } = stores.settingsStore;
-    const { locale } = settings;
+    const { locale } = stores.settingsStore.settings;
 
     switch (locale) {
         case 'es':

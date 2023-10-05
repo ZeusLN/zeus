@@ -46,8 +46,7 @@ export default class PaymentsSettings extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
+        const { getSettings } = this.props.SettingsStore;
         const settings = await getSettings();
 
         this.setState({
@@ -80,8 +79,7 @@ export default class PaymentsSettings extends React.Component<
             timeoutSeconds,
             preferredMempoolRate
         } = this.state;
-        const { SettingsStore } = this.props;
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettings, settings } = this.props.SettingsStore;
 
         return (
             <Screen>

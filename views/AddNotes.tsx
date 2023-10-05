@@ -66,8 +66,8 @@ export default class AddNotes extends React.Component<
     }
 
     render() {
-        const { navigation, NotesStore } = this.props;
-        const { storeNoteKeys, removeNoteKeys } = NotesStore;
+        const { navigation } = this.props;
+        const { storeNoteKeys, removeNoteKeys } = this.props.NotesStore;
         const { payment_hash, txid, getRPreimage, isNoteStored } = this.state;
         const { notes } = this.state;
 

@@ -23,13 +23,12 @@ export default class ExternalLinkModal extends React.Component<
     {}
 > {
     render() {
-        const { ModalStore } = this.props;
         const {
             showExternalLinkModal,
             modalUrl,
             toggleExternalLinkModal,
             onPress
-        } = ModalStore;
+        } = this.props.ModalStore;
 
         return (
             <ModalBox

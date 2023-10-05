@@ -57,13 +57,13 @@ export default class TransactionView extends React.Component<TransactionProps> {
         });
     }
     render() {
-        const { NodeInfoStore, navigation } = this.props;
+        const { navigation } = this.props;
         const transaction: Transaction = navigation.getParam(
             'transaction',
             null
         );
         const { storedNotes } = this.state;
-        const { testnet } = NodeInfoStore;
+        const { testnet } = this.props.NodeInfoStore;
 
         const {
             tx,

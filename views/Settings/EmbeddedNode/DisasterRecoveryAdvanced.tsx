@@ -38,7 +38,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
     }
 
     render() {
-        const { navigation, ChannelBackupStore } = this.props;
+        const { navigation } = this.props;
         const { selected } = this.state;
         const {
             advancedRecoveryList,
@@ -46,7 +46,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
             backups,
             loading,
             error
-        } = ChannelBackupStore;
+        } = this.props.ChannelBackupStore;
 
         const noneSelected = Object.keys(selected).length === 0;
 

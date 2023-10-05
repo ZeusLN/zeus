@@ -87,8 +87,8 @@ export default class PosPane extends React.PureComponent<
     }
 
     renderItem = ({ item, index }, onClickPaid, onClickHide) => {
-        const { navigation, FiatStore } = this.props;
-        const { getRate, getSymbol } = FiatStore;
+        const { navigation } = this.props;
+        const { getRate, getSymbol } = this.props.FiatStore;
         const isPaid: boolean = item && item.payment;
 
         let row: Array<any> = [];
@@ -191,16 +191,9 @@ export default class PosPane extends React.PureComponent<
     };
 
     render() {
-        const {
-            ActivityStore,
-            SettingsStore,
-            PosStore,
-            FiatStore,
-            NodeInfoStore,
-            navigation
-        } = this.props;
+        const { SettingsStore, NodeInfoStore, navigation } = this.props;
         const { search, selectedIndex } = this.state;
-        const { setFiltersPos } = ActivityStore;
+        const { setFiltersPos } = this.props.ActivityStore;
         const {
             loading,
             getOrders,
@@ -208,8 +201,8 @@ export default class PosPane extends React.PureComponent<
             filteredPaidOrders,
             updateSearch,
             hideOrder
-        } = PosStore;
-        const { getRate, getFiatRates } = FiatStore;
+        } = this.props.PosStore;
+        const { getRate, getFiatRates } = this.props.FiatStore;
         const orders =
             selectedIndex === 0 ? filteredOpenOrders : filteredPaidOrders;
 

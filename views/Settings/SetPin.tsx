@@ -65,9 +65,10 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     };
 
     saveSettings = async () => {
-        const { SettingsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const { pin, pinConfirm } = this.state;
-        const { getSettings, updateSettings, setLoginStatus } = SettingsStore;
+        const { getSettings, updateSettings, setLoginStatus } =
+            this.props.SettingsStore;
 
         if (pin !== pinConfirm) {
             this.setState({
@@ -101,8 +102,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { navigation } = this.props;
+        const { settings } = this.props.SettingsStore;
         const { pin, pinMismatchError, pinInvalidError } = this.state;
 
         return (

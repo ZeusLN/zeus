@@ -47,8 +47,6 @@ export default class FeeBreakdown extends React.Component<
             channelPoint,
             peerDisplay,
             initiator,
-            ChannelsStore,
-            NodeInfoStore,
             isActive,
             isClosed,
             total_satoshis_received,
@@ -58,8 +56,8 @@ export default class FeeBreakdown extends React.Component<
             csv_delay,
             label
         } = this.props;
-        const { loading, chanInfo } = ChannelsStore;
-        const { nodeInfo, testnet } = NodeInfoStore;
+        const { loading, chanInfo } = this.props.ChannelsStore;
+        const { nodeInfo, testnet } = this.props.NodeInfoStore;
         const { nodeId } = nodeInfo;
 
         let localPolicy, remotePolicy;

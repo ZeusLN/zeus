@@ -54,9 +54,9 @@ export default class RoutingEvent extends React.Component<
         };
     }
     render() {
-        const { navigation, ChannelsStore } = this.props;
+        const { navigation } = this.props;
         const { routingEvent } = this.state;
-        const { aliasesById, channels } = ChannelsStore;
+        const { aliasesById, channels } = this.props.ChannelsStore;
 
         const { chan_id_in, chan_id_out, amt_in, amt_out, fee, getTime } =
             routingEvent;

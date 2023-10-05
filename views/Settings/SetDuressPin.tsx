@@ -67,9 +67,9 @@ export default class SetDuressPin extends React.Component<
     };
 
     saveSettings = async () => {
-        const { SettingsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const { duressPin, duressPinConfirm } = this.state;
-        const { getSettings, updateSettings } = SettingsStore;
+        const { getSettings, updateSettings } = this.props.SettingsStore;
 
         if (duressPin !== duressPinConfirm) {
             this.setState({
@@ -102,8 +102,8 @@ export default class SetDuressPin extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { navigation } = this.props;
+        const { settings } = this.props.SettingsStore;
         const { duressPin, duressPinMismatchError, duressPinInvalidError } =
             this.state;
 

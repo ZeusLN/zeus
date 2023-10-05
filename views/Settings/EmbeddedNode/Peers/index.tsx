@@ -19,8 +19,8 @@ interface PeersProps {
 @observer
 export default class Peers extends React.Component<PeersProps, {}> {
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { settings }: any = SettingsStore;
+        const { navigation } = this.props;
+        const { settings }: any = this.props.SettingsStore;
         const { neutrinoPeers, zeroConfPeers, dontAllowOtherPeers } = settings;
 
         return (

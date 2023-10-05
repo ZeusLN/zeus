@@ -105,17 +105,11 @@ const SwipeableRow = ({
 @observer
 export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
-        const {
-            BalanceStore,
-            navigation,
-            value,
-            amount,
-            lightning,
-            onRefresh,
-            locked
-        } = this.props;
+        const { navigation, value, amount, lightning, onRefresh, locked } =
+            this.props;
 
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore;
+        const { totalBlockchainBalance, lightningBalance } =
+            this.props.BalanceStore;
 
         let DATA: DataRow[] = [
             {

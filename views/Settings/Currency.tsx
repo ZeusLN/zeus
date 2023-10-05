@@ -45,8 +45,7 @@ export default class Currency extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
 
         this.setState({
             fiatEnabled: settings.fiatEnabled,
@@ -60,8 +59,7 @@ export default class Currency extends React.Component<
         prevState: Readonly<CurrencyState>,
         _snapshot?: any
     ): Promise<void> {
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
+        const { getSettings } = this.props.SettingsStore;
         const settings = await getSettings();
         if (prevState.selectedCurrency !== settings.fiat) {
             this.setState({
@@ -75,9 +73,9 @@ export default class Currency extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore, UnitsStore } = this.props;
+        const { navigation, UnitsStore } = this.props;
         const { fiatEnabled, selectedCurrency, fiatRatesSource } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { updateSettings }: any = this.props.SettingsStore;
 
         return (
             <Screen>

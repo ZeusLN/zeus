@@ -56,8 +56,7 @@ export default class DisasterRecovery extends React.Component<
     };
 
     UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
 
         this.setState({
             automaticDisasterRecoveryBackup:
@@ -81,7 +80,7 @@ export default class DisasterRecovery extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const {
             automaticDisasterRecoveryBackup,
             disasterRecoveryCopied,
@@ -93,7 +92,7 @@ export default class DisasterRecovery extends React.Component<
             lastDisasterRecoveryBackupStatus,
             lastDisasterRecoveryBackupTime
         } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { updateSettings }: any = this.props.SettingsStore;
 
         const setChannelBackupRecoveredError = () => {
             this.setState({

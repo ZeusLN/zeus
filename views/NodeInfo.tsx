@@ -29,10 +29,9 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
     }
 
     render() {
-        const { navigation, NodeInfoStore, SettingsStore } = this.props;
+        const { navigation, NodeInfoStore } = this.props;
         const { nodeInfo } = NodeInfoStore;
-        const { settings } = SettingsStore;
-        const { privacy } = settings;
+        const { privacy } = this.props.SettingsStore.settings;
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const URIs = (props: { uris: Array<string> }) => {

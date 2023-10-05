@@ -51,8 +51,7 @@ export default class PointOfSale extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
+        const { getSettings } = this.props.SettingsStore;
         const settings = await getSettings();
 
         this.setState({
@@ -81,7 +80,7 @@ export default class PointOfSale extends React.Component<
     );
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const {
             squareEnabled,
             squareAccessToken,
@@ -91,8 +90,9 @@ export default class PointOfSale extends React.Component<
             disableTips,
             squareDevMode
         } = this.state;
-        const { updateSettings, settings }: any = SettingsStore;
-        const { passphrase, pin, fiatEnabled } = settings;
+        const { updateSettings }: any = this.props.SettingsStore;
+        const { passphrase, pin, fiatEnabled } =
+            this.props.SettingsStore.settings;
 
         const LIST_ITEMS = [
             {

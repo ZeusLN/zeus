@@ -33,8 +33,7 @@ export default class LNDLogs extends React.Component<
     };
 
     UNSAFE_componentWillMount(): void {
-        const { SettingsStore } = this.props;
-        const { embeddedLndNetwork } = SettingsStore;
+        const { embeddedLndNetwork } = this.props.SettingsStore;
         (async () => {
             const network =
                 embeddedLndNetwork === 'Testnet' ? 'testnet' : 'mainnet';

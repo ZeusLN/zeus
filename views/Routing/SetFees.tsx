@@ -29,17 +29,11 @@ interface SetFeesProps {
 @observer
 export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
     render() {
-        const {
-            ChannelsStore,
-            FeeStore,
-            NodeInfoStore,
-            SettingsStore,
-            navigation
-        } = this.props;
-
+        const { ChannelsStore, FeeStore, SettingsStore, navigation } =
+            this.props;
         const { chanInfo, nodes } = ChannelsStore;
         const { channelFees } = FeeStore;
-        const { nodeInfo } = NodeInfoStore;
+        const { nodeInfo } = this.props.NodeInfoStore;
         const { nodeId } = nodeInfo;
 
         const channel: Channel = navigation.getParam('channel', null);

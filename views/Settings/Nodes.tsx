@@ -82,21 +82,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     );
 
     render() {
-        const {
-            navigation,
-            BalanceStore,
-            NodeInfoStore,
-            ChannelsStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, BalanceStore, NodeInfoStore, ChannelsStore } =
+            this.props;
         const { loading, nodes } = this.state;
-        const {
-            updateSettings,
-            settings,
-            setConnectingStatus,
-            implementation
-        }: any = SettingsStore;
-        const { selectedNode } = settings;
+        const { updateSettings, setConnectingStatus, implementation }: any =
+            this.props.SettingsStore;
+        const { selectedNode } = this.props.SettingsStore.settings;
 
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {

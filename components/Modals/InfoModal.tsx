@@ -20,14 +20,13 @@ interface InfoModalProps {
 @observer
 export default class InfoModal extends React.Component<InfoModalProps, {}> {
     render() {
-        const { ModalStore } = this.props;
         const {
             showInfoModal,
             infoModalText,
             infoModalLink,
             infoModalNav,
             toggleInfoModal
-        } = ModalStore;
+        } = this.props.ModalStore;
 
         return (
             <ModalBox
