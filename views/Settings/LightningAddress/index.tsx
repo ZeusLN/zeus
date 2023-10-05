@@ -302,18 +302,39 @@ export default class LightningAddress extends React.Component<
                                                 'views.Settings.LightningAddress.chooseHandle'
                                             )}
                                         </Text>
-                                        <TextInput
-                                            value={newLightningAddress}
-                                            onChangeText={(text: string) => {
-                                                this.setState({
-                                                    newLightningAddress: text
-                                                });
+                                        <View
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'row'
                                             }}
-                                            autoCapitalize="none"
-                                            autoCorrect={false}
-                                            suffix="@zeuspay.com"
-                                            right={130}
-                                        />
+                                        >
+                                            <TextInput
+                                                value={newLightningAddress}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setState({
+                                                        newLightningAddress:
+                                                            text
+                                                    });
+                                                }}
+                                                autoCapitalize="none"
+                                                autoCorrect={false}
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row'
+                                                }}
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    fontSize: 20,
+                                                    marginLeft: 5
+                                                }}
+                                            >
+                                                @zeuspay.com
+                                            </Text>
+                                        </View>
                                     </View>
 
                                     <View style={styles.wrapper}>
