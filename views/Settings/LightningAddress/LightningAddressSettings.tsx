@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
-import { ListItem } from 'react-native-elements';
+import { StyleSheet, Text, View } from 'react-native';
+import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Screen from '../../../components/Screen';
@@ -18,7 +18,11 @@ interface LightningAddressSettingsProps {
 
 interface LightningAddressSettingsState {
     automaticallyAccept: boolean | undefined;
+    automaticallyRequestOlympusChannels: boolean | undefined;
+    allowComments: boolean | undefined;
     verifyAllPaymentsWithNostr: boolean | undefined;
+    nostrPrivateKey: string;
+    nostrRelays: Array<string>;
 }
 
 @inject('SettingsStore')
@@ -29,7 +33,11 @@ export default class LightningAddressSettings extends React.Component<
 > {
     state = {
         automaticallyAccept: true,
-        verifyAllPaymentsWithNostr: false
+        automaticallyRequestOlympusChannels: true,
+        allowComments: true,
+        verifyAllPaymentsWithNostr: false,
+        nostrPrivateKey: '',
+        nostrRelays: []
     };
 
     async UNSAFE_componentWillMount() {
@@ -37,15 +45,35 @@ export default class LightningAddressSettings extends React.Component<
         const { settings } = SettingsStore;
 
         this.setState({
-            automaticallyAccept: settings.automaticallyAccept,
-            verifyAllPaymentsWithNostr: settings.verifyAllPaymentsWithNostr
+            automaticallyAccept: settings.lightningAddress?.automaticallyAccept
+                ? true
+                : false,
+            automaticallyRequestOlympusChannels: settings.lightningAddress
+                ?.automaticallyRequestOlympusChannels
+                ? true
+                : false,
+            allowComments: settings.lightningAddress?.allowComments
+                ? true
+                : false,
+            verifyAllPaymentsWithNostr:
+                settings.lightningAddress?.verifyAllPaymentsWithNostr,
+            nostrPrivateKey: settings.lightningAddress?.nostrPrivateKey || '',
+            nostrRelays: settings.lightningAddress?.nostrRelays || []
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { automaticallyAccept, verifyAllPaymentsWithNostr } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const {
+            automaticallyAccept,
+            automaticallyRequestOlympusChannels,
+            allowComments,
+            verifyAllPaymentsWithNostr,
+            nostrPrivateKey,
+            nostrRelays
+        } = this.state;
+        const { updateSettings, settings }: any = SettingsStore;
+        const enabled = settings?.lightningAddress?.enabled;
 
         return (
             <Screen>
@@ -64,12 +92,7 @@ export default class LightningAddressSettings extends React.Component<
                         navigation={navigation}
                     />
                     <View style={{ margin: 5 }}>
-                        <ListItem
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: 'transparent'
-                            }}
-                        >
+                        <ListItem containerStyle={styles.listItem}>
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
@@ -96,19 +119,104 @@ export default class LightningAddressSettings extends React.Component<
                                                 !automaticallyAccept
                                         });
                                         await updateSettings({
-                                            automaticallyAccept:
-                                                !automaticallyAccept
+                                            lightningAddress: {
+                                                enabled,
+                                                automaticallyAccept:
+                                                    !automaticallyAccept,
+                                                automaticallyRequestOlympusChannels,
+                                                allowComments,
+                                                verifyAllPaymentsWithNostr,
+                                                nostrPrivateKey,
+                                                nostrRelays
+                                            }
                                         });
                                     }}
                                 />
                             </View>
                         </ListItem>
-                        <ListItem
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: 'transparent'
-                            }}
-                        >
+                        <ListItem containerStyle={styles.listItem}>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
+                                    width: '85%'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannels'
+                                )}
+                            </ListItem.Title>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Switch
+                                    value={automaticallyRequestOlympusChannels}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            automaticallyRequestOlympusChannels:
+                                                !automaticallyRequestOlympusChannels
+                                        });
+                                        await updateSettings({
+                                            lightningAddress: {
+                                                enabled,
+                                                automaticallyAccept,
+                                                automaticallyRequestOlympusChannels:
+                                                    !automaticallyRequestOlympusChannels,
+                                                allowComments,
+                                                verifyAllPaymentsWithNostr,
+                                                nostrPrivateKey,
+                                                nostrRelays
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </ListItem>
+                        <ListItem containerStyle={styles.listItem}>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
+                                    width: '85%'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.LightningAddressSettings.allowComments'
+                                )}
+                            </ListItem.Title>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Switch
+                                    value={allowComments}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            allowComments: !allowComments
+                                        });
+                                        await updateSettings({
+                                            lightningAddress: {
+                                                enabled,
+                                                automaticallyAccept,
+                                                automaticallyRequestOlympusChannels,
+                                                allowComments: !allowComments,
+                                                verifyAllPaymentsWithNostr,
+                                                nostrPrivateKey,
+                                                nostrRelays
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </ListItem>
+                        <ListItem containerStyle={styles.listItem}>
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
@@ -135,8 +243,16 @@ export default class LightningAddressSettings extends React.Component<
                                                 !verifyAllPaymentsWithNostr
                                         });
                                         await updateSettings({
-                                            verifyAllPaymentsWithNostr:
-                                                !verifyAllPaymentsWithNostr
+                                            lightningAddress: {
+                                                enabled,
+                                                automaticallyAccept,
+                                                automaticallyRequestOlympusChannels,
+                                                allowComments,
+                                                verifyAllPaymentsWithNostr:
+                                                    !verifyAllPaymentsWithNostr,
+                                                nostrPrivateKey,
+                                                nostrRelays
+                                            }
                                         });
                                     }}
                                 />
@@ -172,9 +288,39 @@ export default class LightningAddressSettings extends React.Component<
                                 )}
                             </Text>
                         </View>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                            onPress={() => navigation.navigate('Nostr')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {`${localeString(
+                                        'views.Settings.Nostr.relays'
+                                    )} (${nostrRelays?.length || 0})`}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
                     </View>
                 </View>
             </Screen>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    listItem: {
+        borderBottomWidth: 0,
+        backgroundColor: 'transparent'
+    }
+});
