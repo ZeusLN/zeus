@@ -317,8 +317,9 @@ export default class ChannelsStore {
         this.totalOutbound = 0;
         this.totalInbound = 0;
         this.totalOffline = 0;
-        BackendUtils.getChannels()
-            .then((data: any) => {
+
+        const loadPromises = [
+            BackendUtils.getChannels().then((data: any) => {
                 const channels = data.channels.map(
                     (channel: any) => new Channel(channel)
                 );
@@ -347,15 +348,12 @@ export default class ChannelsStore {
                     }
                 });
                 this.channels = channels;
-                this.error = false;
             })
-            .catch(() => {
-                this.getChannelsError();
-            });
+        ];
 
         if (BackendUtils.supportsPendingChannels()) {
-            BackendUtils.getPendingChannels()
-                .then((data: any) => {
+            loadPromises.push(
+                BackendUtils.getPendingChannels().then((data: any) => {
                     const pendingOpenChannels = data.pending_open_channels.map(
                         (pending: any) => {
                             pending.channel.pendingOpen = true;
@@ -389,25 +387,25 @@ export default class ChannelsStore {
                         .concat(pendingCloseChannels)
                         .concat(forceCloseChannels)
                         .concat(waitCloseChannels);
-                    this.error = false;
                 })
-                .catch(() => {
-                    this.getChannelsError();
-                });
+            );
 
-            BackendUtils.getClosedChannels()
-                .then((data: any) => {
+            loadPromises.push(
+                BackendUtils.getClosedChannels().then((data: any) => {
                     const closedChannels = data.channels.map(
                         (channel: any) => new ClosedChannel(channel)
                     );
                     this.closedChannels = closedChannels;
-                    this.error = false;
-                    this.loading = false;
                 })
-                .catch(() => {
-                    this.getChannelsError();
-                });
+            );
         }
+
+        Promise.all(loadPromises)
+            .then(() => {
+                this.loading = false;
+                this.error = false;
+            })
+            .catch((e) => this.getChannelsError(e));
     };
 
     @action
