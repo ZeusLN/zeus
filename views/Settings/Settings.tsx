@@ -93,8 +93,9 @@ export default class Settings extends React.Component<
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
-        const posEnabled =
-            settings && settings.pos && settings.pos.squareEnabled;
+        const posEnabled = settings?.pos?.squareEnabled;
+
+        const lightningAddressEnabled = settings?.lightningAddress?.enabled;
 
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
@@ -104,7 +105,10 @@ export default class Settings extends React.Component<
         const OlympusButton = () => (
             <TouchableOpacity
                 onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
-                onLongPress={() => navigation.navigate('LightningAddress')}
+                onLongPress={() => {
+                    if (BackendUtils.supportsCustomPreimages())
+                        navigation.navigate('LightningAddress');
+                }}
             >
                 <View style={{ top: -7 }}>
                     <Olympus width="45" height="45" fill={themeColor('text')} />
@@ -251,43 +255,51 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {false && BackendUtils.supportsLSPs() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                height: 45,
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('LightningAddress')
-                                }
+                    {lightningAddressEnabled &&
+                        BackendUtils.supportsCustomPreimages() && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    height: 45,
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginTop: 5,
+                                    marginBottom: 5
+                                }}
                             >
-                                <View style={{ paddingLeft: 5, paddingTop: 3 }}>
-                                    <MailboxFlagIcon
-                                        fill={themeColor('text')}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('LightningAddress')
+                                    }
                                 >
-                                    {localeString('general.lightningAddress')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                    <View
+                                        style={{
+                                            paddingLeft: 5,
+                                            paddingTop: 3
+                                        }}
+                                    >
+                                        <MailboxFlagIcon
+                                            fill={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'general.lightningAddress'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {selectedNode && (
                         <View

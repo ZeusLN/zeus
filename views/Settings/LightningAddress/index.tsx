@@ -57,8 +57,6 @@ export default class LightningAddress extends React.Component<
     };
 
     generateNostrKeys = () => {
-        const { settings, updateSettings } = this.props.SettingsStore;
-        const relays = settings?.nostr?.relays;
         const nostrPrivateKey = generatePrivateKey();
         const nostrPublicKey = getPublicKey(nostrPrivateKey);
         const nostrNpub = nip19.npubEncode(nostrPublicKey);
@@ -67,13 +65,6 @@ export default class LightningAddress extends React.Component<
             nostrPrivateKey,
             nostrPublicKey,
             nostrNpub
-        });
-
-        updateSettings({
-            nostr: {
-                relays,
-                nostrPrivateKey
-            }
         });
     };
 
@@ -103,7 +94,7 @@ export default class LightningAddress extends React.Component<
         const {
             create,
             status,
-            lightningAddress,
+            lightningAddressHandle,
             availableHashes,
             paid,
             settled,
@@ -112,9 +103,8 @@ export default class LightningAddress extends React.Component<
             error_msg,
             loading
         } = LightningAddressStore;
-        const { settings, updateSettings } = SettingsStore;
-        const { nostr } = settings;
-        const { relays } = nostr;
+        const nostrRelays =
+            SettingsStore?.settings?.lightningAddress?.nostrRelays || [];
 
         const InfoButton = () => (
             <View style={{ right: 15 }}>
@@ -150,7 +140,7 @@ export default class LightningAddress extends React.Component<
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('QR', {
-                        value: lightningAddress,
+                        value: lightningAddressHandle,
                         hideText: true,
                         jumboLabel: true
                     })
@@ -216,7 +206,7 @@ export default class LightningAddress extends React.Component<
                         rightComponent={
                             <Row>
                                 {!loading && fees && !error && <InfoButton />}
-                                {lightningAddress && <SettingsButton />}
+                                {lightningAddressHandle && <SettingsButton />}
                             </Row>
                         }
                         navigation={navigation}
@@ -226,7 +216,7 @@ export default class LightningAddress extends React.Component<
                         {!loading && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
-                        {!loading && lightningAddress && (
+                        {!loading && lightningAddressHandle && (
                             <View
                                 style={{
                                     alignSelf: 'center',
@@ -247,7 +237,7 @@ export default class LightningAddress extends React.Component<
                                             textAlign: 'center'
                                         }}
                                     >
-                                        {lightningAddress}
+                                        {lightningAddressHandle}
                                     </Text>
                                 </Row>
                                 <Row
@@ -303,7 +293,7 @@ export default class LightningAddress extends React.Component<
                                 <QRButton />
                             </View>
                         )}
-                        {!loading && !lightningAddress && !error && (
+                        {!loading && !lightningAddressHandle && !error && (
                             <>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.wrapper}>
@@ -429,12 +419,6 @@ export default class LightningAddress extends React.Component<
                                                                     nip19.npubEncode(
                                                                         nostrPublicKey
                                                                     );
-                                                                updateSettings({
-                                                                    nostr: {
-                                                                        relays,
-                                                                        nostrPrivateKey
-                                                                    }
-                                                                });
                                                             } catch (e) {}
                                                             this.setState({
                                                                 nostrPrivateKey,
@@ -508,7 +492,8 @@ export default class LightningAddress extends React.Component<
                                                         {`${localeString(
                                                             'views.Settings.Nostr.relays'
                                                         )} (${
-                                                            relays?.length || 0
+                                                            nostrRelays?.length ||
+                                                            0
                                                         })`}
                                                     </ListItem.Title>
                                                 </ListItem.Content>
@@ -535,7 +520,7 @@ export default class LightningAddress extends React.Component<
                                                         ? nostrPublicKey
                                                         : undefined,
                                                     enableZaplockerVerification
-                                                        ? relays
+                                                        ? nostrRelays
                                                         : undefined
                                                 ).finally(() => status())
                                             }
@@ -543,15 +528,15 @@ export default class LightningAddress extends React.Component<
                                                 enableZaplockerVerification &&
                                                 (!nostrPublicKey ||
                                                     !nostrNpub ||
-                                                    !relays ||
-                                                    relays.length === 0)
+                                                    !nostrRelays ||
+                                                    nostrRelays.length === 0)
                                             }
                                         />
                                     </View>
                                 </View>
                             </>
                         )}
-                        {lightningAddress && (
+                        {lightningAddressHandle && (
                             <>
                                 {!loading && (
                                     <ButtonGroup

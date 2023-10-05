@@ -36,7 +36,7 @@ const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 const RELAYS = ['wss://nostr.mutinywallet.com', 'wss://relay.damus.io'];
 
 export default class LightningAddressStore {
-    @observable public lightningAddress: string;
+    @observable public lightningAddressHandle: string;
     @observable public lightningAddressActivated: boolean = false;
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
@@ -90,13 +90,13 @@ export default class LightningAddressStore {
     // TODO remove
     test_DELETE = async () => {
         await EncryptedStorage.setItem(ADDRESS_ACTIVATED_STRING, '');
-        this.lightningAddress = '';
+        this.lightningAddressHandle = '';
     };
 
     setLightningAddress = async (handle: string) => {
         await EncryptedStorage.setItem(ADDRESS_ACTIVATED_STRING, 'true');
         this.lightningAddressActivated = true;
-        this.lightningAddress = handle;
+        this.lightningAddressHandle = handle;
     };
 
     @action
@@ -118,7 +118,7 @@ export default class LightningAddressStore {
         const nostrSignatures: any = [];
         if (preimages) {
             const nostrPrivateKey =
-                this.settingsStore?.settings?.nostr?.nostrPrivateKey;
+                this.settingsStore?.settings?.lightningAddress?.nostrPrivateKey;
             for (let i = 0; i < preimages.length; i++) {
                 const preimage = preimages[i];
                 const hash = sha256
@@ -293,14 +293,35 @@ export default class LightningAddressStore {
                                 )
                                     .then(async (response: any) => {
                                         const data = response.json();
+                                        const status = response.info().status;
                                         const { handle, created_at, success } =
                                             data;
 
-                                        if (handle) {
-                                            this.setLightningAddress(handle);
-                                        }
-
                                         if (status === 200 && success) {
+                                            if (handle) {
+                                                this.setLightningAddress(
+                                                    handle
+                                                );
+                                            }
+
+                                            await this.settingsStore.updateSettings(
+                                                {
+                                                    lightningAddress: {
+                                                        enabled: true,
+                                                        automaticallyAccept:
+                                                            true,
+                                                        automaticallyRequestOlympusChannels:
+                                                            true,
+                                                        allowComments: true,
+                                                        verifyAllPaymentsWithNostr:
+                                                            false,
+                                                        nostrPrivateKey:
+                                                            nostr_pk,
+                                                        nostrRelays: relays
+                                                    }
+                                                }
+                                            );
+
                                             this.loading = false;
                                             resolve({
                                                 created_at
@@ -394,10 +415,11 @@ export default class LightningAddressStore {
                                             this.settled = settled;
                                             this.fees = fees;
                                             this.minimumSats = minimumSats;
-                                            this.lightningAddress = handle;
+                                            this.lightningAddressHandle =
+                                                handle;
 
                                             if (
-                                                this.lightningAddress &&
+                                                this.lightningAddressHandle &&
                                                 new BigNumber(
                                                     this.availableHashes
                                                 ).lt(50)

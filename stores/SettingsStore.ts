@@ -69,9 +69,14 @@ interface InvoicesSettings {
     showCustomPreimageField?: boolean;
 }
 
-interface NostrSettings {
-    nostrPrivateKey?: string;
-    relays?: Array<string>;
+interface LightningAddressSettings {
+    enabled: boolean;
+    automaticallyAccept: boolean;
+    automaticallyRequestOlympusChannels: boolean;
+    allowComments: boolean;
+    verifyAllPaymentsWithNostr: boolean;
+    nostrPrivateKey: string;
+    nostrRelays: Array<string>;
 }
 
 export interface Settings {
@@ -93,7 +98,6 @@ export interface Settings {
     pos: PosSettings;
     payments: PaymentsSettings;
     invoices: InvoicesSettings;
-    nostr: NostrSettings;
     isBiometryEnabled: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
@@ -116,8 +120,7 @@ export interface Settings {
     lspAccessKey: string;
     requestSimpleTaproot: boolean;
     // Lightning Address
-    automaticallyAccept: boolean;
-    verifyAllPaymentsWithNostr: boolean;
+    lightningAddress: LightningAddressSettings;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -711,10 +714,6 @@ export default class SettingsStore {
             ampInvoice: false,
             showCustomPreimageField: false
         },
-        nostr: {
-            nostrPrivateKey: '',
-            relays: DEFAULT_NOSTR_RELAYS
-        },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
         scramblePin: true,
@@ -741,8 +740,15 @@ export default class SettingsStore {
         lspAccessKey: '',
         requestSimpleTaproot: false,
         // Lightning Address
-        automaticallyAccept: true,
-        verifyAllPaymentsWithNostr: false
+        lightningAddress: {
+            enabled: false,
+            automaticallyAccept: true,
+            automaticallyRequestOlympusChannels: true,
+            allowComments: true,
+            verifyAllPaymentsWithNostr: false,
+            nostrPrivateKey: '',
+            nostrRelays: DEFAULT_NOSTR_RELAYS
+        }
     };
     @observable public posStatus: string = 'unselected';
     @observable public loading = false;
@@ -930,13 +936,6 @@ export default class SettingsStore {
                     this.settings.fiatEnabled = true;
                 }
 
-                if (!this.settings.nostr) {
-                    this.settings.nostr = {
-                        relays: DEFAULT_NOSTR_RELAYS,
-                        nostrPrivateKey: ''
-                    };
-                }
-
                 // TODO PEGASUS
                 // temporarily toggle all alpha users settings for now
                 const MOD_KEY_1 = 'neutrino-mod-1';
@@ -955,6 +954,19 @@ export default class SettingsStore {
                 }
                 if (!this.settings.lspTestnet) {
                     this.settings.lspTestnet = DEFAULT_LSP_TESTNET;
+                }
+
+                // default Lightning Address settings
+                if (!this.settings.lightningAddress) {
+                    this.settings.lightningAddress = {
+                        enabled: false,
+                        automaticallyAccept: true,
+                        automaticallyRequestOlympusChannels: true,
+                        allowComments: true,
+                        verifyAllPaymentsWithNostr: false,
+                        nostrRelays: DEFAULT_NOSTR_RELAYS,
+                        nostrPrivateKey: ''
+                    };
                 }
 
                 // default automatic channel backups to on
@@ -1079,7 +1091,6 @@ export default class SettingsStore {
                     const status = response.info().status;
                     if (status == 200) {
                         const data = response.json();
-                        console.log('!!', data);
                         this.loading = false;
                         if (data.error) {
                             this.createAccountError =
