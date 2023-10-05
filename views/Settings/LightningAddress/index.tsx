@@ -514,7 +514,13 @@ export default class LightningAddress extends React.Component<
                                             )}
                                             onPress={() =>
                                                 create(
-                                                    newLightningAddress
+                                                    newLightningAddress,
+                                                    enableZaplockerVerification
+                                                        ? nostrPublicKey
+                                                        : undefined,
+                                                    enableZaplockerVerification
+                                                        ? relays
+                                                        : undefined
                                                 ).finally(() => status())
                                             }
                                             disabled={
