@@ -4,6 +4,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import bolt11 from 'bolt11';
 import { io } from 'socket.io-client';
+import { schnorr } from '@noble/curves/secp256k1';
+import { bytesToHex } from '@noble/hashes/utils';
 
 import {
     relayInit,
@@ -106,20 +108,29 @@ export default class LightningAddressStore {
         const preimageHashMap: any = {};
 
         const preimages = [];
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < 250; i++) {
             preimages.push(
                 bip39.mnemonicToEntropy(bip39.generateMnemonic(256))
             );
         }
 
         const hashes: any = [];
+        const nostrSignatures: any = [];
         if (preimages) {
+            const nostrPrivateKey =
+                this.settingsStore?.settings?.nostr?.nostrPrivateKey;
             for (let i = 0; i < preimages.length; i++) {
                 const preimage = preimages[i];
                 const hash = sha256
                     .create()
                     .update(Base64Utils.hexToBytes(preimage))
                     .hex();
+                if (nostrPrivateKey) {
+                    const pmthash_sig = bytesToHex(
+                        schnorr.sign(hash, nostrPrivateKey)
+                    );
+                    nostrSignatures.push(pmthash_sig);
+                }
                 preimageHashMap[hash] = preimage;
                 hashes.push(hash);
             }
@@ -173,13 +184,24 @@ export default class LightningAddressStore {
                                     {
                                         'Content-Type': 'application/json'
                                     },
-                                    JSON.stringify({
-                                        pubkey: this.nodeInfoStore.nodeInfo
-                                            .identity_pubkey,
-                                        message: verification,
-                                        signature,
-                                        hashes
-                                    })
+                                    JSON.stringify(
+                                        nostrSignatures.length > 0
+                                            ? {
+                                                  pubkey: this.nodeInfoStore
+                                                      .nodeInfo.identity_pubkey,
+                                                  message: verification,
+                                                  signature,
+                                                  hashes,
+                                                  nostrSignatures
+                                              }
+                                            : {
+                                                  pubkey: this.nodeInfoStore
+                                                      .nodeInfo.identity_pubkey,
+                                                  message: verification,
+                                                  signature,
+                                                  hashes
+                                              }
+                                    )
                                 )
                                     .then(async (response: any) => {
                                         const data = response.json();
@@ -375,9 +397,10 @@ export default class LightningAddressStore {
                                             this.lightningAddress = handle;
 
                                             if (
+                                                this.lightningAddress &&
                                                 new BigNumber(
                                                     this.availableHashes
-                                                ).lt(500)
+                                                ).lt(50)
                                             ) {
                                                 this.generatePreimages();
                                             }

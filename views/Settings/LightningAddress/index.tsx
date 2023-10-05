@@ -57,6 +57,8 @@ export default class LightningAddress extends React.Component<
     };
 
     generateNostrKeys = () => {
+        const { settings, updateSettings } = this.props.SettingsStore;
+        const relays = settings?.nostr?.relays;
         const nostrPrivateKey = generatePrivateKey();
         const nostrPublicKey = getPublicKey(nostrPrivateKey);
         const nostrNpub = nip19.npubEncode(nostrPublicKey);
@@ -66,6 +68,14 @@ export default class LightningAddress extends React.Component<
             nostrPublicKey,
             nostrNpub
         });
+
+        updateSettings({
+            nostr: {
+                relays,
+                nostrPrivateKey
+            }
+        });
+        console.log('updated??', { relays, nostrPrivateKey });
     };
 
     async UNSAFE_componentWillMount() {
@@ -157,7 +167,7 @@ export default class LightningAddress extends React.Component<
             </TouchableOpacity>
         );
 
-        const statusGood = availableHashes > 500;
+        const statusGood = availableHashes > 50;
 
         const openOrdersButton = () => (
             <Text
