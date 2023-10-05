@@ -732,11 +732,39 @@ export default class LightningAddressStore {
 
                     this.socket.on('paid', (data: any) => {
                         console.log('paid', data);
-                        const { hash, req } = data;
+                        const { hash, req, amount_msat } = data;
 
                         console.log('hash', hash);
                         console.log('req', req);
-                        console.log('received_mtokens', req.received_mtokens);
+                        console.log('amount_msat', amount_msat);
+
+                        // TODO add logic to check if auto toggle is on
+                        if (true) {
+                            this.getPreimageMap().then((map) => {
+                                const preimage = map[hash];
+
+                                BackendUtils.createInvoice({
+                                    expiry: '3600',
+                                    value: (amount_msat / 1000).toString(),
+                                    memo: `OLYMPUS LNURL redemption ${hash}`,
+                                    preimage
+                                })
+                                    .then((result: any) => {
+                                        if (result.payment_request) {
+                                            this.redeem(
+                                                hash,
+                                                result.payment_request
+                                            ).then(() => this.status());
+                                        }
+                                    })
+                                    .catch(() => {
+                                        // if payment request has already been submitted, try to redeem without new pay req
+                                        this.redeem(hash).then(() =>
+                                            this.status()
+                                        );
+                                    });
+                            });
+                        }
                     });
                 });
             }
