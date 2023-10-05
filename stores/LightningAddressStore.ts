@@ -746,7 +746,7 @@ export default class LightningAddressStore {
                                 BackendUtils.createInvoice({
                                     expiry: '3600',
                                     value: (amount_msat / 1000).toString(),
-                                    memo: `OLYMPUS LNURL redemption ${hash}`,
+                                    memo: 'ZEUS PAY',
                                     preimage
                                 })
                                     .then((result: any) => {

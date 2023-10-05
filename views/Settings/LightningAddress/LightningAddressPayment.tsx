@@ -145,7 +145,7 @@ export default function LightningAddressPayment(props) {
                                         value: (
                                             item.amount_msat / 1000
                                         ).toString(),
-                                        memo: `OLYMPUS LNURL redemption ${item.hash}`,
+                                        memo: 'ZEUS PAY',
                                         preimage
                                     })
                                         .then((result) => {
