@@ -99,6 +99,7 @@ export default class LightningAddress extends React.Component<
             paid,
             settled,
             fees,
+            error,
             error_msg,
             loading
         } = LightningAddressStore;
@@ -205,7 +206,7 @@ export default class LightningAddress extends React.Component<
                         }}
                         rightComponent={
                             <Row>
-                                {!loading && fees && <InfoButton />}
+                                {!loading && fees && !error && <InfoButton />}
                                 {lightningAddress && <SettingsButton />}
                             </Row>
                         }
@@ -293,7 +294,7 @@ export default class LightningAddress extends React.Component<
                                 <QRButton />
                             </View>
                         )}
-                        {!loading && !lightningAddress && (
+                        {!loading && !lightningAddress && !error && (
                             <>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.wrapper}>
