@@ -43,7 +43,9 @@ export default class Nostr extends React.Component<NostrProps, NostrState> {
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings, getSettings } = SettingsStore;
+
+        await getSettings();
 
         this.setState({
             relays: settings.nostr.relays || [],
@@ -112,7 +114,10 @@ export default class Nostr extends React.Component<NostrProps, NostrState> {
                                                 addRelay: ''
                                             });
                                             updateSettings({
-                                                relays: newRelays
+                                                nostr: {
+                                                    relays: newRelays,
+                                                    nsec
+                                                }
                                             });
                                         }}
                                     />
