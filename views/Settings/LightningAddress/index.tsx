@@ -312,7 +312,7 @@ export default class LightningAddress extends React.Component<
                                             autoCapitalize="none"
                                             autoCorrect={false}
                                             suffix="@zeuspay.com"
-                                            right={170}
+                                            right={130}
                                         />
                                     </View>
 
