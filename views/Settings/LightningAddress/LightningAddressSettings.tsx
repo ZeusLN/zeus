@@ -73,7 +73,8 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'Lato-Regular',
+                                    width: '85%'
                                 }}
                             >
                                 {localeString(
@@ -111,7 +112,8 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'Lato-Regular',
+                                    width: '85%'
                                 }}
                             >
                                 {localeString(
