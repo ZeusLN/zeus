@@ -75,7 +75,6 @@ export default class LightningAddress extends React.Component<
                 nostrPrivateKey
             }
         });
-        console.log('updated??', { relays, nostrPrivateKey });
     };
 
     async UNSAFE_componentWillMount() {
