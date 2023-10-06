@@ -76,8 +76,8 @@ export default class NostrRelays extends React.Component<
             automaticallyAccept,
             automaticallyRequestOlympusChannels,
             allowComments,
-            verifyAllPaymentsWithNostr,
-            nostrPrivateKey
+            nostrPrivateKey,
+            notifications
         } = lightningAddress;
         const { update, loading, error_msg } = LightningAddressStore;
 
@@ -110,7 +110,9 @@ export default class NostrRelays extends React.Component<
                                 fontFamily: 'Lato-Regular'
                             }
                         }}
-                        rightComponent={loading && <LoadingIndicator />}
+                        rightComponent={
+                            loading && <LoadingIndicator size={35} />
+                        }
                         navigation={navigation}
                     />
                     <ScrollView style={{ margin: 5 }}>
@@ -185,10 +187,10 @@ export default class NostrRelays extends React.Component<
                                                                 automaticallyAccept,
                                                                 automaticallyRequestOlympusChannels,
                                                                 allowComments,
-                                                                verifyAllPaymentsWithNostr,
                                                                 nostrPrivateKey,
                                                                 nostrRelays:
-                                                                    newNostrRelays
+                                                                    newNostrRelays,
+                                                                notifications
                                                             }
                                                         });
                                                     });
@@ -256,10 +258,10 @@ export default class NostrRelays extends React.Component<
                                                                                         automaticallyAccept,
                                                                                         automaticallyRequestOlympusChannels,
                                                                                         allowComments,
-                                                                                        verifyAllPaymentsWithNostr,
                                                                                         nostrPrivateKey,
                                                                                         nostrRelays:
-                                                                                            newNostrRelays
+                                                                                            newNostrRelays,
+                                                                                        notifications
                                                                                     }
                                                                             }
                                                                         );

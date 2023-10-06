@@ -1,12 +1,15 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import DropdownSetting from '../../../components/DropdownSetting';
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 
-import SettingsStore from '../../../stores/SettingsStore';
+import SettingsStore, {
+    NOTIFICATIONS_PREF_KEYS
+} from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
@@ -25,9 +28,9 @@ interface LightningAddressSettingsState {
     automaticallyAccept: boolean | undefined;
     automaticallyRequestOlympusChannels: boolean | undefined;
     allowComments: boolean | undefined;
-    verifyAllPaymentsWithNostr: boolean | undefined;
     nostrPrivateKey: string;
     nostrRelays: Array<string>;
+    notifications: number;
 }
 
 @inject('SettingsStore', 'LightningAddressStore')
@@ -40,9 +43,9 @@ export default class LightningAddressSettings extends React.Component<
         automaticallyAccept: true,
         automaticallyRequestOlympusChannels: true,
         allowComments: true,
-        verifyAllPaymentsWithNostr: false,
         nostrPrivateKey: '',
-        nostrRelays: []
+        nostrRelays: [],
+        notifications: 1
     };
 
     async UNSAFE_componentWillMount() {
@@ -60,10 +63,9 @@ export default class LightningAddressSettings extends React.Component<
             allowComments: settings.lightningAddress?.allowComments
                 ? true
                 : false,
-            verifyAllPaymentsWithNostr:
-                settings.lightningAddress?.verifyAllPaymentsWithNostr,
             nostrPrivateKey: settings.lightningAddress?.nostrPrivateKey || '',
-            nostrRelays: settings.lightningAddress?.nostrRelays || []
+            nostrRelays: settings.lightningAddress?.nostrRelays || [],
+            notifications: settings.lightningAddress?.notifications || 1
         });
     }
 
@@ -73,9 +75,9 @@ export default class LightningAddressSettings extends React.Component<
             automaticallyAccept,
             automaticallyRequestOlympusChannels,
             allowComments,
-            verifyAllPaymentsWithNostr,
             nostrPrivateKey,
-            nostrRelays
+            nostrRelays,
+            notifications
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const enabled = settings?.lightningAddress?.enabled;
@@ -95,7 +97,9 @@ export default class LightningAddressSettings extends React.Component<
                                 fontFamily: 'Lato-Regular'
                             }
                         }}
-                        rightComponent={loading && <LoadingIndicator />}
+                        rightComponent={
+                            loading && <LoadingIndicator size={35} />
+                        }
                         navigation={navigation}
                     />
                     <ScrollView style={{ margin: 5 }}>
@@ -135,9 +139,9 @@ export default class LightningAddressSettings extends React.Component<
                                                     !automaticallyAccept,
                                                 automaticallyRequestOlympusChannels,
                                                 allowComments,
-                                                verifyAllPaymentsWithNostr,
                                                 nostrPrivateKey,
-                                                nostrRelays
+                                                nostrRelays,
+                                                notifications
                                             }
                                         });
                                     }}
@@ -182,9 +186,9 @@ export default class LightningAddressSettings extends React.Component<
                                                         automaticallyRequestOlympusChannels:
                                                             !automaticallyRequestOlympusChannels,
                                                         allowComments,
-                                                        verifyAllPaymentsWithNostr,
                                                         nostrPrivateKey,
-                                                        nostrRelays
+                                                        nostrRelays,
+                                                        notifications
                                                     }
                                                 });
                                             });
@@ -230,9 +234,9 @@ export default class LightningAddressSettings extends React.Component<
                                                         automaticallyRequestOlympusChannels,
                                                         allowComments:
                                                             !allowComments,
-                                                        verifyAllPaymentsWithNostr,
                                                         nostrPrivateKey,
-                                                        nostrRelays
+                                                        nostrRelays,
+                                                        notifications
                                                     }
                                                 });
                                             });
@@ -241,77 +245,42 @@ export default class LightningAddressSettings extends React.Component<
                                 />
                             </View>
                         </ListItem>
-                        <ListItem containerStyle={styles.listItem}>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
-                                    width: '85%'
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.LightningAddressSettings.verifyAllPaymentsWithNostr'
-                                )}
-                            </ListItem.Title>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
-                            >
-                                <Switch
-                                    value={verifyAllPaymentsWithNostr}
-                                    onValueChange={async () => {
-                                        this.setState({
-                                            verifyAllPaymentsWithNostr:
-                                                !verifyAllPaymentsWithNostr
-                                        });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                enabled,
-                                                automaticallyAccept,
-                                                automaticallyRequestOlympusChannels,
-                                                allowComments,
-                                                verifyAllPaymentsWithNostr:
-                                                    !verifyAllPaymentsWithNostr,
-                                                nostrPrivateKey,
-                                                nostrRelays
-                                            }
-                                        });
-                                    }}
-                                />
-                            </View>
-                        </ListItem>
                         <View
                             style={{
-                                margin: 10
+                                margin: 5,
+                                marginLeft: 15,
+                                marginRight: 15
                             }}
                         >
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.LightningAddressSettings.verifyAllPaymentsWithNostr.subtitle1'
+                            <DropdownSetting
+                                title={localeString(
+                                    'views.Settings.LightningAddressSettings.notifications'
                                 )}
-                            </Text>
-                        </View>
-                        <View
-                            style={{
-                                margin: 10
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText')
+                                selectedValue={notifications}
+                                onValueChange={async (value: number) => {
+                                    try {
+                                        await update({
+                                            notifications: value
+                                        }).then(async () => {
+                                            this.setState({
+                                                notifications: value
+                                            });
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    enabled,
+                                                    automaticallyAccept,
+                                                    automaticallyRequestOlympusChannels,
+                                                    allowComments,
+                                                    nostrPrivateKey,
+                                                    nostrRelays,
+                                                    notifications: value
+                                                }
+                                            });
+                                        });
+                                    } catch (e) {}
                                 }}
-                            >
-                                {localeString(
-                                    'views.Settings.LightningAddressSettings.verifyAllPaymentsWithNostr.subtitle2'
-                                )}
-                            </Text>
+                                values={NOTIFICATIONS_PREF_KEYS}
+                            />
                         </View>
                         <ListItem
                             containerStyle={{
