@@ -96,7 +96,7 @@ export default class NostrKey extends React.Component<
     }
 
     render() {
-        const { navigation, LightningAddressStore } = this.props;
+        const { navigation, LightningAddressStore, SettingsStore } = this.props;
         const {
             existingNostrPrivateKey,
             nostrPrivateKey,
@@ -107,6 +107,16 @@ export default class NostrKey extends React.Component<
             editMode
         } = this.state;
         const { update, error_msg, loading } = LightningAddressStore;
+        const { updateSettings, settings } = SettingsStore;
+        const { lightningAddress } = settings;
+        const {
+            enabled,
+            automaticallyAccept,
+            automaticallyRequestOlympusChannels,
+            allowComments,
+            nostrRelays,
+            notifications
+        } = lightningAddress;
 
         const EditButton = () => (
             <View style={{ right: 15 }}>
@@ -275,11 +285,22 @@ export default class NostrKey extends React.Component<
                                                 try {
                                                     update({
                                                         nostr_pk: nostrPublicKey
-                                                    }).then(() => {
+                                                    }).then(async () => {
                                                         this.setState({
                                                             existingNostrPrivateKey:
                                                                 nostrPrivateKey,
                                                             editMode: false
+                                                        });
+                                                        await updateSettings({
+                                                            lightningAddress: {
+                                                                enabled,
+                                                                automaticallyAccept,
+                                                                automaticallyRequestOlympusChannels,
+                                                                allowComments,
+                                                                nostrPrivateKey,
+                                                                nostrRelays,
+                                                                notifications
+                                                            }
                                                         });
                                                     });
                                                 } catch (e) {}

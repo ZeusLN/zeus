@@ -315,11 +315,10 @@ export default class LightningAddressStore {
                                                         automaticallyRequestOlympusChannels:
                                                             true,
                                                         allowComments: true,
-                                                        verifyAllPaymentsWithNostr:
-                                                            false,
                                                         nostrPrivateKey:
                                                             nostr_pk,
-                                                        nostrRelays: relays
+                                                        nostrRelays: relays,
+                                                        notifications: 1
                                                     }
                                                 }
                                             );

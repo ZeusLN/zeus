@@ -74,9 +74,9 @@ interface LightningAddressSettings {
     automaticallyAccept: boolean;
     automaticallyRequestOlympusChannels: boolean;
     allowComments: boolean;
-    verifyAllPaymentsWithNostr: boolean;
     nostrPrivateKey: string;
     nostrRelays: Array<string>;
+    notifications: number;
 }
 
 export interface Settings {
@@ -672,6 +672,12 @@ export const DEFAULT_NOSTR_RELAYS = [
     'wss://nostr.lnproxy.org'
 ];
 
+export const NOTIFICATIONS_PREF_KEYS = [
+    { key: 'Disabled', value: 0 },
+    { key: 'Push', value: 1 },
+    { key: 'Nostr', value: 2 }
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -745,9 +751,9 @@ export default class SettingsStore {
             automaticallyAccept: true,
             automaticallyRequestOlympusChannels: true,
             allowComments: true,
-            verifyAllPaymentsWithNostr: false,
             nostrPrivateKey: '',
-            nostrRelays: DEFAULT_NOSTR_RELAYS
+            nostrRelays: DEFAULT_NOSTR_RELAYS,
+            notifications: 1
         }
     };
     @observable public posStatus: string = 'unselected';
@@ -963,9 +969,9 @@ export default class SettingsStore {
                         automaticallyAccept: true,
                         automaticallyRequestOlympusChannels: true,
                         allowComments: true,
-                        verifyAllPaymentsWithNostr: false,
+                        nostrPrivateKey: '',
                         nostrRelays: DEFAULT_NOSTR_RELAYS,
-                        nostrPrivateKey: ''
+                        notifications: 1
                     };
                 }
 
