@@ -1,22 +1,25 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Notifications } from 'react-native-notifications';
+import stores from './stores/Stores';
 
 export default class PushNotificationManager extends React.Component {
     componentDidMount() {
-        // TODO add conditions, let user opt in to notifications
-        if (true) {
+        if (
+            stores?.settingsStore?.settings?.lightningAddress?.notifications ==
+            1
+        ) {
             this.registerDevice();
             this.registerNotificationEvents();
         }
     }
 
     registerDevice = () => {
-        console.log('!register device');
         Notifications.events().registerRemoteNotificationsRegistered(
             (event) => {
-                // TODO: Send the token to my server so it could send back push notifications...
-                console.log('Device Token Received', event.deviceToken);
+                const deviceToken = event.deviceToken;
+                console.log('Device Token Received', deviceToken);
+                stores.lightningAddressStore.setDeviceToken(deviceToken);
             }
         );
         Notifications.events().registerRemoteNotificationsRegistrationFailed(

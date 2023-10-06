@@ -316,7 +316,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             updateSettings
         } = SettingsStore;
         const { isSyncing } = SyncStore;
-        const { fiatEnabled, pos, rescan, recovery } = settings;
+        const { fiatEnabled, pos, rescan, recovery, lightningAddress } =
+            settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
 
         if (pos && pos.squareEnabled && posStatus === 'active')
@@ -367,9 +368,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     ChannelBackupStore.initSubscribeChannelEvents();
             }
 
-            // TODO add connection conditions
-            if (true) {
+            if (lightningAddress.automaticallyAccept) {
                 LightningAddressStore.subscribeUpdates();
+            }
+
+            if (lightningAddress.notifications === 1) {
+                LightningAddressStore.updatePushCredentials();
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {
