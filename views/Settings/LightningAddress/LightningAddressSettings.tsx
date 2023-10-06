@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -98,7 +98,7 @@ export default class LightningAddressSettings extends React.Component<
                         rightComponent={loading && <LoadingIndicator />}
                         navigation={navigation}
                     />
-                    <View style={{ margin: 5 }}>
+                    <ScrollView style={{ margin: 5 }}>
                         {error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
@@ -380,7 +380,7 @@ export default class LightningAddressSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
-                    </View>
+                    </ScrollView>
                 </View>
             </Screen>
         );
