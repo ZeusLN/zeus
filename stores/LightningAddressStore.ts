@@ -829,11 +829,22 @@ export default class LightningAddressStore {
     };
 
     @action
-    public updatePushCredentials = () => {
-        this.update({
-            device_token: this.deviceToken,
-            device_platform: Platform.OS
-        });
+    public updatePushCredentials = async () => {
+        const DEVICE_TOKEN_KEY = 'zeus-device-notification-token';
+        const token = await EncryptedStorage.getItem(DEVICE_TOKEN_KEY);
+
+        // only push update if the device token has changed
+        if (this.deviceToken && (!token || this.deviceToken !== token)) {
+            this.update({
+                device_token: this.deviceToken,
+                device_platform: Platform.OS
+            }).then(async () => {
+                await EncryptedStorage.setItem(
+                    DEVICE_TOKEN_KEY,
+                    this.deviceToken
+                );
+            });
+        }
     };
 
     @action
