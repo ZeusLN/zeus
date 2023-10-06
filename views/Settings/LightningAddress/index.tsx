@@ -19,7 +19,7 @@ import { Row } from '../../../components/layout/Row';
 import { Spacer } from '../../../components/layout/Spacer';
 
 import LightningAddressStore from '../../../stores/LightningAddressStore';
-import SettingsStore from '../../../stores/SettingsStore';
+import { DEFAULT_NOSTR_RELAYS } from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -29,7 +29,6 @@ import DiceSVG from '../../../assets/images/SVG/Dice.svg';
 interface LightningAddressProps {
     navigation: any;
     LightningAddressStore: LightningAddressStore;
-    SettingsStore: SettingsStore;
 }
 
 interface LightningAddressState {
@@ -39,9 +38,11 @@ interface LightningAddressState {
     nostrPrivateKey: string;
     nostrPublicKey: string;
     nostrNpub: string;
+    //
+    nostrRelays: Array<string>;
 }
 
-@inject('LightningAddressStore', 'SettingsStore')
+@inject('LightningAddressStore')
 @observer
 export default class LightningAddress extends React.Component<
     LightningAddressProps,
@@ -53,7 +54,9 @@ export default class LightningAddress extends React.Component<
         enableZaplockerVerification: true,
         nostrPrivateKey: '',
         nostrPublicKey: '',
-        nostrNpub: ''
+        nostrNpub: '',
+        //
+        nostrRelays: DEFAULT_NOSTR_RELAYS
     };
 
     generateNostrKeys = () => {
@@ -81,15 +84,26 @@ export default class LightningAddress extends React.Component<
         });
     }
 
+    UNSAFE_componentWillReceiveProps = (newProps: any) => {
+        const { navigation } = newProps;
+        const nostrRelays = navigation.getParam('relays', null);
+        if (nostrRelays) {
+            this.setState({
+                nostrRelays
+            });
+        }
+    };
+
     render() {
-        const { navigation, LightningAddressStore, SettingsStore } = this.props;
+        const { navigation, LightningAddressStore } = this.props;
         const {
             newLightningAddress,
             enableZaplockerVerification,
             nostrPrivateKey,
             nostrPublicKey,
             nostrNpub,
-            selectedIndex
+            selectedIndex,
+            nostrRelays
         } = this.state;
         const {
             create,
@@ -103,8 +117,6 @@ export default class LightningAddress extends React.Component<
             error_msg,
             loading
         } = LightningAddressStore;
-        const nostrRelays =
-            SettingsStore?.settings?.lightningAddress?.nostrRelays || [];
 
         const InfoButton = () => (
             <View style={{ right: 15 }}>
@@ -476,7 +488,13 @@ export default class LightningAddress extends React.Component<
                                                         'transparent'
                                                 }}
                                                 onPress={() =>
-                                                    navigation.navigate('Nostr')
+                                                    navigation.navigate(
+                                                        'NostrRelays',
+                                                        {
+                                                            setup: true,
+                                                            relays: nostrRelays
+                                                        }
+                                                    )
                                                 }
                                             >
                                                 <ListItem.Content>

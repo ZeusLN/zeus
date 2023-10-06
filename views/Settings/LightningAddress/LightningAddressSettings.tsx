@@ -5,15 +5,20 @@ import { inject, observer } from 'mobx-react';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
+
 import SettingsStore from '../../../stores/SettingsStore';
+import LightningAddressStore from '../../../stores/LightningAddressStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import Switch from '../../../components/Switch';
+import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../../components/LoadingIndicator';
 
 interface LightningAddressSettingsProps {
     navigation: any;
     SettingsStore: SettingsStore;
+    LightningAddressStore: LightningAddressStore;
 }
 
 interface LightningAddressSettingsState {
@@ -25,7 +30,7 @@ interface LightningAddressSettingsState {
     nostrRelays: Array<string>;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'LightningAddressStore')
 @observer
 export default class LightningAddressSettings extends React.Component<
     LightningAddressSettingsProps,
@@ -63,7 +68,7 @@ export default class LightningAddressSettings extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, LightningAddressStore } = this.props;
         const {
             automaticallyAccept,
             automaticallyRequestOlympusChannels,
@@ -74,6 +79,7 @@ export default class LightningAddressSettings extends React.Component<
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const enabled = settings?.lightningAddress?.enabled;
+        const { loading, update, error_msg } = LightningAddressStore;
 
         return (
             <Screen>
@@ -89,9 +95,13 @@ export default class LightningAddressSettings extends React.Component<
                                 fontFamily: 'Lato-Regular'
                             }
                         }}
+                        rightComponent={loading && <LoadingIndicator />}
                         navigation={navigation}
                     />
                     <View style={{ margin: 5 }}>
+                        {error_msg && (
+                            <ErrorMessage message={error_msg} dismissable />
+                        )}
                         <ListItem containerStyle={styles.listItem}>
                             <ListItem.Title
                                 style={{
@@ -156,22 +166,29 @@ export default class LightningAddressSettings extends React.Component<
                                 <Switch
                                     value={automaticallyRequestOlympusChannels}
                                     onValueChange={async () => {
-                                        this.setState({
-                                            automaticallyRequestOlympusChannels:
-                                                !automaticallyRequestOlympusChannels
-                                        });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                enabled,
-                                                automaticallyAccept,
-                                                automaticallyRequestOlympusChannels:
-                                                    !automaticallyRequestOlympusChannels,
-                                                allowComments,
-                                                verifyAllPaymentsWithNostr,
-                                                nostrPrivateKey,
-                                                nostrRelays
-                                            }
-                                        });
+                                        try {
+                                            await update({
+                                                request_channels:
+                                                    !automaticallyRequestOlympusChannels
+                                            }).then(async () => {
+                                                this.setState({
+                                                    automaticallyRequestOlympusChannels:
+                                                        !automaticallyRequestOlympusChannels
+                                                });
+                                                await updateSettings({
+                                                    lightningAddress: {
+                                                        enabled,
+                                                        automaticallyAccept,
+                                                        automaticallyRequestOlympusChannels:
+                                                            !automaticallyRequestOlympusChannels,
+                                                        allowComments,
+                                                        verifyAllPaymentsWithNostr,
+                                                        nostrPrivateKey,
+                                                        nostrRelays
+                                                    }
+                                                });
+                                            });
+                                        } catch (e) {}
                                     }}
                                 />
                             </View>
@@ -198,20 +215,28 @@ export default class LightningAddressSettings extends React.Component<
                                 <Switch
                                     value={allowComments}
                                     onValueChange={async () => {
-                                        this.setState({
-                                            allowComments: !allowComments
-                                        });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                enabled,
-                                                automaticallyAccept,
-                                                automaticallyRequestOlympusChannels,
-                                                allowComments: !allowComments,
-                                                verifyAllPaymentsWithNostr,
-                                                nostrPrivateKey,
-                                                nostrRelays
-                                            }
-                                        });
+                                        try {
+                                            await update({
+                                                allow_comments: !allowComments
+                                            }).then(async () => {
+                                                this.setState({
+                                                    allowComments:
+                                                        !allowComments
+                                                });
+                                                await updateSettings({
+                                                    lightningAddress: {
+                                                        enabled,
+                                                        automaticallyAccept,
+                                                        automaticallyRequestOlympusChannels,
+                                                        allowComments:
+                                                            !allowComments,
+                                                        verifyAllPaymentsWithNostr,
+                                                        nostrPrivateKey,
+                                                        nostrRelays
+                                                    }
+                                                });
+                                            });
+                                        } catch (e) {}
                                     }}
                                 />
                             </View>
@@ -292,7 +317,7 @@ export default class LightningAddressSettings extends React.Component<
                             containerStyle={{
                                 backgroundColor: 'transparent'
                             }}
-                            onPress={() => navigation.navigate('Nostr')}
+                            onPress={() => navigation.navigate('NostrRelays')}
                         >
                             <ListItem.Content>
                                 <ListItem.Title
