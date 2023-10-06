@@ -24,6 +24,7 @@ function ZeusHeader(props: HeaderProps) {
             color={themeColor('text')}
             underlayColor="transparent"
             size={35}
+            tvParallaxProperties={{}}
         />
     );
 
@@ -37,6 +38,7 @@ function ZeusHeader(props: HeaderProps) {
             color={themeColor('text')}
             underlayColor="transparent"
             size={35}
+            tvParallaxProperties={{}}
         />
     );
 

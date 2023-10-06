@@ -128,6 +128,7 @@ export default class InvoicesSettings extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
+                tvParallaxProperties={{}}
             />
         );
 

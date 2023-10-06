@@ -227,6 +227,7 @@ export default class Contacts extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={35}
+                tvParallaxProperties={{}}
             />
         );
         const Add = ({ navigation }: { navigation: any }) => (

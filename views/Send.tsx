@@ -559,6 +559,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         type="material-community"
                                         size={18}
                                         color={themeColor('background')}
+                                        tvParallaxProperties={{}}
                                     />
                                 </TouchableOpacity>
                             </View>

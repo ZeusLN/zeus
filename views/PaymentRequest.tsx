@@ -344,6 +344,7 @@ export default class PaymentRequest extends React.Component<
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                tvParallaxProperties={{}}
             />
         );
 

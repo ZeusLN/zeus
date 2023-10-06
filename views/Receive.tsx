@@ -916,6 +916,7 @@ export default class Receive extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
+                tvParallaxProperties={{}}
             />
         );
 
@@ -926,6 +927,7 @@ export default class Receive extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
+                tvParallaxProperties={{}}
             />
         );
 

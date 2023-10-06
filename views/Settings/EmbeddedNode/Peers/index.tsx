@@ -47,6 +47,8 @@ export default class Peers extends React.Component<PeersProps, {}> {
                                 backgroundColor: 'transparent'
                             }}
                             onPress={() => navigation.navigate('NeutrinoPeers')}
+                            hasTVPreferredFocus={false}
+                            tvParallaxProperties={{}}
                         >
                             <ListItem.Content>
                                 <ListItem.Title
@@ -94,6 +96,7 @@ export default class Peers extends React.Component<PeersProps, {}> {
                             <Icon
                                 name="keyboard-arrow-right"
                                 color={themeColor('secondaryText')}
+                                tvParallaxProperties={{}}
                             />
                         </ListItem>
                         <View
@@ -116,6 +119,8 @@ export default class Peers extends React.Component<PeersProps, {}> {
                                 backgroundColor: 'transparent'
                             }}
                             onPress={() => navigation.navigate('ZeroConfPeers')}
+                            hasTVPreferredFocus={false}
+                            tvParallaxProperties={{}}
                         >
                             <ListItem.Content>
                                 <ListItem.Title
@@ -154,6 +159,7 @@ export default class Peers extends React.Component<PeersProps, {}> {
                             <Icon
                                 name="keyboard-arrow-right"
                                 color={themeColor('secondaryText')}
+                                tvParallaxProperties={{}}
                             />
                         </ListItem>
                         <View

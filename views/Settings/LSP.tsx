@@ -77,6 +77,8 @@ export default class EmbeddedNode extends React.Component<
                             borderBottomWidth: 0,
                             backgroundColor: 'transparent'
                         }}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <ListItem.Title
                             style={{
@@ -192,6 +194,8 @@ export default class EmbeddedNode extends React.Component<
                             borderBottomWidth: 0,
                             backgroundColor: 'transparent'
                         }}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <ListItem.Title
                             style={{

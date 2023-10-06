@@ -206,6 +206,7 @@ export default class Activity extends React.PureComponent<
                 }}
                 color={themeColor('highlight')}
                 underlayColor="transparent"
+                tvParallaxProperties={{}}
             />
         );
 
@@ -376,6 +377,8 @@ export default class Activity extends React.PureComponent<
                                                 });
                                             }
                                         }}
+                                        hasTVPreferredFocus={false}
+                                        tvParallaxProperties={{}}
                                     >
                                         <ListItem.Content>
                                             <ListItem.Title

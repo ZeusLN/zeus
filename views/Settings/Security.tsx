@@ -195,6 +195,8 @@ export default class Security extends React.Component<
                     backgroundColor: 'transparent'
                 }}
                 onPress={() => this.navigateSecurity(item)}
+                hasTVPreferredFocus={false}
+                tvParallaxProperties={{}}
             >
                 <ListItem.Content>
                     <ListItem.Title
@@ -209,6 +211,7 @@ export default class Security extends React.Component<
                 <Icon
                     name="keyboard-arrow-right"
                     color={themeColor('secondaryText')}
+                    tvParallaxProperties={{}}
                 />
             </ListItem>
         );
@@ -253,6 +256,8 @@ export default class Security extends React.Component<
                             containerStyle={{
                                 backgroundColor: 'transparent'
                             }}
+                            hasTVPreferredFocus={false}
+                            tvParallaxProperties={{}}
                         >
                             <ListItem.Content>
                                 <ListItem.Title
@@ -280,6 +285,8 @@ export default class Security extends React.Component<
                             containerStyle={{
                                 backgroundColor: 'transparent'
                             }}
+                            hasTVPreferredFocus={false}
+                            tvParallaxProperties={{}}
                         >
                             <ListItem.Content>
                                 <ListItem.Title
@@ -311,6 +318,8 @@ export default class Security extends React.Component<
                             containerStyle={{
                                 backgroundColor: 'transparent'
                             }}
+                            hasTVPreferredFocus={false}
+                            tvParallaxProperties={{}}
                         >
                             <ListItem.Content>
                                 <ListItem.Title

@@ -175,6 +175,8 @@ export default class UTXOPicker extends React.Component<
                                                 onPress={() =>
                                                     this.toggleItem(item)
                                                 }
+                                                hasTVPreferredFocus={false}
+                                                tvParallaxProperties={{}}
                                             >
                                                 <Text
                                                     style={{

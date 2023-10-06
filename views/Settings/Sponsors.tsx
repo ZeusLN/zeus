@@ -52,6 +52,8 @@ function Sponsors(props: SponsorsProps) {
                             backgroundColor: 'theme'
                         }}
                         onPress={() => navigation.navigate(item.path)}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <ListItem.Content>
                             <ListItem.Title
@@ -66,6 +68,7 @@ function Sponsors(props: SponsorsProps) {
                         <Icon
                             name="keyboard-arrow-right"
                             color={themeColor('secondaryText')}
+                            tvParallaxProperties={{}}
                         />
                     </ListItem>
                 )}

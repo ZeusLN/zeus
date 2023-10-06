@@ -84,6 +84,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                                 utxo: item
                                             });
                                         }}
+                                        hasTVPreferredFocus={false}
+                                        tvParallaxProperties={{}}
                                     >
                                         <ListItem.Content>
                                             <Amount

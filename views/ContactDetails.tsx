@@ -164,6 +164,7 @@ export default class ContactDetails extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={35}
+                tvParallaxProperties={{}}
             />
         );
         const StarButton = () => (
@@ -173,6 +174,7 @@ export default class ContactDetails extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={32}
+                tvParallaxProperties={{}}
             />
         );
         const EditContactButton = () => (

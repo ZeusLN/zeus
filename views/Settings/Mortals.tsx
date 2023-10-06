@@ -63,6 +63,8 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
                                             }${item.handle}`
                                         )
                                     }
+                                    hasTVPreferredFocus={false}
+                                    tvParallaxProperties={{}}
                                 >
                                     <Avatar
                                         size={

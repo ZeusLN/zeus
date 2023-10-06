@@ -136,6 +136,8 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                                                     selected: item
                                                 })
                                             }
+                                            hasTVPreferredFocus={false}
+                                            tvParallaxProperties={{}}
                                         >
                                             <Text
                                                 style={{

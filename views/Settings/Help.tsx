@@ -66,6 +66,8 @@ function Help(props: HelpProps) {
                             backgroundColor: 'transparent'
                         }}
                         onPress={() => UrlUtils.goToUrl(item.url)}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <ListItem.Content>
                             <ListItem.Title
@@ -80,6 +82,7 @@ function Help(props: HelpProps) {
                         <Icon
                             name="keyboard-arrow-right"
                             color={themeColor('secondaryText')}
+                            tvParallaxProperties={{}}
                         />
                     </ListItem>
                 )}

@@ -262,6 +262,8 @@ export default class PaymentsSettings extends React.Component<
                             borderBottomWidth: 0,
                             backgroundColor: 'transparent'
                         }}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <ListItem.Title
                             style={{

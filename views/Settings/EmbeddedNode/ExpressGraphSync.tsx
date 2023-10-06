@@ -79,6 +79,8 @@ export default class ExpressGraphSync extends React.Component<
                                     borderBottomWidth: 0,
                                     backgroundColor: 'transparent'
                                 }}
+                                hasTVPreferredFocus={false}
+                                tvParallaxProperties={{}}
                             >
                                 <ListItem.Title
                                     style={{
@@ -134,6 +136,8 @@ export default class ExpressGraphSync extends React.Component<
                                     borderBottomWidth: 0,
                                     backgroundColor: 'transparent'
                                 }}
+                                hasTVPreferredFocus={false}
+                                tvParallaxProperties={{}}
                             >
                                 <ListItem.Title
                                     style={{
@@ -190,6 +194,8 @@ export default class ExpressGraphSync extends React.Component<
                                     borderBottomWidth: 0,
                                     backgroundColor: 'transparent'
                                 }}
+                                hasTVPreferredFocus={false}
+                                tvParallaxProperties={{}}
                             >
                                 <ListItem.Title
                                     style={{

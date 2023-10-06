@@ -73,6 +73,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     color={themeColor('text')}
                     underlayColor="transparent"
                     size={30}
+                    tvParallaxProperties={{}}
                 />
             </View>
         );

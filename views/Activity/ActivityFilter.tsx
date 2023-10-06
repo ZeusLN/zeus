@@ -207,6 +207,7 @@ export default class ActivityFilter extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
+                tvParallaxProperties={{}}
             />
         );
 
@@ -237,6 +238,8 @@ export default class ActivityFilter extends React.Component<
                                     borderBottomWidth: 0,
                                     backgroundColor: 'transparent'
                                 }}
+                                hasTVPreferredFocus={false}
+                                tvParallaxProperties={{}}
                             >
                                 <ListItem.Title
                                     style={{

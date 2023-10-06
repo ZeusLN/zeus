@@ -90,6 +90,7 @@ export default class Accounts extends React.Component<
                 onPress={() => navigation.navigate('ImportAccount')}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                tvParallaxProperties={{}}
             />
         );
 

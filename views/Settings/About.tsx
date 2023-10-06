@@ -51,6 +51,8 @@ function About(props: AboutProps) {
                             backgroundColor: 'transparent'
                         }}
                         onPress={() => navigation.navigate(item.path)}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <ListItem.Content>
                             <ListItem.Title
@@ -65,6 +67,7 @@ function About(props: AboutProps) {
                         <Icon
                             name="keyboard-arrow-right"
                             color={themeColor('secondaryText')}
+                            tvParallaxProperties={{}}
                         />
                     </ListItem>
                 )}

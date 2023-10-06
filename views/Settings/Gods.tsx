@@ -63,6 +63,8 @@ export default class Gods extends React.Component<GodsProps, {}> {
                                             }${item.handle}`
                                         )
                                     }
+                                    hasTVPreferredFocus={false}
+                                    tvParallaxProperties={{}}
                                 >
                                     <Avatar
                                         size={

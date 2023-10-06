@@ -367,6 +367,7 @@ export default class AddContact extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={35}
+                tvParallaxProperties={{}}
             />
         );
 
@@ -386,6 +387,7 @@ export default class AddContact extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={35}
+                tvParallaxProperties={{}}
             />
         );
         const isEdit = !!this.props.navigation.getParam('isEdit', false);
@@ -634,6 +636,7 @@ export default class AddContact extends React.Component<
                                             color={themeColor('text')}
                                             underlayColor="transparent"
                                             size={16}
+                                            tvParallaxProperties={{}}
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -736,6 +739,7 @@ export default class AddContact extends React.Component<
                                             color={themeColor('text')}
                                             underlayColor="transparent"
                                             size={16}
+                                            tvParallaxProperties={{}}
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -845,6 +849,7 @@ export default class AddContact extends React.Component<
                                             color={themeColor('text')}
                                             underlayColor="transparent"
                                             size={16}
+                                            tvParallaxProperties={{}}
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -946,6 +951,7 @@ export default class AddContact extends React.Component<
                                             color={themeColor('text')}
                                             underlayColor="transparent"
                                             size={16}
+                                            tvParallaxProperties={{}}
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -1046,6 +1052,7 @@ export default class AddContact extends React.Component<
                                             color={themeColor('text')}
                                             underlayColor="transparent"
                                             size={16}
+                                            tvParallaxProperties={{}}
                                         />
                                     </TouchableOpacity>
                                 </View>

@@ -211,6 +211,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                         enhancedPath
                                     })
                                 }
+                                hasTVPreferredFocus={false}
+                                tvParallaxProperties={{}}
                             >
                                 <ListItem.Content>
                                     <ListItem.Title
@@ -231,6 +233,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 <Icon
                                     name="keyboard-arrow-right"
                                     color={themeColor('secondaryText')}
+                                    tvParallaxProperties={{}}
                                 />
                             </ListItem>
                         )}

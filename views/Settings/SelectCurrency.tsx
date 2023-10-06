@@ -133,6 +133,8 @@ export default class SelectCurrency extends React.Component<
                                         });
                                     });
                                 }}
+                                hasTVPreferredFocus={false}
+                                tvParallaxProperties={{}}
                             >
                                 <ListItem.Content>
                                     <ListItem.Title
@@ -157,6 +159,7 @@ export default class SelectCurrency extends React.Component<
                                         <Icon
                                             name="check"
                                             color={themeColor('highlight')}
+                                            tvParallaxProperties={{}}
                                         />
                                     </View>
                                 )}

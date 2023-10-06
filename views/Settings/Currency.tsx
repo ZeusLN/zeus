@@ -98,6 +98,8 @@ export default class Currency extends React.Component<
                             borderBottomWidth: 0,
                             backgroundColor: 'transparent'
                         }}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <ListItem.Title
                             style={{
@@ -165,6 +167,8 @@ export default class Currency extends React.Component<
                             backgroundColor: 'transparent'
                         }}
                         onPress={() => this.navigateToSelectCurrency()}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <ListItem.Content>
                             <ListItem.Title
@@ -181,6 +185,7 @@ export default class Currency extends React.Component<
                         <Icon
                             name="keyboard-arrow-right"
                             color={themeColor('secondaryText')}
+                            tvParallaxProperties={{}}
                         />
                     </ListItem>
                 </View>

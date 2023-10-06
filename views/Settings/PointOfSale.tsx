@@ -147,6 +147,8 @@ export default class PointOfSale extends React.Component<
                                     borderBottomWidth: 0,
                                     backgroundColor: 'transparent'
                                 }}
+                                hasTVPreferredFocus={false}
+                                tvParallaxProperties={{}}
                             >
                                 <ListItem.Title
                                     style={{
@@ -317,6 +319,8 @@ export default class PointOfSale extends React.Component<
                                             backgroundColor:
                                                 themeColor('background')
                                         }}
+                                        hasTVPreferredFocus={false}
+                                        tvParallaxProperties={{}}
                                     >
                                         <ListItem.Title
                                             style={{
@@ -368,6 +372,8 @@ export default class PointOfSale extends React.Component<
                                             backgroundColor:
                                                 themeColor('background')
                                         }}
+                                        hasTVPreferredFocus={false}
+                                        tvParallaxProperties={{}}
                                     >
                                         <ListItem.Title
                                             style={{
@@ -428,6 +434,8 @@ export default class PointOfSale extends React.Component<
                                         onPress={() =>
                                             navigation.navigate(item.path)
                                         }
+                                        hasTVPreferredFocus={false}
+                                        tvParallaxProperties={{}}
                                     >
                                         <ListItem.Content>
                                             <ListItem.Title
@@ -442,6 +450,7 @@ export default class PointOfSale extends React.Component<
                                         <Icon
                                             name="keyboard-arrow-right"
                                             color={themeColor('secondaryText')}
+                                            tvParallaxProperties={{}}
                                         />
                                     </ListItem>
                                 )}

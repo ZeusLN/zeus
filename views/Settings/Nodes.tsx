@@ -116,6 +116,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
+                tvParallaxProperties={{}}
             />
         );
 
@@ -186,6 +187,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             });
                                         });
                                     }}
+                                    hasTVPreferredFocus={false}
+                                    tvParallaxProperties={{}}
                                 >
                                     <NodeIdenticon
                                         selectedNode={item}

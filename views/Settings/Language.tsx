@@ -112,6 +112,8 @@ export default class Language extends React.Component<
                                         navigation.goBack();
                                     });
                                 }}
+                                hasTVPreferredFocus={false}
+                                tvParallaxProperties={{}}
                             >
                                 <ListItem.Content>
                                     <ListItem.Title
@@ -134,6 +136,7 @@ export default class Language extends React.Component<
                                         <Icon
                                             name="check"
                                             color={themeColor('highlight')}
+                                            tvParallaxProperties={{}}
                                         />
                                     </View>
                                 )}

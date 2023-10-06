@@ -103,6 +103,8 @@ export default class NeutrinoPeers extends React.Component<
                                     borderBottomWidth: 0,
                                     backgroundColor: 'transparent'
                                 }}
+                                hasTVPreferredFocus={false}
+                                tvParallaxProperties={{}}
                             >
                                 <ListItem.Title
                                     style={{

@@ -163,6 +163,8 @@ export default class Privacy extends React.Component<
                             borderBottomWidth: 0,
                             backgroundColor: 'transparent'
                         }}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <Text
                             style={{
@@ -208,6 +210,8 @@ export default class Privacy extends React.Component<
                             borderBottomWidth: 0,
                             backgroundColor: 'transparent'
                         }}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <Text
                             style={{
@@ -258,6 +262,8 @@ export default class Privacy extends React.Component<
                             borderBottomWidth: 0,
                             backgroundColor: 'transparent'
                         }}
+                        hasTVPreferredFocus={false}
+                        tvParallaxProperties={{}}
                     >
                         <ListItem.Title
                             style={{

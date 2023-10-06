@@ -63,6 +63,8 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                             }${item.handle}`
                                         )
                                     }
+                                    hasTVPreferredFocus={false}
+                                    tvParallaxProperties={{}}
                                 >
                                     <Avatar
                                         size={
