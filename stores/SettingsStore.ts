@@ -753,7 +753,7 @@ export default class SettingsStore {
             allowComments: true,
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
-            notifications: 1
+            notifications: 0
         }
     };
     @observable public posStatus: string = 'unselected';
@@ -971,7 +971,7 @@ export default class SettingsStore {
                         allowComments: true,
                         nostrPrivateKey: '',
                         nostrRelays: DEFAULT_NOSTR_RELAYS,
-                        notifications: 1
+                        notifications: 0
                     };
                 }
 
