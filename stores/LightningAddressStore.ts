@@ -37,6 +37,7 @@ const RELAYS = ['wss://nostr.mutinywallet.com', 'wss://relay.damus.io'];
 
 export default class LightningAddressStore {
     @observable public lightningAddressHandle: string;
+    @observable public lightningAddressDomain: string;
     @observable public lightningAddressActivated: boolean = false;
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
@@ -87,16 +88,11 @@ export default class LightningAddressStore {
         }
     };
 
-    // TODO remove
-    test_DELETE = async () => {
-        await EncryptedStorage.setItem(ADDRESS_ACTIVATED_STRING, '');
-        this.lightningAddressHandle = '';
-    };
-
-    setLightningAddress = async (handle: string) => {
+    setLightningAddress = async (handle: string, domain: string) => {
         await EncryptedStorage.setItem(ADDRESS_ACTIVATED_STRING, 'true');
         this.lightningAddressActivated = true;
         this.lightningAddressHandle = handle;
+        this.lightningAddressDomain = domain;
     };
 
     @action
@@ -286,7 +282,8 @@ export default class LightningAddressStore {
                                             .identity_pubkey,
                                         message: verification,
                                         signature,
-                                        handle: `${handle}@zeuspay.com`,
+                                        handle,
+                                        domain: 'zeuspay.com',
                                         nostr_pk,
                                         relays
                                     })
@@ -294,13 +291,18 @@ export default class LightningAddressStore {
                                     .then(async (response: any) => {
                                         const data = response.json();
                                         const status = response.info().status;
-                                        const { handle, created_at, success } =
-                                            data;
+                                        const {
+                                            handle,
+                                            domain,
+                                            created_at,
+                                            success
+                                        } = data;
 
                                         if (status === 200 && success) {
                                             if (handle) {
                                                 this.setLightningAddress(
-                                                    handle
+                                                    handle,
+                                                    domain
                                                 );
                                             }
 
@@ -398,16 +400,20 @@ export default class LightningAddressStore {
                                     })
                                 )
                                     .then((response: any) => {
-                                        console.log('!', response);
                                         const data = response.json();
                                         const status = response.info().status;
-                                        const { handle, created_at, success } =
-                                            data;
+                                        const {
+                                            handle,
+                                            domain,
+                                            created_at,
+                                            success
+                                        } = data;
 
                                         if (status === 200 && success) {
                                             if (handle) {
                                                 this.setLightningAddress(
-                                                    handle
+                                                    handle,
+                                                    domain || 'zeuspay.com'
                                                 );
                                             }
 
@@ -492,7 +498,8 @@ export default class LightningAddressStore {
                                             settled,
                                             fees,
                                             minimumSats,
-                                            handle
+                                            handle,
+                                            domain
                                         } = data;
 
                                         if (status === 200 && success) {
@@ -506,6 +513,8 @@ export default class LightningAddressStore {
                                             this.minimumSats = minimumSats;
                                             this.lightningAddressHandle =
                                                 handle;
+                                            this.lightningAddressDomain =
+                                                domain;
 
                                             if (
                                                 this.lightningAddressHandle &&
