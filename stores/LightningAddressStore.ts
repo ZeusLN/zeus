@@ -49,6 +49,8 @@ export default class LightningAddressStore {
     @observable public fees: any = {};
     @observable public minimumSats: number;
     @observable public socket: any;
+    // Push
+    @observable public deviceToken: string;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -822,6 +824,19 @@ export default class LightningAddressStore {
     };
 
     @action
+    public setDeviceToken = (token: string) => {
+        this.deviceToken = token;
+    };
+
+    @action
+    public updatePushCredentials = () => {
+        this.update({
+            device_token: this.deviceToken,
+            device_platform: Platform.OS
+        });
+    };
+
+    @action
     public subscribeUpdates = () => {
         if (this.socket) return;
         ReactNativeBlobUtil.fetch(
@@ -857,33 +872,28 @@ export default class LightningAddressStore {
                         console.log('req', req);
                         console.log('amount_msat', amount_msat);
 
-                        // TODO add logic to check if auto toggle is on
-                        if (true) {
-                            this.getPreimageMap().then((map) => {
-                                const preimage = map[hash];
+                        this.getPreimageMap().then((map) => {
+                            const preimage = map[hash];
 
-                                BackendUtils.createInvoice({
-                                    expiry: '3600',
-                                    value: (amount_msat / 1000).toString(),
-                                    memo: 'ZEUS PAY',
-                                    preimage
+                            BackendUtils.createInvoice({
+                                expiry: '3600',
+                                value: (amount_msat / 1000).toString(),
+                                memo: 'ZEUS PAY',
+                                preimage
+                            })
+                                .then((result: any) => {
+                                    if (result.payment_request) {
+                                        this.redeem(
+                                            hash,
+                                            result.payment_request
+                                        ).then(() => this.status());
+                                    }
                                 })
-                                    .then((result: any) => {
-                                        if (result.payment_request) {
-                                            this.redeem(
-                                                hash,
-                                                result.payment_request
-                                            ).then(() => this.status());
-                                        }
-                                    })
-                                    .catch(() => {
-                                        // if payment request has already been submitted, try to redeem without new pay req
-                                        this.redeem(hash).then(() =>
-                                            this.status()
-                                        );
-                                    });
-                            });
-                        }
+                                .catch(() => {
+                                    // if payment request has already been submitted, try to redeem without new pay req
+                                    this.redeem(hash).then(() => this.status());
+                                });
+                        });
                     });
                 });
             }
