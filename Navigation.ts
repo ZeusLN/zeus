@@ -61,6 +61,7 @@ import LightningAddressSettings from './views/Settings/LightningAddress/Lightnin
 import Attestation from './views/Settings/LightningAddress/Attestation';
 import Attestations from './views/Settings/LightningAddress/Attestations';
 import NostrRelays from './views/Settings/LightningAddress/NostrRelays';
+import ChangeAddress from './views/Settings/LightningAddress/ChangeAddress';
 
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
@@ -375,6 +376,9 @@ const AppScenes = {
     },
     NostrRelays: {
         screen: NostrRelays
+    },
+    ChangeAddress: {
+        screen: ChangeAddress
     }
 };
 

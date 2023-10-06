@@ -336,6 +336,29 @@ export default class LightningAddressSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                            onPress={() => navigation.navigate('ChangeAddress')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddress.ChangeAddress'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
                     </View>
                 </View>
             </Screen>
