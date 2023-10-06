@@ -317,6 +317,27 @@ export default class LightningAddressSettings extends React.Component<
                             containerStyle={{
                                 backgroundColor: 'transparent'
                             }}
+                            onPress={() => navigation.navigate('NostrKeys')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString('nostr.keys')}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
                             onPress={() => navigation.navigate('NostrRelays')}
                         >
                             <ListItem.Content>
