@@ -109,6 +109,7 @@ export default class LightningAddress extends React.Component<
             create,
             status,
             lightningAddressHandle,
+            lightningAddressDomain,
             availableHashes,
             paid,
             settled,
@@ -123,9 +124,7 @@ export default class LightningAddress extends React.Component<
                 <Icon
                     name="info"
                     onPress={() => {
-                        // TODO reset
-                        // navigation.navigate('LightningAddressInfo');
-                        this.props.LightningAddressStore.test_DELETE();
+                        navigation.navigate('LightningAddressInfo');
                     }}
                     color={themeColor('text')}
                     underlayColor="transparent"
@@ -152,7 +151,7 @@ export default class LightningAddress extends React.Component<
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('QR', {
-                        value: lightningAddressHandle,
+                        value: `${lightningAddressHandle}@${lightningAddressDomain}`,
                         hideText: true,
                         jumboLabel: true
                     })
@@ -249,7 +248,7 @@ export default class LightningAddress extends React.Component<
                                             textAlign: 'center'
                                         }}
                                     >
-                                        {lightningAddressHandle}
+                                        {`${lightningAddressHandle}@${lightningAddressDomain}`}
                                     </Text>
                                 </Row>
                                 <Row
@@ -305,7 +304,7 @@ export default class LightningAddress extends React.Component<
                                 <QRButton />
                             </View>
                         )}
-                        {!loading && !lightningAddressHandle && !error && (
+                        {!loading && !lightningAddressHandle && (
                             <>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.wrapper}>
@@ -540,7 +539,7 @@ export default class LightningAddress extends React.Component<
                                                     enableZaplockerVerification
                                                         ? nostrRelays
                                                         : undefined
-                                                ).finally(() => status())
+                                                ).then(() => status())
                                             }
                                             disabled={
                                                 enableZaplockerVerification &&
