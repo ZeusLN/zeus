@@ -9,7 +9,6 @@ import LightningAddressPayment from './LightningAddressPayment';
 import Button from '../../../components/Button';
 import KeyValue from '../../../components/KeyValue';
 import Screen from '../../../components/Screen';
-import Switch from '../../../components/Switch';
 import Text from '../../../components/Text';
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
@@ -24,8 +23,6 @@ import { DEFAULT_NOSTR_RELAYS } from '../../../stores/SettingsStore';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
-import DiceSVG from '../../../assets/images/SVG/Dice.svg';
-
 interface LightningAddressProps {
     navigation: any;
     LightningAddressStore: LightningAddressStore;
@@ -34,11 +31,9 @@ interface LightningAddressProps {
 interface LightningAddressState {
     selectedIndex: number;
     newLightningAddress: string;
-    enableZaplockerVerification: boolean;
     nostrPrivateKey: string;
     nostrPublicKey: string;
     nostrNpub: string;
-    //
     nostrRelays: Array<string>;
 }
 
@@ -51,11 +46,9 @@ export default class LightningAddress extends React.Component<
     state = {
         selectedIndex: 0,
         newLightningAddress: '',
-        enableZaplockerVerification: true,
         nostrPrivateKey: '',
         nostrPublicKey: '',
         nostrNpub: '',
-        //
         nostrRelays: DEFAULT_NOSTR_RELAYS
     };
 
@@ -72,15 +65,20 @@ export default class LightningAddress extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { LightningAddressStore } = this.props;
-        const { status } = LightningAddressStore;
-
-        status();
+        const { LightningAddressStore, navigation } = this.props;
+        const { status, lightningAddressHandle } = LightningAddressStore;
 
         this.generateNostrKeys();
 
         this.setState({
             newLightningAddress: ''
+        });
+
+        status();
+
+        // triggers when loaded from navigation or back action
+        navigation.addListener('didFocus', () => {
+            if (lightningAddressHandle) status();
         });
     }
 
@@ -92,13 +90,24 @@ export default class LightningAddress extends React.Component<
                 nostrRelays
             });
         }
+
+        const nostrPrivateKey = navigation.getParam('nostrPrivateKey', '');
+        if (nostrPrivateKey) {
+            const nostrPublicKey = getPublicKey(nostrPrivateKey);
+            const nostrNpub = nip19.npubEncode(nostrPublicKey);
+
+            this.setState({
+                nostrPrivateKey,
+                nostrPublicKey,
+                nostrNpub
+            });
+        }
     };
 
     render() {
         const { navigation, LightningAddressStore } = this.props;
         const {
             newLightningAddress,
-            enableZaplockerVerification,
             nostrPrivateKey,
             nostrPublicKey,
             nostrNpub,
@@ -348,181 +357,105 @@ export default class LightningAddress extends React.Component<
                                         </View>
                                     </View>
 
-                                    <View style={styles.wrapper}>
-                                        <Text
-                                            style={{
-                                                top: 20,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.LightningAddress.enableZaplockerVerification'
-                                            )}
-                                        </Text>
-                                        <Switch
-                                            value={enableZaplockerVerification}
-                                            onValueChange={() =>
-                                                this.setState({
-                                                    enableZaplockerVerification:
-                                                        !enableZaplockerVerification
-                                                })
-                                            }
-                                        />
-                                    </View>
+                                    <>
+                                        <View style={styles.wrapper}>
+                                            <Text
+                                                style={{
+                                                    fontFamily: 'Lato-Regular',
+                                                    color: themeColor('text'),
+                                                    marginTop: 15,
+                                                    marginBottom: 10
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.zaplockerVerification'
+                                                )}
+                                            </Text>
 
-                                    {enableZaplockerVerification && (
-                                        <>
-                                            <View style={styles.wrapper}>
-                                                <Text style={styles.text}>
-                                                    {`${localeString(
-                                                        'nostr.privkey'
-                                                    )} ${localeString(
-                                                        'general.or'
-                                                    )} ${localeString(
-                                                        'nostr.nsec'
-                                                    )}`}
-                                                </Text>
-                                                <View
+                                            {nostrNpub && (
+                                                <KeyValue
+                                                    keyValue={localeString(
+                                                        'nostr.npub'
+                                                    )}
+                                                    value={nostrNpub}
+                                                />
+                                            )}
+                                        </View>
+                                        <ListItem
+                                            containerStyle={{
+                                                backgroundColor: 'transparent'
+                                            }}
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'NostrKeys',
+                                                    {
+                                                        setup: true,
+                                                        nostrPrivateKey
+                                                    }
+                                                )
+                                            }
+                                        >
+                                            <ListItem.Content>
+                                                <ListItem.Title
                                                     style={{
-                                                        display: 'flex',
-                                                        flexDirection: 'row'
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontFamily:
+                                                            'Lato-Regular'
                                                     }}
                                                 >
-                                                    <TextInput
-                                                        value={nostrPrivateKey}
-                                                        onChangeText={(
-                                                            text: string
-                                                        ) => {
-                                                            let nostrPrivateKey: string =
-                                                                    text,
-                                                                nostrPublicKey,
-                                                                nostrNpub;
-                                                            try {
-                                                                if (
-                                                                    text.includes(
-                                                                        'nsec'
-                                                                    )
-                                                                ) {
-                                                                    let {
-                                                                        type,
-                                                                        data
-                                                                    } =
-                                                                        nip19.decode(
-                                                                            text
-                                                                        );
-                                                                    if (
-                                                                        type ===
-                                                                            'nsec' &&
-                                                                        typeof data ===
-                                                                            'string'
-                                                                    ) {
-                                                                        nostrPrivateKey =
-                                                                            data;
-                                                                    }
-                                                                }
-                                                                nostrPublicKey =
-                                                                    getPublicKey(
-                                                                        nostrPrivateKey
-                                                                    );
-                                                                nostrNpub =
-                                                                    nip19.npubEncode(
-                                                                        nostrPublicKey
-                                                                    );
-                                                            } catch (e) {}
-                                                            this.setState({
-                                                                nostrPrivateKey,
-                                                                nostrPublicKey,
-                                                                nostrNpub
-                                                            });
-                                                        }}
-                                                        autoCapitalize="none"
-                                                        autoCorrect={false}
-                                                        style={{
-                                                            flex: 1,
-                                                            flexDirection: 'row'
-                                                        }}
-                                                    />
-                                                    <TouchableOpacity
-                                                        onPress={() =>
-                                                            this.generateNostrKeys()
-                                                        }
-                                                        style={{
-                                                            marginTop: 22,
-                                                            marginLeft: 15
-                                                        }}
-                                                    >
-                                                        <DiceSVG
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="35"
-                                                            height="35"
-                                                        />
-                                                    </TouchableOpacity>
-                                                </View>
-
-                                                {nostrPublicKey && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'nostr.pubkey'
-                                                        )}
-                                                        value={nostrPublicKey}
-                                                    />
-                                                )}
-
-                                                {nostrNpub && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'nostr.npub'
-                                                        )}
-                                                        value={nostrNpub}
-                                                    />
-                                                )}
-                                            </View>
-                                            <ListItem
-                                                containerStyle={{
-                                                    backgroundColor:
-                                                        'transparent'
-                                                }}
-                                                onPress={() =>
-                                                    navigation.navigate(
-                                                        'NostrRelays',
-                                                        {
-                                                            setup: true,
-                                                            relays: nostrRelays
-                                                        }
-                                                    )
-                                                }
-                                            >
-                                                <ListItem.Content>
-                                                    <ListItem.Title
-                                                        style={{
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            fontFamily:
-                                                                'Lato-Regular'
-                                                        }}
-                                                    >
-                                                        {`${localeString(
-                                                            'views.Settings.Nostr.relays'
-                                                        )} (${
-                                                            nostrRelays?.length ||
-                                                            0
-                                                        })`}
-                                                    </ListItem.Title>
-                                                </ListItem.Content>
-                                                <Icon
-                                                    name="keyboard-arrow-right"
-                                                    color={themeColor(
-                                                        'secondaryText'
+                                                    {localeString(
+                                                        'views.Settings.LightningAddress.changeNostrKeys'
                                                     )}
-                                                />
-                                            </ListItem>
-                                        </>
-                                    )}
+                                                </ListItem.Title>
+                                            </ListItem.Content>
+                                            <Icon
+                                                name="keyboard-arrow-right"
+                                                color={themeColor(
+                                                    'secondaryText'
+                                                )}
+                                            />
+                                        </ListItem>
+                                        <ListItem
+                                            containerStyle={{
+                                                backgroundColor: 'transparent'
+                                            }}
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'NostrRelays',
+                                                    {
+                                                        setup: true,
+                                                        relays: nostrRelays
+                                                    }
+                                                )
+                                            }
+                                        >
+                                            <ListItem.Content>
+                                                <ListItem.Title
+                                                    style={{
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontFamily:
+                                                            'Lato-Regular'
+                                                    }}
+                                                >
+                                                    {`${localeString(
+                                                        'views.Settings.Nostr.relays'
+                                                    )} (${
+                                                        nostrRelays?.length || 0
+                                                    })`}
+                                                </ListItem.Title>
+                                            </ListItem.Content>
+                                            <Icon
+                                                name="keyboard-arrow-right"
+                                                color={themeColor(
+                                                    'secondaryText'
+                                                )}
+                                            />
+                                        </ListItem>
+                                    </>
                                 </View>
                                 <View>
                                     <View style={{ bottom: 15, margin: 10 }}>
@@ -533,20 +466,15 @@ export default class LightningAddress extends React.Component<
                                             onPress={() =>
                                                 create(
                                                     newLightningAddress,
-                                                    enableZaplockerVerification
-                                                        ? nostrPublicKey
-                                                        : undefined,
-                                                    enableZaplockerVerification
-                                                        ? nostrRelays
-                                                        : undefined
+                                                    nostrPublicKey,
+                                                    nostrRelays
                                                 ).then(() => status())
                                             }
                                             disabled={
-                                                enableZaplockerVerification &&
-                                                (!nostrPublicKey ||
-                                                    !nostrNpub ||
-                                                    !nostrRelays ||
-                                                    nostrRelays.length === 0)
+                                                !nostrPublicKey ||
+                                                !nostrNpub ||
+                                                !nostrRelays ||
+                                                nostrRelays.length === 0
                                             }
                                         />
                                     </View>
