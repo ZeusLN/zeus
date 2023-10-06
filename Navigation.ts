@@ -60,7 +60,7 @@ import LightningAddressInfo from './views/Settings/LightningAddress/LightningAdd
 import LightningAddressSettings from './views/Settings/LightningAddress/LightningAddressSettings';
 import Attestation from './views/Settings/LightningAddress/Attestation';
 import Attestations from './views/Settings/LightningAddress/Attestations';
-import Nostr from './views/Settings/Nostr';
+import NostrRelays from './views/Settings/LightningAddress/NostrRelays';
 
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
@@ -373,8 +373,8 @@ const AppScenes = {
     ContactDetails: {
         screen: ContactDetails
     },
-    Nostr: {
-        screen: Nostr
+    NostrRelays: {
+        screen: NostrRelays
     }
 };
 

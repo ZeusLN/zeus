@@ -359,6 +359,95 @@ export default class LightningAddressStore {
     };
 
     @action
+    public update = (updates: any) => {
+        this.error = false;
+        this.error_msg = '';
+        this.loading = true;
+        return new Promise((resolve, reject) => {
+            ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/auth`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+                })
+            )
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        const { verification } = data;
+
+                        BackendUtils.signMessage(verification)
+                            .then((data: any) => {
+                                const signature = data.zbase || data.signature;
+                                ReactNativeBlobUtil.fetch(
+                                    'POST',
+                                    `${LNURL_HOST}/lnurl/update`,
+                                    {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    JSON.stringify({
+                                        pubkey: this.nodeInfoStore.nodeInfo
+                                            .identity_pubkey,
+                                        message: verification,
+                                        signature,
+                                        updates
+                                    })
+                                )
+                                    .then((response: any) => {
+                                        console.log('!', response);
+                                        const data = response.json();
+                                        const status = response.info().status;
+                                        const { handle, created_at, success } =
+                                            data;
+
+                                        if (status === 200 && success) {
+                                            if (handle) {
+                                                this.setLightningAddress(
+                                                    handle
+                                                );
+                                            }
+
+                                            this.loading = false;
+                                            resolve({
+                                                created_at
+                                            });
+                                        } else {
+                                            this.loading = false;
+                                            this.error = true;
+                                            this.error_msg =
+                                                data.error.toString();
+                                            reject(data.error);
+                                        }
+                                    })
+                                    .catch((error: any) => {
+                                        this.loading = false;
+                                        this.error = true;
+                                        this.error_msg = error.toString();
+                                        reject(error);
+                                    });
+                            })
+                            .catch((error: any) => {
+                                this.loading = false;
+                                this.error = true;
+                                this.error_msg = error.toString();
+                                reject(error);
+                            });
+                    }
+                })
+                .catch((error: any) => {
+                    this.loading = false;
+                    this.error = true;
+                    this.error_msg = error.toString();
+                    reject(error);
+                });
+        });
+    };
+
+    @action
     public status = async () => {
         this.loading = true;
         return new Promise((resolve, reject) => {

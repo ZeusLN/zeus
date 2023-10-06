@@ -666,7 +666,7 @@ export const LNDHUB_AUTH_MODES = [
 const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
 const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
 
-const DEFAULT_NOSTR_RELAYS = [
+export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.damus.io',
     'wss://nostr.wine',
     'wss://nostr.lnproxy.org'
