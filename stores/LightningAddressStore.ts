@@ -877,7 +877,7 @@ export default class LightningAddressStore {
 
                     this.socket.on('paid', (data: any) => {
                         console.log('paid', data);
-                        const { hash, req, amount_msat } = data;
+                        const { hash, req, amount_msat, comment } = data;
 
                         console.log('hash', hash);
                         console.log('req', req);
@@ -889,7 +889,9 @@ export default class LightningAddressStore {
                             BackendUtils.createInvoice({
                                 expiry: '3600',
                                 value: (amount_msat / 1000).toString(),
-                                memo: 'ZEUS PAY',
+                                memo: comment
+                                    ? `ZEUS PAY: ${comment}`
+                                    : 'ZEUS PAY',
                                 preimage
                             })
                                 .then((result: any) => {

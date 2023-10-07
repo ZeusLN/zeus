@@ -134,9 +134,11 @@ export default function LightningAddressPayment(props) {
                                 if (selectedIndex === 1) return;
                                 getPreimageMap().then((map) => {
                                     const {
-                                        hash
+                                        hash,
+                                        comment
                                     }: {
                                         hash: string;
+                                        comment: string;
                                     } = item;
                                     const preimage = map[hash];
 
@@ -145,7 +147,9 @@ export default function LightningAddressPayment(props) {
                                         value: (
                                             item.amount_msat / 1000
                                         ).toString(),
-                                        memo: 'ZEUS PAY',
+                                        memo: comment
+                                            ? `ZEUS PAY: ${comment}`
+                                            : 'ZEUS PAY',
                                         preimage
                                     })
                                         .then((result) => {
