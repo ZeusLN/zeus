@@ -248,6 +248,7 @@ export default class LightningAddressStore {
     public create = async (
         handle: string,
         nostr_pk?: string,
+        nostrPrivateKey?: string,
         relays?: Array<string>
     ) => {
         this.error = false;
@@ -317,8 +318,7 @@ export default class LightningAddressStore {
                                                         automaticallyRequestOlympusChannels:
                                                             true,
                                                         allowComments: true,
-                                                        nostrPrivateKey:
-                                                            nostr_pk,
+                                                        nostrPrivateKey,
                                                         nostrRelays: relays,
                                                         notifications: 1
                                                     }
