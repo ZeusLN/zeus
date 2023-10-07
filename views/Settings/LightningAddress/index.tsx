@@ -467,6 +467,7 @@ export default class LightningAddress extends React.Component<
                                                 create(
                                                     newLightningAddress,
                                                     nostrPublicKey,
+                                                    nostrPrivateKey,
                                                     nostrRelays
                                                 ).then(() => status())
                                             }
