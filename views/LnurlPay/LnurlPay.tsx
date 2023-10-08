@@ -164,7 +164,8 @@ export default class LnurlPay extends React.Component<
                         pmthash_sig,
                         user_pubkey,
                         relays,
-                        relays_sig
+                        relays_sig,
+                        pr
                     );
                     navigation.navigate('PaymentRequest');
                 });

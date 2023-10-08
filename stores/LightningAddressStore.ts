@@ -7,13 +7,7 @@ import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
-
-import {
-    relayInit,
-    finishEvent,
-    generatePrivateKey,
-    getPublicKey
-} from 'nostr-tools';
+import { getPublicKey, relayInit } from 'nostr-tools';
 
 const bip39 = require('bip39');
 
@@ -655,54 +649,10 @@ export default class LightningAddressStore {
     };
 
     @action
-    public broadcastAttestation = async (hash: string, invoice: string) => {
-        // create ephemeral key
-        const sk = generatePrivateKey();
-        const pk = getPublicKey(sk);
-
-        const event = {
-            kind: 55869,
-            pubkey: pk,
-            created_at: Math.floor(Date.now() / 1000),
-            tags: [['p', hash]],
-            content: invoice
-        };
-
-        // this calculates the event id and signs the event in a single step
-        const signedEvent = finishEvent(event, sk);
-
-        console.log('signedEvent', signedEvent);
-
-        await Promise.all(
-            RELAYS.map(async (relayItem) => {
-                const relay = relayInit(relayItem);
-                relay.on('connect', () => {
-                    console.log(`connected to ${relay.url}`);
-                });
-                relay.on('error', () => {
-                    console.log(`failed to connect to ${relay.url}`);
-                });
-
-                await relay.connect();
-
-                await relay.publish(signedEvent);
-
-                console.log('event.id', signedEvent.id);
-                const eventReceived = await relay.get({
-                    ids: [signedEvent.id]
-                });
-                console.log('eventReceived', eventReceived);
-                return;
-            })
-        );
-
-        console.log('broadcast complete');
-        return;
-    };
-
-    @action
     public lookupAttestations = async (hash: string, amountMsat: number) => {
         const attestations: any = {};
+
+        const hashpk = getPublicKey(hash);
 
         await Promise.all(
             RELAYS.map(async (relayItem) => {
@@ -719,7 +669,7 @@ export default class LightningAddressStore {
                 const events = await relay.list([
                     {
                         kinds: [55869],
-                        '#p': [hash]
+                        '#p': [hashpk]
                     }
                 ]);
 

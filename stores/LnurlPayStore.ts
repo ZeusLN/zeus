@@ -4,7 +4,13 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import { schnorr } from '@noble/curves/secp256k1';
 import { hexToBytes } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
-import { nip19 } from 'nostr-tools';
+import {
+    nip19,
+    finishEvent,
+    generatePrivateKey,
+    getPublicKey,
+    relayInit
+} from 'nostr-tools';
 
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -29,16 +35,18 @@ interface LnurlPayMetadataEntry {
 }
 
 export default class LnurlPayStore {
-    paymentHash: string | null;
-    domain: string | null;
-    successAction: LNURLPaySuccessAction | null;
+    paymentHash: string | undefined;
+    domain: string | undefined;
+    successAction: LNURLPaySuccessAction | undefined;
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
     // Zaplocker
-    isZaplocker: boolean | null;
-    isPmtHashSigValid: boolean | null;
-    isRelaysSigValid: boolean | null;
-    zaplockerNpub: string | null;
+    isZaplocker: boolean | undefined;
+    isPmtHashSigValid: boolean | undefined;
+    isRelaysSigValid: boolean | undefined;
+    zaplockerNpub: string | undefined;
+    relays: Array<string> | undefined;
+    paymentRequest: string | undefined;
 
     constructor(settingsStore: SettingsStore, nodeInfoStore: NodeInfoStore) {
         this.settingsStore = settingsStore;
@@ -46,13 +54,15 @@ export default class LnurlPayStore {
     }
 
     reset = () => {
-        this.paymentHash = null;
-        this.domain = null;
-        this.successAction = null;
-        this.isZaplocker = null;
-        this.isPmtHashSigValid = null;
-        this.isRelaysSigValid = null;
-        this.zaplockerNpub = null;
+        this.paymentHash = undefined;
+        this.domain = undefined;
+        this.successAction = undefined;
+        this.isZaplocker = undefined;
+        this.isPmtHashSigValid = undefined;
+        this.isRelaysSigValid = undefined;
+        this.zaplockerNpub = undefined;
+        this.relays = undefined;
+        this.paymentRequest = undefined;
     };
 
     @action
@@ -84,7 +94,8 @@ export default class LnurlPayStore {
         pmthash_sig?: string,
         user_pubkey?: string,
         relays?: Array<string>,
-        relays_sig?: string
+        relays_sig?: string,
+        pr?: string
     ) => {
         this.reset();
         const now = new Date().getTime();
@@ -116,6 +127,8 @@ export default class LnurlPayStore {
         this.successAction = successAction;
         this.domain = domain;
 
+        if (pr) this.paymentRequest = pr;
+
         // Zaplocker
         if (user_pubkey) {
             this.isZaplocker = true;
@@ -133,6 +146,7 @@ export default class LnurlPayStore {
             }
 
             if (relays && relays_sig) {
+                this.relays = relays;
                 const relaysBytes = hexToBytes(relays_sig);
                 this.isRelaysSigValid = schnorr.verify(
                     relaysBytes,
@@ -144,5 +158,58 @@ export default class LnurlPayStore {
                 );
             }
         }
+    };
+
+    @action
+    public broadcastAttestation = async () => {
+        const hash = this.paymentHash;
+        const invoice = this.paymentRequest;
+        const relays = this.relays;
+
+        if (!hash || !invoice || !relays) return;
+
+        // create ephemeral key
+        const sk = generatePrivateKey();
+        const pk = getPublicKey(sk);
+
+        const hashpk = getPublicKey(hash);
+
+        const event = {
+            kind: 55869,
+            pubkey: pk,
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [['p', hashpk]],
+            content: invoice
+        };
+
+        // this calculates the event id and signs the event in a single step
+        const signedEvent = finishEvent(event, sk);
+        console.log('signedEvent', signedEvent);
+
+        await Promise.all(
+            relays.map(async (relayItem: string) => {
+                const relay = relayInit(relayItem);
+                relay.on('connect', () => {
+                    console.log(`connected to ${relay.url}`);
+                });
+                relay.on('error', () => {
+                    console.log(`failed to connect to ${relay.url}`);
+                });
+
+                await relay.connect();
+
+                await relay.publish(signedEvent);
+
+                console.log('event.id', signedEvent.id);
+                const eventReceived = await relay.get({
+                    ids: [signedEvent.id]
+                });
+                console.log('eventReceived', eventReceived);
+                return;
+            })
+        );
+
+        console.log('broadcast complete');
+        return;
     };
 }
