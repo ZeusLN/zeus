@@ -247,9 +247,9 @@ export default class LightningAddressStore {
     @action
     public create = async (
         handle: string,
-        nostr_pk?: string,
-        nostrPrivateKey?: string,
-        relays?: Array<string>
+        nostr_pk: string,
+        nostrPrivateKey: string,
+        relays: Array<string>
     ) => {
         this.error = false;
         this.error_msg = '';
@@ -271,6 +271,13 @@ export default class LightningAddressStore {
                         const data = response.json();
                         const { verification } = data;
 
+                        const relays_sig = bytesToHex(
+                            schnorr.sign(
+                                Base64Utils.utf8ToHex(JSON.stringify(relays)),
+                                nostrPrivateKey
+                            )
+                        );
+
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
@@ -288,7 +295,8 @@ export default class LightningAddressStore {
                                         handle,
                                         domain: 'zeuspay.com',
                                         nostr_pk,
-                                        relays
+                                        relays,
+                                        relays_sig
                                     })
                                 )
                                     .then(async (response: any) => {
