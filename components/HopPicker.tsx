@@ -70,11 +70,10 @@ export default class ChannelPicker extends React.Component<
         this.setState({ channelSelected: item });
     }
 
-    renderItem = ({ item }: any) => {
+    renderItem = ({ item }: { item: Channel }) => {
         const { ChannelsStore } = this.props;
         const { channelSelected } = this.state;
         const { largestChannelSats, channelsType } = ChannelsStore;
-        const displayName = item.alias || item.remotePubkey || item.channelId;
 
         const selected = channelSelected === item;
 
@@ -82,7 +81,7 @@ export default class ChannelPicker extends React.Component<
             return (
                 <TouchableHighlight onPress={() => this.toggleItem(item)}>
                     <ChannelItem
-                        title={displayName}
+                        title={item.displayName}
                         inbound={item.remoteBalance}
                         outbound={item.localBalance}
                         largestTotal={largestChannelSats}
@@ -95,7 +94,7 @@ export default class ChannelPicker extends React.Component<
         return (
             <TouchableHighlight onPress={() => this.toggleItem(item)}>
                 <ChannelItem
-                    title={displayName}
+                    title={item.displayName}
                     inbound={item.remoteBalance}
                     outbound={item.localBalance}
                     selected={selected}

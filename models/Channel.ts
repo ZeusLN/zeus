@@ -1,7 +1,6 @@
 import BigNumber from 'bignumber.js';
 import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
-import { localeString } from '../utils/LocaleUtils';
 import { lnrpc } from '../proto/lightning';
 
 interface HTLC {
@@ -96,13 +95,12 @@ export default class Channel extends BaseModel {
             : this.remote_balance || '0';
     }
 
+    /** Channel id
+     * @returns {string | undefined} id of the channel or undefined if channel is pending
+     */
     @computed
-    public get channelId(): string {
-        return (
-            this.chan_id ||
-            this.channel_id ||
-            localeString('models.Channel.unknownId')
-        );
+    public get channelId(): string | undefined {
+        return this.chan_id || this.channel_id;
     }
 
     @computed

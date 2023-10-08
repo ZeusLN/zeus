@@ -11,6 +11,8 @@ import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
 
 import BackendUtils from './../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
+
 import _ from 'lodash';
 
 interface ChannelInfoIndex {
@@ -195,7 +197,7 @@ export default class ChannelsStore {
                         .toLocaleLowerCase()
                         .includes(query.toLocaleLowerCase()) ||
                     channel.channelId
-                        .toLocaleLowerCase()
+                        ?.toLocaleLowerCase()
                         .includes(query.toLocaleLowerCase())
             )
             .filter(
@@ -258,7 +260,7 @@ export default class ChannelsStore {
         if (channels.length === 0) return;
 
         const channelsWithMissingAliases = channels.filter(
-            (c) => this.aliasesById[c.channelId] == null
+            (c) => c.channelId != null && this.aliasesById[c.channelId] == null
         );
         const channelsWithMissingNodeInfos = channels.filter(
             (c) => this.nodes[c.remotePubkey] == null
@@ -288,15 +290,18 @@ export default class ChannelsStore {
         for (const channel of channelsWithMissingAliases) {
             const nodeInfo = this.nodes[channel.remotePubkey];
             if (!nodeInfo) continue;
-            this.aliasesById[channel.channelId] = nodeInfo.alias;
+            this.aliasesById[channel.channelId!] = nodeInfo.alias;
         }
 
         for (const channel of channels) {
             if (channel.alias == null) {
-                channel.alias = this.aliasesById[channel.channelId];
+                channel.alias = this.nodes[channel.remotePubkey]?.alias;
             }
             channel.displayName =
-                channel.alias || channel.remotePubkey || channel.channelId;
+                channel.alias ||
+                channel.remotePubkey ||
+                channel.channelId ||
+                localeString('models.Channel.unknownId');
         }
 
         this.loading = false;
