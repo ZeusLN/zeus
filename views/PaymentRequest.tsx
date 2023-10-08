@@ -303,12 +303,7 @@ export default class PaymentRequest extends React.Component<
             isRelaysSigValid,
             zaplockerNpub
         } = LnurlPayStore;
-        console.log('!!', {
-            isZaplocker,
-            isPmtHashSigValid,
-            isRelaysSigValid,
-            zaplockerNpub
-        });
+
         const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
@@ -1120,6 +1115,8 @@ export default class PaymentRequest extends React.Component<
                                                 : undefined
                                         }
                                         onPress={() => {
+                                            if (isZaplocker)
+                                                LnurlPayStore.broadcastAttestation();
                                             this.sendPayment(
                                                 feeOption,
                                                 String(percentAmount),

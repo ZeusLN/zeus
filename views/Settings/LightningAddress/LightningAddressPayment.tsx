@@ -14,19 +14,13 @@ import BackendUtils from '../../../utils/BackendUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
-import Send from '../../../assets/images/SVG/Send.svg';
 import Receive from '../../../assets/images/SVG/Receive.svg';
 
 export default function LightningAddressPayment(props) {
     const { item, index, selectedIndex, navigation } = props;
     const { lightningAddressStore } = stores;
-    const {
-        status,
-        redeem,
-        getPreimageMap,
-        lookupAttestations,
-        broadcastAttestation
-    } = lightningAddressStore;
+    const { status, redeem, getPreimageMap, lookupAttestations } =
+        lightningAddressStore;
 
     const [attestationStatus, setAttestationStatus] = useState('neutral');
     const [loading, setLoading] = useState(false);
@@ -71,23 +65,6 @@ export default function LightningAddressPayment(props) {
             </ListItem.Content>
             <ListItem.Content right>
                 <Row>
-                    {false && (
-                        <TouchableOpacity
-                            onPress={() => {
-                                // TODO remove
-                                broadcastAttestation(item.hash, item.hodl);
-                            }}
-                            style={{
-                                marginRight: 10
-                            }}
-                        >
-                            <Send
-                                fill={themeColor('text')}
-                                width={45}
-                                height={45}
-                            />
-                        </TouchableOpacity>
-                    )}
                     <TouchableOpacity
                         onPress={() => {
                             if (attestationStatus === 'neutral') {
