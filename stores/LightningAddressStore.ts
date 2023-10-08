@@ -6,6 +6,7 @@ import bolt11 from 'bolt11';
 import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
+import hashjs from 'hash.js';
 
 import {
     relayInit,
@@ -273,7 +274,10 @@ export default class LightningAddressStore {
 
                         const relays_sig = bytesToHex(
                             schnorr.sign(
-                                Base64Utils.utf8ToHex(JSON.stringify(relays)),
+                                hashjs
+                                    .sha256()
+                                    .update(JSON.stringify(relays))
+                                    .digest('hex'),
                                 nostrPrivateKey
                             )
                         );

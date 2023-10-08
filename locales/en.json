@@ -485,6 +485,8 @@
     "views.PaymentRequest.firstHop": "First Hop",
     "views.PaymentRequest.lastHop": "Last Hop",
     "views.PaymentRequest.lndGettingReady": "LND is getting ready to make payments. Please wait.",
+    "views.PaymentRequest.isPmtHashSigValid": "Payment hash signature",
+    "views.PaymentRequest.isRelaysSigValid": "Relays signature",
     "views.Receive.title": "Receive",
     "views.Receive.successCreate": "Successfully created invoice",
     "views.Receive.warningLndHub": "Please note that LNDHub has a fixed on-chain address",
