@@ -137,7 +137,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
     renderItem = ({ item }: { item: Channel }) => {
         const { ChannelsStore, navigation } = this.props;
         const { largestChannelSats, channelsType } = ChannelsStore;
-        const displayName = item.alias || item.remotePubkey || item.channelId;
 
         const getStatus = () => {
             if (item.isActive) {
@@ -165,7 +164,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     }
                 >
                     <ChannelItem
-                        title={displayName}
+                        title={item.displayName}
                         status={getStatus()}
                         inbound={item.remoteBalance}
                         outbound={item.localBalance}
@@ -184,7 +183,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                 }
             >
                 <ChannelItem
-                    title={displayName}
+                    title={item.displayName}
                     inbound={item.remoteBalance}
                     outbound={item.localBalance}
                     status={getStatus()}
