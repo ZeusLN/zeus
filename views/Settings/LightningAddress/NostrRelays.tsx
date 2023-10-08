@@ -4,6 +4,7 @@ import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
+import hashjs from 'hash.js';
 
 import { Row } from '../../../components/layout/Row';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
@@ -18,7 +19,6 @@ import TextInput from '../../../components/TextInput';
 import SettingsStore from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 
-import Base64Utils from '../../../utils/Base64Utils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
@@ -178,11 +178,14 @@ export default class NostrRelays extends React.Component<
                                             } else {
                                                 const relays_sig = bytesToHex(
                                                     schnorr.sign(
-                                                        Base64Utils.utf8ToHex(
-                                                            JSON.stringify(
-                                                                newNostrRelays
+                                                        hashjs
+                                                            .sha256()
+                                                            .update(
+                                                                JSON.stringify(
+                                                                    newNostrRelays
+                                                                )
                                                             )
-                                                        ),
+                                                            .digest('hex'),
                                                         nostrPrivateKey
                                                     )
                                                 );
