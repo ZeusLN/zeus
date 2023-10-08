@@ -71,9 +71,8 @@ export default class ChannelPicker extends React.Component<
     }
 
     renderItem = ({ item }: any) => {
-        const { ChannelsStore } = this.props;
         const { channelSelected } = this.state;
-        const { largestChannelSats, channelsType } = ChannelsStore;
+        const { largestChannelSats, channelsType } = this.props.ChannelsStore;
         const displayName = item.alias || item.remotePubkey || item.channelId;
 
         const selected = channelSelected === item;

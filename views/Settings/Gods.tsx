@@ -27,8 +27,8 @@ export default class Gods extends React.Component<GodsProps, {}> {
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { sponsorsError, gods, loading } = SettingsStore;
+        const { navigation } = this.props;
+        const { sponsorsError, gods, loading } = this.props.SettingsStore;
 
         return (
             <Screen>

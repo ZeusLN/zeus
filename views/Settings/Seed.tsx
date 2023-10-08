@@ -92,9 +92,9 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const { understood, showModal } = this.state;
-        const { seedPhrase }: any = SettingsStore;
+        const { seedPhrase }: any = this.props.SettingsStore;
 
         const DangerouslyCopySeed = () => (
             <TouchableOpacity

@@ -16,10 +16,9 @@ interface UnitToggleProps {
 @observer
 export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
     render() {
-        const { UnitsStore, SettingsStore, onToggle } = this.props;
-        const { changeUnits, units } = UnitsStore;
-        const { settings } = SettingsStore;
-        const { fiat } = settings;
+        const { onToggle } = this.props;
+        const { changeUnits, units } = this.props.UnitsStore;
+        const { fiat } = this.props.SettingsStore.settings;
 
         return (
             <React.Fragment>

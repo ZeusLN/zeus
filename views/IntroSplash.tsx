@@ -164,11 +164,10 @@ export default class IntroSplash extends React.Component<
                                     this.setState({
                                         creatingWallet: true
                                     });
-                                    const { SettingsStore } = this.props;
                                     const {
                                         setConnectingStatus,
                                         updateSettings
-                                    } = SettingsStore;
+                                    } = this.props.SettingsStore;
 
                                     let response;
                                     try {

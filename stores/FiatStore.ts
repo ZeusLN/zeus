@@ -326,8 +326,7 @@ export default class FiatStore {
     };
 
     @action getSymbol = () => {
-        const { settings } = this.settingsStore;
-        const { fiat } = settings;
+        const { fiat } = this.settingsStore.settings;
         if (fiat) {
             return this.symbolLookup(fiat);
         } else {
@@ -342,8 +341,7 @@ export default class FiatStore {
 
     @action
     public getRate = (sats: boolean) => {
-        const { settings } = this.settingsStore;
-        const { fiat } = settings;
+        const { fiat } = this.settingsStore.settings;
 
         if (fiat && this.fiatRates) {
             const fiatEntry = this.fiatRates.filter(

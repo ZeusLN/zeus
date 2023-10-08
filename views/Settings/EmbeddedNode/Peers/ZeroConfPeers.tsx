@@ -42,8 +42,7 @@ export default class ZeroConfPeers extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
 
         this.setState({
             zeroConfPeers: settings.zeroConfPeers || []
@@ -51,9 +50,9 @@ export default class ZeroConfPeers extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const { zeroConfPeers, addPeer } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { updateSettings }: any = this.props.SettingsStore;
 
         return (
             <Screen>

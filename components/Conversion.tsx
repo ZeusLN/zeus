@@ -46,19 +46,10 @@ export default class Conversion extends React.Component<
     };
 
     render() {
-        const {
-            amount,
-            sats,
-            satsPending,
-            FiatStore,
-            UnitsStore,
-            SettingsStore,
-            sensitive
-        } = this.props;
+        const { amount, sats, satsPending, FiatStore, sensitive } = this.props;
         const { showRate } = this.state;
-        const { units } = UnitsStore;
-        const { settings } = SettingsStore;
-        const { fiatEnabled } = settings;
+        const { units } = this.props.UnitsStore;
+        const { fiatEnabled } = this.props.SettingsStore.settings;
 
         const { getRate }: any = FiatStore;
 

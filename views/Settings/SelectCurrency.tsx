@@ -41,8 +41,7 @@ export default class SelectCurrency extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
+        const { getSettings } = this.props.SettingsStore;
         const settings = await getSettings();
 
         this.setState({
@@ -73,10 +72,10 @@ export default class SelectCurrency extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const { selectedCurrency, search, currencies, fiatRatesSource } =
             this.state;
-        const { updateSettings, getSettings }: any = SettingsStore;
+        const { updateSettings, getSettings }: any = this.props.SettingsStore;
 
         return (
             <Screen>

@@ -75,7 +75,7 @@ export default class SignVerifyMessage extends React.Component<
     };
 
     render() {
-        const { navigation, MessageSignStore } = this.props;
+        const { navigation } = this.props;
         const {
             messageToSign,
             messageToVerify,
@@ -90,7 +90,7 @@ export default class SignVerifyMessage extends React.Component<
             valid,
             error,
             signature
-        } = MessageSignStore;
+        } = this.props.MessageSignStore;
 
         const signButton = () => (
             <React.Fragment>

@@ -167,8 +167,7 @@ export default class WalletHeader extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
@@ -191,13 +190,11 @@ export default class WalletHeader extends React.Component<
             toggle,
             SettingsStore,
             NodeInfoStore,
-            ChannelsStore,
-            PosStore,
-            SyncStore
+            ChannelsStore
         } = this.props;
         const { settings, posStatus, setPosStatus } = SettingsStore;
-        const { isSyncing } = SyncStore;
-        const { getOrders } = PosStore;
+        const { isSyncing } = this.props.SyncStore;
+        const { getOrders } = this.props.PosStore;
         const multipleNodes: boolean =
             (settings && settings.nodes && settings.nodes.length > 1) || false;
         const selectedNode: any =

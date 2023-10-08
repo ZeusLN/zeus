@@ -22,9 +22,9 @@ interface SyncProps {
 @observer
 export default class Sync extends React.PureComponent<SyncProps, {}> {
     render() {
-        const { navigation, SyncStore } = this.props;
+        const { navigation } = this.props;
         const { bestBlockHeight, currentBlockHeight, numBlocksUntilSynced } =
-            SyncStore;
+            this.props.SyncStore;
 
         return (
             <Screen>

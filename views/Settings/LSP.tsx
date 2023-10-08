@@ -39,8 +39,7 @@ export default class EmbeddedNode extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings, embeddedLndNetwork } = SettingsStore;
+        const { settings, embeddedLndNetwork } = this.props.SettingsStore;
 
         this.setState({
             enableLSP: settings.enableLSP,
@@ -54,9 +53,10 @@ export default class EmbeddedNode extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const { enableLSP, lsp, accessKey, requestSimpleTaproot } = this.state;
-        const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
+        const { updateSettings, embeddedLndNetwork }: any =
+            this.props.SettingsStore;
 
         return (
             <Screen>

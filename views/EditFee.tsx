@@ -56,9 +56,9 @@ export default class EditFee extends React.Component<
     }
 
     async UNSAFE_componentWillMount() {
-        const { FeeStore, SettingsStore, navigation } = this.props;
+        const { FeeStore, navigation } = this.props;
+        const { settings } = this.props.SettingsStore;
         const fee = navigation.getParam('fee', null);
-        const { settings } = SettingsStore;
         const fees: any = await FeeStore.getOnchainFeesviaMempool();
 
         const preferredMempoolRate =
@@ -73,10 +73,10 @@ export default class EditFee extends React.Component<
 
     render() {
         const { selectedFee } = this.state;
-        const { navigation, FeeStore } = this.props;
+        const { navigation } = this.props;
         const displayOnly = navigation.getParam('displayOnly', null);
         const { recommendedFees, loading, error, getOnchainFeesviaMempool } =
-            FeeStore;
+            this.props.FeeStore;
 
         const ReloadButton = () => (
             <TouchableOpacity onPress={() => getOnchainFeesviaMempool()}>

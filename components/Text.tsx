@@ -20,9 +20,8 @@ interface TextProps {
 @observer
 export default class ZeusText extends React.Component<TextProps, {}> {
     render() {
-        const { children, style, infoText, infoLink, infoNav, ModalStore } =
-            this.props;
-        const { toggleInfoModal } = ModalStore;
+        const { children, style, infoText, infoLink, infoNav } = this.props;
+        const { toggleInfoModal } = this.props.ModalStore;
 
         const CoreText = () => (
             <Row>

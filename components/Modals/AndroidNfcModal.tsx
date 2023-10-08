@@ -22,8 +22,8 @@ export default class AndroidNfcModal extends React.Component<
     {}
 > {
     render() {
-        const { ModalStore } = this.props;
-        const { showAndroidNfcModal, toggleAndroidNfcModal } = ModalStore;
+        const { showAndroidNfcModal, toggleAndroidNfcModal } =
+            this.props.ModalStore;
 
         return (
             <ModalBox

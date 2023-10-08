@@ -27,8 +27,8 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { sponsorsError, mortals, loading } = SettingsStore;
+        const { navigation } = this.props;
+        const { sponsorsError, mortals, loading } = this.props.SettingsStore;
 
         return (
             <Screen>

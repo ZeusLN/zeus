@@ -63,7 +63,7 @@ export default class BumpFee extends React.PureComponent<
     };
 
     render() {
-        const { FeeStore, SettingsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const { outpoint, target_conf, sat_per_vbyte, force, target_type } =
             this.state;
 
@@ -73,9 +73,8 @@ export default class BumpFee extends React.PureComponent<
             bumpFeeError,
             bumpFeeErrorMsg,
             loading
-        } = FeeStore;
-        const { settings } = SettingsStore;
-        const { privacy } = settings;
+        } = this.props.FeeStore;
+        const { privacy } = this.props.SettingsStore.settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
         const isChannel = navigation.getParam('channel', false);

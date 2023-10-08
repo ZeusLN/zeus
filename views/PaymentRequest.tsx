@@ -107,8 +107,7 @@ export default class PaymentRequest extends React.Component<
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
-        const { SettingsStore } = this.props;
-        const { getSettings, implementation } = SettingsStore;
+        const { getSettings, implementation } = this.props.SettingsStore;
         const settings = await getSettings();
 
         this.setState({
@@ -132,9 +131,9 @@ export default class PaymentRequest extends React.Component<
     }
 
     checkIfLndReady = async () => {
-        const { BalanceStore, NodeInfoStore } = this.props;
+        const { BalanceStore } = this.props;
         const noBalance = BalanceStore.lightningBalance === 0;
-        const { isLightningReadyToSend } = NodeInfoStore;
+        const { isLightningReadyToSend } = this.props.NodeInfoStore;
         while (
             !this.state.lightningReadyToSend &&
             this.isComponentMounted &&
@@ -176,8 +175,7 @@ export default class PaymentRequest extends React.Component<
 
     displayFeeRecommendation = () => {
         const { feeLimitSat } = this.state;
-        const { InvoicesStore } = this.props;
-        const { feeEstimate } = InvoicesStore;
+        const { feeEstimate } = this.props.InvoicesStore;
 
         if (
             feeEstimate &&
@@ -254,13 +252,7 @@ export default class PaymentRequest extends React.Component<
     };
 
     render() {
-        const {
-            InvoicesStore,
-            UnitsStore,
-            ChannelsStore,
-            SettingsStore,
-            navigation
-        } = this.props;
+        const { UnitsStore, ChannelsStore, navigation } = this.props;
         const {
             enableMultiPathPayment,
             enableAtomicMultiPathPayment,
@@ -286,7 +278,7 @@ export default class PaymentRequest extends React.Component<
             successProbability,
             feeEstimate,
             clearPayReq
-        } = InvoicesStore;
+        } = this.props.InvoicesStore;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
         const expiry = pay_req && pay_req.expiry;
@@ -326,7 +318,7 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { enableTor, implementation } = SettingsStore;
+        const { enableTor, implementation } = this.props.SettingsStore;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'c-lightning-REST';

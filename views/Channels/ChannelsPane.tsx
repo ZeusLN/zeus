@@ -133,8 +133,8 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
     };
 
     renderItem = ({ item }) => {
-        const { ChannelsStore, navigation } = this.props;
-        const { largestChannelSats, channelsType } = ChannelsStore;
+        const { navigation } = this.props;
+        const { largestChannelSats, channelsType } = this.props.ChannelsStore;
         const displayName = item.alias || item.remotePubkey || item.channelId;
 
         const getStatus = () => {

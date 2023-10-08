@@ -37,8 +37,7 @@ export default class Pathfinding extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
 
         this.setState({
             bimodalPathfinding: settings.bimodalPathfinding
@@ -46,9 +45,9 @@ export default class Pathfinding extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const { bimodalPathfinding, resetMissionControlSuccess } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { updateSettings }: any = this.props.SettingsStore;
 
         return (
             <Screen>

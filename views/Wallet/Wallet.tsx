@@ -200,8 +200,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     handleAppStateChange = (nextAppState: any) => {
         const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { loginBackground } = settings;
+        const { loginBackground } = SettingsStore.settings;
 
         if (
             nextAppState === 'background' &&
@@ -294,8 +293,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             PosStore,
             FiatStore,
             LSPStore,
-            ChannelBackupStore,
-            SyncStore
+            ChannelBackupStore
         } = this.props;
         const {
             settings,
@@ -311,7 +309,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             embeddedLndNetwork,
             updateSettings
         } = SettingsStore;
-        const { isSyncing } = SyncStore;
+        const { isSyncing } = this.props.SyncStore;
         const { fiatEnabled, pos, rescan, recovery } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
 

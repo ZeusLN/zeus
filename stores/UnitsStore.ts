@@ -32,8 +32,7 @@ export default class UnitsStore {
     public changeUnits = () => (this.units = this.getNextUnit());
 
     public getNextUnit = () => {
-        const { settings } = this.settingsStore;
-        const { fiatEnabled } = settings;
+        const { fiatEnabled } = this.settingsStore.settings;
 
         if (!fiatEnabled) {
             return this.units === 'sats' ? 'BTC' : 'sats';
@@ -58,8 +57,7 @@ export default class UnitsStore {
         value: string | number = 0,
         fixedUnits?: string
     ): ValueDisplayProps => {
-        const { settings } = this.settingsStore;
-        const { fiat, display } = settings;
+        const { fiat, display } = this.settingsStore.settings;
         const showAllDecimalPlaces: boolean =
             (display && display.showAllDecimalPlaces) || false;
         const units = fixedUnits || this.units;
@@ -135,8 +133,7 @@ export default class UnitsStore {
 
     @action
     public getAmount = (value: string | number = 0, fixedUnits?: string) => {
-        const { settings } = this.settingsStore;
-        const { fiat } = settings;
+        const { fiat } = this.settingsStore.settings;
         const units = fixedUnits || this.units;
 
         const [wholeSats] = value.toString().split('.');

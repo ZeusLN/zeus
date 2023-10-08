@@ -19,8 +19,7 @@ export default class CLightningREST extends LND {
         eosVersion?: string,
         minApiVersion?: string
     ) => {
-        const { nodeInfo } = stores.nodeInfoStore;
-        const { version, api_version } = nodeInfo;
+        const { version, api_version } = stores.nodeInfoStore.nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         if (minApiVersion) {
             return (

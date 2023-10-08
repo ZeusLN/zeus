@@ -362,8 +362,7 @@ export default class LightningNodeConnect {
         this.lnc.lnd.lightning.subscribeTransactions();
 
     supports = (minVersion: string, eosVersion?: string) => {
-        const { nodeInfo } = stores.nodeInfoStore;
-        const { version } = nodeInfo;
+        const { version } = stores.nodeInfoStore.nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         return isSupportedVersion(version, minVersion, eosVersion);
     };

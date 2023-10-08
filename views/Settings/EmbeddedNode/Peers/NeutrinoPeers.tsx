@@ -46,8 +46,7 @@ export default class NeutrinoPeers extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = this.props.SettingsStore;
 
         this.setState({
             dontAllowOtherPeers:
@@ -59,9 +58,9 @@ export default class NeutrinoPeers extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const { dontAllowOtherPeers, neutrinoPeers, addPeer } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { updateSettings }: any = this.props.SettingsStore;
 
         return (
             <Screen>

@@ -230,8 +230,8 @@ export default class Lockscreen extends React.Component<
     };
 
     deletePin = () => {
-        const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { navigation } = this.props;
+        const { updateSettings } = this.props.SettingsStore;
 
         // duress pin is also deleted when pin is deleted
         updateSettings({
@@ -244,8 +244,8 @@ export default class Lockscreen extends React.Component<
     };
 
     deleteDuressPin = () => {
-        const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { navigation } = this.props;
+        const { updateSettings } = this.props.SettingsStore;
 
         updateSettings({
             duressPin: '',
@@ -256,8 +256,8 @@ export default class Lockscreen extends React.Component<
     };
 
     deleteNodes = () => {
-        const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { navigation } = this.props;
+        const { updateSettings } = this.props.SettingsStore;
 
         updateSettings({
             nodes: undefined,
@@ -269,8 +269,8 @@ export default class Lockscreen extends React.Component<
     };
 
     authenticationFailure = () => {
-        const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { navigation } = this.props;
+        const { updateSettings } = this.props.SettingsStore;
 
         updateSettings({
             nodes: undefined,
@@ -286,8 +286,7 @@ export default class Lockscreen extends React.Component<
     };
 
     resetAuthenticationAttempts = () => {
-        const { SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { updateSettings } = this.props.SettingsStore;
 
         updateSettings({ authenticationAttempts: 0 });
     };
@@ -312,8 +311,8 @@ export default class Lockscreen extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { navigation } = this.props;
+        const { settings } = this.props.SettingsStore;
         const {
             passphrase,
             passphraseAttempt,

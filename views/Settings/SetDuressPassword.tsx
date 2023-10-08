@@ -40,8 +40,7 @@ export default class SetDuressPassphrase extends React.Component<
     };
 
     async componentDidMount() {
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
+        const { getSettings } = this.props.SettingsStore;
         const settings = await getSettings();
 
         if (settings.duressPassphrase) {
@@ -59,9 +58,9 @@ export default class SetDuressPassphrase extends React.Component<
     );
 
     saveSettings = async () => {
-        const { SettingsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const { duressPassphrase, duressPassphraseConfirm } = this.state;
-        const { getSettings, updateSettings } = SettingsStore;
+        const { getSettings, updateSettings } = this.props.SettingsStore;
 
         if (duressPassphrase !== duressPassphraseConfirm) {
             this.setState({
@@ -90,8 +89,8 @@ export default class SetDuressPassphrase extends React.Component<
     };
 
     deleteDuressPassword = async () => {
-        const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { navigation } = this.props;
+        const { updateSettings } = this.props.SettingsStore;
 
         await updateSettings({ duressPassphrase: '' }).then(() => {
             navigation.navigate('Settings', {

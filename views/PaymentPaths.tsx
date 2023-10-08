@@ -21,9 +21,9 @@ interface PaymentPathsViewProps {
 @observer
 export default class PaymentPathsView extends React.Component<PaymentPathsViewProps> {
     render() {
-        const { navigation, ChannelsStore } = this.props;
+        const { navigation } = this.props;
         const enhancedPath = navigation.getParam('enhancedPath', null);
-        const { aliasMap, loading } = ChannelsStore;
+        const { aliasMap, loading } = this.props.ChannelsStore;
 
         return (
             <Screen>

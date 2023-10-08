@@ -15,7 +15,6 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import stores from './../../stores/Stores';
-const { invoicesStore } = stores;
 
 import Receive from './../../assets/images/SVG/Receive.svg';
 import Routing from './../../assets/images/SVG/Routing.svg';
@@ -141,6 +140,7 @@ export default class LightningSwipeableRow extends Component<
     };
 
     private fetchLnInvoice = () => {
+        const { invoicesStore } = stores;
         invoicesStore.getPayReq(this.props.lightning);
         this.props.navigation.navigate('PaymentRequest', {});
     };

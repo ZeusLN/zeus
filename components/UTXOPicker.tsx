@@ -100,10 +100,10 @@ export default class UTXOPicker extends React.Component<
     }
 
     render() {
-        const { title, onValueChange, UTXOsStore } = this.props;
+        const { title, onValueChange } = this.props;
         const { utxosSelected, utxosSet, showUtxoModal, selectedBalance } =
             this.state;
-        const { utxos, loading, getUTXOs } = UTXOsStore;
+        const { utxos, loading, getUTXOs } = this.props.UTXOsStore;
 
         const utxosPicked: string[] = [];
         utxosSelected.forEach((utxo: string) => utxosPicked.push(utxo));

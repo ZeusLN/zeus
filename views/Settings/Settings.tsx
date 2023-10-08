@@ -81,9 +81,10 @@ export default class Settings extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const { showHiddenSettings, easterEggCount } = this.state;
-        const { implementation, settings, seedPhrase } = SettingsStore;
+        const { implementation, settings, seedPhrase } =
+            this.props.SettingsStore;
 
         const selectedNode: any =
             (settings &&

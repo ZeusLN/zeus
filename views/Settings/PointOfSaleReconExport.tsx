@@ -24,8 +24,8 @@ export default class PointOfSaleReconExport extends React.PureComponent<
     {}
 > {
     render() {
-        const { PosStore, navigation } = this.props;
-        const { reconExport } = PosStore;
+        const { navigation } = this.props;
+        const { reconExport } = this.props.PosStore;
 
         const CopyBadge = ({ copyValue }: { copyValue: string }) => (
             <TouchableOpacity onPress={() => Clipboard.setString(copyValue)}>

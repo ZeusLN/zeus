@@ -23,8 +23,7 @@ interface CoinControlProps {
 @observer
 export default class CoinControl extends React.Component<CoinControlProps, {}> {
     async UNSAFE_componentWillMount() {
-        const { UTXOsStore } = this.props;
-        const { getUTXOs, listAccounts } = UTXOsStore;
+        const { getUTXOs, listAccounts } = this.props.UTXOsStore;
         getUTXOs();
         if (BackendUtils.supportsAccounts()) {
             listAccounts();
@@ -41,8 +40,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
     );
 
     render() {
-        const { navigation, UTXOsStore } = this.props;
-        const { loading, utxos, getUTXOs } = UTXOsStore;
+        const { navigation } = this.props;
+        const { loading, utxos, getUTXOs } = this.props.UTXOsStore;
 
         return (
             <Screen>

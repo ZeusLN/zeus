@@ -112,8 +112,8 @@ export default class OpenChannel extends React.Component<
     }
 
     async UNSAFE_componentWillMount() {
-        const { ChannelsStore, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { ChannelsStore } = this.props;
+        const { settings } = this.props.SettingsStore;
 
         ChannelsStore.resetOpenChannel();
 
@@ -245,14 +245,7 @@ export default class OpenChannel extends React.Component<
     };
 
     render() {
-        const {
-            ChannelsStore,
-            BalanceStore,
-            NodeInfoStore,
-            UTXOsStore,
-            SettingsStore,
-            navigation
-        } = this.props;
+        const { NodeInfoStore, UTXOsStore, navigation } = this.props;
         const {
             node_pubkey_string,
             local_funding_amount,
@@ -269,7 +262,7 @@ export default class OpenChannel extends React.Component<
             connectPeerOnly,
             advancedSettingsToggle
         } = this.state;
-        const { implementation } = SettingsStore;
+        const { implementation } = this.props.SettingsStore;
 
         const {
             connectingToPeer,
@@ -279,8 +272,8 @@ export default class OpenChannel extends React.Component<
             errorMsgPeer,
             peerSuccess,
             channelSuccess
-        } = ChannelsStore;
-        const { confirmedBlockchainBalance } = BalanceStore;
+        } = this.props.ChannelsStore;
+        const { confirmedBlockchainBalance } = this.props.BalanceStore;
 
         const ScanButton = () => (
             <TouchableOpacity

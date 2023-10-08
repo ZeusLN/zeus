@@ -20,8 +20,7 @@ const handleAnything = async (
     setAmount?: string,
     isClipboardValue?: boolean
 ): Promise<any> => {
-    const { nodeInfo } = nodeInfoStore;
-    const { isTestNet, isRegTest } = nodeInfo;
+    const { isTestNet, isRegTest } = nodeInfoStore.nodeInfo;
     const { value, amount, lightning }: any =
         AddressUtils.processSendAddress(data);
     const hasAt: boolean = value.includes('@');

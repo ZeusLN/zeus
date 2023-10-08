@@ -144,9 +144,9 @@ export default class Receive extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { navigation, InvoicesStore, SettingsStore } = this.props;
-        const { reset } = InvoicesStore;
-        const { getSettings, posStatus } = SettingsStore;
+        const { navigation } = this.props;
+        const { reset } = this.props.InvoicesStore;
+        const { getSettings, posStatus } = this.props.SettingsStore;
 
         const settings = await getSettings();
 
@@ -280,9 +280,9 @@ export default class Receive extends React.Component<
     }
 
     async UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation, InvoicesStore, SettingsStore } = nextProps;
-        const { reset } = InvoicesStore;
-        const { settings } = SettingsStore;
+        const { navigation } = nextProps;
+        const { reset } = this.props.InvoicesStore;
+        const { settings } = this.props.SettingsStore;
 
         reset();
         const amount: string = navigation.getParam('amount');
@@ -354,8 +354,7 @@ export default class Receive extends React.Component<
     };
 
     onBack = () => {
-        const { InvoicesStore } = this.props;
-        const { reset } = InvoicesStore;
+        const { reset } = this.props.InvoicesStore;
         // kill all listeners and pollers before navigating back
         this.clearListeners();
         this.clearIntervals();
@@ -372,9 +371,8 @@ export default class Receive extends React.Component<
         ampInvoice?: boolean,
         addressType?: string
     ) => {
-        const { InvoicesStore } = this.props;
         const { enableLSP } = this.state;
-        const { createUnifiedInvoice } = InvoicesStore;
+        const { createUnifiedInvoice } = this.props.InvoicesStore;
 
         createUnifiedInvoice(
             BackendUtils.supportsLSPs() && enableLSP ? '' : memo || '',
@@ -400,9 +398,8 @@ export default class Receive extends React.Component<
     };
 
     autoGenerateOnChainAddress = () => {
-        const { InvoicesStore } = this.props;
         const { addressType } = this.state;
-        const { getNewAddress } = InvoicesStore;
+        const { getNewAddress } = this.props.InvoicesStore;
 
         getNewAddress({ type: addressType }).then((onChainAddress: string) => {
             this.subscribeInvoice(undefined, onChainAddress);
@@ -466,9 +463,9 @@ export default class Receive extends React.Component<
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore } = this.props;
+        const { navigation } = this.props;
         const { enableLSP } = this.state;
-        const { createUnifiedInvoice } = InvoicesStore;
+        const { createUnifiedInvoice } = this.props.InvoicesStore;
         const amount = getSatAmount(navigation.getParam('amount'));
 
         handleAnything(text, amount.toString())
@@ -520,13 +517,12 @@ export default class Receive extends React.Component<
     };
 
     subscribeInvoice = async (rHash?: string, onChainAddress?: string) => {
-        const { InvoicesStore, PosStore, SettingsStore, NodeInfoStore } =
-            this.props;
+        const { PosStore } = this.props;
         const { orderId, orderTotal, orderTip, exchangeRate, rate, value } =
             this.state;
-        const { implementation, settings } = SettingsStore;
-        const { nodeInfo } = NodeInfoStore;
-        const { setWatchedInvoicePaid } = InvoicesStore;
+        const { implementation, settings } = this.props.SettingsStore;
+        const { nodeInfo } = this.props.NodeInfoStore;
+        const { setWatchedInvoicePaid } = this.props.InvoicesStore;
 
         const numConfPreference =
             settings.pos && settings.pos.confirmationPreference === '1conf'
@@ -853,13 +849,8 @@ export default class Receive extends React.Component<
     };
 
     render() {
-        const {
-            InvoicesStore,
-            SettingsStore,
-            UnitsStore,
-            LSPStore,
-            navigation
-        } = this.props;
+        const { InvoicesStore, SettingsStore, LSPStore, navigation } =
+            this.props;
         const {
             selectedIndex,
             addressType,
@@ -875,7 +866,7 @@ export default class Receive extends React.Component<
             enableLSP
         } = this.state;
         const { zeroConfFee, showLspSettings } = LSPStore;
-        const { getAmount } = UnitsStore;
+        const { getAmount } = this.props.UnitsStore;
 
         const {
             createUnifiedInvoice,

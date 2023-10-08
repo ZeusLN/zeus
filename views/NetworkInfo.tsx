@@ -25,8 +25,9 @@ export default class NetworkInfo extends React.Component<NetworkInfoProps, {}> {
     }
 
     render() {
-        const { navigation, NodeInfoStore } = this.props;
-        const { getNetworkInfo, networkInfo, loading } = NodeInfoStore;
+        const { navigation } = this.props;
+        const { getNetworkInfo, networkInfo, loading } =
+            this.props.NodeInfoStore;
 
         const NETWORK_INFO = [
             {

@@ -13,8 +13,7 @@ interface LnurlPaySuccessProps {
 
 export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProps> {
     URLClicked = () => {
-        const { successAction } = this.props;
-        const { url } = successAction;
+        const { url } = this.props.successAction;
         const urlString: string = url || '';
 
         Linking.canOpenURL(urlString).then((supported: boolean) => {

@@ -47,10 +47,10 @@ export default class SendingOnChain extends React.Component<
         });
     }
     render() {
-        const { NodeInfoStore, TransactionsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const { loading, publishSuccess, error, error_msg, txid } =
-            TransactionsStore;
-        const { testnet } = NodeInfoStore;
+            this.props.TransactionsStore;
+        const { testnet } = this.props.NodeInfoStore;
         const { storedNotes } = this.state;
 
         return (

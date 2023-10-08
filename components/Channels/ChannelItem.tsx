@@ -36,8 +36,7 @@ export function ChannelItem({
     hideLabels?: boolean;
     selected?: boolean;
 }) {
-    const { settings } = Stores.settingsStore;
-    const { privacy } = settings;
+    const { privacy } = Stores.settingsStore.settings;
     const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
     const isOffline =

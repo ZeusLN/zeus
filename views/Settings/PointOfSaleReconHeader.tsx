@@ -44,8 +44,8 @@ function TotalRow({
 }
 
 export function ReconHeader(props) {
-    const { total, tax, tips, FiatStore } = props;
-    const { getSymbol } = FiatStore;
+    const { total, tax, tips } = props;
+    const { getSymbol } = props.FiatStore;
 
     const styles = StyleSheet.create({
         header: {
