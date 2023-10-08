@@ -73,3 +73,4 @@ ios/Pods
 # Lnd binaries
 android/lndmobile/Lndmobile.aar
 ios/LncMobile/Lndmobile.xcframework
+ios/LndMobileLibZipFile
