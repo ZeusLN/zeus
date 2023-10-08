@@ -58,7 +58,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             cltv_expiry,
             expirationDate,
             getPaymentRequest,
-            getKeysendMessage
+            getKeysendMessage,
+            getAmount
         } = invoice;
         const privateInvoice = invoice.private;
         const noteKey = getRPreimage || payment_hash;
@@ -68,7 +69,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 <Icon
                     name="qr-code"
                     onPress={() => {
-                        navigation.navigate('QR', { value: getPaymentRequest });
+                        navigation.navigate('QR', {
+                            value: getPaymentRequest,
+                            satAmount: getAmount
+                        });
                     }}
                     color={themeColor('text')}
                     underlayColor="transparent"

@@ -128,7 +128,7 @@ export default class CollapsedQR extends React.Component<
 
         return (
             <React.Fragment>
-                {satAmount && (
+                {satAmount != null && (
                     <View
                         style={{
                             flexDirection: 'column',
