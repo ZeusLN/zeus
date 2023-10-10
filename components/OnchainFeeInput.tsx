@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
+import { Text, TouchableWithoutFeedback, View } from 'react-native';
+import TextInput from '../components/TextInput';
 import { themeColor } from '../utils/ThemeUtils';
 import stores from '../stores/Stores';
 import NavigationService from '../NavigationService';
