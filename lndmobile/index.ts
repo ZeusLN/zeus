@@ -498,9 +498,7 @@ export const addInvoice = async (
             private: is_private,
             min_hop_hints: is_private ? 6 : 0,
             is_amp,
-            r_preimage: preimage
-                ? Base64Utils.hexToUint8Array(preimage)
-                : undefined
+            r_preimage: preimage ? Base64Utils.hexToBytes(preimage) : undefined
         }
     });
     return response;

@@ -95,8 +95,7 @@ export default class NodeInfoStore {
 
     @action
     public isLightningReadyToSend = async () => {
-        const { channels } = this.channelsStore;
-        this.channelsStore.getChannels();
+        await this.channelsStore.getChannels();
         await this.getNodeInfo();
         const syncedToChain = this.nodeInfo?.synced_to_chain;
         const syncedToGraph = this.nodeInfo?.synced_to_graph;
@@ -105,7 +104,23 @@ export default class NodeInfoStore {
         return (
             syncedToChain &&
             (!requireGraphSync || syncedToGraph) &&
-            channels.some((channel: Channel) => channel.active)
+            this.channelsStore.channels.some(
+                (channel: Channel) => channel.active
+            )
+        );
+    };
+
+    @action
+    public isLightningReadyToReceive = async () => {
+        await this.channelsStore.getChannels();
+        await this.getNodeInfo();
+        const syncedToChain = this.nodeInfo?.synced_to_chain;
+
+        return (
+            syncedToChain &&
+            this.channelsStore.channels.some(
+                (channel: Channel) => channel.active
+            )
         );
     };
 }

@@ -73,8 +73,8 @@ export default class DropdownSetting extends React.Component<
                             {title}
                         </Text>
                         <Picker
-                            selectedValue={`${selectedValue}`}
-                            onValueChange={(itemValue: string) =>
+                            selectedValue={selectedValue}
+                            onValueChange={(itemValue: string | number) =>
                                 onValueChange(itemValue)
                             }
                             style={{

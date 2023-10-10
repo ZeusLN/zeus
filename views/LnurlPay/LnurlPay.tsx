@@ -120,6 +120,12 @@ export default class LnurlPay extends React.Component<
                     tag: 'noop'
                 };
 
+                // Zaplocker data
+                const pmthash_sig = data.pmthash_sig;
+                const user_pubkey = data.user_pubkey;
+                const relays = data.relays;
+                const relays_sig = data.relays_sig;
+
                 InvoicesStore.getPayReq(pr).then(() => {
                     if (InvoicesStore.getPayReqError) {
                         Alert.alert(
@@ -153,7 +159,13 @@ export default class LnurlPay extends React.Component<
                         lnurl.lnurlText,
                         lnurl.metadata,
                         description_hash,
-                        successAction
+                        successAction,
+                        // Zaplocker
+                        pmthash_sig,
+                        user_pubkey,
+                        relays,
+                        relays_sig,
+                        pr
                     );
                     navigation.navigate('PaymentRequest');
                 });

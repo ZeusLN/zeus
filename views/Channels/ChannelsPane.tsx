@@ -247,19 +247,19 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             case ChannelsType.Open:
                 headerString = `${localeString(
                     'views.Wallet.Wallet.channels'
-                )} (${filteredChannels.length})`;
+                )} (${filteredChannels?.length || 0})`;
                 channelsData = filteredChannels;
                 break;
             case ChannelsType.Pending:
                 headerString = `${localeString(
                     'views.Wallet.Wallet.pendingChannels'
-                )} (${filteredPendingChannels.length})`;
+                )} (${filteredPendingChannels?.length || 0})`;
                 channelsData = filteredPendingChannels;
                 break;
             case ChannelsType.Closed:
                 headerString = `${localeString(
                     'views.Wallet.Wallet.closedChannels'
-                )} (${filteredClosedChannels.length})`;
+                )} (${filteredClosedChannels?.length || 0})`;
                 channelsData = filteredClosedChannels;
                 break;
         }

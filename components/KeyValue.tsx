@@ -22,6 +22,7 @@ interface KeyValueProps {
     color?: string;
     sensitive?: boolean;
     mempoolLink?: () => void;
+    disableCopy?: boolean;
     SettingsStore: SettingsStore;
 }
 
@@ -35,6 +36,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             color,
             sensitive,
             mempoolLink,
+            disableCopy,
             SettingsStore
         } = this.props;
 
@@ -44,8 +46,9 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         {
             /* TODO: rig up RTL */
         }
-        const isCopyable =
-            typeof value === 'string' || typeof value === 'number';
+        const isCopyable = disableCopy
+            ? false
+            : typeof value === 'string' || typeof value === 'number';
         const rtl = false;
         const Key = (
             <Body>
@@ -61,7 +64,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                 </Text>
             </Body>
         );
-        const Value = isCopyable ? (
+        const Value = (
             <Text
                 style={{
                     color: color || themeColor('text'),
@@ -70,8 +73,6 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             >
                 {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
             </Text>
-        ) : (
-            value
         );
 
         const copyText = () => {
