@@ -127,7 +127,7 @@ export default class BalanceStore {
     };
 
     @action
-    public getCombinedBalance = async (reset: boolean) => {
+    public getCombinedBalance = async (reset: boolean = false) => {
         if (reset) this.reset();
         const lightning = await this.getLightningBalance();
         const onChain = await this.getBlockchainBalance();

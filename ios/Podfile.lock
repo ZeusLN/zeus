@@ -324,7 +324,7 @@ PODS:
     - glog
   - react-native-biometrics (3.0.1):
     - React-Core
-  - react-native-blob-util (0.14.0):
+  - react-native-blob-util (0.19.1):
     - React-Core
   - react-native-date-picker (4.3.3):
     - React-Core
@@ -784,7 +784,7 @@ SPEC CHECKSUMS:
   React-jsinspector: aaed4cf551c4a1c98092436518c2d267b13a673f
   React-logger: da1ebe05ae06eb6db4b162202faeafac4b435e77
   react-native-biometrics: 352e5a794bfffc46a0c86725ea7dc62deb085bdc
-  react-native-blob-util: 180714990c4563645fa70e9202cd32e27656a6e6
+  react-native-blob-util: af2dc91365bfde33f61389cbd0c692af9a4a97cb
   react-native-date-picker: 1d61c76315098a6ad4c643a356f005916c7d4875
   react-native-encrypted-storage: db300a3f2f0aba1e818417c1c0a6be549038deb7
   react-native-get-random-values: dee677497c6a740b71e5612e8dbd83e7539ed5bb

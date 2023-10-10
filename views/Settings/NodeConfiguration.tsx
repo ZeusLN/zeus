@@ -236,8 +236,8 @@ export default class NodeConfiguration extends React.Component<
         // remove option to add a new embedded node if initialized already
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { embeddedLndNetwork } = this.state;
-        if (settings.nodes) {
+        const { embeddedLndNetwork, newEntry } = this.state;
+        if (settings.nodes && newEntry) {
             const result = settings?.nodes?.filter(
                 (node) => node.implementation === 'embedded-lnd'
             );
