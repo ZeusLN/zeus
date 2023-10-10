@@ -74,8 +74,6 @@ export default class LightningAddress extends React.Component<
             newLightningAddress: ''
         });
 
-        status();
-
         // triggers when loaded from navigation or back action
         navigation.addListener('didFocus', () => {
             if (lightningAddressHandle) status();
