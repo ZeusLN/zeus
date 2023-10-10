@@ -223,10 +223,14 @@ export default class LightningAddress extends React.Component<
                             }
                         }}
                         rightComponent={
-                            <Row>
-                                {!loading && fees && !error && <InfoButton />}
-                                {lightningAddressHandle && <SettingsButton />}
-                            </Row>
+                            !loading ? (
+                                <Row>
+                                    {fees && !error && <InfoButton />}
+                                    {lightningAddressHandle && !error && (
+                                        <SettingsButton />
+                                    )}
+                                </Row>
+                            ) : undefined
                         }
                         navigation={navigation}
                     />
