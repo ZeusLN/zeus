@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+    Dimensions,
+    FlatList,
+    StyleSheet,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { ButtonGroup, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
@@ -125,6 +131,8 @@ export default class LightningAddress extends React.Component<
             error_msg,
             loading
         } = LightningAddressStore;
+
+        const { fontScale } = Dimensions.get('window');
 
         const InfoButton = () => (
             <View style={{ right: 15 }}>
@@ -255,7 +263,7 @@ export default class LightningAddress extends React.Component<
                                     <Text
                                         style={{
                                             fontFamily: 'Lato-Regular',
-                                            fontSize: 16,
+                                            fontSize: 26 / fontScale,
                                             color: themeColor('text'),
                                             textAlign: 'center'
                                         }}
