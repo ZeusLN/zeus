@@ -148,55 +148,59 @@ export default class LightningAddressSettings extends React.Component<
                                 />
                             </View>
                         </ListItem>
-                        <ListItem containerStyle={styles.listItem}>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
-                                    width: '85%'
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannels'
-                                )}
-                            </ListItem.Title>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
-                            >
-                                <Switch
-                                    value={automaticallyRequestOlympusChannels}
-                                    onValueChange={async () => {
-                                        try {
-                                            await update({
-                                                request_channels:
-                                                    !automaticallyRequestOlympusChannels
-                                            }).then(async () => {
-                                                this.setState({
-                                                    automaticallyRequestOlympusChannels:
-                                                        !automaticallyRequestOlympusChannels
-                                                });
-                                                await updateSettings({
-                                                    lightningAddress: {
-                                                        enabled,
-                                                        automaticallyAccept,
-                                                        automaticallyRequestOlympusChannels:
-                                                            !automaticallyRequestOlympusChannels,
-                                                        allowComments,
-                                                        nostrPrivateKey,
-                                                        nostrRelays,
-                                                        notifications
-                                                    }
-                                                });
-                                            });
-                                        } catch (e) {}
+                        {false && (
+                            <ListItem containerStyle={styles.listItem}>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular',
+                                        width: '85%'
                                     }}
-                                />
-                            </View>
-                        </ListItem>
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannels'
+                                    )}
+                                </ListItem.Title>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    <Switch
+                                        value={
+                                            automaticallyRequestOlympusChannels
+                                        }
+                                        onValueChange={async () => {
+                                            try {
+                                                await update({
+                                                    request_channels:
+                                                        !automaticallyRequestOlympusChannels
+                                                }).then(async () => {
+                                                    this.setState({
+                                                        automaticallyRequestOlympusChannels:
+                                                            !automaticallyRequestOlympusChannels
+                                                    });
+                                                    await updateSettings({
+                                                        lightningAddress: {
+                                                            enabled,
+                                                            automaticallyAccept,
+                                                            automaticallyRequestOlympusChannels:
+                                                                !automaticallyRequestOlympusChannels,
+                                                            allowComments,
+                                                            nostrPrivateKey,
+                                                            nostrRelays,
+                                                            notifications
+                                                        }
+                                                    });
+                                                });
+                                            } catch (e) {}
+                                        }}
+                                    />
+                                </View>
+                            </ListItem>
+                        )}
                         <ListItem containerStyle={styles.listItem}>
                             <ListItem.Title
                                 style={{
