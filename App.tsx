@@ -4,6 +4,7 @@ import { Provider } from 'mobx-react';
 import Stores from './stores/Stores';
 import Navigation from './Navigation';
 import NavigationService from './NavigationService';
+import PushNotificationManager from './PushNotificationManager';
 import { AppContainer } from './components/layout/AppContainer';
 import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
@@ -33,21 +34,24 @@ export default class App extends React.PureComponent {
                 NotesStore={Stores.notesStore}
                 SyncStore={Stores.syncStore}
                 LSPStore={Stores.lspStore}
+                LightningAddressStore={Stores.lightningAddressStore}
                 ChannelBackupStore={Stores.channelBackupStore}
             >
                 <AppContainer>
-                    <GestureHandlerRootView style={{ flex: 1 }}>
-                        <Navigation
-                            ref={(navigatorRef) => {
-                                NavigationService.setTopLevelNavigator(
-                                    navigatorRef
-                                );
-                            }}
-                        />
-                        <ExternalLinkModal />
-                        <AndroidNfcModal />
-                        <InfoModal />
-                    </GestureHandlerRootView>
+                    <PushNotificationManager>
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                            <Navigation
+                                ref={(navigatorRef) => {
+                                    NavigationService.setTopLevelNavigator(
+                                        navigatorRef
+                                    );
+                                }}
+                            />
+                            <ExternalLinkModal />
+                            <AndroidNfcModal />
+                            <InfoModal />
+                        </GestureHandlerRootView>
+                    </PushNotificationManager>
                 </AppContainer>
             </Provider>
         );

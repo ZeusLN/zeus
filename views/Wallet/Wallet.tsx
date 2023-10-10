@@ -49,6 +49,7 @@ import ModalStore from '../../stores/ModalStore';
 import SyncStore from '../../stores/SyncStore';
 import LSPStore from '../../stores/LSPStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
@@ -80,6 +81,7 @@ interface WalletProps {
     SyncStore: SyncStore;
     LSPStore: LSPStore;
     ChannelBackupStore: ChannelBackupStore;
+    LightningAddressStore: LightningAddressStore;
 }
 
 interface WalletState {
@@ -100,7 +102,8 @@ interface WalletState {
     'ModalStore',
     'SyncStore',
     'LSPStore',
-    'ChannelBackupStore'
+    'ChannelBackupStore',
+    'LightningAddressStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -310,7 +313,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             FiatStore,
             LSPStore,
             ChannelBackupStore,
-            SyncStore
+            SyncStore,
+            LightningAddressStore
         } = this.props;
         const {
             settings,
@@ -327,7 +331,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             updateSettings
         } = SettingsStore;
         const { isSyncing } = SyncStore;
-        const { fiatEnabled, pos, rescan, recovery } = settings;
+        const { fiatEnabled, pos, rescan, recovery, lightningAddress } =
+            settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
 
         if (pos && pos.squareEnabled && posStatus === 'active')
@@ -376,6 +381,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             } else {
                 if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                     ChannelBackupStore.initSubscribeChannelEvents();
+            }
+
+            if (
+                lightningAddress.enabled &&
+                BackendUtils.supportsCustomPreimages() &&
+                !NodeInfoStore.testnet
+            ) {
+                if (lightningAddress.automaticallyAccept) {
+                    LightningAddressStore.subscribeUpdates();
+                    const isReady =
+                        await NodeInfoStore.isLightningReadyToReceive();
+                    if (isReady) LightningAddressStore.redeemAllOpenPayments();
+                }
+
+                if (lightningAddress.notifications === 1) {
+                    LightningAddressStore.updatePushCredentials();
+                }
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {

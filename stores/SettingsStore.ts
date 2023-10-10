@@ -69,6 +69,16 @@ interface InvoicesSettings {
     showCustomPreimageField?: boolean;
 }
 
+interface LightningAddressSettings {
+    enabled: boolean;
+    automaticallyAccept: boolean;
+    automaticallyRequestOlympusChannels: boolean;
+    allowComments: boolean;
+    nostrPrivateKey: string;
+    nostrRelays: Array<string>;
+    notifications: number;
+}
+
 export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -110,6 +120,8 @@ export interface Settings {
     lspTestnet: string;
     lspAccessKey: string;
     requestSimpleTaproot: boolean;
+    // Lightning Address
+    lightningAddress: LightningAddressSettings;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -704,6 +716,18 @@ export const LNDHUB_AUTH_MODES = [
 const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
 const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
 
+export const DEFAULT_NOSTR_RELAYS = [
+    'wss://relay.damus.io',
+    'wss://nostr.wine',
+    'wss://nostr.lnproxy.org'
+];
+
+export const NOTIFICATIONS_PREF_KEYS = [
+    { key: 'Disabled', value: 0 },
+    { key: 'Push', value: 1 },
+    { key: 'Nostr', value: 2 }
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -771,7 +795,17 @@ export default class SettingsStore {
         lspMainnet: DEFAULT_LSP_MAINNET,
         lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: '',
-        requestSimpleTaproot: false
+        requestSimpleTaproot: false,
+        // Lightning Address
+        lightningAddress: {
+            enabled: false,
+            automaticallyAccept: true,
+            automaticallyRequestOlympusChannels: true,
+            allowComments: true,
+            nostrPrivateKey: '',
+            nostrRelays: DEFAULT_NOSTR_RELAYS,
+            notifications: 0
+        }
     };
     @observable public posStatus: string = 'unselected';
     @observable public loading = false;
@@ -979,6 +1013,19 @@ export default class SettingsStore {
                     this.settings.lspTestnet = DEFAULT_LSP_TESTNET;
                 }
 
+                // default Lightning Address settings
+                if (!this.settings.lightningAddress) {
+                    this.settings.lightningAddress = {
+                        enabled: false,
+                        automaticallyAccept: true,
+                        automaticallyRequestOlympusChannels: true,
+                        allowComments: true,
+                        nostrPrivateKey: '',
+                        nostrRelays: DEFAULT_NOSTR_RELAYS,
+                        notifications: 0
+                    };
+                }
+
                 // default automatic channel backups to on
                 if (this.settings.automaticDisasterRecoveryBackup !== false) {
                     this.settings.automaticDisasterRecoveryBackup = true;
@@ -1101,7 +1148,6 @@ export default class SettingsStore {
                     const status = response.info().status;
                     if (status == 200) {
                         const data = response.json();
-                        console.log('!!', data);
                         this.loading = false;
                         if (data.error) {
                             this.createAccountError =

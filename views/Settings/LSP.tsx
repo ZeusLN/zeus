@@ -13,12 +13,12 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Switch from '../../components/Switch';
 
-interface EmbeddedNodeProps {
+interface LSPProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface EmbeddedNodeState {
+interface LSPState {
     enableLSP: boolean | undefined;
     lsp: string;
     accessKey: string;
@@ -27,10 +27,7 @@ interface EmbeddedNodeState {
 
 @inject('SettingsStore')
 @observer
-export default class EmbeddedNode extends React.Component<
-    EmbeddedNodeProps,
-    EmbeddedNodeState
-> {
+export default class LSP extends React.Component<LSPProps, LSPState> {
     state = {
         enableLSP: true,
         lsp: '',
