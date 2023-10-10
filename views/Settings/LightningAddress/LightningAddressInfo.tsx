@@ -105,7 +105,7 @@ export default class LightningAddressInfo extends React.Component<
                                             'views.Settings.LightningAddressInfo.feesByAmount'
                                         )}
                                     />
-                                    {fees.map((feeItem) => {
+                                    {fees.map((feeItem: any, index: number) => {
                                         const {
                                             limitAmount,
                                             limitQualifier,
@@ -115,6 +115,7 @@ export default class LightningAddressInfo extends React.Component<
 
                                         return (
                                             <KeyValue
+                                                key={index}
                                                 keyValue={`${LIMIT_QUALIFIERS[limitQualifier]} ${limitAmount} sats`}
                                                 value={`${fee}${FEE_QUALIFIERS[feeQualifier]}`}
                                             />
