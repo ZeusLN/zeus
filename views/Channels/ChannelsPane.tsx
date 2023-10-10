@@ -35,8 +35,8 @@ export enum Status {
 
 interface ChannelsProps {
     navigation: any;
-    ChannelsStore: ChannelsStore;
-    SettingsStore: SettingsStore;
+    ChannelsStore?: ChannelsStore;
+    SettingsStore?: SettingsStore;
 }
 
 @inject('ChannelsStore', 'SettingsStore')
@@ -136,7 +136,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
 
     renderItem = ({ item }: { item: Channel }) => {
         const { ChannelsStore, navigation } = this.props;
-        const { largestChannelSats, channelsType } = ChannelsStore;
+        const { largestChannelSats, channelsType } = ChannelsStore!;
         const displayName = item.alias || item.remotePubkey || item.channelId;
 
         const getStatus = () => {
@@ -200,7 +200,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
 
     toggleChannelsType = () => {
         const { ChannelsStore } = this.props;
-        const { channelsType } = ChannelsStore;
+        const { channelsType } = ChannelsStore!;
 
         let newType = ChannelsType.Open;
         switch (channelsType) {
@@ -214,11 +214,11 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             default:
                 newType = ChannelsType.Open;
         }
-        ChannelsStore.setChannelsType(newType);
+        ChannelsStore!.setChannelsType(newType);
     };
 
     updateSearch = (value: string) => {
-        this.props.ChannelsStore.setSearch(value);
+        this.props.ChannelsStore!.setSearch(value);
     };
 
     render() {
@@ -236,10 +236,10 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             showSearch,
             channelsType,
             search
-        } = ChannelsStore;
+        } = ChannelsStore!;
 
         const lurkerMode: boolean =
-            SettingsStore?.settings?.privacy?.lurkerMode || false;
+            SettingsStore!.settings?.privacy?.lurkerMode || false;
 
         let headerString;
         let channelsData: Channel[];
@@ -271,12 +271,11 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                 <WalletHeader
                     navigation={navigation}
                     title={headerString}
-                    SettingsStore={SettingsStore}
                     channels
                     toggle={
                         BackendUtils.supportsPendingChannels()
                             ? this.toggleChannelsType
-                            : null
+                            : undefined
                     }
                 />
                 <ChannelsHeader
@@ -320,7 +319,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                                 )}
                             />
                         </Row>
-                        <FilterOptions ChannelsStore={ChannelsStore} />
+                        <FilterOptions ChannelsStore={ChannelsStore!} />
                     </View>
                 )}
                 {loading ? (
