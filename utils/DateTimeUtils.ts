@@ -1,4 +1,4 @@
-const dateFormat = require('dateformat');
+import dateFormat from 'dateformat';
 
 class DateTimeUtils {
     listDate = (timestamp: number | string | Date) =>

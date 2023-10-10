@@ -1,5 +1,7 @@
 import * as React from 'react';
 import {
+    BackHandler,
+    NativeEventSubscription,
     Image,
     View,
     SafeAreaView,
@@ -41,6 +43,8 @@ export default class IntroSplash extends React.Component<
     IntroSplashProps,
     IntroSplashState
 > {
+    private backPressSubscription: NativeEventSubscription;
+
     state = {
         creatingWallet: false,
         error: false
@@ -51,6 +55,23 @@ export default class IntroSplash extends React.Component<
         this.props.navigation.addListener('didFocus', () => {
             this.props.SettingsStore.getSettings();
         });
+
+        this.backPressSubscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.handleBackPress.bind(this)
+        );
+    }
+
+    handleBackPress = () => {
+        if (this.state.creatingWallet) {
+            return true;
+        }
+        BackHandler.exitApp();
+        return true;
+    };
+
+    componentWillUnmount(): void {
+        this.backPressSubscription?.remove();
     }
 
     render() {

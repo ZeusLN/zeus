@@ -11,6 +11,7 @@ import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
 
 import BackendUtils from './../utils/BackendUtils';
+import _ from 'lodash';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
@@ -185,7 +186,7 @@ export default class ChannelsStore {
     filter = (channels: Array<Channel>) => {
         const query = this.search;
         const filtered = channels
-            .filter(
+            ?.filter(
                 (channel: Channel) =>
                     channel.alias
                         ?.toLocaleLowerCase()
@@ -204,7 +205,7 @@ export default class ChannelsStore {
                         channel.private ? 'unannounced' : 'announced'
                     )
             );
-        const sorted = filtered.sort((a: any, b: any) => {
+        const sorted = filtered?.sort((a: any, b: any) => {
             if (this.sort.type === 'numeric') {
                 return Number(a[this.sort.param]) < Number(b[this.sort.param])
                     ? 1
@@ -254,35 +255,50 @@ export default class ChannelsStore {
 
     @action
     enrichChannels = async (channels: Array<Channel>) => {
+        if (channels.length === 0) return;
+
+        const channelsWithMissingAliases = channels?.filter(
+            (c) => this.aliasesById[c.channelId] == null
+        );
+        const channelsWithMissingNodeInfos = channels?.filter(
+            (c) => this.nodes[c.remotePubkey] == null
+        );
+        const publicKeysOfToBeLoadedNodeInfos = _.chain(
+            channelsWithMissingAliases.concat(channelsWithMissingNodeInfos)
+        )
+            .map((c) => c.remotePubkey)
+            .uniq()
+            .value();
+
         this.loading = true;
         await Promise.all(
-            channels.map(async (channel: Channel) => {
-                if (!channel.remotePubkey) return;
-                if (
-                    this.settingsStore.implementation !== 'c-lightning-REST' &&
-                    !this.nodes[channel.remotePubkey]
-                ) {
-                    await this.getNodeInfo(channel.remotePubkey)
-                        .then((nodeInfo: any) => {
-                            if (!nodeInfo) return;
-                            this.nodes[channel.remotePubkey] = nodeInfo;
-                            this.aliasesById[channel.channelId] =
-                                nodeInfo.alias;
-                        })
-                        .catch(() => {
-                            // console.log(
-                            //     `Couldn't find node alias for ${channel.remotePubkey}`,
-                            //     err
-                            // );
-                        });
+            publicKeysOfToBeLoadedNodeInfos.map(
+                async (remotePubKey: string) => {
+                    if (
+                        this.settingsStore.implementation !== 'c-lightning-REST'
+                    ) {
+                        const nodeInfo = await this.getNodeInfo(remotePubKey);
+                        if (!nodeInfo) return;
+                        this.nodes[remotePubKey] = nodeInfo;
+                    }
                 }
-                if (!channel.alias && this.aliasesById[channel.channelId]) {
-                    channel.alias = this.aliasesById[channel.channelId];
-                }
-                channel.displayName =
-                    channel.alias || channel.remotePubkey || channel.channelId;
-            })
+            )
         );
+
+        for (const channel of channelsWithMissingAliases) {
+            const nodeInfo = this.nodes[channel.remotePubkey];
+            if (!nodeInfo) continue;
+            this.aliasesById[channel.channelId] = nodeInfo.alias;
+        }
+
+        for (const channel of channels) {
+            if (channel.alias == null) {
+                channel.alias = this.aliasesById[channel.channelId];
+            }
+            channel.displayName =
+                channel.alias || channel.remotePubkey || channel.channelId;
+        }
+
         this.loading = false;
         return channels;
     };
@@ -301,8 +317,9 @@ export default class ChannelsStore {
         this.totalOutbound = 0;
         this.totalInbound = 0;
         this.totalOffline = 0;
-        BackendUtils.getChannels()
-            .then((data: any) => {
+
+        const loadPromises = [
+            BackendUtils.getChannels().then((data: any) => {
                 const channels = data.channels.map(
                     (channel: any) => new Channel(channel)
                 );
@@ -331,15 +348,12 @@ export default class ChannelsStore {
                     }
                 });
                 this.channels = channels;
-                this.error = false;
             })
-            .catch(() => {
-                this.getChannelsError();
-            });
+        ];
 
         if (BackendUtils.supportsPendingChannels()) {
-            BackendUtils.getPendingChannels()
-                .then((data: any) => {
+            loadPromises.push(
+                BackendUtils.getPendingChannels().then((data: any) => {
                     const pendingOpenChannels = data.pending_open_channels.map(
                         (pending: any) => {
                             pending.channel.pendingOpen = true;
@@ -373,25 +387,26 @@ export default class ChannelsStore {
                         .concat(pendingCloseChannels)
                         .concat(forceCloseChannels)
                         .concat(waitCloseChannels);
-                    this.error = false;
                 })
-                .catch(() => {
-                    this.getChannelsError();
-                });
+            );
 
-            BackendUtils.getClosedChannels()
-                .then((data: any) => {
+            loadPromises.push(
+                BackendUtils.getClosedChannels().then((data: any) => {
                     const closedChannels = data.channels.map(
                         (channel: any) => new ClosedChannel(channel)
                     );
                     this.closedChannels = closedChannels;
-                    this.error = false;
-                    this.loading = false;
                 })
-                .catch(() => {
-                    this.getChannelsError();
-                });
+            );
         }
+
+        Promise.all(loadPromises)
+            .then(() => {
+                this.loading = false;
+                this.error = false;
+                return;
+            })
+            .catch(() => this.getChannelsError());
     };
 
     @action
@@ -523,9 +538,13 @@ export default class ChannelsStore {
     };
 
     @action
-    public getChannelInfo = (chanId: string) => {
+    public loadChannelInfo = (chanId: string, deleteBeforeLoading = false) => {
         this.loading = true;
-        if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
+
+        if (deleteBeforeLoading) {
+            if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
+        }
+
         BackendUtils.getChannelInfo(chanId)
             .then((data: any) => {
                 this.chanInfo[chanId] = new ChannelInfo(data);

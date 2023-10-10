@@ -27,6 +27,7 @@ interface InvoicesSettingsState {
     expiry: string;
     routeHints: boolean;
     ampInvoice: boolean;
+    showCustomPreimageField: boolean;
 }
 
 @inject('SettingsStore')
@@ -40,7 +41,8 @@ export default class InvoicesSettings extends React.Component<
         memo: '',
         expiry: '3600',
         routeHints: false,
-        ampInvoice: false
+        ampInvoice: false,
+        showCustomPreimageField: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -53,7 +55,9 @@ export default class InvoicesSettings extends React.Component<
             memo: settings?.invoices?.memo || '',
             expiry: settings?.invoices?.expiry || '3600',
             routeHints: settings?.invoices?.routeHints || false,
-            ampInvoice: settings?.invoices?.ampInvoice || false
+            ampInvoice: settings?.invoices?.ampInvoice || false,
+            showCustomPreimageField:
+                settings?.invoices?.showCustomPreimageField || false
         });
     }
 
@@ -68,8 +72,14 @@ export default class InvoicesSettings extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { addressType, memo, expiry, routeHints, ampInvoice } =
-            this.state;
+        const {
+            addressType,
+            memo,
+            expiry,
+            routeHints,
+            ampInvoice,
+            showCustomPreimageField
+        } = this.state;
         const { implementation, updateSettings }: any = SettingsStore;
 
         const ADDRESS_TYPES = BackendUtils.supportsTaproot()
@@ -165,7 +175,8 @@ export default class InvoicesSettings extends React.Component<
                                     memo: text,
                                     expiry,
                                     routeHints,
-                                    ampInvoice
+                                    ampInvoice,
+                                    showCustomPreimageField
                                 }
                             });
                         }}
@@ -196,7 +207,8 @@ export default class InvoicesSettings extends React.Component<
                                             memo,
                                             expiry: text,
                                             routeHints,
-                                            ampInvoice
+                                            ampInvoice,
+                                            showCustomPreimageField
                                         }
                                     });
                                 }}
@@ -227,7 +239,8 @@ export default class InvoicesSettings extends React.Component<
                                             memo,
                                             expiry,
                                             routeHints: !routeHints,
-                                            ampInvoice
+                                            ampInvoice,
+                                            showCustomPreimageField
                                         }
                                     });
                                 }}
@@ -258,7 +271,45 @@ export default class InvoicesSettings extends React.Component<
                                             memo,
                                             expiry,
                                             routeHints,
-                                            ampInvoice: !ampInvoice
+                                            ampInvoice: !ampInvoice,
+                                            showCustomPreimageField
+                                        }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
+
+                    {BackendUtils.supportsCustomPreimages() && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText'),
+                                    top: 20
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Invoices.showCustomPreimageField'
+                                )}
+                                {}
+                            </Text>
+                            <Switch
+                                value={showCustomPreimageField}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        showCustomPreimageField:
+                                            !showCustomPreimageField
+                                    });
+                                    await updateSettings({
+                                        invoices: {
+                                            addressType,
+                                            memo,
+                                            expiry,
+                                            routeHints,
+                                            ampInvoice,
+                                            showCustomPreimageField:
+                                                !showCustomPreimageField
                                         }
                                     });
                                 }}
@@ -302,7 +353,8 @@ export default class InvoicesSettings extends React.Component<
                                         memo,
                                         expiry,
                                         routeHints,
-                                        ampInvoice
+                                        ampInvoice,
+                                        showCustomPreimageField
                                     }
                                 });
                                 this.refs.modal.close();

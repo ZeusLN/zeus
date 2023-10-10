@@ -8,7 +8,7 @@ import { themeColor } from './../utils/ThemeUtils';
 import ModalStore from '../stores/ModalStore';
 
 interface TextProps {
-    ModalStore: ModalStore;
+    ModalStore?: ModalStore;
     style?: any;
     children: string;
     infoText?: string | Array<string>;
@@ -22,7 +22,7 @@ export default class ZeusText extends React.Component<TextProps, {}> {
     render() {
         const { children, style, infoText, infoLink, infoNav, ModalStore } =
             this.props;
-        const { toggleInfoModal } = ModalStore;
+        const { toggleInfoModal } = ModalStore!;
 
         const CoreText = () => (
             <Row>

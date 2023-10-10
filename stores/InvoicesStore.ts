@@ -120,7 +120,8 @@ export default class InvoicesStore {
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
         routeHints?: boolean,
-        addressType?: string
+        addressType?: string,
+        customPreimage?: string
     ) => {
         this.creatingInvoice = true;
         return this.createInvoice(
@@ -130,7 +131,8 @@ export default class InvoicesStore {
             lnurl,
             ampInvoice,
             routeHints,
-            true
+            true,
+            customPreimage
         ).then(
             ({
                 rHash,
@@ -173,7 +175,8 @@ export default class InvoicesStore {
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
         routeHints?: boolean,
-        unified?: boolean
+        unified?: boolean,
+        customPreimage?: string
     ) => {
         this.payment_request = null;
         this.payment_request_amt = null;
@@ -189,6 +192,8 @@ export default class InvoicesStore {
 
         if (ampInvoice) req.is_amp = true;
         if (routeHints) req.private = true;
+
+        if (customPreimage) req.preimage = customPreimage;
 
         if (
             BackendUtils.supportsLSPs() &&

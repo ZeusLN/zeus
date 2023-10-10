@@ -10,10 +10,8 @@ import SettingsStore from './SettingsStore';
 
 export default class SyncStore {
     @observable public isSyncing: boolean = false;
-    @observable public syncStatusUpdatesPaused: boolean = false;
     @observable public isInExpressGraphSync: boolean = false;
     @observable public bestBlockHeight: number;
-    @observable public initialKnownBlockHeight: number;
     @observable public currentBlockHeight: number;
     @observable public currentProgress: number;
     @observable public numBlocksUntilSynced: number;
@@ -28,7 +26,6 @@ export default class SyncStore {
     @action
     public reset = () => {
         this.isSyncing = false;
-        this.syncStatusUpdatesPaused = false;
         this.isInExpressGraphSync = false;
         this.error = false;
     };
@@ -37,27 +34,20 @@ export default class SyncStore {
         this.isInExpressGraphSync = syncing;
     };
 
-    setSyncInfo = (isInitialCall?: boolean) => {
+    setSyncInfo = async () => {
         const nodeInfo = this.nodeInfo;
-
-        if (isInitialCall)
-            this.initialKnownBlockHeight = nodeInfo?.block_height ?? 0;
 
         if (this.currentBlockHeight !== nodeInfo?.block_height) {
             this.currentBlockHeight = nodeInfo?.block_height || 0;
 
-            // set best block height to current block height if it's higher
-            if (
-                nodeInfo?.block_height &&
-                this.currentBlockHeight > nodeInfo.block_height
-            ) {
-                this.bestBlockHeight = this.currentBlockHeight;
+            // if current block exceeds or equals best block height, query mempool for new tip
+            // if mempool call fails, set best block height to current height, then proceed
+            if (this.currentBlockHeight >= this.bestBlockHeight) {
+                await this.getBestBlockHeight();
+                if (this.error) this.bestBlockHeight = this.currentBlockHeight;
             }
 
-            this.currentProgress =
-                (this.currentBlockHeight ?? 0) - (this.bestBlockHeight ?? 0);
-            this.numBlocksUntilSynced =
-                (this.bestBlockHeight ?? 0) - this.currentBlockHeight;
+            this.updateProgress();
         }
 
         if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced <= 0) {
@@ -75,51 +65,76 @@ export default class SyncStore {
         });
     };
 
-    @action
-    public pauseSyncingUpates = () => {
-        this.syncStatusUpdatesPaused = true;
+    updateProgress = () => {
+        this.currentProgress =
+            (this.currentBlockHeight ?? 0) - (this.bestBlockHeight ?? 0);
+        this.numBlocksUntilSynced =
+            (this.bestBlockHeight ?? 0) - this.currentBlockHeight;
     };
 
-    @action
-    public resumeSyncingUpates = () => {
-        this.syncStatusUpdatesPaused = false;
-        this.startSyncing(true);
-    };
-
-    @action
-    public startSyncing = (skipWait?: boolean) => {
-        this.isSyncing = true;
-        if (!skipWait) sleep(6000);
-
-        ReactNativeBlobUtil.fetch(
-            'get',
-            `https://mempool.space/${
-                this.settingsStore.embeddedLndNetwork === 'Testnet'
-                    ? 'testnet/'
-                    : ''
-            }api/blocks/tip/height`
-        )
-            .then(async (response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    this.bestBlockHeight = Number.parseInt(response.json());
-
-                    // initial fetch
-                    await this.getNodeInfo().then(() => this.setSyncInfo(true));
-
-                    while (
-                        this.numBlocksUntilSynced > 0 &&
-                        !this.syncStatusUpdatesPaused
-                    ) {
-                        sleep(2000);
-                        await this.getNodeInfo().then(() => this.setSyncInfo());
+    getBestBlockHeight = async () => {
+        await new Promise((resolve, reject) => {
+            ReactNativeBlobUtil.fetch(
+                'get',
+                `https://mempool.space/${
+                    this.settingsStore.embeddedLndNetwork === 'Testnet'
+                        ? 'testnet/'
+                        : ''
+                }api/blocks/tip/height`
+            )
+                .then(async (response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        this.bestBlockHeight = Number.parseInt(response.json());
+                        if (
+                            typeof this.bestBlockHeight === 'number' &&
+                            this.currentBlockHeight
+                        ) {
+                            this.updateProgress();
+                        }
+                        resolve(this.bestBlockHeight);
+                    } else {
+                        this.error = true;
+                        reject();
                     }
-                } else {
+                })
+                .catch(() => {
                     this.error = true;
-                }
-            })
-            .catch(() => {
-                this.error = true;
-            });
+                    reject();
+                });
+        });
+    };
+
+    @action
+    public startSyncing = async () => {
+        this.isSyncing = true;
+
+        await this.getBestBlockHeight();
+
+        // initial fetch
+        while (!this.nodeInfo?.block_height) {
+            await this.getNodeInfo();
+            if (!this.nodeInfo?.block_height) {
+                await sleep(3000);
+            }
+        }
+
+        await this.setSyncInfo();
+
+        let i = 0;
+        while (this.numBlocksUntilSynced > 0) {
+            await sleep(2000);
+            this.getNodeInfo().then(() => this.setSyncInfo());
+
+            // only query Mempool instance every 30 seconds
+            const queryMempool = i === 14;
+            if (queryMempool) {
+                i = 0;
+            } else {
+                i++;
+            }
+
+            if (queryMempool) this.getBestBlockHeight();
+        }
     };
 }

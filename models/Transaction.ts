@@ -83,7 +83,7 @@ export default class Transaction extends BaseModel {
         );
     }
 
-    @computed public get getDate(): string | Date {
+    @computed public get getDate(): Date {
         return DateTimeUtils.listDate(this.time_stamp);
     }
 

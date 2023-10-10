@@ -10,7 +10,7 @@ import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 
-const logo = require('../assets/images/Launcher.png');
+const defaultLogo = require('../assets/images/Launcher.png');
 
 let simulation: any;
 
@@ -51,6 +51,7 @@ interface CollapsedQRProps {
     expanded?: boolean;
     textBottom?: boolean;
     truncateLongValue?: boolean;
+    logo?: any;
 }
 
 interface CollapsedQRState {
@@ -117,7 +118,8 @@ export default class CollapsedQR extends React.Component<
             hideText,
             expanded,
             textBottom,
-            truncateLongValue
+            truncateLongValue,
+            logo
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
@@ -135,7 +137,7 @@ export default class CollapsedQR extends React.Component<
                         <QRCode
                             value={value}
                             size={height > width ? width * 0.8 : height * 0.6}
-                            logo={logo}
+                            logo={logo || defaultLogo}
                         />
                     </View>
                 )}

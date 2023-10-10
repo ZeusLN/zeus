@@ -496,7 +496,7 @@ public class LndMobileService extends Service {
     String packageName = getApplicationContext().getPackageName();
     ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      if (p.processName.equals(packageName + ":blixtLndMobile")) {
+      if (p.processName.equals(packageName + ":zeusLndMobile")) {
         return true;
       }
     }
@@ -507,7 +507,7 @@ public class LndMobileService extends Service {
     String packageName = getApplicationContext().getPackageName();
     ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      if (p.processName.equals(packageName + ":blixtLndMobile")) {
+      if (p.processName.equals(packageName + ":zeusLndMobile")) {
         Process.killProcess(p.pid);
         return true;
       }

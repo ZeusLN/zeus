@@ -13,27 +13,26 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Switch from '../../components/Switch';
 
-interface EmbeddedNodeProps {
+interface LSPProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface EmbeddedNodeState {
+interface LSPState {
     enableLSP: boolean | undefined;
     lsp: string;
     accessKey: string;
+    requestSimpleTaproot: boolean;
 }
 
 @inject('SettingsStore')
 @observer
-export default class EmbeddedNode extends React.Component<
-    EmbeddedNodeProps,
-    EmbeddedNodeState
-> {
+export default class LSP extends React.Component<LSPProps, LSPState> {
     state = {
         enableLSP: true,
         lsp: '',
-        accessKey: ''
+        accessKey: '',
+        requestSimpleTaproot: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -46,13 +45,14 @@ export default class EmbeddedNode extends React.Component<
                 embeddedLndNetwork === 'Mainnet'
                     ? settings.lspMainnet
                     : settings.lspTestnet,
-            accessKey: settings.lspAccessKey
+            accessKey: settings.lspAccessKey,
+            requestSimpleTaproot: settings.requestSimpleTaproot
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { enableLSP, lsp, accessKey } = this.state;
+        const { enableLSP, lsp, accessKey, requestSimpleTaproot } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
 
         return (
@@ -184,6 +184,44 @@ export default class EmbeddedNode extends React.Component<
                             autoCorrect={false}
                         />
                     </View>
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular'
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.LSP.requestSimpleTaproot'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={requestSimpleTaproot}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        requestSimpleTaproot:
+                                            !requestSimpleTaproot
+                                    });
+                                    await updateSettings({
+                                        requestSimpleTaproot:
+                                            !requestSimpleTaproot
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
                 </View>
             </Screen>
         );

@@ -27,6 +27,8 @@ import SendIcon from '../../assets/images/SVG/Send.svg';
 import KeyIcon from '../../assets/images/SVG/Key.svg';
 import NetworkIcon from '../../assets/images/SVG/Network.svg';
 import CloudIcon from '../../assets/images/SVG/Cloud.svg';
+import MailboxFlagIcon from '../../assets/images/SVG/MailboxFlag.svg';
+import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
@@ -37,16 +39,16 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
-import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import { version } from '../../package.json';
 
 interface SettingsProps {
     navigation: any;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
-    SyncStore: SyncStore;
     UnitsStore: UnitsStore;
 }
 
@@ -55,7 +57,7 @@ interface SettingsState {
     easterEggCount: number;
 }
 
-@inject('SettingsStore', 'SyncStore', 'UnitsStore')
+@inject('NodeInfoStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class Settings extends React.Component<
     SettingsProps,
@@ -66,8 +68,8 @@ export default class Settings extends React.Component<
         easterEggCount: 0
     };
 
-    UNSAFE_componentDidMount() {
-        const { SettingsStore, SyncStore, navigation } = this.props;
+    UNSAFE_componentWillMount() {
+        const { SettingsStore, navigation } = this.props;
 
         SettingsStore.getSettings();
 
@@ -75,13 +77,6 @@ export default class Settings extends React.Component<
         navigation.addListener('didFocus', () => {
             SettingsStore.getSettings();
         });
-
-        // pause syncing updates if necessary
-        const { isSyncing, syncStatusUpdatesPaused, pauseSyncingUpates } =
-            SyncStore;
-        if (isSyncing && !syncStatusUpdatesPaused) {
-            pauseSyncingUpates();
-        }
     }
 
     componentWillUnmount() {
@@ -90,7 +85,7 @@ export default class Settings extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, NodeInfoStore, SettingsStore } = this.props;
         const { showHiddenSettings, easterEggCount } = this.state;
         const { implementation, settings, seedPhrase } = SettingsStore;
 
@@ -100,8 +95,9 @@ export default class Settings extends React.Component<
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
-        const posEnabled =
-            settings && settings.pos && settings.pos.squareEnabled;
+        const posEnabled = settings?.pos?.squareEnabled;
+
+        const lightningAddressEnabled = settings?.lightningAddress?.enabled;
 
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
@@ -111,6 +107,13 @@ export default class Settings extends React.Component<
         const OlympusButton = () => (
             <TouchableOpacity
                 onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
+                onLongPress={() => {
+                    if (
+                        BackendUtils.supportsCustomPreimages() &&
+                        !NodeInfoStore.testnet
+                    )
+                        navigation.navigate('LightningAddress');
+                }}
                 accessibilityLabel={localeString('views.Settings.olympus')}
             >
                 <View style={{ top: -7 }}>
@@ -257,6 +260,54 @@ export default class Settings extends React.Component<
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    {lightningAddressEnabled &&
+                        BackendUtils.supportsCustomPreimages() &&
+                        !NodeInfoStore.testnet && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    height: 45,
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginTop: 5,
+                                    marginBottom: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('LightningAddress')
+                                    }
+                                >
+                                    <View
+                                        style={{
+                                            paddingLeft: 5,
+                                            paddingTop: 3
+                                        }}
+                                    >
+                                        <MailboxFlagIcon
+                                            fill={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'general.lightningAddress'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
                     {selectedNode && (
                         <View
                             style={{
@@ -856,6 +907,44 @@ export default class Settings extends React.Component<
                             </View>
                         </TouchableOpacity>
                     </View>
+
+                    {false && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginTop: 5,
+                                marginBottom: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Nostr')}
+                            >
+                                <View style={{ paddingLeft: 5, paddingTop: 2 }}>
+                                    <NostrichIcon
+                                        fill={themeColor('text')}
+                                        width={23}
+                                        height={23}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    Nostr
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
                     {(showHiddenSettings || posEnabled) && (
                         <View
                             style={{

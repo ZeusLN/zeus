@@ -6,6 +6,9 @@ apply plugin: "com.google.protobuf"
 apply plugin: "kotlin-android"
 apply plugin: "kotlin-android-extensions"
 
+// LN address notifications
+apply plugin: "com.google.gms.google-services"
+
 import com.android.build.OutputFile
 
 /**
@@ -199,6 +202,10 @@ dependencies {
 
     implementation "com.jakewharton:process-phoenix:2.0.0"
     implementation 'org.brotli:dec:0.1.2'
+
+    // LN address notifications
+    // Import the Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:32.3.1')
 }
 
 configurations {

@@ -374,5 +374,6 @@ export default class Spark {
     supportsLSPs = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;
+    supportsCustomPreimages = () => false;
     isLNDBased = () => false;
 }

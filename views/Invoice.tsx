@@ -64,17 +64,15 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const noteKey = getRPreimage || payment_hash;
 
         const QRButton = () => (
-            <View style={{ marginTop: -4 }}>
-                <Icon
-                    name="qr-code"
-                    onPress={() => {
-                        navigation.navigate('QR', { value: getPaymentRequest });
-                    }}
-                    color={themeColor('text')}
-                    underlayColor="transparent"
-                    size={30}
-                />
-            </View>
+            <Icon
+                name="qr-code"
+                onPress={() => {
+                    navigation.navigate('QR', { value: getPaymentRequest });
+                }}
+                color={themeColor('text')}
+                underlayColor="transparent"
+                size={35}
+            />
         );
         const EditNotesButton = () => (
             <TouchableOpacity
@@ -150,7 +148,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 keyValue={localeString(
                                     'views.Invoice.settleDate'
                                 )}
-                                value={invoice.settleDate}
+                                value={invoice.formattedSettleDate}
                                 sensitive
                             />
                         )}
@@ -160,7 +158,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 keyValue={localeString(
                                     'views.Invoice.creationDate'
                                 )}
-                                value={invoice.creationDate}
+                                value={invoice.formattedCreationDate}
                                 sensitive
                             />
                         )}

@@ -29,11 +29,13 @@ import InvoicesStore from '../stores/InvoicesStore';
 import TransactionsStore, { SendPaymentReq } from '../stores/TransactionsStore';
 import UnitsStore from '../stores/UnitsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
+import LnurlPayStore from '../stores/LnurlPayStore';
 import SettingsStore from '../stores/SettingsStore';
 
 import FeeUtils from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
+import LinkingUtils from '../utils/LinkingUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -52,6 +54,7 @@ interface InvoiceProps {
     UnitsStore: UnitsStore;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
+    LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
 }
 
@@ -69,6 +72,7 @@ interface InvoiceState {
     outgoingChanId: string | null;
     lastHopPubkey: string | null;
     settingsToggle: boolean;
+    zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
 }
 
@@ -79,6 +83,7 @@ interface InvoiceState {
     'UnitsStore',
     'ChannelsStore',
     'NodeInfoStore',
+    'LnurlPayStore',
     'SettingsStore'
 )
 @observer
@@ -102,6 +107,7 @@ export default class PaymentRequest extends React.Component<
         outgoingChanId: null,
         lastHopPubkey: null,
         settingsToggle: false,
+        zaplockerToggle: false,
         lightningReadyToSend: false
     };
 
@@ -140,7 +146,7 @@ export default class PaymentRequest extends React.Component<
             this.isComponentMounted &&
             !noBalance
         ) {
-            sleep(7000);
+            await sleep(7000);
             const isReady = await isLightningReadyToSend();
             if (isReady) {
                 this.setState({
@@ -258,6 +264,7 @@ export default class PaymentRequest extends React.Component<
             InvoicesStore,
             UnitsStore,
             ChannelsStore,
+            LnurlPayStore,
             SettingsStore,
             navigation
         } = this.props;
@@ -273,6 +280,7 @@ export default class PaymentRequest extends React.Component<
             lastHopPubkey,
             customAmount,
             satAmount,
+            zaplockerToggle,
             settingsToggle,
             timeoutSeconds,
             lightningReadyToSend
@@ -287,6 +295,16 @@ export default class PaymentRequest extends React.Component<
             feeEstimate,
             clearPayReq
         } = InvoicesStore;
+
+        // Zaplocker
+        const {
+            isZaplocker,
+            isPmtHashSigValid,
+            isRelaysSigValid,
+            zaplockerNpub
+        } = LnurlPayStore;
+
+        const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
         const expiry = pay_req && pay_req.expiry;
@@ -344,6 +362,7 @@ export default class PaymentRequest extends React.Component<
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
+                size={35}
             />
         );
 
@@ -432,6 +451,131 @@ export default class PaymentRequest extends React.Component<
                                     </View>
                                 )}
                             </>
+
+                            {isZaplocker && (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        this.setState({
+                                            zaplockerToggle: !zaplockerToggle
+                                        });
+                                    }}
+                                >
+                                    <View
+                                        style={{
+                                            marginTop: 10,
+                                            marginBottom: 10
+                                        }}
+                                    >
+                                        <Row justify="space-between">
+                                            <View style={{ width: '95%' }}>
+                                                <KeyValue
+                                                    keyValue={localeString(
+                                                        'views.Settings.LightningAddress.zaplockerVerification'
+                                                    )}
+                                                    color={
+                                                        isZaplockerValid
+                                                            ? themeColor(
+                                                                  'success'
+                                                              )
+                                                            : themeColor(
+                                                                  'error'
+                                                              )
+                                                    }
+                                                />
+                                            </View>
+                                            {zaplockerToggle ? (
+                                                <CaretDown
+                                                    fill={
+                                                        isZaplockerValid
+                                                            ? themeColor(
+                                                                  'success'
+                                                              )
+                                                            : themeColor(
+                                                                  'error'
+                                                              )
+                                                    }
+                                                    width="20"
+                                                    height="20"
+                                                />
+                                            ) : (
+                                                <CaretRight
+                                                    fill={
+                                                        isZaplockerValid
+                                                            ? themeColor(
+                                                                  'success'
+                                                              )
+                                                            : themeColor(
+                                                                  'error'
+                                                              )
+                                                    }
+                                                    width="20"
+                                                    height="20"
+                                                />
+                                            )}
+                                        </Row>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+
+                            {zaplockerToggle && (
+                                <>
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.isPmtHashSigValid'
+                                        )}
+                                        value={
+                                            isPmtHashSigValid
+                                                ? localeString('general.valid')
+                                                : localeString(
+                                                      'general.invalid'
+                                                  )
+                                        }
+                                        color={
+                                            isPmtHashSigValid
+                                                ? themeColor('success')
+                                                : themeColor('error')
+                                        }
+                                    />
+
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.isRelaysSigValid'
+                                        )}
+                                        value={
+                                            isRelaysSigValid
+                                                ? localeString('general.valid')
+                                                : localeString(
+                                                      'general.invalid'
+                                                  )
+                                        }
+                                        color={
+                                            isRelaysSigValid
+                                                ? themeColor('success')
+                                                : themeColor('error')
+                                        }
+                                    />
+
+                                    <KeyValue
+                                        keyValue={localeString('nostr.npub')}
+                                        value={zaplockerNpub}
+                                        sensitive
+                                    />
+
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={localeString(
+                                                'nostr.loadProfileExternal'
+                                            )}
+                                            onPress={() =>
+                                                LinkingUtils.handleDeepLink(
+                                                    `nostr:${zaplockerNpub}`,
+                                                    this.props.navigation
+                                                )
+                                            }
+                                        />
+                                    </View>
+                                </>
+                            )}
 
                             {!!description && (
                                 <KeyValue
@@ -962,11 +1106,17 @@ export default class PaymentRequest extends React.Component<
                                         title={localeString(
                                             'views.PaymentRequest.payInvoice'
                                         )}
-                                        icon={{
-                                            name: 'send',
-                                            size: 25
-                                        }}
+                                        icon={
+                                            lightningReadyToSend
+                                                ? {
+                                                      name: 'send',
+                                                      size: 25
+                                                  }
+                                                : undefined
+                                        }
                                         onPress={() => {
+                                            if (isZaplocker)
+                                                LnurlPayStore.broadcastAttestation();
                                             this.sendPayment(
                                                 feeOption,
                                                 String(percentAmount),

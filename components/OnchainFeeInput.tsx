@@ -33,6 +33,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                 .getOnchainFeesviaMempool()
                 .then((recommendedFees) => {
                     setNewFee(recommendedFees[preferredMempoolRate]);
+                    onChangeFee(recommendedFees[preferredMempoolRate]);
                     setLoading(false);
                 })
                 .catch(() => {

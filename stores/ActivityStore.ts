@@ -12,8 +12,8 @@ import PaymentsStore from './PaymentsStore';
 import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
 
-import { localeString } from './../utils/LocaleUtils';
 import BackendUtils from './../utils/BackendUtils';
+import ActivityFilterUtils from '../utils/ActivityFilterUtils';
 
 const STORAGE_KEY = 'zeus-activity-filters';
 
@@ -25,8 +25,8 @@ export interface Filter {
     received: boolean;
     unpaid: boolean;
     minimumAmount: number;
-    startDate: any;
-    endDate: any;
+    startDate?: Date;
+    endDate?: Date;
 }
 
 export const DEFAULT_FILTERS = {
@@ -36,8 +36,8 @@ export const DEFAULT_FILTERS = {
     received: true,
     unpaid: true,
     minimumAmount: 0,
-    startDate: null,
-    endDate: null
+    startDate: undefined,
+    endDate: undefined
 };
 
 export default class ActivityStore {
@@ -72,6 +72,7 @@ export default class ActivityStore {
             STORAGE_KEY,
             JSON.stringify(this.filters)
         );
+        this.setFilters(this.filters);
     };
 
     @action
@@ -83,8 +84,8 @@ export default class ActivityStore {
             received: true,
             unpaid: false,
             minimumAmount: 0,
-            startDate: null,
-            endDate: null
+            startDate: undefined,
+            endDate: undefined
         };
         await EncryptedStorage.setItem(
             STORAGE_KEY,
@@ -112,12 +113,14 @@ export default class ActivityStore {
 
     @action
     public clearStartDateFilter = () => {
-        this.filters.startDate = null;
+        this.filters.startDate = undefined;
+        this.setFilters(this.filters);
     };
 
     @action
     public clearEndDateFilter = () => {
-        this.filters.endDate = null;
+        this.filters.endDate = undefined;
+        this.setFilters(this.filters);
     };
 
     getSortedActivity = () => {
@@ -175,15 +178,18 @@ export default class ActivityStore {
     public async getFilters() {
         this.loading = true;
         try {
-            // Retrieve the credentials
-            const filters: any = await EncryptedStorage.getItem(STORAGE_KEY);
+            const filters = await EncryptedStorage.getItem(STORAGE_KEY);
             if (filters) {
-                this.filters = JSON.parse(filters);
+                this.filters = JSON.parse(filters, (key, value) =>
+                    (key === 'startDate' || key === 'endDate') && value
+                        ? new Date(value)
+                        : value
+                );
             } else {
                 console.log('No activity filters stored');
             }
         } catch (error) {
-            console.log("Keychain couldn't be accessed!", error);
+            console.log('Loading activity filters failed', error);
         } finally {
             this.loading = false;
         }
@@ -194,93 +200,12 @@ export default class ActivityStore {
     @action
     public setFilters = async (filters: Filter) => {
         this.loading = true;
-
         this.filters = filters;
-
-        let filteredActivity = this.activity;
-
-        if (filters.lightning == false) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(
-                        activity.model ===
-                            localeString('views.Invoice.title') ||
-                        activity.model === localeString('views.Payment.title')
-                    )
-            );
-        }
-
-        if (filters.onChain == false) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(
-                        activity.model ===
-                            localeString('general.transaction') &&
-                        activity.getAmount != 0
-                    )
-            );
-        }
-
-        if (filters.sent == false) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(
-                        (activity.model ===
-                            localeString('general.transaction') &&
-                            activity.getAmount < 0) ||
-                        activity.model === localeString('views.Payment.title')
-                    )
-            );
-        }
-
-        if (filters.received == false) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(
-                        (activity.model ===
-                            localeString('general.transaction') &&
-                            activity.getAmount > 0) ||
-                        (activity.model ===
-                            localeString('views.Invoice.title') &&
-                            activity.isPaid)
-                    )
-            );
-        }
-
-        if (filters.unpaid == false) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(
-                        activity.model ===
-                            localeString('views.Invoice.title') &&
-                        !activity.isPaid
-                    )
-            );
-        }
-
-        if (filters.minimumAmount > 0) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    Math.abs(activity.getAmount) >= filters.minimumAmount
-            );
-        }
-
-        if (filters.startDate) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) => +activity.getDate >= +filters.startDate
-            );
-        }
-
-        if (filters.endDate) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) => +activity.getDate <= +filters.endDate
-            );
-        }
-
-        this.filteredActivity = filteredActivity;
-
+        this.filteredActivity = ActivityFilterUtils.filterActivities(
+            this.activity,
+            filters
+        );
         await EncryptedStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
-
         this.loading = false;
     };
 
