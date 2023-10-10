@@ -14,7 +14,7 @@ import com.facebook.react.ReactApplication;
 import com.oblador.vectoricons.VectorIconsPackage;
 import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
-import com.remobile.qrcodeLocalImage.RCTQRCodeLocalImagePackage; 
+import com.remobile.qrcodeLocalImage.RCTQRCodeLocalImagePackage;
 import android.content.Context;
 
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint;
@@ -23,6 +23,9 @@ import com.facebook.soloader.SoLoader;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import javax.net.ssl.X509TrustManager;
+
+import com.ReactNativeBlobUtil.ReactNativeBlobUtilUtils;
 
 public class MainApplication extends Application implements ReactApplication {
 
@@ -39,7 +42,7 @@ public class MainApplication extends Application implements ReactApplication {
           List<ReactPackage> packages = new PackageList(this).getPackages();
           // Packages that cannot be autolinked yet can be added manually here, for example:
           // packages.add(new MyReactNativePackage());
-             
+
           // ZEUS
           packages.add(new MobileToolsPackage());
           packages.add(new LndMobilePackage());
@@ -79,5 +82,20 @@ public class MainApplication extends Application implements ReactApplication {
       // If you opted-in for the New Architecture, we load the native entry point for this app.
       DefaultNewArchitectureEntryPoint.load();
     }
+
+    ReactNativeBlobUtilUtils.sharedTrustManager = new X509TrustManager() {
+      @Override
+      public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+      }
+
+      @Override
+      public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+      }
+
+      @Override
+      public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+        return new java.security.cert.X509Certificate[]{};
+      }
+    };
   }
 }

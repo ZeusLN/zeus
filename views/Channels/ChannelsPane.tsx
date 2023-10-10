@@ -21,6 +21,8 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import Channel from '../../models/Channel';
+
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
     Good = 'Good',
@@ -132,7 +134,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
         return sortKeys;
     };
 
-    renderItem = ({ item }) => {
+    renderItem = ({ item }: { item: Channel }) => {
         const { ChannelsStore, navigation } = this.props;
         const { largestChannelSats, channelsType } = ChannelsStore;
         const displayName = item.alias || item.remotePubkey || item.channelId;
@@ -240,7 +242,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             SettingsStore?.settings?.privacy?.lurkerMode || false;
 
         let headerString;
-        let channelsData;
+        let channelsData: Channel[];
         switch (channelsType) {
             case ChannelsType.Open:
                 headerString = `${localeString(
