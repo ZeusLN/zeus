@@ -287,7 +287,9 @@ export default class Send extends React.Component<SendProps, SendState> {
     validateAddress = (text: string) => {
         const { navigation } = this.props;
         this.setState({
-            loading: true
+            loading: true,
+            isValid: true,
+            error_msg: ''
         });
         handleAnything(text, this.state.amount)
             .then((response) => {
