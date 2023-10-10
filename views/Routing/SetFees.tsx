@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Header from '../../components/Header';
@@ -11,7 +11,6 @@ import Channel from '../../models/Channel';
 import ChannelsStore from '../../stores/ChannelsStore';
 import FeeStore from '../../stores/FeeStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -22,20 +21,14 @@ interface SetFeesProps {
     ChannelsStore: ChannelsStore;
     FeeStore: FeeStore;
     NodeInfoStore: NodeInfoStore;
-    SettingsStore: SettingsStore;
 }
 
-@inject('ChannelsStore', 'FeeStore', 'NodeInfoStore', 'SettingsStore')
+@inject('ChannelsStore', 'FeeStore', 'NodeInfoStore')
 @observer
 export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
     render() {
-        const {
-            ChannelsStore,
-            FeeStore,
-            NodeInfoStore,
-            SettingsStore,
-            navigation
-        } = this.props;
+        const { ChannelsStore, FeeStore, NodeInfoStore, navigation } =
+            this.props;
 
         const { chanInfo, nodes } = ChannelsStore;
         const { channelFees } = FeeStore;
@@ -93,47 +86,63 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                     }}
                     navigation={navigation}
                 />
-                <View
-                    style={{
-                        top: 5,
-                        padding: 15
-                    }}
-                >
-                    {channel && policy && BackendUtils.isLNDBased() && (
-                        <SetFeesForm
-                            baseFee={`${Number(policy.fee_base_msat) / 1000}`}
-                            feeRate={`${
-                                Number(policy.fee_rate_milli_msat) / 10000
-                            }`}
-                            timeLockDelta={policy.time_lock_delta.toString()}
-                            minHtlc={`${Number(policy.min_htlc) / 1000}`}
-                            maxHtlc={`${Number(policy.max_htlc_msat) / 1000}`}
-                            channelPoint={channelPoint}
-                            channelId={channelId}
-                            FeeStore={FeeStore}
-                            ChannelsStore={ChannelsStore}
-                            SettingsStore={SettingsStore}
-                        />
-                    )}
-                    {channel && !BackendUtils.isLNDBased() && (
-                        <SetFeesForm
-                            baseFee={
-                                channelFee &&
-                                channelFee.base_fee_msat &&
-                                `${Number(channelFee.base_fee_msat) / 1000}`
-                            }
-                            feeRate={
-                                channelFee &&
-                                channelFee.fee_rate &&
-                                `${Number(channelFee.fee_rate) / 10000}`
-                            }
-                            channelPoint={channelPoint}
-                            channelId={channelId}
-                            FeeStore={FeeStore}
-                        />
-                    )}
-                    {!channel && <SetFeesForm FeeStore={FeeStore} />}
-                </View>
+
+                <ScrollView ref="_scrollView">
+                    <View style={{ padding: 15 }}>
+                        {channel && policy && BackendUtils.isLNDBased() && (
+                            <SetFeesForm
+                                baseFee={`${
+                                    Number(policy.fee_base_msat) / 1000
+                                }`}
+                                feeRate={`${
+                                    Number(policy.fee_rate_milli_msat) / 10000
+                                }`}
+                                timeLockDelta={policy.time_lock_delta.toString()}
+                                minHtlc={`${Number(policy.min_htlc) / 1000}`}
+                                maxHtlc={`${
+                                    Number(policy.max_htlc_msat) / 1000
+                                }`}
+                                channelPoint={channelPoint}
+                                channelId={channelId}
+                                setFeesCompleted={() => {
+                                    (
+                                        this.refs._scrollView as ScrollView
+                                    ).scrollToEnd();
+                                }}
+                            />
+                        )}
+                        {channel && !BackendUtils.isLNDBased() && (
+                            <SetFeesForm
+                                baseFee={
+                                    channelFee &&
+                                    channelFee.base_fee_msat &&
+                                    `${Number(channelFee.base_fee_msat) / 1000}`
+                                }
+                                feeRate={
+                                    channelFee &&
+                                    channelFee.fee_rate &&
+                                    `${Number(channelFee.fee_rate) / 10000}`
+                                }
+                                channelPoint={channelPoint}
+                                channelId={channelId}
+                                setFeesCompleted={() => {
+                                    (
+                                        this.refs._scrollView as ScrollView
+                                    ).scrollToEnd();
+                                }}
+                            />
+                        )}
+                        {!channel && (
+                            <SetFeesForm
+                                setFeesCompleted={() => {
+                                    (
+                                        this.refs._scrollView as ScrollView
+                                    ).scrollToEnd();
+                                }}
+                            />
+                        )}
+                    </View>
+                </ScrollView>
             </Screen>
         );
     }
