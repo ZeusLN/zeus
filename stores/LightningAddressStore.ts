@@ -20,10 +20,8 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import BigNumber from 'bignumber.js';
 
-const LNURL_HOST =
-    Platform.OS === 'ios' ? 'http://localhost:1337' : 'http://10.0.2.2:1337';
-const LNURL_SOCKET_HOST =
-    Platform.OS === 'ios' ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
+const LNURL_HOST = 'https://zeuspay.com/api';
+const LNURL_SOCKET_HOST = 'https://zeuspay.com/stream';
 
 const ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
