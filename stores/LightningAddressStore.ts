@@ -21,7 +21,8 @@ import Base64Utils from '../utils/Base64Utils';
 import BigNumber from 'bignumber.js';
 
 const LNURL_HOST = 'https://zeuspay.com/api';
-const LNURL_SOCKET_HOST = 'https://zeuspay.com/stream';
+const LNURL_SOCKET_HOST = 'https://zeuspay.com';
+const LNURL_SOCKET_PATH = '/stream';
 
 const ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
@@ -871,7 +872,9 @@ export default class LightningAddressStore {
                 BackendUtils.signMessage(verification).then((data: any) => {
                     const signature = data.zbase || data.signature;
 
-                    this.socket = io.connect(LNURL_SOCKET_HOST);
+                    this.socket = io(LNURL_SOCKET_HOST, {
+                        path: LNURL_SOCKET_PATH
+                    }).connect();
                     this.socket.emit('auth', {
                         pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                         message: verification,
