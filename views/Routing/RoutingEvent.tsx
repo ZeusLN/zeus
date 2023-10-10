@@ -46,8 +46,8 @@ export default class RoutingEvent extends React.Component<
 
         const { chan_id_in, chan_id_out } = routingEvent;
 
-        this.props.ChannelsStore.getChannelInfo(chan_id_in);
-        this.props.ChannelsStore.getChannelInfo(chan_id_out);
+        this.props.ChannelsStore.loadChannelInfo(chan_id_in, true);
+        this.props.ChannelsStore.loadChannelInfo(chan_id_out, true);
 
         this.state = {
             routingEvent

@@ -46,7 +46,7 @@ export default class UTXOsStore {
     };
 
     @action
-    public listAccounts = (data: any) => {
+    public listAccounts = (data?: any) => {
         this.errorMsg = '';
         this.loadingAccounts = true;
         BackendUtils.listAccounts(data)
