@@ -18,7 +18,6 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
-import { localeString } from '../../utils/LocaleUtils';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
