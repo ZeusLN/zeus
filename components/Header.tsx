@@ -1,8 +1,10 @@
 import React from 'react';
-import { Header, Icon, TextProps } from 'react-native-elements';
-import { themeColor } from '../utils/ThemeUtils';
 import { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import { Header, Icon, TextProps } from 'react-native-elements';
 import { IconObject } from 'react-native-elements/dist/icons/Icon';
+
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
 interface HeaderIcon extends IconObject {
     icon?: string;
@@ -37,6 +39,7 @@ function ZeusHeader(props: HeaderProps) {
             color={themeColor('text')}
             underlayColor="transparent"
             size={35}
+            accessibilityLabel={localeString('general.goBack')}
         />
     );
 
@@ -50,6 +53,7 @@ function ZeusHeader(props: HeaderProps) {
             color={themeColor('text')}
             underlayColor="transparent"
             size={35}
+            accessibilityLabel={localeString('general.close')}
         />
     );
 

@@ -93,6 +93,7 @@ const TempleButton = ({ navigation }: { navigation: any }) => (
 const ScanBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
         onPress={() => navigation.navigate('HandleAnythingQRScanner')}
+        accessibilityLabel={localeString('general.scan')}
     >
         <Scan fill={themeColor('text')} />
     </TouchableOpacity>
@@ -213,6 +214,7 @@ export default class WalletHeader extends React.Component<
             <TouchableOpacity
                 onPress={() => protectedNavigation(navigation, 'Settings')}
                 onLongPress={() => protectedNavigation(navigation, 'Nodes')}
+                accessibilityLabel={localeString('views.Settings.title')}
             >
                 {multipleNodes ? (
                     <NodeIdenticon
@@ -265,6 +267,9 @@ export default class WalletHeader extends React.Component<
                                 height: 25
                             }}
                             source={TorIcon}
+                            accessibilityLabel={localeString(
+                                'general.torEnabled'
+                            )}
                         />
                     </TouchableOpacity>
                 ) : null}
@@ -272,7 +277,10 @@ export default class WalletHeader extends React.Component<
         );
 
         const SearchButton = () => (
-            <TouchableOpacity onPress={() => ChannelsStore!.toggleSearch()}>
+            <TouchableOpacity
+                onPress={() => ChannelsStore!.toggleSearch()}
+                accessibilityLabel={localeString('general.search')}
+            >
                 <Search
                     fill={themeColor('text')}
                     width="30"
@@ -288,6 +296,7 @@ export default class WalletHeader extends React.Component<
         const OpenChannelButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('OpenChannel')}
+                accessibilityLabel={localeString('views.Wallet.Channels.open')}
             >
                 <Add
                     fill={themeColor('text')}
@@ -343,7 +352,10 @@ export default class WalletHeader extends React.Component<
                     title ? (
                         <View style={{ top: 5 }}>
                             {toggle ? (
-                                <View style={{ top: -9, width: '100%' }}>
+                                <View
+                                    style={{ top: -9, width: '100%' }}
+                                    accessibilityLiveRegion="polite"
+                                >
                                     <Button
                                         onPress={() => toggle()}
                                         title={title}

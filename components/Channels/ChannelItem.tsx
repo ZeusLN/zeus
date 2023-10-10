@@ -14,6 +14,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 import Stores from '../../stores/Stores';
 
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
+import { localeString } from './../../utils/LocaleUtils';
 
 export function ChannelItem({
     title,
@@ -95,8 +96,22 @@ export function ChannelItem({
             )}
             {!hideLabels && (
                 <Row justify="space-between">
-                    <Amount sats={outbound} sensitive />
-                    <Amount sats={inbound} sensitive />
+                    <Amount
+                        sats={outbound}
+                        sensitive
+                        accessible
+                        accessibilityLabel={localeString(
+                            'views.Channel.outboundCapacity'
+                        )}
+                    />
+                    <Amount
+                        sats={inbound}
+                        sensitive
+                        accessible
+                        accessibilityLabel={localeString(
+                            'views.Channel.inboundCapacity'
+                        )}
+                    />
                 </Row>
             )}
         </View>
