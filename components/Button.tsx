@@ -103,7 +103,9 @@ function Button(props: ButtonProps) {
                           color: iconOnly
                               ? themeColor('text')
                               : quinary
-                              ? themeColor('text')
+                              ? warning
+                                  ? themeColor('warning')
+                                  : themeColor('text')
                               : quaternary
                               ? warning
                                   ? themeColor('warning')
