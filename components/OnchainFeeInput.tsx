@@ -55,8 +55,8 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                 >
                     <View
                         style={{
-                            height: 65,
-                            padding: loading ? 8 : 15,
+                            height: 55,
+                            justifyContent: 'center',
                             marginTop: 15,
                             borderRadius: 4,
                             marginBottom: 20,
@@ -69,9 +69,8 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                         ) : (
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Regular',
                                     color: themeColor('text'),
-                                    paddingBottom: 5,
+                                    paddingLeft: 15,
                                     fontSize: 18
                                 }}
                             >
