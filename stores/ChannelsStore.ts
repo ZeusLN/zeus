@@ -294,14 +294,14 @@ export default class ChannelsStore {
     };
 
     @action
-    public getChannels = () => {
+    public getChannels = async () => {
         this.loading = true;
         this.channels = [];
         this.largestChannelSats = 0;
         this.totalOutbound = 0;
         this.totalInbound = 0;
         this.totalOffline = 0;
-        BackendUtils.getChannels()
+        await BackendUtils.getChannels()
             .then((data: any) => {
                 const channels = data.channels.map(
                     (channel: any) => new Channel(channel)
@@ -338,7 +338,7 @@ export default class ChannelsStore {
             });
 
         if (BackendUtils.supportsPendingChannels()) {
-            BackendUtils.getPendingChannels()
+            await BackendUtils.getPendingChannels()
                 .then((data: any) => {
                     const pendingOpenChannels = data.pending_open_channels.map(
                         (pending: any) => {
@@ -374,12 +374,13 @@ export default class ChannelsStore {
                         .concat(forceCloseChannels)
                         .concat(waitCloseChannels);
                     this.error = false;
+                    return;
                 })
                 .catch(() => {
                     this.getChannelsError();
                 });
 
-            BackendUtils.getClosedChannels()
+            await BackendUtils.getClosedChannels()
                 .then((data: any) => {
                     const closedChannels = data.channels.map(
                         (channel: any) => new ClosedChannel(channel)
@@ -387,6 +388,7 @@ export default class ChannelsStore {
                     this.closedChannels = closedChannels;
                     this.error = false;
                     this.loading = false;
+                    return;
                 })
                 .catch(() => {
                     this.getChannelsError();

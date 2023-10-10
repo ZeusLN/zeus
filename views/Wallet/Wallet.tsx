@@ -368,12 +368,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     ChannelBackupStore.initSubscribeChannelEvents();
             }
 
-            if (lightningAddress.automaticallyAccept) {
-                LightningAddressStore.subscribeUpdates();
-            }
+            if (lightningAddress.enabled) {
+                if (lightningAddress.automaticallyAccept) {
+                    LightningAddressStore.subscribeUpdates();
+                    const isReady =
+                        await NodeInfoStore.isLightningReadyToReceive();
+                    if (isReady) LightningAddressStore.redeemAllOpenPayments();
+                }
 
-            if (lightningAddress.notifications === 1) {
-                LightningAddressStore.updatePushCredentials();
+                if (lightningAddress.notifications === 1) {
+                    LightningAddressStore.updatePushCredentials();
+                }
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {

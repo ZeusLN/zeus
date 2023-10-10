@@ -840,6 +840,19 @@ export default class LightningAddressStore {
     };
 
     @action
+    public redeemAllOpenPayments = () => {
+        this.status().then(() => {
+            this.paid.map((item: any) => {
+                this.lookupPreimageAndRedeem(
+                    item.hash,
+                    item.amount_msat,
+                    item.comment
+                );
+            });
+        });
+    };
+
+    @action
     public subscribeUpdates = () => {
         if (this.socket) return;
         ReactNativeBlobUtil.fetch(
