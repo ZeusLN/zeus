@@ -1,17 +1,12 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import stores from './stores/Stores';
 
 export default class PushNotificationManager extends React.Component {
-    componentDidMount() {
-        if (
-            stores?.settingsStore?.settings?.lightningAddress?.notifications ==
-            1
-        ) {
-            this.registerDevice();
-            this.registerNotificationEvents();
-        }
+    UNSAFE_componentWillMount() {
+        this.registerDevice();
+        this.registerNotificationEvents();
     }
 
     registerDevice = () => {
@@ -35,6 +30,22 @@ export default class PushNotificationManager extends React.Component {
         Notifications.events().registerNotificationReceivedForeground(
             (notification, completion) => {
                 console.log('Notification Received - Foreground', notification);
+                if (
+                    Platform.OS === 'android' &&
+                    !stores.settingsStore.settings?.lightningAddress
+                        ?.automaticallyAccept
+                ) {
+                    Alert.alert(
+                        notification.payload['gcm.notification.title'],
+                        notification.payload['gcm.notification.body'],
+                        [
+                            {
+                                text: 'OK',
+                                onPress: () => console.log('OK Pressed')
+                            }
+                        ]
+                    );
+                }
                 // Calling completion on iOS with `alert: true` will present the native iOS inApp notification.
                 completion({ alert: false, sound: false, badge: false });
             }
@@ -53,7 +64,6 @@ export default class PushNotificationManager extends React.Component {
         Notifications.events().registerNotificationReceivedBackground(
             (notification, completion) => {
                 console.log('Notification Received - Background', notification);
-
                 // Calling completion on iOS with `alert: true` will present the native iOS inApp notification.
                 completion({ alert: true, sound: true, badge: false });
             }
