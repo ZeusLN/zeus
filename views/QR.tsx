@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { Dimensions, View } from 'react-native';
 
 import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
@@ -47,6 +47,8 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
         const { navigation } = this.props;
         const { value, hideText, jumboLabel, logo } = this.state;
 
+        const { fontScale } = Dimensions.get('window');
+
         return (
             <Screen>
                 <Header
@@ -68,7 +70,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                             style={{
                                 color: themeColor('text'),
                                 fontFamily: 'Lato-Regular',
-                                fontSize: 16,
+                                fontSize: 26 / fontScale,
                                 marginBottom: 20
                             }}
                         >
