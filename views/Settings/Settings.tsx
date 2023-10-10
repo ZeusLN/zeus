@@ -901,40 +901,42 @@ export default class Settings extends React.Component<
                         </TouchableOpacity>
                     </View>
 
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginTop: 5,
-                            marginBottom: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Nostr')}
+                    {false && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginTop: 5,
+                                marginBottom: 5
+                            }}
                         >
-                            <View style={{ paddingLeft: 5, paddingTop: 2 }}>
-                                <NostrichIcon
-                                    fill={themeColor('text')}
-                                    width={23}
-                                    height={23}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Nostr')}
                             >
-                                Nostr
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                                <View style={{ paddingLeft: 5, paddingTop: 2 }}>
+                                    <NostrichIcon
+                                        fill={themeColor('text')}
+                                        width={23}
+                                        height={23}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    Nostr
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {(showHiddenSettings || posEnabled) && (
                         <View
