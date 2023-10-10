@@ -13,8 +13,8 @@ import BalanceStore from './../../stores/BalanceStore';
 import UnitsStore from './../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
