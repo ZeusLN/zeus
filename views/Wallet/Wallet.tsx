@@ -84,6 +84,7 @@ interface WalletProps {
 interface WalletState {
     unlocked: boolean;
     initialLoad: boolean;
+    logoutTimeout: any | undefined;
 }
 
 @inject(
@@ -198,23 +199,31 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         this.backPressSubscription?.remove();
     }
 
-    handleAppStateChange = (nextAppState: any) => {
+    handleAppStateChange = async (nextAppState: any) => {
         const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { loginBackground } = settings;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
+        const { loginBackground, appLockTimeout } = settings;
 
         if (
             nextAppState === 'background' &&
             SettingsStore.loginMethodConfigured() &&
             loginBackground
         ) {
-            // In case the lock screen is visible and a valid PIN is entered and home button is pressed,
-            // unauthorized access would be possible because the PIN is not cleared on next launch.
-            // By calling pop, the lock screen is closed to clear the PIN.
-            this.props.navigation.pop();
-            SettingsStore.setLoginStatus(false);
-        } else if (nextAppState === 'active' && SettingsStore.loginRequired()) {
-            this.props.navigation.navigate('Lockscreen');
+            const appLockTimeoutInMs = Number(appLockTimeout ?? '0') * 1000;
+            const logoutTimeout = setTimeout(() => {
+                SettingsStore.setLoginStatus(false);
+                this.setState({ logoutTimeout: undefined });
+            }, appLockTimeoutInMs);
+            this.setState({ logoutTimeout });
+        } else if (nextAppState === 'active') {
+            if (this.state.logoutTimeout) {
+                clearTimeout(this.state.logoutTimeout);
+            }
+
+            if (SettingsStore.loginRequired()) {
+                this.props.navigation.navigate('Lockscreen');
+            }
         }
     };
 

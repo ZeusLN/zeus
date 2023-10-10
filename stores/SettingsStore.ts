@@ -78,6 +78,7 @@ export interface Settings {
     duressPin?: string;
     scramblePin?: boolean;
     loginBackground?: boolean;
+    appLockTimeout?: string;
     authenticationAttempts?: number;
     fiatEnabled?: boolean;
     fiat?: string;
@@ -123,6 +124,54 @@ export const BLOCK_EXPLORER_KEYS = [
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
         value: 'Custom'
+    }
+];
+
+export const APP_LOCK_TIMEOUT_VALUES = [
+    {
+        key: '0',
+        value: '0',
+        translateKey: 'views.Settings.Security.appLockTimeoutImmediately'
+    },
+    {
+        key: '15',
+        value: '15',
+        translateKey: 'views.Settings.Security.appLockTimeout15s'
+    },
+    {
+        key: '30',
+        value: '30',
+        translateKey: 'views.Settings.Security.appLockTimeout30s'
+    },
+    {
+        key: '60',
+        value: '60',
+        translateKey: 'views.Settings.Security.appLockTimeout1m'
+    },
+    {
+        key: '120',
+        value: '120',
+        translateKey: 'views.Settings.Security.appLockTimeout2m'
+    },
+    {
+        key: '300',
+        value: '300',
+        translateKey: 'views.Settings.Security.appLockTimeout5m'
+    },
+    {
+        key: '600',
+        value: '600',
+        translateKey: 'views.Settings.Security.appLockTimeout10m'
+    },
+    {
+        key: '1800',
+        value: '1800',
+        translateKey: 'views.Settings.Security.appLockTimeout30m'
+    },
+    {
+        key: '3600',
+        value: '3600',
+        translateKey: 'views.Settings.Security.appLockTimeout1h'
     }
 ];
 
@@ -639,6 +688,7 @@ export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'USD';
 export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
 export const DEFAULT_LOCALE = 'English';
+export const DEFAULT_APP_LOCK_TIMEOUT = '0';
 
 export const POS_CONF_PREF_KEYS = [
     { key: '0 conf', value: '0conf' },
@@ -700,6 +750,7 @@ export default class SettingsStore {
         isBiometryEnabled: false,
         scramblePin: true,
         loginBackground: false,
+        appLockTimeout: DEFAULT_APP_LOCK_TIMEOUT,
         fiatEnabled: false,
         fiat: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
