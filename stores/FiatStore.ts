@@ -341,7 +341,7 @@ export default class FiatStore {
     };
 
     @action
-    public getRate = (sats: boolean) => {
+    public getRate = (sats: boolean = false) => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
 
