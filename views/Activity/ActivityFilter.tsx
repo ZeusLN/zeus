@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { isEqual } from 'lodash';
@@ -10,16 +10,17 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
-import ZeusButton from '../../components/Button';
 
 interface ActivityFilterProps {
     navigation: any;
     ActivityStore: ActivityStore;
+    SettingsStore: SettingsStore;
 }
 
 interface ActivityFilterState {
@@ -29,7 +30,7 @@ interface ActivityFilterState {
     workingEndDate: any;
 }
 
-@inject('ActivityStore')
+@inject('ActivityStore', 'SettingsStore')
 @observer
 export default class ActivityFilter extends React.Component<
     ActivityFilterProps,
@@ -52,9 +53,10 @@ export default class ActivityFilter extends React.Component<
     );
 
     render() {
-        const { navigation, ActivityStore } = this.props;
+        const { navigation, ActivityStore, SettingsStore } = this.props;
         const { setStartDate, setEndDate, workingStartDate, workingEndDate } =
             this.state;
+        const locale = SettingsStore.settings.locale;
         const {
             loading,
             setFilters,
@@ -76,141 +78,80 @@ export default class ActivityFilter extends React.Component<
             endDate
         } = filters;
 
-        const DateFilter = () => (
+        const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
             <View
                 style={{
-                    flex: 1,
                     flexDirection: 'row',
-                    justifyContent: 'flex-end'
+                    justifyContent: 'flex-end',
+                    alignItems: 'center'
                 }}
             >
-                <View style={{ padding: 5 }}>
+                <Text
+                    style={{
+                        fontFamily: 'Lato-Regular',
+                        color: themeColor('text'),
+                        marginRight: 30
+                    }}
+                >
+                    {(props.type === 'startDate'
+                        ? startDate
+                        : endDate
+                    )?.toLocaleDateString(locale)}
+                </Text>
+                <Button
+                    onPress={() => {
+                        if (props.type === 'startDate') {
+                            this.setState({
+                                setStartDate: true,
+                                workingStartDate: startDate
+                                    ? startDate
+                                    : endDate ?? new Date()
+                            });
+                        } else {
+                            this.setState({
+                                setEndDate: true,
+                                workingEndDate: endDate ? endDate : new Date()
+                            });
+                        }
+                    }}
+                    buttonStyle={{
+                        backgroundColor: themeColor('secondary'),
+                        paddingLeft: 15,
+                        paddingRight: 15,
+                        height: 40
+                    }}
+                    titleStyle={{
+                        color: themeColor('text'),
+                        fontFamily: 'Lato-Regular'
+                    }}
+                    title={
+                        (props.type === 'startDate' && startDate) ||
+                        (props.type === 'endDate' && endDate)
+                            ? localeString('views.ActivityFilter.edit')
+                            : localeString('views.ActivityFilter.set')
+                    }
+                />
+                {((props.type === 'startDate' && startDate) ||
+                    (props.type === 'endDate' && endDate)) && (
                     <Button
-                        onPress={() =>
-                            startDate
+                        buttonStyle={{
+                            backgroundColor: themeColor('secondary'),
+                            marginLeft: 15,
+                            height: 40
+                        }}
+                        icon={{
+                            name: 'delete',
+                            size: 20,
+                            color: themeColor('text')
+                        }}
+                        onPress={() => {
+                            props.type === 'startDate'
                                 ? clearStartDateFilter()
-                                : this.setState({ setStartDate: !setStartDate })
-                        }
-                        buttonStyle={{ backgroundColor: 'white' }}
-                        titleStyle={{
-                            color: 'black',
-                            fontFamily: 'Lato-Regular'
+                                : clearEndDateFilter();
                         }}
-                        title={
-                            startDate
-                                ? localeString(
-                                      'views.ActivityFilter.clearStartDate'
-                                  )
-                                : localeString(
-                                      'views.ActivityFilter.setStartDate'
-                                  )
-                        }
                     />
-                </View>
-                <View style={{ padding: 5 }}>
-                    <Button
-                        onPress={() =>
-                            endDate
-                                ? clearEndDateFilter()
-                                : this.setState({ setEndDate: !setEndDate })
-                        }
-                        buttonStyle={{ backgroundColor: 'orange' }}
-                        titleStyle={{
-                            color: 'white',
-                            fontFamily: 'Lato-Regular'
-                        }}
-                        title={
-                            endDate
-                                ? localeString(
-                                      'views.ActivityFilter.clearEndDate'
-                                  )
-                                : localeString(
-                                      'views.ActivityFilter.setEndDate'
-                                  )
-                        }
-                    />
-                </View>
-            </View>
-        );
-
-        const DateData = () => (
-            <>
-                <>
-                    {startDate && (
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: themeColor('text')
-                            }}
-                        >{`${localeString(
-                            'views.ActivityFilter.startDate'
-                        )}: ${startDate.toString()}`}</Text>
-                    )}
-                    {endDate && (
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: themeColor('text')
-                            }}
-                        >{`${localeString(
-                            'views.ActivityFilter.endDate'
-                        )}: ${endDate.toString()}`}</Text>
-                    )}
-                </>
-                {(setStartDate || setEndDate) && (
-                    <View
-                        style={{
-                            marginTop: 20
-                        }}
-                    >
-                        <DatePicker
-                            onDateChange={(date) =>
-                                setStartDate
-                                    ? this.setState({ workingStartDate: date })
-                                    : this.setState({ workingEndDate: date })
-                            }
-                            date={
-                                setStartDate ? workingStartDate : workingEndDate
-                            }
-                            maximumDate={new Date()}
-                            textColor={themeColor('text')}
-                            mode="date"
-                            style={{
-                                height: 100,
-                                marginTop: 10,
-                                marginBottom: 20,
-                                alignSelf: 'center'
-                            }}
-                        />
-                        <View style={{ padding: 2 }}>
-                            <ZeusButton
-                                onPress={() => {
-                                    if (setStartDate) {
-                                        setStartDateFilter(workingStartDate);
-                                    } else {
-                                        setEndDateFilter(workingEndDate);
-                                    }
-                                    this.setState({
-                                        setStartDate: false,
-                                        setEndDate: false,
-                                        workingStartDate: new Date(),
-                                        workingEndDate: new Date()
-                                    });
-                                }}
-                                title={
-                                    setStartDate
-                                        ? localeString(
-                                              'views.ActivityFilter.setStartDate'
-                                          )
-                                        : localeString(
-                                              'views.ActivityFilter.setEndDate'
-                                          )
-                                }
-                            />
-                        </View>
-                    </View>
                 )}
-            </>
+            </View>
         );
 
         const FILTERS = [
@@ -250,15 +191,12 @@ export default class ActivityFilter extends React.Component<
                 type: 'Amount'
             },
             {
-                label: localeString('general.date'),
-                value: received,
-                var: 'received',
-                type: 'Date'
+                label: localeString('views.ActivityFilter.startDate'),
+                type: 'StartDate'
             },
-            // use this object for the date objects
             {
-                label: '',
-                type: 'DateData'
+                label: localeString('views.ActivityFilter.endDate'),
+                type: 'EndDate'
             }
         ];
 
@@ -330,11 +268,7 @@ export default class ActivityFilter extends React.Component<
                                     </View>
                                 )}
                                 {item.type === 'Amount' && (
-                                    <View
-                                        style={{
-                                            flex: 1
-                                        }}
-                                    >
+                                    <View style={{ flex: 1 }}>
                                         <TextInput
                                             keyboardType="numeric"
                                             placeholder="0"
@@ -351,17 +285,18 @@ export default class ActivityFilter extends React.Component<
                                                     : 0;
                                                 setAmountFilter(newMinAmount);
                                             }}
+                                            style={{ marginBottom: 0, top: 0 }}
                                         />
                                     </View>
                                 )}
-                                {item.type === 'Date' && (
+                                {item.type === 'StartDate' && (
                                     <View style={{ flex: 1 }}>
-                                        <DateFilter />
+                                        <DateFilter type="startDate" />
                                     </View>
                                 )}
-                                {item.type === 'DateData' && (
+                                {item.type === 'EndDate' && (
                                     <View style={{ flex: 1 }}>
-                                        <DateData />
+                                        <DateFilter type="endDate" />
                                     </View>
                                 )}
                             </ListItem>
@@ -374,18 +309,55 @@ export default class ActivityFilter extends React.Component<
                     onEndReachedThreshold={50}
                     refreshing={loading}
                 />
+                <DatePicker
+                    onConfirm={(date) => {
+                        if (setStartDate) {
+                            this.setState({
+                                workingStartDate: date,
+                                setStartDate: false
+                            });
+                            setStartDateFilter(date);
+                        } else {
+                            this.setState({
+                                workingEndDate: date,
+                                setEndDate: false
+                            });
+                            setEndDateFilter(date);
+                        }
+                    }}
+                    onCancel={() =>
+                        this.setState({
+                            setStartDate: false,
+                            setEndDate: false
+                        })
+                    }
+                    date={setStartDate ? workingStartDate : workingEndDate}
+                    minimumDate={
+                        setStartDate
+                            ? undefined
+                            : startDate
+                            ? startDate
+                            : undefined
+                    }
+                    maximumDate={
+                        setStartDate
+                            ? endDate
+                                ? endDate
+                                : new Date()
+                            : new Date()
+                    }
+                    mode="date"
+                    style={{
+                        height: 100,
+                        marginTop: 10,
+                        marginBottom: 20,
+                        alignSelf: 'center'
+                    }}
+                    modal
+                    open={setStartDate || setEndDate}
+                    locale={locale}
+                />
             </Screen>
         );
     }
 }
-
-const styles = StyleSheet.create({
-    text: {
-        paddingTop: 30,
-        fontFamily: 'Lato-Regular'
-    },
-    button: {
-        paddingTop: 15,
-        paddingBottom: 10
-    }
-});

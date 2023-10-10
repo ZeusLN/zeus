@@ -236,8 +236,8 @@ export default class NodeConfiguration extends React.Component<
         // remove option to add a new embedded node if initialized already
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { embeddedLndNetwork } = this.state;
-        if (settings.nodes) {
+        const { embeddedLndNetwork, newEntry } = this.state;
+        if (settings.nodes && newEntry) {
             const result = settings?.nodes?.filter(
                 (node) => node.implementation === 'embedded-lnd'
             );
@@ -335,7 +335,7 @@ export default class NodeConfiguration extends React.Component<
         }
     }
 
-    saveNodeConfiguration = (skipRedirect?: boolean) => {
+    saveNodeConfiguration = (recoveryCipherSeed?: string) => {
         const { SettingsStore, navigation } = this.props;
         const {
             nickname,
@@ -400,12 +400,16 @@ export default class NodeConfiguration extends React.Component<
             nodes = [node];
         }
 
-        updateSettings({ nodes }).then(() => {
+        updateSettings({ nodes }).then(async () => {
+            if (recoveryCipherSeed) {
+                await updateSettings({
+                    recovery: true
+                });
+            }
+
             this.setState({
                 saved: true
             });
-
-            if (skipRedirect) return;
 
             if (nodes.length === 1) {
                 if (implementation === 'lightning-node-connect') {
@@ -527,6 +531,40 @@ export default class NodeConfiguration extends React.Component<
         });
 
         navigation.navigate('Wallet', { refresh: true });
+    };
+
+    createNewWallet = async (network: string = 'Mainnet') => {
+        const { recoveryCipherSeed, channelBackupsBase64 } = this.state;
+
+        this.setState({
+            creatingWallet: true
+        });
+
+        const response = await createLndWallet(
+            recoveryCipherSeed,
+            undefined,
+            network === 'Testnet',
+            channelBackupsBase64
+        );
+
+        const { wallet, seed, randomBase64 }: any = response;
+
+        if (wallet && wallet.admin_macaroon) {
+            this.setState({
+                adminMacaroon: wallet.admin_macaroon,
+                seedPhrase: seed.cipher_seed_mnemonic,
+                walletPassword: randomBase64,
+                embeddedLndNetwork: network,
+                creatingWallet: false
+            });
+
+            this.saveNodeConfiguration(recoveryCipherSeed);
+        } else {
+            this.setState({
+                creatingWallet: false,
+                errorCreatingWallet: true
+            });
+        }
     };
 
     render() {
@@ -1198,7 +1236,10 @@ export default class NodeConfiguration extends React.Component<
                                     value={macaroonHex}
                                     onChangeText={(text: string) =>
                                         this.setState({
-                                            macaroonHex: text.trim(),
+                                            macaroonHex: text.replace(
+                                                /\s+/g,
+                                                ''
+                                            ),
                                             saved: false
                                         })
                                     }
@@ -1430,68 +1471,7 @@ export default class NodeConfiguration extends React.Component<
                                                       )
                                             }
                                             onPress={async () => {
-                                                this.setState({
-                                                    creatingWallet: true
-                                                });
-
-                                                let response;
-
-                                                try {
-                                                    response =
-                                                        await createLndWallet(
-                                                            recoveryCipherSeed,
-                                                            undefined,
-                                                            undefined,
-                                                            channelBackupsBase64
-                                                        );
-                                                } catch (e) {
-                                                    this.setState({
-                                                        creatingWallet: false,
-                                                        errorCreatingWallet:
-                                                            true
-                                                    });
-                                                }
-
-                                                const {
-                                                    wallet,
-                                                    seed,
-                                                    randomBase64
-                                                }: any = response;
-
-                                                if (recoveryCipherSeed) {
-                                                    this.props.SettingsStore.updateSettings(
-                                                        {
-                                                            recovery: true
-                                                        }
-                                                    );
-                                                }
-
-                                                if (
-                                                    wallet &&
-                                                    wallet.admin_macaroon
-                                                ) {
-                                                    this.setState({
-                                                        adminMacaroon:
-                                                            wallet.admin_macaroon,
-                                                        seedPhrase:
-                                                            seed.cipher_seed_mnemonic,
-                                                        walletPassword:
-                                                            randomBase64,
-                                                        embeddedLndNetwork:
-                                                            'Mainnet',
-                                                        creatingWallet: false
-                                                    });
-
-                                                    this.saveNodeConfiguration(
-                                                        true
-                                                    );
-                                                } else {
-                                                    this.setState({
-                                                        creatingWallet: false,
-                                                        errorCreatingWallet:
-                                                            true
-                                                    });
-                                                }
+                                                await this.createNewWallet();
                                             }}
                                             tertiary
                                         />
@@ -1508,48 +1488,9 @@ export default class NodeConfiguration extends React.Component<
                                                       )
                                             }
                                             onPress={async () => {
-                                                this.setState({
-                                                    creatingWallet: true
-                                                });
-
-                                                const response =
-                                                    await createLndWallet(
-                                                        recoveryCipherSeed,
-                                                        undefined,
-                                                        true,
-                                                        channelBackupsBase64
-                                                    );
-                                                const {
-                                                    wallet,
-                                                    seed,
-                                                    randomBase64
-                                                }: any = response;
-                                                if (
-                                                    wallet &&
-                                                    wallet.admin_macaroon
-                                                ) {
-                                                    this.setState({
-                                                        adminMacaroon:
-                                                            wallet.admin_macaroon,
-                                                        seedPhrase:
-                                                            seed.cipher_seed_mnemonic,
-                                                        walletPassword:
-                                                            randomBase64,
-                                                        embeddedLndNetwork:
-                                                            'Testnet',
-                                                        creatingWallet: false
-                                                    });
-
-                                                    this.saveNodeConfiguration(
-                                                        true
-                                                    );
-                                                } else {
-                                                    this.setState({
-                                                        creatingWallet: false,
-                                                        errorCreatingWallet:
-                                                            true
-                                                    });
-                                                }
+                                                await this.createNewWallet(
+                                                    'Testnet'
+                                                );
                                             }}
                                             tertiary
                                         />

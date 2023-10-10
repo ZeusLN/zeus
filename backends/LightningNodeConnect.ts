@@ -127,7 +127,10 @@ export default class LightningNodeConnect {
                 value_msat: Number(data.value) * 1000,
                 expiry: data.expiry,
                 is_amp: data.is_amp,
-                private: data.private
+                private: data.private,
+                r_preimage: data.preimage
+                    ? Base64Utils.hexToBase64(data.preimage)
+                    : undefined
             })
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
     getPayments = async () =>
@@ -332,14 +335,14 @@ export default class LightningNodeConnect {
             .then((data: walletrpc.ImportAccountResponse) => snakeize(data));
     signMessage = async (message: string) =>
         await this.lnc.lnd.lightning
-            .signMessage({ msg: Base64Utils.encodeStringToBase64(message) })
+            .signMessage({ msg: Base64Utils.utf8ToBase64(message) })
             .then((data: lnrpc.SignMessageResponse) => snakeize(data));
     verifyMessage = async (req: lnrpc.VerifyMessageRequest) =>
         await this.lnc.lnd.lightning
             .verifyMessage({
                 msg:
                     typeof req.msg === 'string'
-                        ? Base64Utils.encodeStringToBase64(req.msg)
+                        ? Base64Utils.utf8ToBase64(req.msg)
                         : req.msg,
                 signature: req.signature
             })
@@ -386,5 +389,6 @@ export default class LightningNodeConnect {
     supportsLSPs = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
+    supportsCustomPreimages = () => true;
     isLNDBased = () => true;
 }

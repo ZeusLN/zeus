@@ -5,8 +5,8 @@ import UrlUtils from '../utils/UrlUtils';
 interface MessageProps {
     message?: string;
     fontSize?: number;
-    link: string;
-    mainStyle: any;
+    link?: string;
+    mainStyle?: any;
     dismissable?: boolean;
 }
 

@@ -24,8 +24,7 @@ export default class Eclair {
 
         url = url.slice(-1) === '/' ? url : url + '/';
         const headers = {
-            Authorization:
-                'Basic ' + Base64Utils.encodeStringToBase64(':' + password),
+            Authorization: 'Basic ' + Base64Utils.utf8ToBase64(':' + password),
             'Content-Type': 'application/x-www-form-urlencoded'
         };
         const body = querystring.stringify(params);
@@ -464,11 +463,11 @@ export default class Eclair {
 
     signMessage = (message: string) =>
         this.api('signmessage', {
-            msg: Base64Utils.encodeStringToBase64(message)
+            msg: Base64Utils.utf8ToBase64(message)
         });
     verifyMessage = (data: any) =>
         this.api('verifymessage', {
-            msg: Base64Utils.encodeStringToBase64(data.msg),
+            msg: Base64Utils.utf8ToBase64(data.msg),
             sig: data.signature
         });
     lnurlAuth = async (r_hash: string) => {
@@ -501,6 +500,7 @@ export default class Eclair {
     supportsLSPs = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;
+    supportsCustomPreimages = () => false;
     isLNDBased = () => false;
 }
 

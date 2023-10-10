@@ -6,13 +6,13 @@ import {
 } from 'react-native';
 
 import { generateSecureRandom } from 'react-native-securerandom';
-import * as base64 from 'base64-js';
 import NetInfo from '@react-native-community/netinfo';
 
 import Log from '../lndmobile/log';
 const log = Log('utils/LndMobileUtils.ts');
 
-import { sleep } from '../utils/SleepUtils';
+import { sleep } from './SleepUtils';
+import Base64Utils from './Base64Utils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { ELndMobileStatusCodes } from '../lndmobile/index';
@@ -275,7 +275,7 @@ export async function createLndWallet(
     ) {
         await startLnd('');
     }
-    sleep(2000);
+    await sleep(2000);
 
     let seed: any;
     if (!seedMnemonic) {
@@ -288,13 +288,13 @@ export async function createLndWallet(
     }
 
     const random = await generateSecureRandom(32);
-    const randomBase64 = base64.fromByteArray(random);
+    const randomBase64 = Base64Utils.bytesToBase64(random);
 
     const isRestore = walletPassphrase || seedMnemonic;
     const wallet: any = await initWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
-        isRestore ? 100 : undefined,
+        isRestore ? 500 : undefined,
         channelBackupsBase64 ? channelBackupsBase64 : undefined,
         walletPassphrase ? walletPassphrase : undefined
     );

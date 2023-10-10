@@ -4,7 +4,7 @@ import { themeColor } from './../utils/ThemeUtils';
 import { StyleProp, ViewStyle } from 'react-native';
 
 interface ButtonProps {
-    title: string;
+    title?: string;
     icon?: any;
     titleStyle?: any;
     onPress?: any;

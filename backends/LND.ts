@@ -246,7 +246,10 @@ export default class LND {
             value_msat: Number(data.value) * 1000,
             expiry: data.expiry,
             is_amp: data.is_amp,
-            private: data.private
+            private: data.private,
+            r_preimage: data.preimage
+                ? Base64Utils.hexToBase64(data.preimage)
+                : undefined
         });
     getPayments = () => this.getRequest('/v1/payments');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
@@ -391,11 +394,11 @@ export default class LND {
         this.postRequest('/v2/wallet/accounts/import', data);
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
-            msg: Base64Utils.encodeStringToBase64(message)
+            msg: Base64Utils.utf8ToBase64(message)
         });
     verifyMessage = (data: any) =>
         this.postRequest('/v1/verifymessage', {
-            msg: Base64Utils.encodeStringToBase64(data.msg),
+            msg: Base64Utils.utf8ToBase64(data.msg),
             signature: data.signature
         });
     lnurlAuth = async (r_hash: string) => {
@@ -431,5 +434,6 @@ export default class LND {
     supportsLSPs = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
+    supportsCustomPreimages = () => true;
     isLNDBased = () => true;
 }

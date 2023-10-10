@@ -232,7 +232,7 @@ export default class TransactionsStore {
 
             if (message) {
                 const hex_message = Base64Utils.hexToBase64(
-                    Base64Utils.utf8ToHexString(message)
+                    Base64Utils.utf8ToHex(message)
                 );
                 data.dest_custom_records![keySendMessageType] = hex_message;
             }
