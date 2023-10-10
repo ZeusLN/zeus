@@ -340,7 +340,10 @@ export default class PaymentRequest extends React.Component<
             <Icon
                 name="qr-code"
                 onPress={() => {
-                    navigation.navigate('QR', { value: paymentRequest });
+                    navigation.navigate('QR', {
+                        value: paymentRequest,
+                        satAmount: requestAmount
+                    });
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"

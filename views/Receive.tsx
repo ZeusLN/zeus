@@ -1312,7 +1312,7 @@ export default class Receive extends React.Component<
                                     </TouchableOpacity>
                                 )}
                             {haveInvoice && !creatingInvoiceError && (
-                                <View style={{ marginTop: 10 }}>
+                                <View>
                                     {selectedIndex == 0 &&
                                         !belowDustLimit &&
                                         haveUnifiedInvoice && (
@@ -1324,6 +1324,7 @@ export default class Receive extends React.Component<
                                                 expanded
                                                 textBottom
                                                 truncateLongValue
+                                                satAmount={satAmount}
                                             />
                                         )}
                                     {selectedIndex == 1 &&
@@ -1338,6 +1339,7 @@ export default class Receive extends React.Component<
                                                 expanded
                                                 textBottom
                                                 truncateLongValue
+                                                satAmount={satAmount}
                                             />
                                         )}
                                     {selectedIndex == 2 &&
@@ -1352,6 +1354,11 @@ export default class Receive extends React.Component<
                                                 expanded
                                                 textBottom
                                                 truncateLongValue
+                                                satAmount={
+                                                    satAmount === '0'
+                                                        ? undefined
+                                                        : satAmount
+                                                }
                                             />
                                         )}
                                     {selectedIndex !== 2 &&
@@ -1366,6 +1373,7 @@ export default class Receive extends React.Component<
                                                 expanded
                                                 textBottom
                                                 truncateLongValue
+                                                satAmount={satAmount}
                                             />
                                         )}
                                     <View
