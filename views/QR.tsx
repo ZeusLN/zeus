@@ -16,6 +16,7 @@ interface QRState {
     value: string;
     hideText: boolean;
     jumboLabel: boolean;
+    logo: any;
 }
 
 export default class QR extends React.PureComponent<QRProps, QRState> {
@@ -32,16 +33,19 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
             false
         );
 
+        const logo: any = this.props.navigation.getParam('logo', null);
+
         this.state = {
             value,
             hideText,
-            jumboLabel
+            jumboLabel,
+            logo
         };
     }
 
     render() {
         const { navigation } = this.props;
-        const { value, hideText, jumboLabel } = this.state;
+        const { value, hideText, jumboLabel, logo } = this.state;
 
         return (
             <Screen>
@@ -76,6 +80,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                         expanded
                         textBottom
                         hideText={hideText}
+                        logo={logo}
                     />
                 </View>
             </Screen>

@@ -160,7 +160,8 @@ export default class LightningAddress extends React.Component<
                     navigation.navigate('QR', {
                         value: `${lightningAddressHandle}@${lightningAddressDomain}`,
                         hideText: true,
-                        jumboLabel: true
+                        jumboLabel: true,
+                        logo: require('../../../assets/images/zeus-pay.png')
                     })
                 }
                 style={{ marginTop: 5 }}
