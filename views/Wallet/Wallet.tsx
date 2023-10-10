@@ -383,7 +383,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     ChannelBackupStore.initSubscribeChannelEvents();
             }
 
-            if (lightningAddress.enabled) {
+            if (
+                lightningAddress.enabled &&
+                BackendUtils.supportsCustomPreimages() &&
+                !NodeInfoStore.testnet
+            ) {
                 if (lightningAddress.automaticallyAccept) {
                     LightningAddressStore.subscribeUpdates();
                     const isReady =

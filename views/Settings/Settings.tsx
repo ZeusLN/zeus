@@ -39,6 +39,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
 
@@ -46,6 +47,7 @@ import { version } from '../../package.json';
 
 interface SettingsProps {
     navigation: any;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
 }
@@ -55,7 +57,7 @@ interface SettingsState {
     easterEggCount: number;
 }
 
-@inject('SettingsStore', 'UnitsStore')
+@inject('NodeInfoStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class Settings extends React.Component<
     SettingsProps,
@@ -83,7 +85,7 @@ export default class Settings extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, NodeInfoStore, SettingsStore } = this.props;
         const { showHiddenSettings, easterEggCount } = this.state;
         const { implementation, settings, seedPhrase } = SettingsStore;
 
@@ -106,7 +108,10 @@ export default class Settings extends React.Component<
             <TouchableOpacity
                 onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
                 onLongPress={() => {
-                    if (BackendUtils.supportsCustomPreimages())
+                    if (
+                        BackendUtils.supportsCustomPreimages() &&
+                        !NodeInfoStore.testnet
+                    )
                         navigation.navigate('LightningAddress');
                 }}
             >
@@ -256,7 +261,8 @@ export default class Settings extends React.Component<
                     )}
 
                     {lightningAddressEnabled &&
-                        BackendUtils.supportsCustomPreimages() && (
+                        BackendUtils.supportsCustomPreimages() &&
+                        !NodeInfoStore.testnet && (
                             <View
                                 style={{
                                     backgroundColor: themeColor('secondary'),
