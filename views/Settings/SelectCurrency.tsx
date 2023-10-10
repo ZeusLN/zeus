@@ -112,6 +112,10 @@ export default class SelectCurrency extends React.Component<
                             borderRadius: 15,
                             backgroundColor: themeColor('secondary')
                         }}
+                        searchIcon={{
+                            importantForAccessibility: 'no-hide-descendants',
+                            accessibilityElementsHidden: true
+                        }}
                     />
                     <FlatList
                         data={currencies.filter((c) =>

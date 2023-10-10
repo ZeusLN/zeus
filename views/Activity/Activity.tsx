@@ -212,6 +212,7 @@ export default class Activity extends React.PureComponent<
         const FilterButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('ActivityFilter')}
+                accessibilityLabel={localeString('views.ActivityFilter.title')}
             >
                 <Filter fill={themeColor('text')} />
             </TouchableOpacity>
