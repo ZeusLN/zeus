@@ -810,6 +810,36 @@ export default class LightningAddressStore {
     };
 
     @action
+    public lookupPreimageAndRedeem = (
+        hash: string,
+        amount_msat: number,
+        comment?: string
+    ) => {
+        this.getPreimageMap().then((map) => {
+            const preimage = map[hash];
+
+            BackendUtils.createInvoice({
+                // 24 hrs
+                expiry: '86400',
+                value: (amount_msat / 1000).toString(),
+                memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
+                preimage
+            })
+                .then((result: any) => {
+                    if (result.payment_request) {
+                        this.redeem(hash, result.payment_request).then(() =>
+                            this.status()
+                        );
+                    }
+                })
+                .catch(() => {
+                    // if payment request has already been submitted, try to redeem without new pay req
+                    this.redeem(hash).then(() => this.status());
+                });
+        });
+    };
+
+    @action
     public subscribeUpdates = () => {
         if (this.socket) return;
         ReactNativeBlobUtil.fetch(
@@ -838,37 +868,17 @@ export default class LightningAddressStore {
                     });
 
                     this.socket.on('paid', (data: any) => {
-                        console.log('paid', data);
                         const { hash, req, amount_msat, comment } = data;
 
                         console.log('hash', hash);
                         console.log('req', req);
                         console.log('amount_msat', amount_msat);
 
-                        this.getPreimageMap().then((map) => {
-                            const preimage = map[hash];
-
-                            BackendUtils.createInvoice({
-                                expiry: '3600',
-                                value: (amount_msat / 1000).toString(),
-                                memo: comment
-                                    ? `ZEUS PAY: ${comment}`
-                                    : 'ZEUS PAY',
-                                preimage
-                            })
-                                .then((result: any) => {
-                                    if (result.payment_request) {
-                                        this.redeem(
-                                            hash,
-                                            result.payment_request
-                                        ).then(() => this.status());
-                                    }
-                                })
-                                .catch(() => {
-                                    // if payment request has already been submitted, try to redeem without new pay req
-                                    this.redeem(hash).then(() => this.status());
-                                });
-                        });
+                        this.lookupPreimageAndRedeem(
+                            hash,
+                            amount_msat,
+                            comment
+                        );
                     });
                 });
             }

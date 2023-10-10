@@ -10,7 +10,6 @@ import { Row } from '../../../components/layout/Row';
 
 import stores from '../../../stores/Stores';
 
-import BackendUtils from '../../../utils/BackendUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
@@ -19,7 +18,7 @@ import Receive from '../../../assets/images/SVG/Receive.svg';
 export default function LightningAddressPayment(props) {
     const { item, index, selectedIndex, navigation } = props;
     const { lightningAddressStore } = stores;
-    const { status, redeem, getPreimageMap, lookupAttestations } =
+    const { lookupPreimageAndRedeem, lookupAttestations } =
         lightningAddressStore;
 
     const [attestationStatus, setAttestationStatus] = useState('neutral');
@@ -109,39 +108,22 @@ export default function LightningAddressPayment(props) {
                         <TouchableOpacity
                             onPress={() => {
                                 if (selectedIndex === 1) return;
-                                getPreimageMap().then((map) => {
-                                    const {
-                                        hash,
-                                        comment
-                                    }: {
-                                        hash: string;
-                                        comment: string;
-                                    } = item;
-                                    const preimage = map[hash];
 
-                                    BackendUtils.createInvoice({
-                                        expiry: '3600',
-                                        value: (
-                                            item.amount_msat / 1000
-                                        ).toString(),
-                                        memo: comment
-                                            ? `ZEUS PAY: ${comment}`
-                                            : 'ZEUS PAY',
-                                        preimage
-                                    })
-                                        .then((result) => {
-                                            if (result.payment_request) {
-                                                redeem(
-                                                    hash,
-                                                    result.payment_request
-                                                ).then(() => status());
-                                            }
-                                        })
-                                        .catch(() => {
-                                            // if payment request has already been submitted, try to redeem without new pay req
-                                            redeem(hash).then(() => status());
-                                        });
-                                });
+                                const {
+                                    hash,
+                                    amount_msat,
+                                    comment
+                                }: {
+                                    hash: string;
+                                    amount_msat: number;
+                                    comment: string;
+                                } = item;
+
+                                lookupPreimageAndRedeem(
+                                    hash,
+                                    amount_msat,
+                                    comment
+                                );
                             }}
                         >
                             <Receive
