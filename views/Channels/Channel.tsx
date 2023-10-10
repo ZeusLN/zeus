@@ -55,7 +55,7 @@ export default class ChannelView extends React.Component<
     ChannelProps,
     ChannelState
 > {
-    constructor(props: any) {
+    constructor(props: ChannelProps) {
         super(props);
         const { navigation, ChannelsStore } = props;
         const channel: Channel = navigation.getParam('channel', null);
@@ -68,7 +68,7 @@ export default class ChannelView extends React.Component<
         };
 
         if (BackendUtils.isLNDBased()) {
-            ChannelsStore.getChannelInfo(channel.channelId);
+            ChannelsStore.loadChannelInfo(channel.channelId);
         }
     }
 
