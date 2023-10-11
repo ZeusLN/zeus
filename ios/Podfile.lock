@@ -481,7 +481,7 @@ PODS:
     - React-Core
   - RNPermissions (3.8.0):
     - React-Core
-  - RNReanimated (3.5.1):
+  - RNReanimated (3.5.4):
     - DoubleConversion
     - FBLazyVector
     - glog
@@ -515,7 +515,7 @@ PODS:
     - React-RCTImage
   - RNSecureRandom (1.0.1):
     - React
-  - RNSVG (13.6.0):
+  - RNSVG (13.14.0):
     - React-Core
   - RNVectorIcons (7.1.0):
     - React
@@ -824,10 +824,10 @@ SPEC CHECKSUMS:
   RNGestureHandler: c0d04458598fcb26052494ae23dda8f8f5162b13
   RNKeychain: ff836453cba46938e0e9e4c22e43d43fa2c90333
   RNPermissions: 06845210af313594dc3fe5e8ae6afc820d791409
-  RNReanimated: 99aa8c96151abbc2d7e737a56ec62aca709f0c92
+  RNReanimated: ab2e96c6d5591c3dfbb38a464f54c8d17fb34a87
   RNScreens: 6a8a3c6b808aa48dca1780df7b73ea524f602c63
   RNSecureRandom: 07efbdf2cd99efe13497433668e54acd7df49fef
-  RNSVG: 3a79c0c4992213e4f06c08e62730c5e7b9e4dc17
+  RNSVG: d00c8f91c3cbf6d476451313a18f04d220d4f396
   RNVectorIcons: bc69e6a278b14842063605de32bec61f0b251a59
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
   SwiftProtobuf: b70d65f419fbfe61a2d58003456ca5da58e337d6
