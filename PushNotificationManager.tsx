@@ -31,11 +31,16 @@ export default class PushNotificationManager extends React.Component {
         Notifications.events().registerNotificationReceivedForeground(
             (notification, completion) => {
                 console.log('Notification Received - Foreground', notification);
+                // Don't display redeem notification if auto-redeem is on
                 if (
-                    Platform.OS === 'android' &&
-                    !stores.settingsStore.settings?.lightningAddress
-                        ?.automaticallyAccept
-                ) {
+                    stores.settingsStore.settings?.lightningAddress
+                        ?.automaticallyAccept &&
+                    notification.payload
+                        .toString()
+                        .includes('Redeem within the next 24 hours')
+                )
+                    return;
+                if (Platform.OS === 'android') {
                     Alert.alert(
                         notification.payload['gcm.notification.title'],
                         notification.payload['gcm.notification.body'],
@@ -47,8 +52,10 @@ export default class PushNotificationManager extends React.Component {
                         ]
                     );
                 }
-                // Calling completion on iOS with `alert: true` will present the native iOS inApp notification.
-                completion({ alert: false, sound: false, badge: false });
+                if (Platform.OS === 'ios') {
+                    // Calling completion on iOS with `alert: true` will present the native iOS inApp notification.
+                    completion({ alert: true, sound: false, badge: false });
+                }
             }
         );
 
