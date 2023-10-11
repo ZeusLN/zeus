@@ -25,20 +25,6 @@ export default function LightningAddressPayment(props) {
     const [loading, setLoading] = useState(false);
     const [attestations, setAttestations] = useState([]);
 
-    const processAttestations = (newAttestations: any) => {
-        setAttestations(newAttestations);
-        if (newAttestations.length === 0) setAttestationStatus('warning');
-        if (newAttestations.length === 1) {
-            const attestation = newAttestations[0];
-            if (attestation.isValid) {
-                setAttestationStatus('success');
-            } else {
-                setAttestationStatus('error');
-            }
-        }
-        if (newAttestations.length > 1) setAttestationStatus('error');
-    };
-
     return (
         <ListItem
             containerStyle={{
@@ -69,10 +55,19 @@ export default function LightningAddressPayment(props) {
                             if (attestationStatus === 'neutral') {
                                 setLoading(true);
                                 lookupAttestations(item.hash, item.amount_msat)
-                                    .then((attestations: Array<any>) => {
-                                        processAttestations(attestations);
-                                        setLoading(false);
-                                    })
+                                    .then(
+                                        ({
+                                            attestations,
+                                            status
+                                        }: {
+                                            attestations: any;
+                                            status: string;
+                                        }) => {
+                                            setAttestations(attestations);
+                                            setAttestationStatus(status);
+                                            setLoading(false);
+                                        }
+                                    )
                                     .catch(() => {
                                         setLoading(false);
                                     });
