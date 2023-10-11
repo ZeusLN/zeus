@@ -5,6 +5,7 @@ import stores from './stores/Stores';
 
 export default class PushNotificationManager extends React.Component {
     UNSAFE_componentWillMount() {
+        if (Platform.OS === 'ios') Notifications.ios.setBadgeCount(0);
         this.registerDevice();
         this.registerNotificationEvents();
     }
