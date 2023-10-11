@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { Notifications } from 'react-native-notifications';
 import bolt11 from 'bolt11';
 import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1';
@@ -574,7 +575,7 @@ export default class LightningAddressStore {
         this.error = false;
         this.error_msg = '';
         this.loading = true;
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'POST',
                 `${LNURL_HOST}/lnurl/auth`,
@@ -820,24 +821,55 @@ export default class LightningAddressStore {
     ) => {
         this.getPreimageMap().then((map) => {
             const preimage = map[hash];
+            const value = (amount_msat / 1000).toString();
+            const value_commas = value.replace(
+                /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
+                ','
+            );
+
+            const fireLocalNotification = () => {
+                const title = 'ZEUS PAY payment received!';
+                const body = `Payment of ${value_commas} sats automatically accepted`;
+                if (Platform.OS === 'android') {
+                    console.log('AA');
+                    Notifications.postLocalNotification({
+                        title,
+                        body
+                    });
+                }
+
+                if (Platform.OS === 'ios') {
+                    Notifications.postLocalNotification({
+                        title,
+                        body,
+                        sound: 'chime.aiff'
+                    });
+                }
+            };
 
             BackendUtils.createInvoice({
                 // 24 hrs
                 expiry: '86400',
-                value: (amount_msat / 1000).toString(),
+                value,
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
                 preimage
             })
                 .then((result: any) => {
                     if (result.payment_request) {
-                        this.redeem(hash, result.payment_request).then(() =>
-                            this.status()
+                        this.redeem(hash, result.payment_request).then(
+                            (success) => {
+                                if (success === true) fireLocalNotification();
+                                this.status();
+                            }
                         );
                     }
                 })
                 .catch(() => {
                     // if payment request has already been submitted, try to redeem without new pay req
-                    this.redeem(hash).then(() => this.status());
+                    this.redeem(hash).then((success) => {
+                        if (success === true) fireLocalNotification();
+                        this.status();
+                    });
                 });
         });
     };
