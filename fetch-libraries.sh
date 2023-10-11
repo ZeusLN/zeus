@@ -48,6 +48,8 @@ fi
 # iOS #
 #######
 
+mkdir ios/LndMobileLibZipFile
+
 if ! echo "$IOS_SHA256 ios/LndMobileLibZipFile/$IOS_FILE.zip" | sha256sum -c -; then
     echo "iOS library file missing or checksum failed" >&2
 
