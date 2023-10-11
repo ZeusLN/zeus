@@ -24,34 +24,48 @@ then
     exit
 fi
 
+###########
+# Android #
+###########
+
+if ! echo "$ANDROID_SHA256 android/lndmobile/$ANDROID_FILE" | sha256sum -c -; then
+    echo "Android library file missing or checksum failed" >&2
+
+    # delete old instance of library file
+    rm android/lndmobile/$ANDROID_FILE
+
+    # download Android LND library file
+    curl -L $ANDROID_LINK > android/lndmobile/$ANDROID_FILE
+
+    # check checksum
+    if ! echo "$ANDROID_SHA256 android/lndmobile/$ANDROID_FILE" | sha256sum -c -; then
+        echo "Android checksum failed" >&2
+        exit 1
+    fi
+fi
+
+#######
+# iOS #
+#######
+
+if ! echo "$IOS_SHA256 ios/LndMobileLibZipFile/$IOS_FILE.zip" | sha256sum -c -; then
+    echo "iOS library file missing or checksum failed" >&2
+
+    # delete old instance of library file
+    rm ios/LndMobileLibZipFile/$IOS_FILE.zip
+
+    # download iOS LND library file
+    curl -L $IOS_LINK > ios/LndMobileLibZipFile/$IOS_FILE.zip
+
+    # check checksum
+    if ! echo "$IOS_SHA256 ios/LndMobileLibZipFile/$IOS_FILE.zip" | sha256sum -c -; then
+        echo "iOS checksum failed" >&2
+        exit 1
+    fi
+fi
+
 # delete old instances of library files
-rm android/lndmobile/$ANDROID_FILE
 rm -rf ios/LncMobile/$IOS_FILE
 
-# create temp dir
-mkdir tmp
-
-# download LND library files
-curl -L $ANDROID_LINK > tmp/$ANDROID_FILE
-curl -L $IOS_LINK > tmp/$IOS_FILE.zip
-
-# check checksums
-if ! echo "$ANDROID_SHA256 tmp/$ANDROID_FILE" | sha256sum -c -; then
-    echo "Android checksum failed" >&2
-    exit 1
-fi
-
-if ! echo "$IOS_SHA256 tmp/$IOS_FILE.zip" | sha256sum -c -; then
-    echo "iOS checksum failed" >&2
-    exit 1
-fi
-
-# unzip LND library files
-unzip tmp/$IOS_FILE.zip -d tmp/
-
-# move LND library files into place
-mv tmp/$ANDROID_FILE android/lndmobile/$ANDROID_FILE
-mv tmp/$IOS_FILE ios/LncMobile/$IOS_FILE
-
-# delete temp dir
-rm -rf tmp
+# unzip LND library file
+unzip ios/LndMobileLibZipFile/$IOS_FILE.zip -d ios/LncMobile
