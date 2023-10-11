@@ -187,6 +187,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                         style={{
                             flex: 1
                         }}
+                        accessibilityLabel={localeString('general.scan')}
                     >
                         <Camera
                             style={styles.preview}
@@ -201,12 +202,29 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                                 onPress={this.toggleTorch}
                             >
                                 {isTorchOn ? (
-                                    <FlashOnIcon width={35} height={35} />
+                                    <View
+                                        accessibilityLabel={localeString(
+                                            'components.QRCodeScanner.flashOn'
+                                        )}
+                                    >
+                                        <FlashOnIcon width={35} height={35} />
+                                    </View>
                                 ) : (
-                                    <FlashOffIcon width={35} height={35} />
+                                    <View
+                                        accessibilityLabel={localeString(
+                                            'components.QRCodeScanner.flashOff'
+                                        )}
+                                    >
+                                        <FlashOffIcon width={35} height={35} />
+                                    </View>
                                 )}
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={this.handleOpenGallery}>
+                            <TouchableOpacity
+                                onPress={this.handleOpenGallery}
+                                accessibilityLabel={localeString(
+                                    'components.QRCodeScanner.chooseFromGallery'
+                                )}
+                            >
                                 <GalleryIcon width={50} height={50} />
                             </TouchableOpacity>
                         </View>

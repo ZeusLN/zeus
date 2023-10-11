@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
+import { Text, TouchableWithoutFeedback, View } from 'react-native';
+import TextInput from '../components/TextInput';
 import { themeColor } from '../utils/ThemeUtils';
 import stores from '../stores/Stores';
 import NavigationService from '../NavigationService';
@@ -33,6 +34,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                 .getOnchainFeesviaMempool()
                 .then((recommendedFees) => {
                     setNewFee(recommendedFees[preferredMempoolRate]);
+                    onChangeFee(recommendedFees[preferredMempoolRate]);
                     setLoading(false);
                 })
                 .catch(() => {
@@ -54,8 +56,8 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                 >
                     <View
                         style={{
-                            height: 65,
-                            padding: loading ? 8 : 15,
+                            height: 55,
+                            justifyContent: 'center',
                             marginTop: 15,
                             borderRadius: 4,
                             marginBottom: 20,
@@ -68,9 +70,8 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                         ) : (
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Regular',
                                     color: themeColor('text'),
-                                    paddingBottom: 5,
+                                    paddingLeft: 15,
                                     fontSize: 18
                                 }}
                             >

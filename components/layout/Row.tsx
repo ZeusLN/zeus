@@ -6,7 +6,9 @@ export function Row({
     justify = 'flex-start',
     align = 'center',
     style = {},
-    children
+    children,
+    accessible,
+    accessibilityLabel
 }: {
     flex?: number;
     justify?:
@@ -23,6 +25,8 @@ export function Row({
         | 'space-around';
     style?: any;
     children?: React.ReactNode;
+    accessible?: boolean;
+    accessibilityLabel?: string;
 }) {
     return (
         <View
@@ -33,6 +37,8 @@ export function Row({
                 alignItems: align,
                 ...style
             }}
+            accessible={accessible}
+            accessibilityLabel={accessibilityLabel}
         >
             {children}
         </View>

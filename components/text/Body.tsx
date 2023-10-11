@@ -11,7 +11,9 @@ export function Body({
     jumbo = false,
     color = undefined,
     colorOverride = undefined,
-    children
+    children,
+    accessible,
+    accessibilityLabel
 }: {
     secondary?: boolean;
     bold?: boolean;
@@ -23,6 +25,8 @@ export function Body({
     colorOverride?: string;
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
     children: React.ReactNode;
+    accessible?: boolean;
+    accessibilityLabel?: string;
 }) {
     return (
         <Text
@@ -39,6 +43,8 @@ export function Body({
                 fontSize: small ? 12 : big ? 20 : jumbo ? 40 : 16,
                 fontFamily: bold || jumbo ? 'Lato-Bold' : 'Lato-Regular'
             }}
+            accessible={accessible}
+            accessibilityLabel={accessibilityLabel}
         >
             {children}
         </Text>

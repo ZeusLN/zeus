@@ -93,6 +93,7 @@ const TempleButton = ({ navigation }: { navigation: any }) => (
 const ScanBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
         onPress={() => navigation.navigate('HandleAnythingQRScanner')}
+        accessibilityLabel={localeString('general.scan')}
     >
         <Scan fill={themeColor('text')} />
     </TouchableOpacity>
@@ -134,11 +135,11 @@ const POSBadge = ({
 );
 
 interface WalletHeaderProps {
-    ChannelsStore: ChannelsStore;
-    SettingsStore: SettingsStore;
-    NodeInfoStore: NodeInfoStore;
-    PosStore: PosStore;
-    SyncStore: SyncStore;
+    ChannelsStore?: ChannelsStore;
+    SettingsStore?: SettingsStore;
+    NodeInfoStore?: NodeInfoStore;
+    PosStore?: PosStore;
+    SyncStore?: SyncStore;
     navigation: any;
     loading: boolean;
     title: string;
@@ -168,7 +169,7 @@ export default class WalletHeader extends React.Component<
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = SettingsStore!;
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
@@ -195,9 +196,9 @@ export default class WalletHeader extends React.Component<
             PosStore,
             SyncStore
         } = this.props;
-        const { settings, posStatus, setPosStatus } = SettingsStore;
-        const { isSyncing } = SyncStore;
-        const { getOrders } = PosStore;
+        const { settings, posStatus, setPosStatus } = SettingsStore!;
+        const { isSyncing } = SyncStore!;
+        const { getOrders } = PosStore!;
         const multipleNodes: boolean =
             (settings && settings.nodes && settings.nodes.length > 1) || false;
         const selectedNode: any =
@@ -213,6 +214,7 @@ export default class WalletHeader extends React.Component<
             <TouchableOpacity
                 onPress={() => protectedNavigation(navigation, 'Settings')}
                 onLongPress={() => protectedNavigation(navigation, 'Nodes')}
+                accessibilityLabel={localeString('views.Settings.title')}
             >
                 {multipleNodes ? (
                     <NodeIdenticon
@@ -227,12 +229,12 @@ export default class WalletHeader extends React.Component<
         );
 
         const displayName = selectedNode && selectedNode.nickname;
-        const nodeAddress = SettingsStore.host || SettingsStore.url;
+        const nodeAddress = SettingsStore!.host || SettingsStore!.url;
 
         let infoValue: string;
-        if (NodeInfoStore.nodeInfo.isTestNet) {
+        if (NodeInfoStore!.nodeInfo.isTestNet) {
             infoValue = localeString('views.Wallet.MainPane.testnet');
-        } else if (NodeInfoStore.nodeInfo.isRegTest) {
+        } else if (NodeInfoStore!.nodeInfo.isRegTest) {
             infoValue = localeString('views.Wallet.MainPane.regnet');
         }
 
@@ -265,6 +267,9 @@ export default class WalletHeader extends React.Component<
                                 height: 25
                             }}
                             source={TorIcon}
+                            accessibilityLabel={localeString(
+                                'general.torEnabled'
+                            )}
                         />
                     </TouchableOpacity>
                 ) : null}
@@ -272,7 +277,10 @@ export default class WalletHeader extends React.Component<
         );
 
         const SearchButton = () => (
-            <TouchableOpacity onPress={() => ChannelsStore.toggleSearch()}>
+            <TouchableOpacity
+                onPress={() => ChannelsStore!.toggleSearch()}
+                accessibilityLabel={localeString('general.search')}
+            >
                 <Search
                     fill={themeColor('text')}
                     width="30"
@@ -288,6 +296,7 @@ export default class WalletHeader extends React.Component<
         const OpenChannelButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('OpenChannel')}
+                accessibilityLabel={localeString('views.Wallet.Channels.open')}
             >
                 <Add
                     fill={themeColor('text')}
@@ -343,7 +352,10 @@ export default class WalletHeader extends React.Component<
                     title ? (
                         <View style={{ top: 5 }}>
                             {toggle ? (
-                                <View style={{ top: -9, width: '100%' }}>
+                                <View
+                                    style={{ top: -9, width: '100%' }}
+                                    accessibilityLiveRegion="polite"
+                                >
                                     <Button
                                         onPress={() => toggle()}
                                         title={title}
