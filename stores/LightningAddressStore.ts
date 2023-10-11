@@ -330,6 +330,10 @@ export default class LightningAddressStore {
                                                 }
                                             );
 
+                                            // ensure push credentials are in place
+                                            // right after creation
+                                            this.updatePushCredentials();
+
                                             this.loading = false;
                                             resolve({
                                                 created_at
