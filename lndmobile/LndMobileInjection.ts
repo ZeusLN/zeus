@@ -85,8 +85,8 @@ import {
     autopilotrpc,
     routerrpc,
     walletrpc
-} from './../proto/lightning';
-import { WorkInfo } from './LndMobile';
+} from '../proto/lightning';
+import type { WorkInfo } from './LndMobile.d.ts';
 
 export interface ILndMobileInjections {
     index: {

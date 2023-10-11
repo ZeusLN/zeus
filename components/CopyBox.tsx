@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { themeColor } from './../utils/ThemeUtils';
-import Copy from './../assets/images/SVG/Copy';
+import { themeColor } from '../utils/ThemeUtils';
+import Copy from '../assets/images/SVG/Copy.svg';
 
 import Clipboard from '@react-native-clipboard/clipboard';
 
