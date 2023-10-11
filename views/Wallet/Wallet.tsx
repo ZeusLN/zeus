@@ -389,12 +389,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 !NodeInfoStore.testnet
             ) {
                 if (lightningAddress.automaticallyAccept) {
-                    const isReady =
-                        await NodeInfoStore.isLightningReadyToReceive();
-                    if (isReady) {
-                        LightningAddressStore.redeemAllOpenPayments();
-                        LightningAddressStore.subscribeUpdates();
-                    }
+                    LightningAddressStore.prepareToAutomaticallyAccept();
                 }
 
                 if (lightningAddress.notifications === 1) {

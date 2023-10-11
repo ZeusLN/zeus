@@ -3,6 +3,8 @@ import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Notifications } from 'react-native-notifications';
+
+import BigNumber from 'bignumber.js';
 import bolt11 from 'bolt11';
 import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1';
@@ -19,7 +21,7 @@ import SettingsStore from './SettingsStore';
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
-import BigNumber from 'bignumber.js';
+import { sleep } from '../utils/SleepUtils';
 
 const LNURL_HOST = 'https://zeuspay.com/api';
 const LNURL_SOCKET_HOST = 'https://zeuspay.com';
@@ -46,6 +48,7 @@ export default class LightningAddressStore {
     @observable public socket: any;
     // Push
     @observable public deviceToken: string;
+    @observable public readyToAutomaticallyAccept: boolean = false;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -933,6 +936,20 @@ export default class LightningAddressStore {
                 });
             }
         });
+    };
+
+    @action
+    public prepareToAutomaticallyAccept = async () => {
+        while (!this.readyToAutomaticallyAccept) {
+            await sleep(7000);
+            const isReady =
+                await this.nodeInfoStore.isLightningReadyToReceive();
+            if (isReady) {
+                this.readyToAutomaticallyAccept = true;
+                this.redeemAllOpenPayments();
+                this.subscribeUpdates();
+            }
+        }
     };
 
     @action
