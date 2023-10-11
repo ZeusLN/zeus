@@ -66,7 +66,7 @@ export default class ChannelView extends React.Component<
         };
 
         if (BackendUtils.isLNDBased() && channel.channelId != null) {
-            ChannelsStore.getChannelInfo(channel.channelId);
+            ChannelsStore.loadChannelInfo(channel.channelId);
         }
     }
 
