@@ -49,6 +49,8 @@ export default class LightningAddress extends React.Component<
     LightningAddressProps,
     LightningAddressState
 > {
+    isInitialFocus = true;
+
     state = {
         selectedIndex: 0,
         newLightningAddress: '',
@@ -70,9 +72,9 @@ export default class LightningAddress extends React.Component<
         });
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { LightningAddressStore, navigation } = this.props;
-        const { status, lightningAddressHandle } = LightningAddressStore;
+        const { status } = LightningAddressStore;
 
         this.generateNostrKeys();
 
@@ -80,11 +82,19 @@ export default class LightningAddress extends React.Component<
             newLightningAddress: ''
         });
 
+        status();
+
         // triggers when loaded from navigation or back action
-        navigation.addListener('didFocus', () => {
-            if (lightningAddressHandle) status();
-        });
+        navigation.addListener('didFocus', this.handleFocus);
     }
+
+    handleFocus = () => {
+        if (this.isInitialFocus) {
+            this.isInitialFocus = false;
+        } else {
+            this.props.LightningAddressStore.status();
+        }
+    };
 
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
         const { navigation } = newProps;
