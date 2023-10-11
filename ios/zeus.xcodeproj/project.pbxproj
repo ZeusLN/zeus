@@ -13,7 +13,7 @@
 		0D0C9325D9514324BC10BE73 /* Word Logo.svg in Resources */ = {isa = PBXBuildFile; fileRef = 454EDE72420A4964823DF6F2 /* Word Logo.svg */; };
 		0E5CAE8C45F0483BB8C8020C /* Eye On.svg in Resources */ = {isa = PBXBuildFile; fileRef = AC03A7A4319C4366A52D94FE /* Eye On.svg */; };
 		0EB04476647C460EA1358028 /* Switch.svg in Resources */ = {isa = PBXBuildFile; fileRef = 647B3F8EC6A6487CB6606AD9 /* Switch.svg */; };
-		100D64C853EC396792DEA38B /* libPods-zeus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7CAA5282644343DC8080128F /* libPods-zeus.a */; };
+		120C1A21E0566E9107515C30 /* libPods-zeus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CB2C2DBF18852D2E65ABC434 /* libPods-zeus.a */; };
 		1316C039CEF7429B88ABE9E2 /* Lato-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 025DDDDD0022456CB347E97B /* Lato-Regular.ttf */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.m */; };
 		13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB11A68108700A75B9A /* LaunchScreen.xib */; };
@@ -77,7 +77,6 @@
 		A09AF727D5F84779808B2B53 /* Receive.svg in Resources */ = {isa = PBXBuildFile; fileRef = EF00F35A868F4C26B9288D74 /* Receive.svg */; };
 		A2AAB31AF9804954A6AD6625 /* Node Off.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8046E6CEF39C45D4A0731EBA /* Node Off.svg */; };
 		A79D6320396A4D6AA420E33C /* Send.svg in Resources */ = {isa = PBXBuildFile; fileRef = 095808991E764378BE2D3052 /* Send.svg */; };
-		AB224FD84F17CC738F9D27DA /* libPods-zeus-zeusTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C9861D9A1E3B352E2C31908 /* libPods-zeus-zeusTests.a */; };
 		BC43A928A3C3466390D20200 /* Pie.svg in Resources */ = {isa = PBXBuildFile; fileRef = 662F3CE13986425FAECE00A8 /* Pie.svg */; };
 		BC7117BDDCFB483CB2345DDB /* Bitcoin.svg in Resources */ = {isa = PBXBuildFile; fileRef = 291FF6091426421DB569BEC4 /* Bitcoin.svg */; };
 		BFEB12685B664218922995B1 /* Scan.svg in Resources */ = {isa = PBXBuildFile; fileRef = 29E002EDCBDC4FB59A29BA2E /* Scan.svg */; };
@@ -96,6 +95,7 @@
 		DEFE5B1336674812BAE3E366 /* Coins.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8F0CAEBF09CC44E0A55DFB2A /* Coins.svg */; };
 		E248E368B08141929FF4B67F /* Caret Up.svg in Resources */ = {isa = PBXBuildFile; fileRef = F3F9827E17844DA7AC951B88 /* Caret Up.svg */; };
 		E24CC9BAF7FF4BA6BCC7F17B /* Lato-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C099E154C6C8479188E39851 /* Lato-Bold.ttf */; };
+		E457D12FB1D26D19F91B52B9 /* libPods-zeus-zeusTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C9B32E9846A8346A32A3BDC6 /* libPods-zeus-zeusTests.a */; };
 		E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */ = {isa = PBXBuildFile; fileRef = AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */; };
 		ECAC6EABDA3B4277AE5D6B7C /* Word Logo - no outline.svg in Resources */ = {isa = PBXBuildFile; fileRef = 904B772D015A42D58EF60A9A /* Word Logo - no outline.svg */; };
 		ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED297162215061F000B7C4FE /* JavaScriptCore.framework */; };
@@ -285,13 +285,15 @@
 		00E356F21AD99517003FC87E /* zeusTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = zeusTests.m; sourceTree = "<group>"; };
 		01471298AE544A2F89251D67 /* PinFilled.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = PinFilled.svg; path = ../assets/images/SVG/PinFilled.svg; sourceTree = "<group>"; };
 		025DDDDD0022456CB347E97B /* Lato-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Regular.ttf"; path = "../assets/fonts/Lato-Regular.ttf"; sourceTree = "<group>"; };
+		04FCBC4A7845073E39FACA73 /* Pods-zeus.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus.release.xcconfig"; path = "Target Support Files/Pods-zeus/Pods-zeus.release.xcconfig"; sourceTree = "<group>"; };
 		058EC85AAE364CEBB5C88C12 /* Globe.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Globe.svg; path = ../assets/images/SVG/Globe.svg; sourceTree = "<group>"; };
 		0739DA7692B644DEBC3BAFFC /* Clock.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Clock.svg; path = ../assets/images/SVG/Clock.svg; sourceTree = "<group>"; };
 		095808991E764378BE2D3052 /* Send.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Send.svg; path = ../assets/images/SVG/Send.svg; sourceTree = "<group>"; };
+		0DB55EB3FF0F9245280FEA6C /* Pods-zeus-zeusTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-zeusTests.release.xcconfig"; path = "Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests.release.xcconfig"; sourceTree = "<group>"; };
 		107D5D19C89849838D993B6C /* splash.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = splash.png; path = ../assets/images/intro/splash.png; sourceTree = "<group>"; };
-		11C792B0752E08A1A70601F2 /* Pods-zeus.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus.debug.xcconfig"; path = "Target Support Files/Pods-zeus/Pods-zeus.debug.xcconfig"; sourceTree = "<group>"; };
 		139105B61AF99BAD00B5F7CC /* RCTSettings.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTSettings.xcodeproj; path = "../node_modules/react-native/Libraries/Settings/RCTSettings.xcodeproj"; sourceTree = "<group>"; };
 		139FDEE61B06529A00C62182 /* RCTWebSocket.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTWebSocket.xcodeproj; path = "../node_modules/react-native/Libraries/WebSocket/RCTWebSocket.xcodeproj"; sourceTree = "<group>"; };
+		13A8EDC828CA266BD8BD1F51 /* Pods-zeus-zeusTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-zeusTests.debug.xcconfig"; path = "Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests.debug.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* zeus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = zeus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = zeus/AppDelegate.h; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AppDelegate.m; path = zeus/AppDelegate.m; sourceTree = "<group>"; };
@@ -302,7 +304,6 @@
 		18B00F64CC5A4074AB595A5C /* MaterialIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialIcons.ttf"; sourceTree = "<group>"; };
 		19F1DF8577E64E24B856F202 /* Question.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Question.svg; path = ../assets/images/SVG/Question.svg; sourceTree = "<group>"; };
 		1AD743129802428BA25522C5 /* libReactNativePermissions.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libReactNativePermissions.a; sourceTree = "<group>"; };
-		1C9861D9A1E3B352E2C31908 /* libPods-zeus-zeusTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus-zeusTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1F20C8EE28BE46F6B99E5ED3 /* Alert.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Alert.svg; path = ../assets/images/SVG/Alert.svg; sourceTree = "<group>"; };
 		226FAAEEA94A478A945F9A57 /* Menu.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Menu.svg; path = ../assets/images/SVG/Menu.svg; sourceTree = "<group>"; };
 		259ED6E1C36A4BB38A5BFB8B /* Temple.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Temple.svg; path = ../assets/images/SVG/Temple.svg; sourceTree = "<group>"; };
@@ -322,7 +323,6 @@
 		49BD28A15F4B4FECA6EE0CDE /* SimpleLineIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = SimpleLineIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf"; sourceTree = "<group>"; };
 		4C8C38BFCA8A45C99AA6FF28 /* MaterialCommunityIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialCommunityIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf"; sourceTree = "<group>"; };
 		4D6C56355DAE4697AB55E762 /* Feather.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Feather.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Feather.ttf"; sourceTree = "<group>"; };
-		52374B0F648AC41A0BC8A515 /* Pods-zeus.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus.release.xcconfig"; path = "Target Support Files/Pods-zeus/Pods-zeus.release.xcconfig"; sourceTree = "<group>"; };
 		571E23F345EB49B99F8150D2 /* Caret Left.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Left.svg"; path = "../assets/images/SVG/Caret Left.svg"; sourceTree = "<group>"; };
 		58468A869AB24054A313D38E /* Refresh.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Refresh.svg; path = ../assets/images/SVG/Refresh.svg; sourceTree = "<group>"; };
 		5CC0E65B8E6447A38BD1EE91 /* Brush.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Brush.svg; path = ../assets/images/SVG/Brush.svg; sourceTree = "<group>"; };
@@ -358,7 +358,6 @@
 		77EC666A91C04742A050DEF4 /* Help Icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Help Icon.svg"; path = "../assets/images/SVG/Help Icon.svg"; sourceTree = "<group>"; };
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
 		794C8E7556B54F62BEAD1975 /* 2.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 2.png; path = ../assets/images/intro/2.png; sourceTree = "<group>"; };
-		7CAA5282644343DC8080128F /* libPods-zeus.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7FE4DFA6CD064723B106677B /* Octicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Octicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Octicons.ttf"; sourceTree = "<group>"; };
 		8046E6CEF39C45D4A0731EBA /* Node Off.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Node Off.svg"; path = "../assets/images/SVG/Node Off.svg"; sourceTree = "<group>"; };
 		80E6686C049240CE9887FA2C /* QR.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = QR.svg; path = ../assets/images/SVG/QR.svg; sourceTree = "<group>"; };
@@ -393,7 +392,6 @@
 		A5BC3ADC78784B888F34B25B /* libRNCamera.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libRNCamera.a; sourceTree = "<group>"; };
 		AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = PinHollow.svg; path = ../assets/images/SVG/PinHollow.svg; sourceTree = "<group>"; };
 		AC03A7A4319C4366A52D94FE /* Eye On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Eye On.svg"; path = "../assets/images/SVG/Eye On.svg"; sourceTree = "<group>"; };
-		AC7FE51813BA1C207EE06D75 /* Pods-zeus-zeusTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-zeusTests.release.xcconfig"; path = "Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests.release.xcconfig"; sourceTree = "<group>"; };
 		ADBDB91F1DFEBF0600ED6528 /* RCTBlob.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTBlob.xcodeproj; path = "../node_modules/react-native/Libraries/Blob/RCTBlob.xcodeproj"; sourceTree = "<group>"; };
 		B23A03CFAFEF40D790A7B4E6 /* ErrorIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ErrorIcon.svg; path = ../assets/images/SVG/ErrorIcon.svg; sourceTree = "<group>"; };
 		B36D434AE9B14EE7AD5E6BCE /* Routing.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Routing.svg; path = ../assets/images/SVG/Routing.svg; sourceTree = "<group>"; };
@@ -404,8 +402,11 @@
 		C44BB3F9DBFD465EBEEED83E /* Ionicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Ionicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Ionicons.ttf"; sourceTree = "<group>"; };
 		C79E350A2A9640088B2E0231 /* tor.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = tor.png; path = ../assets/images/tor.png; sourceTree = "<group>"; };
 		C8B74E7F5FE74AB1B75DD331 /* Backspace.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Backspace.svg; path = ../assets/images/SVG/Backspace.svg; sourceTree = "<group>"; };
+		C9B32E9846A8346A32A3BDC6 /* libPods-zeus-zeusTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus-zeusTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CB2C2DBF18852D2E65ABC434 /* libPods-zeus.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBA0591D71884F909710032D /* Filter On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Filter On.svg"; path = "../assets/images/SVG/Filter On.svg"; sourceTree = "<group>"; };
 		CCFEAC399BB842A091ADB042 /* Wallet.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Wallet.svg; path = ../assets/images/SVG/Wallet.svg; sourceTree = "<group>"; };
+		CDEDFA98A11BF239AB39E264 /* Pods-zeus.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus.debug.xcconfig"; path = "Target Support Files/Pods-zeus/Pods-zeus.debug.xcconfig"; sourceTree = "<group>"; };
 		CE60F60AE34649628EB4D675 /* FontAwesome5_Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Regular.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf"; sourceTree = "<group>"; };
 		D2F679C59D7B4D258A382330 /* FontAwesome5_Brands.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Brands.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Brands.ttf"; sourceTree = "<group>"; };
 		D7D27BFD5D11478D80A6F85E /* FontAwesome.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome.ttf"; sourceTree = "<group>"; };
@@ -413,7 +414,6 @@
 		DAB0850D6CA542288A565578 /* Success.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Success.svg; path = ../assets/images/SVG/Success.svg; sourceTree = "<group>"; };
 		DDCBB2DF7F86404A96FCE2C6 /* Success.gif */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Success.gif; path = ../assets/images/GIF/Success.gif; sourceTree = "<group>"; };
 		DEE698AC647848D9B6DB13F6 /* 3.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 3.png; path = ../assets/images/intro/3.png; sourceTree = "<group>"; };
-		E92DBB99ABD953A6B597F179 /* Pods-zeus-zeusTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-zeusTests.debug.xcconfig"; path = "Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		EF00F35A868F4C26B9288D74 /* Receive.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Receive.svg; path = ../assets/images/SVG/Receive.svg; sourceTree = "<group>"; };
 		F049B384F839491FBB33BBA4 /* Checkmark.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Checkmark.svg; path = ../assets/images/SVG/Checkmark.svg; sourceTree = "<group>"; };
@@ -428,7 +428,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AB224FD84F17CC738F9D27DA /* libPods-zeus-zeusTests.a in Frameworks */,
+				E457D12FB1D26D19F91B52B9 /* libPods-zeus-zeusTests.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -438,7 +438,7 @@
 			files = (
 				ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */,
 				74B637872A5A35B600750202 /* Lndmobile.xcframework in Frameworks */,
-				100D64C853EC396792DEA38B /* libPods-zeus.a in Frameworks */,
+				120C1A21E0566E9107515C30 /* libPods-zeus.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -566,8 +566,8 @@
 				74B637862A5A35B600750202 /* Lndmobile.xcframework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				2D16E6891FA4F8E400B85C8A /* libReact.a */,
-				7CAA5282644343DC8080128F /* libPods-zeus.a */,
-				1C9861D9A1E3B352E2C31908 /* libPods-zeus-zeusTests.a */,
+				CB2C2DBF18852D2E65ABC434 /* libPods-zeus.a */,
+				C9B32E9846A8346A32A3BDC6 /* libPods-zeus-zeusTests.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -678,10 +678,10 @@
 		84DC0E13FD7354A941AB820C /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				11C792B0752E08A1A70601F2 /* Pods-zeus.debug.xcconfig */,
-				52374B0F648AC41A0BC8A515 /* Pods-zeus.release.xcconfig */,
-				E92DBB99ABD953A6B597F179 /* Pods-zeus-zeusTests.debug.xcconfig */,
-				AC7FE51813BA1C207EE06D75 /* Pods-zeus-zeusTests.release.xcconfig */,
+				CDEDFA98A11BF239AB39E264 /* Pods-zeus.debug.xcconfig */,
+				04FCBC4A7845073E39FACA73 /* Pods-zeus.release.xcconfig */,
+				13A8EDC828CA266BD8BD1F51 /* Pods-zeus-zeusTests.debug.xcconfig */,
+				0DB55EB3FF0F9245280FEA6C /* Pods-zeus-zeusTests.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -825,12 +825,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 00E357021AD99517003FC87E /* Build configuration list for PBXNativeTarget "zeusTests" */;
 			buildPhases = (
-				05EABAE0E0C9043A1A592778 /* [CP] Check Pods Manifest.lock */,
+				0E91012640E225BA973E026C /* [CP] Check Pods Manifest.lock */,
 				00E356EA1AD99517003FC87E /* Sources */,
 				00E356EB1AD99517003FC87E /* Frameworks */,
 				00E356EC1AD99517003FC87E /* Resources */,
-				886495769F519F76F1049728 /* [CP] Embed Pods Frameworks */,
-				1B04E508586A45343E0DD276 /* [CP] Copy Pods Resources */,
+				FBE8628AE4F5287401678C73 /* [CP] Embed Pods Frameworks */,
+				957A162EAFB9DDF47E29E05F /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -846,14 +846,14 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "zeus" */;
 			buildPhases = (
-				2FD4FE4B5FDB43521A8F6BD3 /* [CP] Check Pods Manifest.lock */,
+				E50041361676515C0E028DB9 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				97710D0923B7FFEA006C4464 /* ShellScript */,
-				1E14AF77015096B838445069 /* [CP] Embed Pods Frameworks */,
-				F45314F994B61D6F0FADC571 /* [CP] Copy Pods Resources */,
+				F76BB30CDD7AE8BA93481FF6 /* [CP] Embed Pods Frameworks */,
+				DB50FA4D2E3AF65177AF17B7 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -1263,7 +1263,7 @@
 			shellPath = /bin/sh;
 			shellScript = "export NODE_BINARY=node\n../node_modules/react-native/scripts/react-native-xcode.sh\n";
 		};
-		05EABAE0E0C9043A1A592778 /* [CP] Check Pods Manifest.lock */ = {
+		0E91012640E225BA973E026C /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1285,7 +1285,21 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		1B04E508586A45343E0DD276 /* [CP] Copy Pods Resources */ = {
+		2D02E4CB1E0B4B27006451C7 /* Bundle React Native Code And Images */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle React Native Code And Images";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export NODE_BINARY=node\n../node_modules/react-native/scripts/react-native-xcode.sh";
+		};
+		957A162EAFB9DDF47E29E05F /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1335,78 +1349,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		1E14AF77015096B838445069 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		2D02E4CB1E0B4B27006451C7 /* Bundle React Native Code And Images */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "Bundle React Native Code And Images";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "export NODE_BINARY=node\n../node_modules/react-native/scripts/react-native-xcode.sh";
-		};
-		2FD4FE4B5FDB43521A8F6BD3 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-zeus-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		886495769F519F76F1049728 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		97710D0923B7FFEA006C4464 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1424,7 +1366,7 @@
 			shellPath = /bin/sh;
 			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nexport RCT_METRO_PORT=\"${RCT_METRO_PORT:=8081}\"\necho \"export RCT_METRO_PORT=${RCT_METRO_PORT}\" > \"${SRCROOT}/../node_modules/react-native/scripts/.packager.env\"\nif [ -z \"${RCT_NO_LAUNCH_PACKAGER+xxx}\" ] ; then\nif nc -w 5 -z localhost ${RCT_METRO_PORT} ; then\nif ! curl -s \"http://localhost:${RCT_METRO_PORT}/status\" | grep -q \"packager-status:running\" ; then\necho \"warning: Port ${RCT_METRO_PORT} already in use, packager is either not running or not running correctly\"\nexit 2\nfi\nelse\nopen \"$SRCROOT/../node_modules/react-native/scripts/launchPackager.command\" || echo \"warning: Can't start packager automatically\"\nfi\nfi\n";
 		};
-		F45314F994B61D6F0FADC571 /* [CP] Copy Pods Resources */ = {
+		DB50FA4D2E3AF65177AF17B7 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1472,6 +1414,64 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		E50041361676515C0E028DB9 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-zeus-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		F76BB30CDD7AE8BA93481FF6 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		FBE8628AE4F5287401678C73 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -1555,7 +1555,7 @@
 /* Begin XCBuildConfiguration section */
 		00E356F61AD99517003FC87E /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E92DBB99ABD953A6B597F179 /* Pods-zeus-zeusTests.debug.xcconfig */;
+			baseConfigurationReference = 13A8EDC828CA266BD8BD1F51 /* Pods-zeus-zeusTests.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -1581,6 +1581,7 @@
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"-lc++",
+					"-ld_classic",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1590,7 +1591,7 @@
 		};
 		00E356F71AD99517003FC87E /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = AC7FE51813BA1C207EE06D75 /* Pods-zeus-zeusTests.release.xcconfig */;
+			baseConfigurationReference = 0DB55EB3FF0F9245280FEA6C /* Pods-zeus-zeusTests.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -1612,6 +1613,7 @@
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"-lc++",
+					"-ld_classic",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1621,7 +1623,7 @@
 		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 11C792B0752E08A1A70601F2 /* Pods-zeus.debug.xcconfig */;
+			baseConfigurationReference = CDEDFA98A11BF239AB39E264 /* Pods-zeus.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
@@ -1670,7 +1672,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 52374B0F648AC41A0BC8A515 /* Pods-zeus.release.xcconfig */;
+			baseConfigurationReference = 04FCBC4A7845073E39FACA73 /* Pods-zeus.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
@@ -1923,6 +1925,8 @@
 					"$(inherited)",
 					"-Wl",
 					"-ld_classic",
+					"-Wl",
+					"-ld_classic",
 				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
@@ -1980,6 +1984,8 @@
 				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
+					"-Wl",
+					"-ld_classic",
 					"-Wl",
 					"-ld_classic",
 				);
