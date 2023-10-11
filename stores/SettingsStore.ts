@@ -69,6 +69,16 @@ interface InvoicesSettings {
     showCustomPreimageField?: boolean;
 }
 
+interface LightningAddressSettings {
+    enabled: boolean;
+    automaticallyAccept: boolean;
+    automaticallyRequestOlympusChannels: boolean;
+    allowComments: boolean;
+    nostrPrivateKey: string;
+    nostrRelays: Array<string>;
+    notifications: number;
+}
+
 export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -78,6 +88,7 @@ export interface Settings {
     duressPin?: string;
     scramblePin?: boolean;
     loginBackground?: boolean;
+    appLockTimeout?: string;
     authenticationAttempts?: number;
     fiatEnabled?: boolean;
     fiat?: string;
@@ -109,6 +120,8 @@ export interface Settings {
     lspTestnet: string;
     lspAccessKey: string;
     requestSimpleTaproot: boolean;
+    // Lightning Address
+    lightningAddress: LightningAddressSettings;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -123,6 +136,54 @@ export const BLOCK_EXPLORER_KEYS = [
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
         value: 'Custom'
+    }
+];
+
+export const APP_LOCK_TIMEOUT_VALUES = [
+    {
+        key: '0',
+        value: '0',
+        translateKey: 'views.Settings.Security.appLockTimeoutImmediately'
+    },
+    {
+        key: '15',
+        value: '15',
+        translateKey: 'views.Settings.Security.appLockTimeout15s'
+    },
+    {
+        key: '30',
+        value: '30',
+        translateKey: 'views.Settings.Security.appLockTimeout30s'
+    },
+    {
+        key: '60',
+        value: '60',
+        translateKey: 'views.Settings.Security.appLockTimeout1m'
+    },
+    {
+        key: '120',
+        value: '120',
+        translateKey: 'views.Settings.Security.appLockTimeout2m'
+    },
+    {
+        key: '300',
+        value: '300',
+        translateKey: 'views.Settings.Security.appLockTimeout5m'
+    },
+    {
+        key: '600',
+        value: '600',
+        translateKey: 'views.Settings.Security.appLockTimeout10m'
+    },
+    {
+        key: '1800',
+        value: '1800',
+        translateKey: 'views.Settings.Security.appLockTimeout30m'
+    },
+    {
+        key: '3600',
+        value: '3600',
+        translateKey: 'views.Settings.Security.appLockTimeout1h'
     }
 ];
 
@@ -639,6 +700,7 @@ export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'USD';
 export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
 export const DEFAULT_LOCALE = 'English';
+export const DEFAULT_APP_LOCK_TIMEOUT = '0';
 
 export const POS_CONF_PREF_KEYS = [
     { key: '0 conf', value: '0conf' },
@@ -653,6 +715,18 @@ export const LNDHUB_AUTH_MODES = [
 
 const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
 const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
+
+export const DEFAULT_NOSTR_RELAYS = [
+    'wss://relay.damus.io',
+    'wss://nostr.wine',
+    'wss://nostr.lnproxy.org'
+];
+
+export const NOTIFICATIONS_PREF_KEYS = [
+    { key: 'Disabled', value: 0 },
+    { key: 'Push', value: 1 },
+    { key: 'Nostr', value: 2 }
+];
 
 const STORAGE_KEY = 'zeus-settings';
 
@@ -700,6 +774,7 @@ export default class SettingsStore {
         isBiometryEnabled: false,
         scramblePin: true,
         loginBackground: false,
+        appLockTimeout: DEFAULT_APP_LOCK_TIMEOUT,
         fiatEnabled: false,
         fiat: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
@@ -720,7 +795,17 @@ export default class SettingsStore {
         lspMainnet: DEFAULT_LSP_MAINNET,
         lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: '',
-        requestSimpleTaproot: false
+        requestSimpleTaproot: false,
+        // Lightning Address
+        lightningAddress: {
+            enabled: false,
+            automaticallyAccept: true,
+            automaticallyRequestOlympusChannels: true,
+            allowComments: true,
+            nostrPrivateKey: '',
+            nostrRelays: DEFAULT_NOSTR_RELAYS,
+            notifications: 0
+        }
     };
     @observable public posStatus: string = 'unselected';
     @observable public loading = false;
@@ -928,6 +1013,19 @@ export default class SettingsStore {
                     this.settings.lspTestnet = DEFAULT_LSP_TESTNET;
                 }
 
+                // default Lightning Address settings
+                if (!this.settings.lightningAddress) {
+                    this.settings.lightningAddress = {
+                        enabled: false,
+                        automaticallyAccept: true,
+                        automaticallyRequestOlympusChannels: true,
+                        allowComments: true,
+                        nostrPrivateKey: '',
+                        nostrRelays: DEFAULT_NOSTR_RELAYS,
+                        notifications: 0
+                    };
+                }
+
                 // default automatic channel backups to on
                 if (this.settings.automaticDisasterRecoveryBackup !== false) {
                     this.settings.automaticDisasterRecoveryBackup = true;
@@ -1050,7 +1148,6 @@ export default class SettingsStore {
                     const status = response.info().status;
                     if (status == 200) {
                         const data = response.json();
-                        console.log('!!', data);
                         this.loading = false;
                         if (data.error) {
                             this.createAccountError =

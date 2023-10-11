@@ -4,7 +4,7 @@ import { themeColor } from './../utils/ThemeUtils';
 import { StyleProp, ViewStyle } from 'react-native';
 
 interface ButtonProps {
-    title: string;
+    title?: string;
     icon?: any;
     titleStyle?: any;
     onPress?: any;
@@ -19,6 +19,7 @@ interface ButtonProps {
     buttonStyle?: StyleProp<ViewStyle>;
     noUppercase?: boolean;
     disabled?: boolean;
+    accessibilityLabel?: string;
 }
 
 function Button(props: ButtonProps) {
@@ -37,7 +38,8 @@ function Button(props: ButtonProps) {
         containerStyle,
         buttonStyle,
         noUppercase,
-        disabled
+        disabled,
+        accessibilityLabel
     } = props;
 
     const newContainerStyle: any = adaptiveWidth
@@ -101,7 +103,9 @@ function Button(props: ButtonProps) {
                           color: iconOnly
                               ? themeColor('text')
                               : quinary
-                              ? themeColor('text')
+                              ? warning
+                                  ? themeColor('warning')
+                                  : themeColor('text')
                               : quaternary
                               ? warning
                                   ? themeColor('warning')
@@ -116,6 +120,7 @@ function Button(props: ButtonProps) {
             onPress={onPress}
             containerStyle={newContainerStyle}
             disabled={disabled}
+            accessibilityLabel={accessibilityLabel}
         />
     );
 }

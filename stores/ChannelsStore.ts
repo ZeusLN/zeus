@@ -188,7 +188,7 @@ export default class ChannelsStore {
     filter = (channels: Array<Channel>) => {
         const query = this.search;
         const filtered = channels
-            .filter(
+            ?.filter(
                 (channel: Channel) =>
                     channel.alias
                         ?.toLocaleLowerCase()
@@ -207,7 +207,7 @@ export default class ChannelsStore {
                         channel.private ? 'unannounced' : 'announced'
                     )
             );
-        const sorted = filtered.sort((a: any, b: any) => {
+        const sorted = filtered?.sort((a: any, b: any) => {
             if (this.sort.type === 'numeric') {
                 return Number(a[this.sort.param]) < Number(b[this.sort.param])
                     ? 1
@@ -259,10 +259,10 @@ export default class ChannelsStore {
     enrichChannels = async (channels: Array<Channel>) => {
         if (channels.length === 0) return;
 
-        const channelsWithMissingAliases = channels.filter(
+        const channelsWithMissingAliases = channels?.filter(
             (c) => c.channelId != null && this.aliasesById[c.channelId] == null
         );
-        const channelsWithMissingNodeInfos = channels.filter(
+        const channelsWithMissingNodeInfos = channels?.filter(
             (c) => this.nodes[c.remotePubkey] == null
         );
         const publicKeysOfToBeLoadedNodeInfos = _.chain(
@@ -409,8 +409,9 @@ export default class ChannelsStore {
             .then(() => {
                 this.loading = false;
                 this.error = false;
+                return;
             })
-            .catch((e) => this.getChannelsError(e));
+            .catch(() => this.getChannelsError());
     };
 
     @action
@@ -542,9 +543,13 @@ export default class ChannelsStore {
     };
 
     @action
-    public getChannelInfo = (chanId: string) => {
+    public loadChannelInfo = (chanId: string, deleteBeforeLoading = false) => {
         this.loading = true;
-        if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
+
+        if (deleteBeforeLoading) {
+            if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
+        }
+
         BackendUtils.getChannelInfo(chanId)
             .then((data: any) => {
                 this.chanInfo[chanId] = new ChannelInfo(data);

@@ -53,6 +53,17 @@ import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
+
+// Lightning address
+import LightningAddress from './views/Settings/LightningAddress';
+import LightningAddressInfo from './views/Settings/LightningAddress/LightningAddressInfo';
+import LightningAddressSettings from './views/Settings/LightningAddress/LightningAddressSettings';
+import Attestation from './views/Settings/LightningAddress/Attestation';
+import Attestations from './views/Settings/LightningAddress/Attestations';
+import NostrKeys from './views/Settings/LightningAddress/NostrKeys';
+import NostrRelays from './views/Settings/LightningAddress/NostrRelays';
+import ChangeAddress from './views/Settings/LightningAddress/ChangeAddress';
+
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
@@ -340,6 +351,21 @@ const AppScenes = {
     LSPSettings: {
         screen: LSP
     },
+    LightningAddress: {
+        screen: LightningAddress
+    },
+    LightningAddressInfo: {
+        screen: LightningAddressInfo
+    },
+    LightningAddressSettings: {
+        screen: LightningAddressSettings
+    },
+    Attestations: {
+        screen: Attestations
+    },
+    Attestation: {
+        screen: Attestation
+    },
     Contacts: {
         screen: Contacts
     },
@@ -348,6 +374,15 @@ const AppScenes = {
     },
     ContactDetails: {
         screen: ContactDetails
+    },
+    NostrKeys: {
+        screen: NostrKeys
+    },
+    NostrRelays: {
+        screen: NostrRelays
+    },
+    ChangeAddress: {
+        screen: ChangeAddress
     }
 };
 

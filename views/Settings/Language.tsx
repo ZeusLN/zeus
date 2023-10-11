@@ -96,6 +96,10 @@ export default class Language extends React.Component<
                             borderRadius: 15,
                             backgroundColor: themeColor('secondary')
                         }}
+                        searchIcon={{
+                            importantForAccessibility: 'no-hide-descendants',
+                            accessibilityElementsHidden: true
+                        }}
                     />
                     <FlatList
                         data={locales}

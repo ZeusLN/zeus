@@ -34,12 +34,12 @@ import { version } from './../../package.json';
 
 interface PosPaneProps {
     navigation: any;
-    ActivityStore: ActivityStore;
-    FiatStore: FiatStore;
-    NodeInfoStore: NodeInfoStore;
-    PosStore: PosStore;
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
+    ActivityStore?: ActivityStore;
+    FiatStore?: FiatStore;
+    NodeInfoStore?: NodeInfoStore;
+    PosStore?: PosStore;
+    UnitsStore?: UnitsStore;
+    SettingsStore?: SettingsStore;
 }
 
 interface PosPaneState {
@@ -88,7 +88,7 @@ export default class PosPane extends React.PureComponent<
 
     renderItem = ({ item, index }, onClickPaid, onClickHide) => {
         const { navigation, FiatStore } = this.props;
-        const { getRate, getSymbol } = FiatStore;
+        const { getRate, getSymbol } = FiatStore!;
         const isPaid: boolean = item && item.payment;
 
         let row: Array<any> = [];
@@ -200,7 +200,7 @@ export default class PosPane extends React.PureComponent<
             navigation
         } = this.props;
         const { search, selectedIndex } = this.state;
-        const { setFiltersPos } = ActivityStore;
+        const { setFiltersPos } = ActivityStore!;
         const {
             loading,
             getOrders,
@@ -208,8 +208,8 @@ export default class PosPane extends React.PureComponent<
             filteredPaidOrders,
             updateSearch,
             hideOrder
-        } = PosStore;
-        const { getRate, getFiatRates } = FiatStore;
+        } = PosStore!;
+        const { getRate, getFiatRates } = FiatStore!;
         const orders =
             selectedIndex === 0 ? filteredOpenOrders : filteredPaidOrders;
 
@@ -217,7 +217,7 @@ export default class PosPane extends React.PureComponent<
             orders.length || 0
         })`;
 
-        const error = NodeInfoStore.error || SettingsStore.error;
+        const error = NodeInfoStore!.error || SettingsStore!.error;
 
         const openOrdersButton = () => (
             <Text
@@ -271,10 +271,10 @@ export default class PosPane extends React.PureComponent<
                             marginBottom: 25
                         }}
                     >
-                        {SettingsStore.errorMsg
-                            ? SettingsStore.errorMsg
-                            : NodeInfoStore.errorMsg
-                            ? NodeInfoStore.errorMsg
+                        {SettingsStore!.errorMsg
+                            ? SettingsStore!.errorMsg
+                            : NodeInfoStore!.errorMsg
+                            ? NodeInfoStore!.errorMsg
                             : localeString('views.Wallet.MainPane.error')}
                     </Text>
                     <Button
@@ -295,7 +295,7 @@ export default class PosPane extends React.PureComponent<
                         }}
                         onPress={() => {
                             const { posStatus, settings } =
-                                this.props.SettingsStore;
+                                this.props.SettingsStore!;
                             const loginRequired =
                                 settings &&
                                 (settings.passphrase || settings.pin);
@@ -328,11 +328,7 @@ export default class PosPane extends React.PureComponent<
 
         return (
             <View style={{ flex: 1 }}>
-                <WalletHeader
-                    title={headerString}
-                    navigation={navigation}
-                    SettingsStore={SettingsStore}
-                />
+                <WalletHeader title={headerString} navigation={navigation} />
 
                 {getRate() === '$N/A' ? (
                     <Animated.View

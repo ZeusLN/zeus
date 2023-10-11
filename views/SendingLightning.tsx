@@ -146,7 +146,7 @@ export default class SendingLightning extends React.Component<
                                 {localeString('views.SendingLightning.sending')}
                             </Text>
                         )}
-                        {(!!success || !!inTransit) && !error && (
+                        {!loading && (!!success || !!inTransit) && !error && (
                             <WordLogo
                                 height={150}
                                 style={{
@@ -154,7 +154,7 @@ export default class SendingLightning extends React.Component<
                                 }}
                             />
                         )}
-                        {!!success && !error && (
+                        {!loading && !!success && !error && (
                             <>
                                 <Image
                                     source={Success}
@@ -168,7 +168,7 @@ export default class SendingLightning extends React.Component<
                                 <PaidIndicator />
                             </>
                         )}
-                        {!!inTransit && !error && (
+                        {!loading && !!inTransit && !error && (
                             <View
                                 style={{
                                     padding: 20,
@@ -196,35 +196,68 @@ export default class SendingLightning extends React.Component<
                                 </Text>
                             </View>
                         )}
-                        {(!!error || !!payment_error) && (
-                            <>
-                                <Error width="27%" />
-                                <Text
-                                    style={{
-                                        color: '#FF9090',
-                                        fontFamily: 'Lato-Regular',
-                                        fontSize: 32
-                                    }}
-                                >
-                                    {localeString('general.error')}
-                                </Text>
+                        {!loading && LnurlPayStore.isZaplocker && (
+                            <View
+                                style={{
+                                    padding: 20,
+                                    marginTop: 10,
+                                    marginBottom: 10,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <Clock
+                                    color={themeColor('bitcoin')}
+                                    width={180}
+                                    height={180}
+                                />
                                 <Text
                                     style={{
                                         color: themeColor('text'),
                                         fontFamily: 'Lato-Regular',
-                                        padding: 20,
-                                        marginBottom: 60,
-                                        fontSize:
-                                            (payment_error || error_msg || '')
-                                                .length > 100
-                                                ? 20
-                                                : 24
+                                        fontSize: 22,
+                                        marginTop: 25
                                     }}
                                 >
-                                    {payment_error || error_msg}
+                                    {localeString(
+                                        'views.SendingLightning.isZaplocker'
+                                    )}
                                 </Text>
-                            </>
+                            </View>
                         )}
+                        {(!!error || !!payment_error) &&
+                            !loading &&
+                            !LnurlPayStore.isZaplocker && (
+                                <>
+                                    <Error width="27%" />
+                                    <Text
+                                        style={{
+                                            color: '#FF9090',
+                                            fontFamily: 'Lato-Regular',
+                                            fontSize: 32
+                                        }}
+                                    >
+                                        {localeString('general.error')}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'Lato-Regular',
+                                            padding: 20,
+                                            marginBottom: 60,
+                                            fontSize:
+                                                (
+                                                    payment_error ||
+                                                    error_msg ||
+                                                    ''
+                                                ).length > 100
+                                                    ? 20
+                                                    : 24
+                                        }}
+                                    >
+                                        {payment_error || error_msg}
+                                    </Text>
+                                </>
+                            )}
                         {!!success && !error && (
                             <Text
                                 style={{
@@ -345,27 +378,28 @@ export default class SendingLightning extends React.Component<
                             {(!!error ||
                                 !!payment_error ||
                                 !!success ||
-                                !!inTransit) && (
-                                <Button
-                                    title={localeString(
-                                        'views.SendingLightning.goToWallet'
-                                    )}
-                                    icon={{
-                                        name: 'list',
-                                        size: 25,
-                                        color: themeColor('background')
-                                    }}
-                                    onPress={() =>
-                                        navigation.navigate('Wallet', {
-                                            refresh: true
-                                        })
-                                    }
-                                    titleStyle={{
-                                        color: themeColor('background')
-                                    }}
-                                    containerStyle={{ width: '100%' }}
-                                />
-                            )}
+                                !!inTransit) &&
+                                !loading && (
+                                    <Button
+                                        title={localeString(
+                                            'views.SendingLightning.goToWallet'
+                                        )}
+                                        icon={{
+                                            name: 'list',
+                                            size: 25,
+                                            color: themeColor('background')
+                                        }}
+                                        onPress={() =>
+                                            navigation.navigate('Wallet', {
+                                                refresh: true
+                                            })
+                                        }
+                                        titleStyle={{
+                                            color: themeColor('background')
+                                        }}
+                                        containerStyle={{ width: '100%' }}
+                                    />
+                                )}
                         </View>
                     </View>
                 </ScrollView>
