@@ -657,7 +657,7 @@ export default class LightningAddressStore {
 
     @action
     public lookupAttestations = async (hash: string, amountMsat: number) => {
-        const attestations: any = {};
+        const attestationEvents: any = {};
 
         const hashpk = getPublicKey(hash);
 
@@ -681,7 +681,7 @@ export default class LightningAddressStore {
                 ]);
 
                 events.map((event) => {
-                    attestations[event.id] = event;
+                    attestationEvents[event.id] = event;
                 });
 
                 relay.close();
@@ -689,17 +689,32 @@ export default class LightningAddressStore {
             })
         );
 
-        const attestationsArray: any = [];
-        Object.keys(attestations).map((key) => {
+        const attestations: any = [];
+        Object.keys(attestationEvents).map((key) => {
             const attestation = this.analyzeAttestation(
-                attestations[key],
+                attestationEvents[key],
                 hash,
                 amountMsat
             );
-            attestationsArray.push(attestation);
+            attestations.push(attestation);
         });
 
-        return attestationsArray;
+        let status;
+        if (attestations.length === 0) status = 'warning';
+        if (attestations.length === 1) {
+            const attestation = attestations[0];
+            if (attestation.isValid) {
+                status = 'success';
+            } else {
+                status = 'error';
+            }
+        }
+        if (attestations.length > 1) status = 'error';
+
+        return {
+            attestations,
+            status
+        };
     };
 
     calculateFeeMsat = (amountMsat: string | number) => {
