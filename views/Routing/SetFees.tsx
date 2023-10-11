@@ -46,7 +46,7 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                 channel.channelId;
         }
 
-        const channelId = channel && channel.channelId;
+        const channelId = channel && channel.channelId!;
         const channelPoint = channel && channel.channel_point;
 
         // LND
