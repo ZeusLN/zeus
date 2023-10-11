@@ -4,6 +4,7 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import {
     BackHandler,
     Image,
+    NativeEventSubscription,
     ScrollView,
     StyleSheet,
     Text,
@@ -28,7 +29,6 @@ import Error from '../assets/images/SVG/Error.svg';
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
 import CopyBox from '../components/CopyBox';
-import { NativeEventSubscription } from 'react-native';
 
 interface SendingLightningProps {
     navigation: any;

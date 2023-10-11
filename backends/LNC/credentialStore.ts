@@ -1,5 +1,5 @@
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { CredentialStore } from '@lightninglabs/lnc-rn';
+import { CredentialStore } from '../../zeus_modules/@lightninglabs/lnc-rn';
 import hashjs from 'hash.js';
 
 const STORAGE_KEY = 'lnc-rn';
