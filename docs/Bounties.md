@@ -16,12 +16,6 @@ Payout: 1,500,000 sats (0.015 BTC)
 
 Currently, the Zeus point of sale only works in tandem with the Square terminal API. We would like to expand support to Clover terminals. Check out the docs for the [Clover REST API](https://docs.clover.com/docs/making-rest-api-calls).
 
-## Accessibility fixes
-
-Payout: 1,000,000 sats (0.01 BTC)
-
-The fine folks over at the Bitcoin Design Community have detailed [an issue](https://github.com/ZeusLN/zeus/issues/1442) with our accessibility problems in Zeus.
-
 # Claimed Bounties
 
 ## Eclair support
@@ -73,3 +67,12 @@ Payout: 1,250,000 sats (0.0125 BTC)
 
 Currently, Zeus supports lnurl-fallback, lnurl-withdraw, and lnurl-pay but not lnurl-auth or lnurl-channel. lnurl-auth will allow users to log into lnurl-auth powered sites using their lightning node. LND doesn't support it natively but it appears Breez has found a workaround - that may be a good starting point. You'll most likely have to leverage Zeus' local database. Check out the spec [here](https://github.com/fiatjaf/lnurl-rfc/blob/master/lnurl-auth.md).
 
+
+## Accessibility fixes
+Author: [sha-256](https://github.com/sha-265)
+
+[Pull Request](https://github.com/ZeusLN/zeus/pull/1590)
+
+Payout: 1,000,000 sats (0.01 BTC)
+
+The fine folks over at the Bitcoin Design Community have detailed [an issue](https://github.com/ZeusLN/zeus/issues/1442) with our accessibility problems in Zeus.
