@@ -896,7 +896,7 @@
     "views.Settings.LightningAddress.noOpenPayments": "No open payments",
     "views.Settings.LightningAddress.noSettledPayments": "No settled payments",
     "views.Settings.LightningAddress.statusExplainer1": "This is the number of payments that can be made to you while you're offline.",
-    "views.Settings.LightningAddress.statusExplainer2": "You will send the server more payment hashes over time, as you run out, so that you can continue to receive payments.",
+    "views.Settings.LightningAddress.statusExplainer2": "More payment hashes will be sent to the server automatically when required, so that you can continue to receive payments.",
     "views.Settings.LightningAddress.generatingPreimages": "Generating preimages",
     "views.Settings.LightningAddress.ChangeAddress": "Change address",
     "views.Settings.LightningAddressSettings.title": "Lightning address settings",
