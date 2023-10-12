@@ -849,7 +849,6 @@ export default class LightningAddressStore {
                 const title = 'ZEUS PAY payment received!';
                 const body = `Payment of ${value_commas} sats automatically accepted`;
                 if (Platform.OS === 'android') {
-                    console.log('AA');
                     Notifications.postLocalNotification({
                         title,
                         body
@@ -971,11 +970,42 @@ export default class LightningAddressStore {
                         console.log('req', req);
                         console.log('amount_msat', amount_msat);
 
-                        this.lookupPreimageAndRedeem(
-                            hash,
-                            amount_msat,
-                            comment
-                        );
+                        const attestationLevel = this.settingsStore?.settings
+                            ?.lightningAddress
+                            ?.automaticallyAcceptAttestationLevel
+                            ? this.settingsStore.settings.lightningAddress
+                                  .automaticallyAcceptAttestationLevel
+                            : 2;
+
+                        if (attestationLevel === 0) {
+                            this.lookupPreimageAndRedeem(
+                                hash,
+                                amount_msat,
+                                comment
+                            );
+                        } else {
+                            this.lookupAttestations(hash, amount_msat)
+                                .then(({ status }: { status: string }) => {
+                                    if (status === 'error') return;
+                                    // success only
+                                    if (
+                                        status === 'warning' &&
+                                        attestationLevel === 1
+                                    )
+                                        return;
+                                    this.lookupPreimageAndRedeem(
+                                        hash,
+                                        amount_msat,
+                                        comment
+                                    );
+                                })
+                                .catch((e) => {
+                                    console.log(
+                                        'Error looking up attestation',
+                                        e
+                                    );
+                                });
+                        }
                     });
                 });
             }
