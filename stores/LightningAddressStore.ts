@@ -872,7 +872,8 @@ export default class LightningAddressStore {
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
                 preimage,
                 private:
-                    this.settingsStore?.settings?.lightningAddress?.routeHints
+                    this.settingsStore?.settings?.lightningAddress
+                        ?.routeHints || false
             })
                 .then((result: any) => {
                     if (result.payment_request) {
