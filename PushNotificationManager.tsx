@@ -4,7 +4,7 @@ import { Notifications } from 'react-native-notifications';
 import stores from './stores/Stores';
 
 export default class PushNotificationManager extends React.Component {
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         if (Platform.OS === 'ios') Notifications.ios.setBadgeCount(0);
         this.registerDevice();
         this.registerNotificationEvents();
@@ -35,9 +35,9 @@ export default class PushNotificationManager extends React.Component {
                 if (
                     stores.settingsStore.settings?.lightningAddress
                         ?.automaticallyAccept &&
-                    notification.payload
-                        .toString()
-                        .includes('Redeem within the next 24 hours')
+                    JSON.stringify(notification.payload).includes(
+                        'Redeem within the next 24 hours'
+                    )
                 )
                     return;
                 if (Platform.OS === 'android') {
