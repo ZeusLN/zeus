@@ -3,12 +3,12 @@ import { Alert, View } from 'react-native';
 import { Header } from 'react-native-elements';
 import { observer } from 'mobx-react';
 
-import QRCodeScanner from './../components/QRCodeScanner';
+import QRCodeScanner from '../components/QRCodeScanner';
 
-import handleAnything from './../utils/handleAnything';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
-import LoadingIndicator from './../components/LoadingIndicator';
+import handleAnything from '../utils/handleAnything';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 interface handleAnythingQRProps {
     navigation: any;

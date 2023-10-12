@@ -1,5 +1,5 @@
 import { NativeModules } from 'react-native';
-import { WorkInfo } from './LndMobile';
+import type { WorkInfo } from './LndMobile.d.ts';
 const { LndMobileScheduledSync } = NativeModules;
 
 export const checkScheduledSyncWorkStatus = async (): Promise<WorkInfo> => {
