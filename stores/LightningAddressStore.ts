@@ -831,7 +831,7 @@ export default class LightningAddressStore {
 
     @action
     public updatePushCredentials = async () => {
-        const DEVICE_TOKEN_KEY = 'zeus-device-notification-token';
+        const DEVICE_TOKEN_KEY = 'zeus-notification-device-token';
         const token = await EncryptedStorage.getItem(DEVICE_TOKEN_KEY);
 
         // only push update if the device token has changed
@@ -1039,6 +1039,12 @@ export default class LightningAddressStore {
                 this.readyToAutomaticallyAccept = true;
                 this.redeemAllOpenPayments();
                 this.subscribeUpdates();
+                if (
+                    this.settingsStore?.settings?.lightningAddress
+                        .notifications === 1
+                ) {
+                    this.updatePushCredentials();
+                }
             }
         }
     };
