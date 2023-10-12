@@ -897,14 +897,38 @@ export default class LightningAddressStore {
 
     @action
     public redeemAllOpenPayments = () => {
+        const attestationLevel =
+            this.settingsStore?.settings?.lightningAddress
+                ?.automaticallyAcceptAttestationLevel || 0;
         this.status().then(() => {
-            this.paid.map((item: any) => {
-                this.lookupPreimageAndRedeem(
-                    item.hash,
-                    item.amount_msat,
-                    item.comment
-                );
-            });
+            // disabled
+            if (attestationLevel === 0) {
+                this.paid.map((item: any) => {
+                    this.lookupPreimageAndRedeem(
+                        item.hash,
+                        item.amount_msat,
+                        item.comment
+                    );
+                });
+            } else {
+                this.paid.map((item: any) => {
+                    this.lookupAttestations(item.hash, item.amount_msat)
+                        .then(({ status }: { status: string }) => {
+                            if (status === 'error') return;
+                            // success only
+                            if (status === 'warning' && attestationLevel === 1)
+                                return;
+                            this.lookupPreimageAndRedeem(
+                                item.hash,
+                                item.amount_msat,
+                                item.comment
+                            );
+                        })
+                        .catch((e) => {
+                            console.log('Error looking up attestation', e);
+                        });
+                });
+            }
         });
     };
 

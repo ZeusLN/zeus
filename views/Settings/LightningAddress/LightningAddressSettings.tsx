@@ -10,7 +10,8 @@ import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 
 import SettingsStore, {
-    NOTIFICATIONS_PREF_KEYS
+    NOTIFICATIONS_PREF_KEYS,
+    AUTOMATIC_ATTESTATION_KEYS
 } from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 
@@ -28,6 +29,7 @@ interface LightningAddressSettingsProps {
 
 interface LightningAddressSettingsState {
     automaticallyAccept: boolean | undefined;
+    automaticallyAcceptAttestationLevel: number;
     automaticallyRequestOlympusChannels: boolean | undefined;
     routeHints: boolean | undefined;
     allowComments: boolean | undefined;
@@ -44,6 +46,7 @@ export default class LightningAddressSettings extends React.Component<
 > {
     state = {
         automaticallyAccept: true,
+        automaticallyAcceptAttestationLevel: 0,
         automaticallyRequestOlympusChannels: true,
         routeHints: false,
         allowComments: true,
@@ -60,6 +63,9 @@ export default class LightningAddressSettings extends React.Component<
             automaticallyAccept: settings.lightningAddress?.automaticallyAccept
                 ? true
                 : false,
+            automaticallyAcceptAttestationLevel:
+                settings.lightningAddress
+                    ?.automaticallyAcceptAttestationLevel || 0,
             automaticallyRequestOlympusChannels: settings.lightningAddress
                 ?.automaticallyRequestOlympusChannels
                 ? true
@@ -78,6 +84,7 @@ export default class LightningAddressSettings extends React.Component<
         const { navigation, SettingsStore, LightningAddressStore } = this.props;
         const {
             automaticallyAccept,
+            automaticallyAcceptAttestationLevel,
             automaticallyRequestOlympusChannels,
             routeHints,
             allowComments,
@@ -143,6 +150,7 @@ export default class LightningAddressSettings extends React.Component<
                                                 enabled,
                                                 automaticallyAccept:
                                                     !automaticallyAccept,
+                                                automaticallyAcceptAttestationLevel,
                                                 automaticallyRequestOlympusChannels,
                                                 routeHints,
                                                 allowComments,
@@ -155,6 +163,44 @@ export default class LightningAddressSettings extends React.Component<
                                 />
                             </View>
                         </ListItem>
+                        <View
+                            style={{
+                                margin: 5,
+                                marginLeft: 15,
+                                marginRight: 15
+                            }}
+                        >
+                            <DropdownSetting
+                                title={localeString(
+                                    'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel'
+                                )}
+                                selectedValue={
+                                    automaticallyAcceptAttestationLevel
+                                }
+                                onValueChange={async (value: number) => {
+                                    this.setState({
+                                        automaticallyAcceptAttestationLevel:
+                                            value
+                                    });
+                                    await updateSettings({
+                                        lightningAddress: {
+                                            enabled,
+                                            automaticallyAccept,
+                                            automaticallyAcceptAttestationLevel:
+                                                value,
+                                            automaticallyRequestOlympusChannels,
+                                            routeHints,
+                                            allowComments,
+                                            nostrPrivateKey,
+                                            nostrRelays,
+                                            notifications
+                                        }
+                                    });
+                                }}
+                                values={AUTOMATIC_ATTESTATION_KEYS}
+                                disabled={!automaticallyAccept}
+                            />
+                        </View>
                         {false && (
                             <ListItem containerStyle={styles.listItem}>
                                 <ListItem.Title
@@ -193,6 +239,7 @@ export default class LightningAddressSettings extends React.Component<
                                                         lightningAddress: {
                                                             enabled,
                                                             automaticallyAccept,
+                                                            automaticallyAcceptAttestationLevel,
                                                             automaticallyRequestOlympusChannels:
                                                                 !automaticallyRequestOlympusChannels,
                                                             routeHints,
@@ -239,6 +286,7 @@ export default class LightningAddressSettings extends React.Component<
                                                 lightningAddress: {
                                                     enabled,
                                                     automaticallyAccept,
+                                                    automaticallyAcceptAttestationLevel,
                                                     automaticallyRequestOlympusChannels,
                                                     routeHints: !routeHints,
                                                     allowComments,
@@ -286,6 +334,7 @@ export default class LightningAddressSettings extends React.Component<
                                                     lightningAddress: {
                                                         enabled,
                                                         automaticallyAccept,
+                                                        automaticallyAcceptAttestationLevel,
                                                         automaticallyRequestOlympusChannels,
                                                         routeHints,
                                                         allowComments:
@@ -325,6 +374,7 @@ export default class LightningAddressSettings extends React.Component<
                                                 lightningAddress: {
                                                     enabled,
                                                     automaticallyAccept,
+                                                    automaticallyAcceptAttestationLevel,
                                                     automaticallyRequestOlympusChannels,
                                                     routeHints,
                                                     allowComments,
