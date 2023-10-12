@@ -1,14 +1,22 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Divider, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import Button from '../../../components/Button';
+import { Row } from '../../../components/layout/Row';
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 import KeyValue from '../../../components/KeyValue';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+import UrlUtils from '../../../utils/UrlUtils';
+
 import LightningAddressStore from '../../../stores/LightningAddressStore';
+
+import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
+import Receive from '../../../assets/images/SVG/Receive.svg';
 
 interface LightningAddressInfoProps {
     navigation: any;
@@ -53,7 +61,7 @@ export default class LightningAddressInfo extends React.Component<
                         }}
                         navigation={navigation}
                     />
-                    <View style={{ margin: 5 }}>
+                    <ScrollView style={{ margin: 5 }}>
                         <View
                             style={{
                                 margin: 10
@@ -123,10 +131,249 @@ export default class LightningAddressInfo extends React.Component<
                                     })}
                                 </>
                             )}
+
+                            <Divider
+                                orientation="horizontal"
+                                style={{ margin: 20 }}
+                            />
+
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Settings.LightningAddressInfo.iconLegend'
+                                )}
+                            />
+
+                            <ListItem containerStyle={styles.listItem}>
+                                <ListItem.Content>
+                                    <ListItem.Title>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LightningAddressInfo.redeem'
+                                            )}
+                                        </Text>
+                                    </ListItem.Title>
+                                    <ListItem.Subtitle>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LightningAddressInfo.pressToRedeem'
+                                            )}
+                                        </Text>
+                                    </ListItem.Subtitle>
+                                </ListItem.Content>
+                                <ListItem.Content right>
+                                    <Row>
+                                        <View style={styles.icon}>
+                                            <Receive
+                                                fill={themeColor('text')}
+                                                width={45}
+                                                height={45}
+                                            />
+                                        </View>
+                                    </Row>
+                                </ListItem.Content>
+                            </ListItem>
+
+                            <ListItem containerStyle={styles.listItem}>
+                                <ListItem.Content>
+                                    <ListItem.Title>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LightningAddressInfo.notLoaded'
+                                            )}
+                                        </Text>
+                                    </ListItem.Title>
+                                    <ListItem.Subtitle>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LightningAddressInfo.notLoadedDetails'
+                                            )}
+                                        </Text>
+                                    </ListItem.Subtitle>
+                                </ListItem.Content>
+                                <ListItem.Content right>
+                                    <Row>
+                                        <View style={styles.icon}>
+                                            <Nostrich
+                                                fill={themeColor('text')}
+                                                width={32}
+                                                height={32}
+                                            />
+                                        </View>
+                                    </Row>
+                                </ListItem.Content>
+                            </ListItem>
+
+                            <ListItem containerStyle={styles.listItem}>
+                                <ListItem.Content>
+                                    <ListItem.Title>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.Attestations.validAttestation'
+                                            )}
+                                        </Text>
+                                    </ListItem.Title>
+                                    <ListItem.Subtitle>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LightningAddressInfo.validAttestationDetails'
+                                            )}
+                                        </Text>
+                                    </ListItem.Subtitle>
+                                </ListItem.Content>
+                                <ListItem.Content right>
+                                    <Row>
+                                        <View style={styles.icon}>
+                                            <Nostrich
+                                                fill={themeColor('success')}
+                                                width={32}
+                                                height={32}
+                                            />
+                                        </View>
+                                    </Row>
+                                </ListItem.Content>
+                            </ListItem>
+
+                            <ListItem containerStyle={styles.listItem}>
+                                <ListItem.Content>
+                                    <ListItem.Title>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.Attestations.invalidAttestation'
+                                            )}
+                                        </Text>
+                                    </ListItem.Title>
+                                    <ListItem.Subtitle>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LightningAddressInfo.invalidAttestationDetails'
+                                            )}
+                                        </Text>
+                                    </ListItem.Subtitle>
+                                </ListItem.Content>
+                                <ListItem.Content right>
+                                    <Row>
+                                        <View style={styles.icon}>
+                                            <Nostrich
+                                                fill={themeColor('error')}
+                                                width={32}
+                                                height={32}
+                                            />
+                                        </View>
+                                    </Row>
+                                </ListItem.Content>
+                            </ListItem>
+
+                            <ListItem containerStyle={styles.listItem}>
+                                <ListItem.Content>
+                                    <ListItem.Title>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.Attestations.noAttestationsFound'
+                                            )}
+                                        </Text>
+                                    </ListItem.Title>
+                                    <ListItem.Subtitle>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LightningAddressInfo.noAttestationDetails'
+                                            )}
+                                        </Text>
+                                    </ListItem.Subtitle>
+                                </ListItem.Content>
+                                <ListItem.Content right>
+                                    <Row>
+                                        <View style={styles.icon}>
+                                            <Nostrich
+                                                fill={themeColor('warning')}
+                                                width={32}
+                                                height={32}
+                                            />
+                                        </View>
+                                    </Row>
+                                </ListItem.Content>
+                            </ListItem>
+
+                            <View style={{ marginTop: 20 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.LightningAddressInfo.learnAboutZaplocker'
+                                    )}
+                                    onPress={() =>
+                                        UrlUtils.goToUrl(
+                                            'https://github.com/supertestnet/zaplocker#four-problems-zaplocker-solves'
+                                        )
+                                    }
+                                />
+                            </View>
                         </View>
-                    </View>
+                    </ScrollView>
                 </View>
             </Screen>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    listItem: {
+        flex: 1,
+        borderBottomWidth: 0,
+        backgroundColor: 'transparent'
+    },
+    icon: {
+        marginRight: 10,
+        width: 45,
+        height: 45,
+        alignItems: 'center',
+        justifyContent: 'center'
+    }
+});
