@@ -808,7 +808,7 @@ export default class SettingsStore {
         lightningAddress: {
             enabled: false,
             automaticallyAccept: true,
-            automaticallyAcceptAttestationLevel: 0,
+            automaticallyAcceptAttestationLevel: 1,
             automaticallyRequestOlympusChannels: true,
             routeHints: false,
             allowComments: true,
@@ -1028,7 +1028,7 @@ export default class SettingsStore {
                     this.settings.lightningAddress = {
                         enabled: false,
                         automaticallyAccept: true,
-                        automaticallyAcceptAttestationLevel: 0,
+                        automaticallyAcceptAttestationLevel: 1,
                         automaticallyRequestOlympusChannels: true,
                         routeHints: false,
                         allowComments: true,
