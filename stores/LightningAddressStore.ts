@@ -870,7 +870,9 @@ export default class LightningAddressStore {
                 expiry: '86400',
                 value,
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
-                preimage
+                preimage,
+                private:
+                    this.settingsStore?.settings?.lightningAddress?.routeHints
             })
                 .then((result: any) => {
                     if (result.payment_request) {

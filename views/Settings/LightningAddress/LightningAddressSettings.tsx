@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import { Row } from '../../../components/layout/Row';
+import Text from '../../../components/Text';
 import DropdownSetting from '../../../components/DropdownSetting';
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
@@ -27,6 +29,7 @@ interface LightningAddressSettingsProps {
 interface LightningAddressSettingsState {
     automaticallyAccept: boolean | undefined;
     automaticallyRequestOlympusChannels: boolean | undefined;
+    routeHints: boolean | undefined;
     allowComments: boolean | undefined;
     nostrPrivateKey: string;
     nostrRelays: Array<string>;
@@ -42,6 +45,7 @@ export default class LightningAddressSettings extends React.Component<
     state = {
         automaticallyAccept: true,
         automaticallyRequestOlympusChannels: true,
+        routeHints: false,
         allowComments: true,
         nostrPrivateKey: '',
         nostrRelays: [],
@@ -60,6 +64,7 @@ export default class LightningAddressSettings extends React.Component<
                 ?.automaticallyRequestOlympusChannels
                 ? true
                 : false,
+            routeHints: settings.lightningAddress?.routeHints ? true : false,
             allowComments: settings.lightningAddress?.allowComments
                 ? true
                 : false,
@@ -74,6 +79,7 @@ export default class LightningAddressSettings extends React.Component<
         const {
             automaticallyAccept,
             automaticallyRequestOlympusChannels,
+            routeHints,
             allowComments,
             nostrPrivateKey,
             nostrRelays,
@@ -138,6 +144,7 @@ export default class LightningAddressSettings extends React.Component<
                                                 automaticallyAccept:
                                                     !automaticallyAccept,
                                                 automaticallyRequestOlympusChannels,
+                                                routeHints,
                                                 allowComments,
                                                 nostrPrivateKey,
                                                 nostrRelays,
@@ -188,6 +195,7 @@ export default class LightningAddressSettings extends React.Component<
                                                             automaticallyAccept,
                                                             automaticallyRequestOlympusChannels:
                                                                 !automaticallyRequestOlympusChannels,
+                                                            routeHints,
                                                             allowComments,
                                                             nostrPrivateKey,
                                                             nostrRelays,
@@ -201,6 +209,49 @@ export default class LightningAddressSettings extends React.Component<
                                 </View>
                             </ListItem>
                         )}
+                        <ListItem containerStyle={styles.listItem}>
+                            <Row align="flex-end">
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular',
+                                        fontSize: 17
+                                    }}
+                                    infoText={[
+                                        localeString(
+                                            'views.Settings.LightningAddressSettings.routeHintsExplainer1'
+                                        ),
+                                        localeString(
+                                            'views.Settings.LightningAddressSettings.routeHintsExplainer2'
+                                        )
+                                    ]}
+                                >
+                                    {localeString('views.Receive.routeHints')}
+                                </Text>
+                                <View style={{ flex: 1 }}>
+                                    <Switch
+                                        value={routeHints}
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                routeHints: !routeHints
+                                            });
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    enabled,
+                                                    automaticallyAccept,
+                                                    automaticallyRequestOlympusChannels,
+                                                    routeHints: !routeHints,
+                                                    allowComments,
+                                                    nostrPrivateKey,
+                                                    nostrRelays,
+                                                    notifications
+                                                }
+                                            });
+                                        }}
+                                    />
+                                </View>
+                            </Row>
+                        </ListItem>
                         <ListItem containerStyle={styles.listItem}>
                             <ListItem.Title
                                 style={{
@@ -236,6 +287,7 @@ export default class LightningAddressSettings extends React.Component<
                                                         enabled,
                                                         automaticallyAccept,
                                                         automaticallyRequestOlympusChannels,
+                                                        routeHints,
                                                         allowComments:
                                                             !allowComments,
                                                         nostrPrivateKey,
@@ -274,6 +326,7 @@ export default class LightningAddressSettings extends React.Component<
                                                     enabled,
                                                     automaticallyAccept,
                                                     automaticallyRequestOlympusChannels,
+                                                    routeHints,
                                                     allowComments,
                                                     nostrPrivateKey,
                                                     nostrRelays,

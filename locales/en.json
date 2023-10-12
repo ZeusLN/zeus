@@ -904,6 +904,8 @@
     "views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannels": "Automatically request channels from OLYMPUS",
     "views.Settings.LightningAddressSettings.allowComments": "Allow comments",
     "views.Settings.LightningAddressSettings.notifications": "Notifications",
+    "views.Settings.LightningAddressSettings.routeHintsExplainer1": "Including route hints will help the LSP forward your payment to you using your unannounced channels.",
+    "views.Settings.LightningAddressSettings.routeHintsExplainer2": "This has a privacy tradeoff in that it will expose your unannounced channels to the LSP.",
     "views.Settings.LightningAddressInfo.title": "Lightning address info",
     "views.Settings.LightningAddressInfo.explainer1": "This lightning address is hosted and powered by our LSP, OLYMPUS by ZEUS. It allows you to accept payments even when you're offline.",
     "views.Settings.LightningAddressInfo.explainer2": "It uses payment hashes generated on your device, and hodl invoices, which means the LSP can only temporarily hold the funds and forward them along to you, or return them to the sender (after a 24 hour expiry period), effectively making it self-custodial.",
