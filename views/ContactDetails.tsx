@@ -283,13 +283,13 @@ export default class ContactDetails extends React.Component<
                                                                 styles.contactFields
                                                             }
                                                         >
-                                                            {address.length > 15
+                                                            {address.length > 23
                                                                 ? `${address.substring(
                                                                       0,
                                                                       10
                                                                   )}...${address.substring(
                                                                       address.length -
-                                                                          5
+                                                                          10
                                                                   )}`
                                                                 : address}
                                                         </Text>
@@ -328,13 +328,13 @@ export default class ContactDetails extends React.Component<
                                                                 styles.contactFields
                                                             }
                                                         >
-                                                            {address.length > 15
+                                                            {address.length > 23
                                                                 ? `${address.substring(
                                                                       0,
                                                                       10
                                                                   )}...${address.substring(
                                                                       address.length -
-                                                                          5
+                                                                          10
                                                                   )}`
                                                                 : address}
                                                         </Text>
@@ -374,13 +374,13 @@ export default class ContactDetails extends React.Component<
                                                                 styles.contactFields
                                                             }
                                                         >
-                                                            {address.length > 15
+                                                            {address.length > 23
                                                                 ? `${address.substring(
                                                                       0,
                                                                       10
                                                                   )}...${address.substring(
                                                                       address.length -
-                                                                          5
+                                                                          10
                                                                   )}`
                                                                 : address}
                                                         </Text>
