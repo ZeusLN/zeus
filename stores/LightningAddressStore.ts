@@ -1039,12 +1039,6 @@ export default class LightningAddressStore {
                 this.readyToAutomaticallyAccept = true;
                 this.redeemAllOpenPayments();
                 this.subscribeUpdates();
-                if (
-                    this.settingsStore?.settings?.lightningAddress
-                        .notifications === 1
-                ) {
-                    this.updatePushCredentials();
-                }
             }
         }
     };
