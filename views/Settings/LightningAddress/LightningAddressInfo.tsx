@@ -334,7 +334,7 @@ export default class LightningAddressInfo extends React.Component<
                                     <Row>
                                         <View style={styles.icon}>
                                             <Nostrich
-                                                fill={themeColor('warning')}
+                                                fill={'#FFC300'}
                                                 width={32}
                                                 height={32}
                                             />
