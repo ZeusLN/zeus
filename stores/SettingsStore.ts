@@ -73,6 +73,7 @@ interface LightningAddressSettings {
     enabled: boolean;
     automaticallyAccept: boolean;
     automaticallyRequestOlympusChannels: boolean;
+    routeHints: boolean;
     allowComments: boolean;
     nostrPrivateKey: string;
     nostrRelays: Array<string>;
@@ -801,6 +802,7 @@ export default class SettingsStore {
             enabled: false,
             automaticallyAccept: true,
             automaticallyRequestOlympusChannels: true,
+            routeHints: false,
             allowComments: true,
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
@@ -1019,6 +1021,7 @@ export default class SettingsStore {
                         enabled: false,
                         automaticallyAccept: true,
                         automaticallyRequestOlympusChannels: true,
+                        routeHints: false,
                         allowComments: true,
                         nostrPrivateKey: '',
                         nostrRelays: DEFAULT_NOSTR_RELAYS,
