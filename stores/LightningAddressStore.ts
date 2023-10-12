@@ -467,6 +467,21 @@ export default class LightningAddressStore {
         });
     };
 
+    enhanceWithFee = (paymentArray: Array<any>) =>
+        paymentArray.map((item: any) => {
+            let fee;
+            try {
+                const decoded = bolt11.decode(item.hodl);
+                if (decoded.millisatoshis) {
+                    fee = new BigNumber(decoded.millisatoshis)
+                        .minus(item.amount_msat)
+                        .div(1000);
+                }
+            } catch (e) {}
+            item.fee = fee;
+            return item;
+        });
+
     @action
     public status = async () => {
         this.loading = true;
@@ -521,8 +536,10 @@ export default class LightningAddressStore {
                                             this.error_msg = '';
                                             this.loading = false;
                                             this.availableHashes = results || 0;
-                                            this.paid = paid;
-                                            this.settled = settled;
+                                            this.paid =
+                                                this.enhanceWithFee(paid);
+                                            this.settled =
+                                                this.enhanceWithFee(settled);
                                             this.fees = fees;
                                             this.minimumSats = minimumSats;
                                             this.lightningAddressHandle =

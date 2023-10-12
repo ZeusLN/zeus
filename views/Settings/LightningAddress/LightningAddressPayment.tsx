@@ -10,6 +10,7 @@ import { Row } from '../../../components/layout/Row';
 
 import stores from '../../../stores/Stores';
 
+import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
@@ -24,6 +25,8 @@ export default function LightningAddressPayment(props) {
     const [attestationStatus, setAttestationStatus] = useState('neutral');
     const [loading, setLoading] = useState(false);
     const [attestations, setAttestations] = useState([]);
+
+    const date = moment(item.updated_at).format('ddd, MMM DD, hh:mm a');
 
     return (
         <ListItem
@@ -44,7 +47,11 @@ export default function LightningAddressPayment(props) {
                             color: themeColor('secondaryText')
                         }}
                     >
-                        {moment(item.updated_at).format('ddd, MMM DD, hh:mm a')}
+                        {item.fee
+                            ? `${localeString('models.Payment.fee')}: ${
+                                  item.fee
+                              } ${localeString('general.sats')} | ${date}`
+                            : date}
                     </Text>
                 </ListItem.Subtitle>
             </ListItem.Content>
