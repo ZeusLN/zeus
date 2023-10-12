@@ -89,11 +89,13 @@ export default function LightningAddressPayment(props) {
                             <LoadingIndicator />
                         ) : (
                             <Nostrich
-                                fill={themeColor(
-                                    attestationStatus === 'neutral'
-                                        ? 'text'
-                                        : attestationStatus
-                                )}
+                                fill={
+                                    attestationStatus === 'warning'
+                                        ? '#FFC300'
+                                        : attestationStatus === 'neutral'
+                                        ? themeColor('text')
+                                        : themeColor(attestationStatus)
+                                }
                                 width={32}
                                 height={32}
                             />
