@@ -79,9 +79,15 @@ export default function LightningAddressPayment(props) {
                                         setLoading(false);
                                     });
                             } else {
-                                navigation.navigate('Attestations', {
-                                    attestations
-                                });
+                                if (attestationStatus === 'success') {
+                                    navigation.navigate('Attestation', {
+                                        attestation: attestations[0]
+                                    });
+                                } else {
+                                    navigation.navigate('Attestations', {
+                                        attestations
+                                    });
+                                }
                             }
                         }}
                         style={{
