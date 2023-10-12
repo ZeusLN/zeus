@@ -897,9 +897,11 @@ export default class LightningAddressStore {
 
     @action
     public redeemAllOpenPayments = () => {
-        const attestationLevel =
-            this.settingsStore?.settings?.lightningAddress
-                ?.automaticallyAcceptAttestationLevel || 0;
+        const attestationLevel = this.settingsStore?.settings?.lightningAddress
+            ?.automaticallyAcceptAttestationLevel
+            ? this.settingsStore.settings.lightningAddress
+                  .automaticallyAcceptAttestationLevel
+            : 2;
         this.status().then(() => {
             // disabled
             if (attestationLevel === 0) {
