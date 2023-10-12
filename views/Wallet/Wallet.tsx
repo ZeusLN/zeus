@@ -391,6 +391,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (lightningAddress.automaticallyAccept) {
                     LightningAddressStore.prepareToAutomaticallyAccept();
                 }
+
+                if (
+                    SettingsStore.settings.lightningAddress?.notifications === 1
+                ) {
+                    LightningAddressStore.updatePushCredentials();
+                }
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {
