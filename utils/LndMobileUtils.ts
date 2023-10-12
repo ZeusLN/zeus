@@ -15,13 +15,11 @@ import { sleep } from './SleepUtils';
 import Base64Utils from './Base64Utils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-import { ELndMobileStatusCodes } from '../lndmobile/index';
+import { ELndMobileStatusCodes, gossipSync } from '../lndmobile/index';
 
 import stores from '../stores/Stores';
 
 import { lnrpc } from '../proto/lightning';
-
-import { gossipSync } from '../lndmobile/index';
 
 export const LndMobileEventEmitter =
     Platform.OS == 'android'

@@ -36,11 +36,11 @@ import TextInput from '../../components/TextInput';
 
 import SettingsStore, {
     INTERFACE_KEYS,
-    LNC_MAILBOX_KEYS
+    LNC_MAILBOX_KEYS,
+    Settings
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
-import { Settings } from '../../stores/SettingsStore';
 
 import { createLndWallet } from '../../utils/LndMobileUtils';
 
