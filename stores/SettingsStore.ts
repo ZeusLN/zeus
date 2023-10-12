@@ -72,6 +72,7 @@ interface InvoicesSettings {
 interface LightningAddressSettings {
     enabled: boolean;
     automaticallyAccept: boolean;
+    automaticallyAcceptAttestationLevel: number;
     automaticallyRequestOlympusChannels: boolean;
     routeHints: boolean;
     allowComments: boolean;
@@ -729,6 +730,12 @@ export const NOTIFICATIONS_PREF_KEYS = [
     { key: 'Nostr', value: 2 }
 ];
 
+export const AUTOMATIC_ATTESTATION_KEYS = [
+    { key: 'Disabled', value: 0 },
+    { key: 'Successful only', value: 1 },
+    { key: 'Successful and not found', value: 2 }
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -801,6 +808,7 @@ export default class SettingsStore {
         lightningAddress: {
             enabled: false,
             automaticallyAccept: true,
+            automaticallyAcceptAttestationLevel: 0,
             automaticallyRequestOlympusChannels: true,
             routeHints: false,
             allowComments: true,
@@ -1020,6 +1028,7 @@ export default class SettingsStore {
                     this.settings.lightningAddress = {
                         enabled: false,
                         automaticallyAccept: true,
+                        automaticallyAcceptAttestationLevel: 0,
                         automaticallyRequestOlympusChannels: true,
                         routeHints: false,
                         allowComments: true,
