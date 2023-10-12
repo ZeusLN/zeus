@@ -46,7 +46,7 @@ export default class LightningAddressSettings extends React.Component<
 > {
     state = {
         automaticallyAccept: true,
-        automaticallyAcceptAttestationLevel: 0,
+        automaticallyAcceptAttestationLevel: 2,
         automaticallyRequestOlympusChannels: true,
         routeHints: false,
         allowComments: true,
@@ -66,7 +66,7 @@ export default class LightningAddressSettings extends React.Component<
             automaticallyAcceptAttestationLevel: settings.lightningAddress
                 ?.automaticallyAcceptAttestationLevel
                 ? settings.lightningAddress.automaticallyAcceptAttestationLevel
-                : 1,
+                : 2,
             automaticallyRequestOlympusChannels: settings.lightningAddress
                 ?.automaticallyRequestOlympusChannels
                 ? true
