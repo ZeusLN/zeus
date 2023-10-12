@@ -91,25 +91,26 @@ export default class Contacts extends React.Component<
         }
 
         if (hasLnAddress) {
-            return item.lnAddress[0].length > 15
-                ? `${item.lnAddress[0].slice(0, 4)}...${item.lnAddress[0].slice(
-                      -4
-                  )}`
+            return item.lnAddress[0].length > 23
+                ? `${item.lnAddress[0].slice(
+                      0,
+                      10
+                  )}...${item.lnAddress[0].slice(-10)}`
                 : item.lnAddress[0];
         }
 
         if (hasOnchainAddress) {
-            return item.onchainAddress[0].length > 15
+            return item.onchainAddress[0].length > 23
                 ? `${item.onchainAddress[0].slice(
                       0,
-                      4
-                  )}...${item.onchainAddress[0].slice(-4)}`
+                      12
+                  )}...${item.onchainAddress[0].slice(-8)}`
                 : item.onchainAddress[0];
         }
 
         if (hasPubkey) {
-            return item.pubkey[0].length > 15
-                ? `${item.pubkey[0].slice(0, 4)}...${item.pubkey[0].slice(-4)}`
+            return item.pubkey[0].length > 23
+                ? `${item.pubkey[0].slice(0, 12)}...${item.pubkey[0].slice(-8)}`
                 : item.pubkey[0];
         }
 
