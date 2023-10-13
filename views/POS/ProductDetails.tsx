@@ -25,10 +25,12 @@ import { localeString } from '../../utils/LocaleUtils';
 
 import DeleteIcon from '../../assets/images/SVG/Delete.svg';
 import DropdownSetting from '../../components/DropdownSetting';
+import PosStore from '../../stores/PosStore';
 
 interface ProductProps {
     navigation: any;
     InventoryStore: InventoryStore;
+    PosStore: PosStore;
 }
 
 interface ProductState {
@@ -52,7 +54,7 @@ const PRICED_IN_KEYS = [
     }
 ];
 
-@inject('InventoryStore')
+@inject('InventoryStore', 'PosStore')
 @observer
 export default class ProductDetails extends React.Component<
     ProductProps,
@@ -149,8 +151,8 @@ export default class ProductDetails extends React.Component<
                         value = 0;
                     }
                     value = value;
+                    break;
             }
-
             product[field] = value;
             this.setState({ product });
         }
@@ -179,6 +181,7 @@ export default class ProductDetails extends React.Component<
         try {
             if (product) {
                 await deleteProduct(product.id);
+                this.props.PosStore.clearCurrentOrder();
                 this.props.navigation.goBack();
             }
         } catch (error) {
@@ -335,13 +338,14 @@ export default class ProductDetails extends React.Component<
                                                     'views.Settings.POS.Product.pricedIn'
                                                 )}
                                                 selectedValue={
-                                                    product?.pricedIn
+                                                    product?.pricedIn! ??
+                                                    PricedIn.Fiat
                                                 }
                                                 onValueChange={async (
                                                     value: string
                                                 ) => {
                                                     this.setValue(
-                                                        'priceIn',
+                                                        'pricedIn',
                                                         value
                                                     );
                                                 }}
@@ -369,13 +373,14 @@ export default class ProductDetails extends React.Component<
                                                 marginTop: 12
                                             }}
                                             autoCapitalize="none"
+                                            keyboardType="numeric"
                                         />
                                     </View>
                                     <DropdownSetting
                                         title={localeString(
                                             'views.Settings.POS.Category.name'
                                         )}
-                                        selectedValue={product?.category}
+                                        selectedValue={product?.category!}
                                         onValueChange={async (
                                             value: string
                                         ) => {

@@ -495,6 +495,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const disableButtons =
             !currentOrder || currentOrder.total_money.amount === 0;
 
+        const itemQty =
+            currentOrder?.line_items.reduce(
+                (n, { quantity }) => n + quantity,
+                0
+            ) ?? 0;
+
         return (
             <View
                 style={{
@@ -505,7 +511,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             >
                 <Button
                     title={`${localeString('general.charge')} (${
-                        (currentOrder && currentOrder.getTotalMoneyDisplay) || 0
+                        currentOrder
+                            ? (itemQty > 0 ? `${itemQty} - ` : '') +
+                              (currentOrder.getTotalMoneyDisplay || 0)
+                            : '0'
                     })`}
                     containerStyle={{
                         borderRadius: 12,
