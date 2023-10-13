@@ -33,6 +33,7 @@ const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 const RELAYS = ['wss://nostr.mutinywallet.com', 'wss://relay.damus.io'];
 
 export default class LightningAddressStore {
+    @observable public lightningAddress: string;
     @observable public lightningAddressHandle: string;
     @observable public lightningAddressDomain: string;
     @observable public lightningAddressActivated: boolean = false;
@@ -93,6 +94,7 @@ export default class LightningAddressStore {
         this.lightningAddressActivated = true;
         this.lightningAddressHandle = handle;
         this.lightningAddressDomain = domain;
+        this.lightningAddress = `${handle}@${domain}`;
     };
 
     @action
@@ -546,9 +548,10 @@ export default class LightningAddressStore {
                                                 handle;
                                             this.lightningAddressDomain =
                                                 domain;
+                                            this.lightningAddress = `${handle}@${domain}`;
 
                                             if (
-                                                this.lightningAddressHandle &&
+                                                this.lightningAddress &&
                                                 new BigNumber(
                                                     this.availableHashes
                                                 ).lt(50)
@@ -1053,5 +1056,8 @@ export default class LightningAddressStore {
         this.settled = [];
         this.preimageMap = {};
         this.socket = undefined;
+        this.lightningAddress = '';
+        this.lightningAddressHandle = '';
+        this.lightningAddressDomain = '';
     };
 }
