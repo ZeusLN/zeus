@@ -97,8 +97,6 @@ export default class Settings extends React.Component<
 
         const posEnabled = settings?.pos?.squareEnabled;
 
-        const lightningAddressEnabled = settings?.lightningAddress?.enabled;
-
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
@@ -107,13 +105,6 @@ export default class Settings extends React.Component<
         const OlympusButton = () => (
             <TouchableOpacity
                 onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
-                onLongPress={() => {
-                    if (
-                        BackendUtils.supportsCustomPreimages() &&
-                        !NodeInfoStore.testnet
-                    )
-                        navigation.navigate('LightningAddress');
-                }}
                 accessibilityLabel={localeString('views.Settings.olympus')}
             >
                 <View style={{ top: -7 }}>
@@ -261,8 +252,7 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {lightningAddressEnabled &&
-                        BackendUtils.supportsCustomPreimages() &&
+                    {BackendUtils.supportsCustomPreimages() &&
                         !NodeInfoStore.testnet && (
                             <View
                                 style={{
