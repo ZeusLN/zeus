@@ -285,6 +285,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             BalanceStore,
             ChannelsStore,
             ChannelBackupStore,
+            LightningAddressStore,
             LSPStore,
             SyncStore,
             SettingsStore
@@ -295,6 +296,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             BalanceStore.reset();
             ChannelsStore.reset();
             SyncStore.reset();
+            LightningAddressStore.reset();
             LSPStore.reset();
             ChannelBackupStore.reset();
         }
@@ -388,6 +390,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 BackendUtils.supportsCustomPreimages() &&
                 !NodeInfoStore.testnet
             ) {
+                LightningAddressStore.status();
+
                 if (lightningAddress.automaticallyAccept) {
                     LightningAddressStore.prepareToAutomaticallyAccept();
                 }

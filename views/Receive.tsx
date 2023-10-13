@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Dimensions,
     Image,
     NativeEventEmitter,
     NativeModules,
@@ -43,6 +44,7 @@ import {
 import Switch from '../components/Switch';
 import Text from '../components/Text';
 import TextInput from '../components/TextInput';
+import { Row } from '../components/layout/Row';
 
 import Invoice from '../models/Invoice';
 
@@ -52,6 +54,7 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import PosStore from '../stores/PosStore';
 import SettingsStore from '../stores/SettingsStore';
+import LightningAddressStore from '../stores/LightningAddressStore';
 import LSPStore from '../stores/LSPStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 
@@ -68,6 +71,11 @@ import {
     LndMobileEventEmitter
 } from '../utils/LndMobileUtils';
 
+import UnifiedSvg from '../assets/images/SVG/DynamicSVG/UnifiedSvg';
+import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
+import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
+import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
+
 interface ReceiveProps {
     exitSetup: any;
     navigation: any;
@@ -79,6 +87,7 @@ interface ReceiveProps {
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     LSPStore: LSPStore;
+    LightningAddressStore: LightningAddressStore;
 }
 
 interface ReceiveState {
@@ -110,6 +119,7 @@ interface ReceiveState {
     'UnitsStore',
     'PosStore',
     'NodeInfoStore',
+    'LightningAddressStore',
     'LSPStore'
 )
 @observer
@@ -144,11 +154,21 @@ export default class Receive extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { navigation, InvoicesStore, SettingsStore } = this.props;
+        const {
+            navigation,
+            InvoicesStore,
+            SettingsStore,
+            LightningAddressStore
+        } = this.props;
         const { reset } = InvoicesStore;
         const { getSettings, posStatus } = SettingsStore;
+        const { status, lightningAddressHandle } = LightningAddressStore;
 
         const settings = await getSettings();
+
+        if (settings?.lightningAddress?.enabled && !lightningAddressHandle) {
+            status();
+        }
 
         this.setState({
             addressType: settings?.invoices?.addressType || '0',
@@ -857,7 +877,9 @@ export default class Receive extends React.Component<
             InvoicesStore,
             SettingsStore,
             UnitsStore,
+            LightningAddressStore,
             LSPStore,
+            NodeInfoStore,
             navigation
         } = this.props;
         const {
@@ -874,6 +896,9 @@ export default class Receive extends React.Component<
             belowMinAmount,
             enableLSP
         } = this.state;
+
+        const { fontScale } = Dimensions.get('window');
+
         const { zeroConfFee, showLspSettings } = LSPStore;
         const { getAmount } = UnitsStore;
 
@@ -892,6 +917,8 @@ export default class Receive extends React.Component<
             SettingsStore;
         const loading = SettingsStore.loading || InvoicesStore.loading;
         const address = onChainAddress;
+        const { lightningAddress } = LightningAddressStore;
+        const lightningAddressLoading = LightningAddressStore.loading;
 
         const error_msg = LSPStore.error_msg || InvoicesStore.error_msg;
 
@@ -970,6 +997,7 @@ export default class Receive extends React.Component<
 
         const unifiedButton = () => (
             <React.Fragment>
+                <UnifiedSvg />
                 <Text
                     style={{
                         color:
@@ -986,6 +1014,7 @@ export default class Receive extends React.Component<
 
         const lightningButton = () => (
             <React.Fragment>
+                <LightningSvg />
                 <Text
                     style={{
                         color:
@@ -1002,6 +1031,7 @@ export default class Receive extends React.Component<
 
         const onChainButton = () => (
             <React.Fragment>
+                <OnChainSvg />
                 <Text
                     style={{
                         color:
@@ -1016,11 +1046,36 @@ export default class Receive extends React.Component<
             </React.Fragment>
         );
 
-        const buttons = [
-            { element: unifiedButton },
-            { element: lightningButton },
-            { element: onChainButton }
-        ];
+        const lightningAddressButton = () => (
+            <React.Fragment>
+                <AddressSvg />
+                <Text
+                    style={{
+                        color:
+                            selectedIndex === 3
+                                ? themeColor('background')
+                                : themeColor('text'),
+                        fontFamily: 'Lato-Regular'
+                    }}
+                >
+                    LN Address
+                </Text>
+            </React.Fragment>
+        );
+
+        const buttons =
+            BackendUtils.supportsCustomPreimages() && !NodeInfoStore.testnet
+                ? [
+                      { element: unifiedButton },
+                      { element: lightningButton },
+                      { element: onChainButton },
+                      { element: lightningAddressButton }
+                  ]
+                : [
+                      { element: unifiedButton },
+                      { element: lightningButton },
+                      { element: onChainButton }
+                  ];
 
         const haveUnifiedInvoice = !!payment_request && !!address;
         const haveInvoice = !!payment_request || !!address;
@@ -1220,7 +1275,8 @@ export default class Receive extends React.Component<
                                 BackendUtils.supportsLSPs() &&
                                 enableLSP &&
                                 satAmount === '0' &&
-                                selectedIndex !== 2 && (
+                                (selectedIndex === 0 ||
+                                    selectedIndex === 1) && (
                                     <View
                                         style={{
                                             backgroundColor:
@@ -1354,7 +1410,78 @@ export default class Receive extends React.Component<
                                                 truncateLongValue
                                             />
                                         )}
-                                    {selectedIndex !== 2 &&
+
+                                    {selectedIndex == 3 &&
+                                        !lightningAddressLoading &&
+                                        !lightningAddress && (
+                                            <View
+                                                style={{
+                                                    marginTop: 20,
+                                                    marginBottom: 20
+                                                }}
+                                            >
+                                                <Button
+                                                    title={localeString(
+                                                        'views.Receive.createLightningAddress'
+                                                    )}
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'LightningAddress'
+                                                        )
+                                                    }
+                                                />
+                                            </View>
+                                        )}
+
+                                    {selectedIndex == 3 &&
+                                        !lightningAddressLoading && (
+                                            <Row
+                                                style={{
+                                                    alignSelf: 'center',
+                                                    marginBottom: 15
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'Lato-Regular',
+                                                        fontSize:
+                                                            26 / fontScale,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        textAlign: 'center'
+                                                    }}
+                                                >
+                                                    {lightningAddress}
+                                                </Text>
+                                            </Row>
+                                        )}
+
+                                    {selectedIndex == 3 &&
+                                        !lightningAddressLoading &&
+                                        lightningAddress && (
+                                            <CollapsedQR
+                                                value={lightningAddress}
+                                                copyText={localeString(
+                                                    'views.Receive.copyAddress'
+                                                )}
+                                                expanded
+                                                textBottom
+                                                hideText
+                                                logo={require('../assets/images/zeus-pay.png')}
+                                            />
+                                        )}
+
+                                    {selectedIndex == 3 &&
+                                        lightningAddressLoading && (
+                                            <View style={{ margin: 40 }}>
+                                                <LoadingIndicator />
+                                            </View>
+                                        )}
+
+                                    {(selectedIndex === 0 ||
+                                        selectedIndex === 1) &&
                                         (belowDustLimit ||
                                             !haveUnifiedInvoice) && (
                                             <CollapsedQR
@@ -1368,30 +1495,34 @@ export default class Receive extends React.Component<
                                                 truncateLongValue
                                             />
                                         )}
-                                    <View
-                                        style={[
-                                            styles.button,
-                                            { paddingTop: 0 }
-                                        ]}
-                                    >
-                                        <Button
-                                            title={
-                                                posStatus === 'active'
-                                                    ? localeString(
-                                                          'general.payNfc'
-                                                      )
-                                                    : localeString(
-                                                          'general.receiveNfc'
-                                                      )
-                                            }
-                                            icon={{
-                                                name: 'nfc',
-                                                size: 25
-                                            }}
-                                            onPress={() => this.enableNfc()}
-                                            secondary
-                                        />
-                                    </View>
+                                    {!(
+                                        selectedIndex === 3 && !lightningAddress
+                                    ) && (
+                                        <View
+                                            style={[
+                                                styles.button,
+                                                { paddingTop: 0 }
+                                            ]}
+                                        >
+                                            <Button
+                                                title={
+                                                    posStatus === 'active'
+                                                        ? localeString(
+                                                              'general.payNfc'
+                                                          )
+                                                        : localeString(
+                                                              'general.receiveNfc'
+                                                          )
+                                                }
+                                                icon={{
+                                                    name: 'nfc',
+                                                    size: 25
+                                                }}
+                                                onPress={() => this.enableNfc()}
+                                                secondary
+                                            />
+                                        </View>
+                                    )}
                                     {!belowDustLimit &&
                                         haveUnifiedInvoice &&
                                         !lnOnly && (
@@ -1409,7 +1540,8 @@ export default class Receive extends React.Component<
                                                         themeColor('secondary'),
                                                     borderRadius: 12,
                                                     borderColor:
-                                                        themeColor('secondary')
+                                                        themeColor('secondary'),
+                                                    height: 80
                                                 }}
                                                 innerBorderStyle={{
                                                     color: themeColor(

@@ -544,6 +544,7 @@
     "views.Receive.ampSwitchExplainer1": "Atomic Multi-path Payments (AMP) are a new type of Lightning payments that can be paid multiple times.",
     "views.Receive.ampSwitchExplainer2": "Please note that AMP invoices are currently only compatible with LND nodes.",
     "views.Receive.lspZeroAmt": "The LSP is incompatible with zero amounts. An unwrapped invoice has been generated. Your node's public key will be exposed.",
+    "views.Receive.createLightningAddress": "Create lightning address",
     "views.Send.title": "Send",
     "views.Send.lnPayment": "Lightning payment request",
     "views.Send.btcAddress": "Bitcoin address",
