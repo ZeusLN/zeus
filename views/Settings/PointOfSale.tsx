@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { FlatList, ScrollView, Text, View } from 'react-native';
+import {
+    FlatList,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -410,43 +416,35 @@ export default class PointOfSale extends React.Component<
                                 </>
                             )}
                         </View>
-                        {posEnabled !== PosEnabled.Disabled && (
-                            <FlatList
-                                data={LIST_ITEMS}
-                                renderItem={({ item }) => (
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor:
-                                                themeColor('background')
-                                        }}
-                                        onPress={() =>
-                                            navigation.navigate(item.path)
-                                        }
-                                    >
-                                        <ListItem.Content>
-                                            <ListItem.Title
-                                                style={{
-                                                    color: themeColor('text'),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {item.label}
-                                            </ListItem.Title>
-                                        </ListItem.Content>
-                                        <Icon
-                                            name="keyboard-arrow-right"
-                                            color={themeColor('secondaryText')}
-                                        />
-                                    </ListItem>
-                                )}
-                                keyExtractor={(item, index) =>
-                                    `${item.label}-${index}`
-                                }
-                                scrollEnabled={false}
-                            />
-                        )}
+                        {posEnabled !== PosEnabled.Disabled &&
+                            LIST_ITEMS.map((item, index) => (
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor:
+                                            themeColor('background')
+                                    }}
+                                    onPress={() =>
+                                        navigation.navigate(item.path)
+                                    }
+                                    key={`${item.label}-${index}`}
+                                >
+                                    <ListItem.Content>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontFamily: 'Lato-Regular'
+                                            }}
+                                        >
+                                            {item.label}
+                                        </ListItem.Title>
+                                    </ListItem.Content>
+                                    <Icon
+                                        name="keyboard-arrow-right"
+                                        color={themeColor('secondaryText')}
+                                    />
+                                </ListItem>
+                            ))}
                     </ScrollView>
                 )}
             </Screen>

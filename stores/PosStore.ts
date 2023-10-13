@@ -135,6 +135,7 @@ export default class PosStore {
             ? new BigNumber(value.toString().replace(/,/g, '.'))
                   .dividedBy(SATS_PER_BTC)
                   .multipliedBy(rate)
+                  .multipliedBy(100)
                   .toNumber()
                   .toFixed(0)
             : 0;
@@ -195,6 +196,7 @@ export default class PosStore {
                     );
                 }
             });
+
             this.currentOrder.total_money.amount = totalFiat.toNumber();
             this.currentOrder.total_money.sats = totalSats.toNumber();
         }

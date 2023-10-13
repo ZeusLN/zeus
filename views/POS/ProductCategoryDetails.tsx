@@ -23,10 +23,12 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import DeleteIcon from '../../assets/images/SVG/Delete.svg';
+import PosStore from '../../stores/PosStore';
 
 interface ProductCategoryProps {
     navigation: any;
     InventoryStore: InventoryStore;
+    PosStore: PosStore;
 }
 
 interface ProductCategoryState {
@@ -36,7 +38,7 @@ interface ProductCategoryState {
     confirmDelete: boolean;
 }
 
-@inject('InventoryStore')
+@inject('InventoryStore', 'PosStore')
 @observer
 export default class ProductCategoryDetails extends React.Component<
     ProductCategoryProps,
@@ -127,12 +129,19 @@ export default class ProductCategoryDetails extends React.Component<
 
     deleteItem = async () => {
         const { InventoryStore } = this.props;
-        const { deleteCategory } = InventoryStore;
+        const { deleteCategory, deleteProduct, getInventory } = InventoryStore;
         const { category } = this.state;
+        const { products } = await getInventory();
 
         try {
             if (category) {
+                products
+                    ?.filter((product) => product.category === category.name)
+                    .map(async (product) => {
+                        await deleteProduct(product.id);
+                    });
                 await deleteCategory(category.id);
+                this.props.PosStore.clearCurrentOrder();
                 this.props.navigation.goBack();
             }
         } catch (error) {

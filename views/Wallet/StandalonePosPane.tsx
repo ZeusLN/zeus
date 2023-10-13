@@ -299,6 +299,13 @@ export default class StandalonePosPane extends React.PureComponent<
     };
 
     renderGridItem = ({ item }) => {
+        const { UnitsStore } = this.props;
+
+        const priceDisplay =
+            item.pricedIn === PricedIn.Sats
+                ? UnitsStore.getAmount(item.price, item.pricedIn)
+                : `$${item.price}`;
+
         return (
             <TouchableOpacity
                 style={{ flex: 1, maxWidth: '50%' }}
@@ -327,7 +334,7 @@ export default class StandalonePosPane extends React.PureComponent<
                         {item.name}
                     </Text>
                     <Text style={{ color: themeColor('text') }}>
-                        ${item.price}
+                        {priceDisplay}
                     </Text>
                 </View>
             </TouchableOpacity>
