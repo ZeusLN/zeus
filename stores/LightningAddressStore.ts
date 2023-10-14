@@ -905,10 +905,14 @@ export default class LightningAddressStore {
                 }
             };
 
+            const automaticallyRequestOlympusChannels =
+                this.settingsStore?.settings?.lightningAddress
+                    ?.automaticallyRequestOlympusChannels;
+
             BackendUtils.createInvoice({
                 // 24 hrs
                 expiry: '86400',
-                value,
+                value: automaticallyRequestOlympusChannels ? undefined : value,
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
                 preimage,
                 private:
