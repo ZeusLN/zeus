@@ -202,19 +202,28 @@ export default class LightningAddressSettings extends React.Component<
                                 disabled={!automaticallyAccept}
                             />
                         </View>
-                        {false && (
-                            <ListItem containerStyle={styles.listItem}>
-                                <ListItem.Title
+                        <ListItem containerStyle={styles.listItem}>
+                            <Row align="flex-end">
+                                <Text
                                     style={{
                                         color: themeColor('text'),
                                         fontFamily: 'Lato-Regular',
-                                        width: '85%'
+                                        fontSize: 17,
+                                        maxWidth: '80%'
                                     }}
+                                    infoText={[
+                                        localeString(
+                                            'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannelsExplainer1'
+                                        ),
+                                        localeString(
+                                            'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannelsExplainer2'
+                                        )
+                                    ]}
                                 >
                                     {localeString(
                                         'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannels'
                                     )}
-                                </ListItem.Title>
+                                </Text>
                                 <View
                                     style={{
                                         flex: 1,
@@ -255,8 +264,8 @@ export default class LightningAddressSettings extends React.Component<
                                         }}
                                     />
                                 </View>
-                            </ListItem>
-                        )}
+                            </Row>
+                        </ListItem>
                         <ListItem containerStyle={styles.listItem}>
                             <Row align="flex-end">
                                 <Text
