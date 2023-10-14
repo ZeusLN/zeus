@@ -75,6 +75,7 @@
     "general.zeusDefaults": "Using Zeus defaults",
     "general.restartZeusChanges": "Restart Zeus for changes to take effect",
     "general.lightningAddress": "Lightning address",
+    "general.lightningAddressCondensed": "LN Address",
     "general.good": "Good",
     "general.bad": "Bad",
     "general.valid": "Valid",

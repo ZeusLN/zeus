@@ -1058,7 +1058,7 @@ export default class Receive extends React.Component<
                         fontFamily: 'Lato-Regular'
                     }}
                 >
-                    LN Address
+                    {localeString('general.lightningAddressCondensed')}
                 </Text>
             </React.Fragment>
         );
