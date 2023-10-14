@@ -1161,160 +1161,129 @@ export default class Receive extends React.Component<
                     navigation={navigation}
                 />
 
-                <ScrollView
-                    style={styles.content}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {creatingInvoiceError && (
-                        <ErrorMessage
-                            message={localeString('views.Receive.errorCreate')}
-                        />
-                    )}
-                    {error_msg && <ErrorMessage message={error_msg} />}
-
-                    {showLspSettings && (
-                        <View style={{ margin: 10 }}>
-                            <Button
-                                title={localeString(
-                                    'views.Receive.goToLspSettings'
+                <View style={{ flex: 1 }}>
+                    <ScrollView
+                        style={styles.content}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {creatingInvoiceError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Receive.errorCreate'
                                 )}
-                                onPress={() =>
-                                    navigation.navigate('LSPSettings')
-                                }
                             />
-                        </View>
-                    )}
+                        )}
+                        {error_msg && <ErrorMessage message={error_msg} />}
 
-                    {watchedInvoicePaid ? (
-                        <View
-                            style={{
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                height: '100%',
-                                paddingTop: 100
-                            }}
-                        >
-                            <WordLogo
-                                height={150}
+                        {showLspSettings && (
+                            <View style={{ margin: 10 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Receive.goToLspSettings'
+                                    )}
+                                    onPress={() =>
+                                        navigation.navigate('LSPSettings')
+                                    }
+                                />
+                            </View>
+                        )}
+
+                        {watchedInvoicePaid ? (
+                            <View
                                 style={{
-                                    alignSelf: 'center'
-                                }}
-                            />
-                            <Image
-                                source={Success}
-                                style={{ width: 290, height: 290 }}
-                            />
-                            <PaidIndicator />
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    fontSize: 20,
-                                    top: -50,
-                                    alignSelf: 'center',
-                                    color: themeColor('text')
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%',
+                                    paddingTop: 100
                                 }}
                             >
-                                {posStatus === 'active'
-                                    ? localeString('views.Wallet.Invoices.paid')
-                                    : `${localeString(
-                                          'views.Receive.youReceived'
-                                      )} ${getAmount(
-                                          watchedInvoicePaidAmt ||
-                                              payment_request_amt
-                                      )}`}
-                            </Text>
-                            <Button
-                                title={
-                                    posStatus === 'active'
-                                        ? localeString('general.goBack')
-                                        : localeString(
-                                              'views.SendingLightning.goToWallet'
+                                <WordLogo
+                                    height={150}
+                                    style={{
+                                        alignSelf: 'center'
+                                    }}
+                                />
+                                <Image
+                                    source={Success}
+                                    style={{ width: 290, height: 290 }}
+                                />
+                                <PaidIndicator />
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        fontSize: 20,
+                                        top: -50,
+                                        alignSelf: 'center',
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {posStatus === 'active'
+                                        ? localeString(
+                                              'views.Wallet.Invoices.paid'
                                           )
-                                }
-                                icon={{
-                                    name: 'list',
-                                    size: 25
-                                }}
-                                onPress={() => navigation.navigate('Wallet')}
-                                containerStyle={{ width: '100%' }}
-                            />
-                        </View>
-                    ) : (
-                        <View>
-                            {!!payment_request && (
-                                <>
-                                    {implementation === 'lndhub' &&
-                                        !!address &&
-                                        !belowDustLimit && (
-                                            <WarningMessage
-                                                message={localeString(
-                                                    'views.Receive.warningLndHub'
-                                                )}
+                                        : `${localeString(
+                                              'views.Receive.youReceived'
+                                          )} ${getAmount(
+                                              watchedInvoicePaidAmt ||
+                                                  payment_request_amt
+                                          )}`}
+                                </Text>
+                                <Button
+                                    title={
+                                        posStatus === 'active'
+                                            ? localeString('general.goBack')
+                                            : localeString(
+                                                  'views.SendingLightning.goToWallet'
+                                              )
+                                    }
+                                    icon={{
+                                        name: 'list',
+                                        size: 25
+                                    }}
+                                    onPress={() =>
+                                        navigation.navigate('Wallet')
+                                    }
+                                    containerStyle={{ width: '100%' }}
+                                />
+                            </View>
+                        ) : (
+                            <View>
+                                {!!payment_request && (
+                                    <>
+                                        {implementation === 'lndhub' &&
+                                            !!address &&
+                                            !belowDustLimit && (
+                                                <WarningMessage
+                                                    message={localeString(
+                                                        'views.Receive.warningLndHub'
+                                                    )}
+                                                />
+                                            )}
+                                        {!!lnurl && (
+                                            <SuccessMessage
+                                                message={
+                                                    !!lnurl &&
+                                                    `${localeString(
+                                                        'views.Receive.successCreate'
+                                                    )} ${localeString(
+                                                        'views.Receive.andSentTo'
+                                                    )} ${lnurl.domain}`
+                                                }
                                             />
                                         )}
-                                    {!!lnurl && (
-                                        <SuccessMessage
-                                            message={
-                                                !!lnurl &&
-                                                `${localeString(
-                                                    'views.Receive.successCreate'
-                                                )} ${localeString(
-                                                    'views.Receive.andSentTo'
-                                                )} ${lnurl.domain}`
-                                            }
-                                        />
-                                    )}
-                                </>
-                            )}
-                            {(creatingInvoice || loading) && (
-                                <View style={{ marginTop: 40 }}>
-                                    <LoadingIndicator />
-                                </View>
-                            )}
-                            {haveInvoice &&
-                                BackendUtils.supportsLSPs() &&
-                                enableLSP &&
-                                satAmount === '0' &&
-                                (selectedIndex === 0 ||
-                                    selectedIndex === 1) && (
-                                    <View
-                                        style={{
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderRadius: 10,
-                                            top: 10,
-                                            margin: 10,
-                                            padding: 15,
-                                            borderWidth: 0.5
-                                        }}
-                                    >
-                                        <Text
-                                            style={{
-                                                fontFamily: 'Lato-Bold',
-                                                color: themeColor('text'),
-                                                fontSize: 15
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Receive.lspZeroAmt'
-                                            )}
-                                        </Text>
+                                    </>
+                                )}
+                                {(creatingInvoice || loading) && (
+                                    <View style={{ marginTop: 40 }}>
+                                        <LoadingIndicator />
                                     </View>
                                 )}
-                            {haveInvoice &&
-                                !!zeroConfFee &&
-                                (selectedIndex == 0 || selectedIndex == 1) && (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                new BigNumber(zeroConfFee).gt(
-                                                    1000
-                                                )
-                                                    ? 'LspExplanationFees'
-                                                    : 'LspExplanationRouting'
-                                            )
-                                        }
-                                    >
+                                {haveInvoice &&
+                                    BackendUtils.supportsLSPs() &&
+                                    enableLSP &&
+                                    satAmount === '0' &&
+                                    (selectedIndex === 0 ||
+                                        selectedIndex === 1) && (
                                         <View
                                             style={{
                                                 backgroundColor:
@@ -1330,363 +1299,27 @@ export default class Receive extends React.Component<
                                                 style={{
                                                     fontFamily: 'Lato-Bold',
                                                     color: themeColor('text'),
-                                                    marginBottom: 5
+                                                    fontSize: 15
                                                 }}
                                             >
                                                 {localeString(
-                                                    new BigNumber(
-                                                        zeroConfFee
-                                                    ).gt(1000)
-                                                        ? selectedIndex === 0
-                                                            ? 'views.Receive.lspExplainerUnified'
-                                                            : 'views.Receive.lspExplainer'
-                                                        : selectedIndex === 0
-                                                        ? 'views.Receive.lspExplainerRoutingUnified'
-                                                        : 'views.Receive.lspExplainerRouting'
-                                                )}
-                                            </Text>
-                                            <Amount
-                                                sats={zeroConfFee}
-                                                fixedUnits="sats"
-                                            />
-                                            <Text
-                                                style={{
-                                                    fontFamily: 'Lato-Bold',
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    fontSize: 15,
-                                                    top: 5,
-                                                    textAlign: 'right'
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'general.tapToLearnMore'
+                                                    'views.Receive.lspZeroAmt'
                                                 )}
                                             </Text>
                                         </View>
-                                    </TouchableOpacity>
-                                )}
-                            {haveInvoice && !creatingInvoiceError && (
-                                <View style={{ marginTop: 10 }}>
-                                    {selectedIndex == 0 &&
-                                        !belowDustLimit &&
-                                        haveUnifiedInvoice && (
-                                            <CollapsedQR
-                                                value={unifiedInvoice}
-                                                copyText={localeString(
-                                                    'views.Receive.copyInvoice'
-                                                )}
-                                                expanded
-                                                textBottom
-                                                truncateLongValue
-                                            />
-                                        )}
-                                    {selectedIndex == 1 &&
-                                        !belowDustLimit &&
-                                        haveUnifiedInvoice && (
-                                            <CollapsedQR
-                                                value={lnInvoice}
-                                                copyValue={lnInvoiceCopyValue}
-                                                copyText={localeString(
-                                                    'views.Receive.copyInvoice'
-                                                )}
-                                                expanded
-                                                textBottom
-                                                truncateLongValue
-                                            />
-                                        )}
-                                    {selectedIndex == 2 &&
-                                        !belowDustLimit &&
-                                        btcAddress && (
-                                            <CollapsedQR
-                                                value={btcAddress}
-                                                copyValue={btcAddressCopyValue}
-                                                copyText={localeString(
-                                                    'views.Receive.copyAddress'
-                                                )}
-                                                expanded
-                                                textBottom
-                                                truncateLongValue
-                                            />
-                                        )}
-
-                                    {selectedIndex == 3 &&
-                                        !lightningAddressLoading &&
-                                        !lightningAddress && (
-                                            <View
-                                                style={{
-                                                    marginTop: 20,
-                                                    marginBottom: 20
-                                                }}
-                                            >
-                                                <Button
-                                                    title={localeString(
-                                                        'views.Receive.createLightningAddress'
-                                                    )}
-                                                    onPress={() =>
-                                                        navigation.navigate(
-                                                            'LightningAddress'
-                                                        )
-                                                    }
-                                                />
-                                            </View>
-                                        )}
-
-                                    {selectedIndex == 3 &&
-                                        !lightningAddressLoading && (
-                                            <Row
-                                                style={{
-                                                    alignSelf: 'center',
-                                                    marginBottom: 15
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'Lato-Regular',
-                                                        fontSize:
-                                                            26 / fontScale,
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        textAlign: 'center'
-                                                    }}
-                                                >
-                                                    {lightningAddress}
-                                                </Text>
-                                            </Row>
-                                        )}
-
-                                    {selectedIndex == 3 &&
-                                        !lightningAddressLoading &&
-                                        lightningAddress && (
-                                            <CollapsedQR
-                                                value={lightningAddress}
-                                                copyText={localeString(
-                                                    'views.Receive.copyAddress'
-                                                )}
-                                                expanded
-                                                textBottom
-                                                hideText
-                                                logo={require('../assets/images/zeus-pay.png')}
-                                            />
-                                        )}
-
-                                    {selectedIndex == 3 &&
-                                        lightningAddressLoading && (
-                                            <View style={{ margin: 40 }}>
-                                                <LoadingIndicator />
-                                            </View>
-                                        )}
-
-                                    {(selectedIndex === 0 ||
-                                        selectedIndex === 1) &&
-                                        (belowDustLimit ||
-                                            !haveUnifiedInvoice) && (
-                                            <CollapsedQR
-                                                value={lnInvoice}
-                                                copyValue={lnInvoiceCopyValue}
-                                                copyText={localeString(
-                                                    'views.Receive.copyAddress'
-                                                )}
-                                                expanded
-                                                textBottom
-                                                truncateLongValue
-                                            />
-                                        )}
-                                    {!(
-                                        selectedIndex === 3 && !lightningAddress
-                                    ) && (
-                                        <View
-                                            style={[
-                                                styles.button,
-                                                { paddingTop: 0 }
-                                            ]}
-                                        >
-                                            <Button
-                                                title={
-                                                    posStatus === 'active'
-                                                        ? localeString(
-                                                              'general.payNfc'
-                                                          )
-                                                        : localeString(
-                                                              'general.receiveNfc'
-                                                          )
-                                                }
-                                                icon={{
-                                                    name: 'nfc',
-                                                    size: 25
-                                                }}
-                                                onPress={() => this.enableNfc()}
-                                                secondary
-                                            />
-                                        </View>
                                     )}
-                                    {!belowDustLimit &&
-                                        haveUnifiedInvoice &&
-                                        !lnOnly && (
-                                            <ButtonGroup
-                                                onPress={this.updateIndex}
-                                                selectedIndex={selectedIndex}
-                                                buttons={buttons}
-                                                selectedButtonStyle={{
-                                                    backgroundColor:
-                                                        themeColor('highlight'),
-                                                    borderRadius: 12
-                                                }}
-                                                containerStyle={{
-                                                    backgroundColor:
-                                                        themeColor('secondary'),
-                                                    borderRadius: 12,
-                                                    borderColor:
-                                                        themeColor('secondary'),
-                                                    height: 80
-                                                }}
-                                                innerBorderStyle={{
-                                                    color: themeColor(
-                                                        'secondary'
-                                                    )
-                                                }}
-                                            />
-                                        )}
-                                </View>
-                            )}
-                            {!loading && !haveInvoice && !creatingInvoice && (
-                                <>
-                                    {BackendUtils.supportsLSPs() && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.secondaryText,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    top: 20
-                                                }}
-                                                infoText={[
-                                                    localeString(
-                                                        'views.Receive.lspSwitchExplainer1'
-                                                    ),
-                                                    localeString(
-                                                        'views.Receive.lspSwitchExplainer2'
-                                                    )
-                                                ]}
-                                                infoNav="LspExplanationOverview"
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LSP.enableLSP'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={enableLSP}
-                                                onValueChange={async () => {
-                                                    this.setState({
-                                                        enableLSP: !enableLSP
-                                                    });
-                                                    await updateSettings({
-                                                        enableLSP: !enableLSP
-                                                    });
-                                                }}
-                                            />
-                                        </>
-                                    )}
-
-                                    {!(
-                                        BackendUtils.supportsLSPs() && enableLSP
-                                    ) && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.secondaryText,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Receive.memo'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.Receive.memoPlaceholder'
-                                                )}
-                                                value={memo}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        memo: text
-                                                    });
-                                                    clearUnified();
-                                                }}
-                                            />
-                                        </>
-                                    )}
-
-                                    <AmountInput
-                                        amount={value}
-                                        title={`${localeString(
-                                            'views.Receive.amount'
-                                        )} ${
-                                            lnurl &&
-                                            lnurl.minWithdrawable !==
-                                                lnurl.maxWithdrawable
-                                                ? ` (${Math.ceil(
-                                                      lnurl.minWithdrawable /
-                                                          1000
-                                                  )} - ${Math.floor(
-                                                      lnurl.maxWithdrawable /
-                                                          1000
-                                                  )})`
-                                                : ''
-                                        }`}
-                                        locked={
-                                            lnurl &&
-                                            lnurl.minWithdrawable ===
-                                                lnurl.maxWithdrawable
-                                                ? true
-                                                : false
-                                        }
-                                        onAmountChange={(
-                                            amount: string,
-                                            satAmount: string | number
-                                        ) => {
-                                            let needInbound = false;
-                                            let belowMinAmount = false;
-                                            if (
-                                                BackendUtils.supportsLSPs() &&
-                                                enableLSP &&
-                                                satAmount != '0' &&
-                                                new BigNumber(satAmount).gt(
-                                                    this.props.ChannelsStore
-                                                        .totalInbound
-                                                )
-                                            ) {
-                                                needInbound = true;
-                                                if (
-                                                    new BigNumber(satAmount).lt(
-                                                        50000
-                                                    )
-                                                ) {
-                                                    belowMinAmount = true;
-                                                }
-                                            }
-                                            this.setState({
-                                                value: amount,
-                                                satAmount,
-                                                needInbound,
-                                                belowMinAmount
-                                            });
-                                        }}
-                                    />
-
-                                    {needInbound && (
+                                {haveInvoice &&
+                                    !!zeroConfFee &&
+                                    (selectedIndex == 0 ||
+                                        selectedIndex == 1) && (
                                         <TouchableOpacity
                                             onPress={() =>
                                                 navigation.navigate(
-                                                    'LspExplanationFees'
+                                                    new BigNumber(
+                                                        zeroConfFee
+                                                    ).gt(1000)
+                                                        ? 'LspExplanationFees'
+                                                        : 'LspExplanationRouting'
                                                 )
                                             }
                                         >
@@ -1695,12 +1328,10 @@ export default class Receive extends React.Component<
                                                     backgroundColor:
                                                         themeColor('secondary'),
                                                     borderRadius: 10,
-                                                    borderColor:
-                                                        themeColor('highlight'),
+                                                    top: 10,
+                                                    margin: 10,
                                                     padding: 15,
-                                                    borderWidth: 0.5,
-                                                    top: 5,
-                                                    marginBottom: 20
+                                                    borderWidth: 0.5
                                                 }}
                                             >
                                                 <Text
@@ -1709,23 +1340,27 @@ export default class Receive extends React.Component<
                                                         color: themeColor(
                                                             'text'
                                                         ),
-                                                        fontSize: 15
+                                                        marginBottom: 5
                                                     }}
                                                 >
-                                                    {belowMinAmount &&
-                                                    this.props.ChannelsStore
-                                                        .channels.length === 0
-                                                        ? localeString(
-                                                              'views.Wallet.KeypadPane.lspExplainerFirstChannel'
-                                                          )
-                                                        : belowMinAmount
-                                                        ? localeString(
-                                                              'views.Wallet.KeypadPane.lspExplainerBelowMin'
-                                                          )
-                                                        : localeString(
-                                                              'views.Wallet.KeypadPane.lspExplainer'
-                                                          )}
+                                                    {localeString(
+                                                        new BigNumber(
+                                                            zeroConfFee
+                                                        ).gt(1000)
+                                                            ? selectedIndex ===
+                                                              0
+                                                                ? 'views.Receive.lspExplainerUnified'
+                                                                : 'views.Receive.lspExplainer'
+                                                            : selectedIndex ===
+                                                              0
+                                                            ? 'views.Receive.lspExplainerRoutingUnified'
+                                                            : 'views.Receive.lspExplainerRouting'
+                                                    )}
                                                 </Text>
+                                                <Amount
+                                                    sats={zeroConfFee}
+                                                    fixedUnits="sats"
+                                                />
                                                 <Text
                                                     style={{
                                                         fontFamily: 'Lato-Bold',
@@ -1744,36 +1379,219 @@ export default class Receive extends React.Component<
                                             </View>
                                         </TouchableOpacity>
                                     )}
+                                {haveInvoice && !creatingInvoiceError && (
+                                    <View style={{ marginTop: 10 }}>
+                                        {selectedIndex == 0 &&
+                                            !belowDustLimit &&
+                                            haveUnifiedInvoice && (
+                                                <CollapsedQR
+                                                    value={unifiedInvoice}
+                                                    copyText={localeString(
+                                                        'views.Receive.copyInvoice'
+                                                    )}
+                                                    expanded
+                                                    textBottom
+                                                    truncateLongValue
+                                                />
+                                            )}
+                                        {selectedIndex == 1 &&
+                                            !belowDustLimit &&
+                                            haveUnifiedInvoice && (
+                                                <CollapsedQR
+                                                    value={lnInvoice}
+                                                    copyValue={
+                                                        lnInvoiceCopyValue
+                                                    }
+                                                    copyText={localeString(
+                                                        'views.Receive.copyInvoice'
+                                                    )}
+                                                    expanded
+                                                    textBottom
+                                                    truncateLongValue
+                                                />
+                                            )}
+                                        {selectedIndex == 2 &&
+                                            !belowDustLimit &&
+                                            btcAddress && (
+                                                <CollapsedQR
+                                                    value={btcAddress}
+                                                    copyValue={
+                                                        btcAddressCopyValue
+                                                    }
+                                                    copyText={localeString(
+                                                        'views.Receive.copyAddress'
+                                                    )}
+                                                    expanded
+                                                    textBottom
+                                                    truncateLongValue
+                                                />
+                                            )}
 
-                                    {implementation !== 'lndhub' && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.secondaryText,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
+                                        {selectedIndex == 3 &&
+                                            !lightningAddressLoading &&
+                                            !lightningAddress && (
+                                                <View
+                                                    style={{
+                                                        marginTop: 20,
+                                                        marginBottom: 20
+                                                    }}
+                                                >
+                                                    <Button
+                                                        title={localeString(
+                                                            'views.Receive.createLightningAddress'
+                                                        )}
+                                                        onPress={() =>
+                                                            navigation.navigate(
+                                                                'LightningAddress'
+                                                            )
+                                                        }
+                                                    />
+                                                </View>
+                                            )}
+
+                                        {selectedIndex == 3 &&
+                                            !lightningAddressLoading && (
+                                                <Row
+                                                    style={{
+                                                        alignSelf: 'center',
+                                                        marginBottom: 15
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'Lato-Regular',
+                                                            fontSize:
+                                                                26 / fontScale,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            textAlign: 'center'
+                                                        }}
+                                                    >
+                                                        {lightningAddress}
+                                                    </Text>
+                                                </Row>
+                                            )}
+
+                                        {selectedIndex == 3 &&
+                                            !lightningAddressLoading &&
+                                            lightningAddress && (
+                                                <CollapsedQR
+                                                    value={lightningAddress}
+                                                    copyText={localeString(
+                                                        'views.Receive.copyAddress'
+                                                    )}
+                                                    expanded
+                                                    textBottom
+                                                    hideText
+                                                    logo={require('../assets/images/zeus-pay.png')}
+                                                />
+                                            )}
+
+                                        {selectedIndex == 3 &&
+                                            lightningAddressLoading && (
+                                                <View style={{ margin: 40 }}>
+                                                    <LoadingIndicator />
+                                                </View>
+                                            )}
+
+                                        {(selectedIndex === 0 ||
+                                            selectedIndex === 1) &&
+                                            (belowDustLimit ||
+                                                !haveUnifiedInvoice) && (
+                                                <CollapsedQR
+                                                    value={lnInvoice}
+                                                    copyValue={
+                                                        lnInvoiceCopyValue
+                                                    }
+                                                    copyText={localeString(
+                                                        'views.Receive.copyAddress'
+                                                    )}
+                                                    expanded
+                                                    textBottom
+                                                    truncateLongValue
+                                                />
+                                            )}
+                                        {!(
+                                            selectedIndex === 3 &&
+                                            !lightningAddress
+                                        ) && (
+                                            <View
+                                                style={[
+                                                    styles.button,
+                                                    { paddingTop: 0 }
+                                                ]}
                                             >
-                                                {localeString(
-                                                    'views.Receive.expiration'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                placeholder={'3600 (one hour)'}
-                                                value={expiry}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        expiry: text
-                                                    })
-                                                }
-                                            />
-                                        </>
-                                    )}
+                                                <Button
+                                                    title={
+                                                        posStatus === 'active'
+                                                            ? localeString(
+                                                                  'general.payNfc'
+                                                              )
+                                                            : localeString(
+                                                                  'general.receiveNfc'
+                                                              )
+                                                    }
+                                                    icon={{
+                                                        name: 'nfc',
+                                                        size: 25
+                                                    }}
+                                                    onPress={() =>
+                                                        this.enableNfc()
+                                                    }
+                                                    secondary
+                                                />
+                                            </View>
+                                        )}
+                                    </View>
+                                )}
+                                {!loading && !haveInvoice && !creatingInvoice && (
+                                    <>
+                                        {BackendUtils.supportsLSPs() && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.secondaryText,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        top: 20
+                                                    }}
+                                                    infoText={[
+                                                        localeString(
+                                                            'views.Receive.lspSwitchExplainer1'
+                                                        ),
+                                                        localeString(
+                                                            'views.Receive.lspSwitchExplainer2'
+                                                        )
+                                                    ]}
+                                                    infoNav="LspExplanationOverview"
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.LSP.enableLSP'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={enableLSP}
+                                                    onValueChange={async () => {
+                                                        this.setState({
+                                                            enableLSP:
+                                                                !enableLSP
+                                                        });
+                                                        await updateSettings({
+                                                            enableLSP:
+                                                                !enableLSP
+                                                        });
+                                                    }}
+                                                />
+                                            </>
+                                        )}
 
-                                    {BackendUtils.supportsCustomPreimages() &&
-                                        showCustomPreimageField && (
+                                        {!(
+                                            BackendUtils.supportsLSPs() &&
+                                            enableLSP
+                                        ) && (
                                             <>
                                                 <Text
                                                     style={{
@@ -1784,157 +1602,373 @@ export default class Receive extends React.Component<
                                                     }}
                                                 >
                                                     {localeString(
-                                                        'views.Receive.customPreimage'
+                                                        'views.Receive.memo'
                                                     )}
                                                 </Text>
                                                 <TextInput
-                                                    value={customPreimage}
+                                                    placeholder={localeString(
+                                                        'views.Receive.memoPlaceholder'
+                                                    )}
+                                                    value={memo}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
+                                                        this.setState({
+                                                            memo: text
+                                                        });
+                                                        clearUnified();
+                                                    }}
+                                                />
+                                            </>
+                                        )}
+
+                                        <AmountInput
+                                            amount={value}
+                                            title={`${localeString(
+                                                'views.Receive.amount'
+                                            )} ${
+                                                lnurl &&
+                                                lnurl.minWithdrawable !==
+                                                    lnurl.maxWithdrawable
+                                                    ? ` (${Math.ceil(
+                                                          lnurl.minWithdrawable /
+                                                              1000
+                                                      )} - ${Math.floor(
+                                                          lnurl.maxWithdrawable /
+                                                              1000
+                                                      )})`
+                                                    : ''
+                                            }`}
+                                            locked={
+                                                lnurl &&
+                                                lnurl.minWithdrawable ===
+                                                    lnurl.maxWithdrawable
+                                                    ? true
+                                                    : false
+                                            }
+                                            onAmountChange={(
+                                                amount: string,
+                                                satAmount: string | number
+                                            ) => {
+                                                let needInbound = false;
+                                                let belowMinAmount = false;
+                                                if (
+                                                    BackendUtils.supportsLSPs() &&
+                                                    enableLSP &&
+                                                    satAmount != '0' &&
+                                                    new BigNumber(satAmount).gt(
+                                                        this.props.ChannelsStore
+                                                            .totalInbound
+                                                    )
+                                                ) {
+                                                    needInbound = true;
+                                                    if (
+                                                        new BigNumber(
+                                                            satAmount
+                                                        ).lt(50000)
+                                                    ) {
+                                                        belowMinAmount = true;
+                                                    }
+                                                }
+                                                this.setState({
+                                                    value: amount,
+                                                    satAmount,
+                                                    needInbound,
+                                                    belowMinAmount
+                                                });
+                                            }}
+                                        />
+
+                                        {needInbound && (
+                                            <TouchableOpacity
+                                                onPress={() =>
+                                                    navigation.navigate(
+                                                        'LspExplanationFees'
+                                                    )
+                                                }
+                                            >
+                                                <View
+                                                    style={{
+                                                        backgroundColor:
+                                                            themeColor(
+                                                                'secondary'
+                                                            ),
+                                                        borderRadius: 10,
+                                                        borderColor:
+                                                            themeColor(
+                                                                'highlight'
+                                                            ),
+                                                        padding: 15,
+                                                        borderWidth: 0.5,
+                                                        top: 5,
+                                                        marginBottom: 20
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'Lato-Bold',
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontSize: 15
+                                                        }}
+                                                    >
+                                                        {belowMinAmount &&
+                                                        this.props.ChannelsStore
+                                                            .channels.length ===
+                                                            0
+                                                            ? localeString(
+                                                                  'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+                                                              )
+                                                            : belowMinAmount
+                                                            ? localeString(
+                                                                  'views.Wallet.KeypadPane.lspExplainerBelowMin'
+                                                              )
+                                                            : localeString(
+                                                                  'views.Wallet.KeypadPane.lspExplainer'
+                                                              )}
+                                                    </Text>
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'Lato-Bold',
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontSize: 15,
+                                                            top: 5,
+                                                            textAlign: 'right'
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'general.tapToLearnMore'
+                                                        )}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )}
+
+                                        {implementation !== 'lndhub' && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.secondaryText,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Receive.expiration'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    keyboardType="numeric"
+                                                    placeholder={
+                                                        '3600 (one hour)'
+                                                    }
+                                                    value={expiry}
                                                     onChangeText={(
                                                         text: string
                                                     ) =>
                                                         this.setState({
-                                                            customPreimage: text
+                                                            expiry: text
                                                         })
                                                     }
                                                 />
                                             </>
                                         )}
 
-                                    {BackendUtils.isLNDBased() &&
-                                        !(
-                                            BackendUtils.supportsLSPs() &&
-                                            enableLSP
-                                        ) && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.secondaryText,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        top: 20
-                                                    }}
-                                                    infoText={[
-                                                        localeString(
-                                                            'views.Receive.routeHintSwitchExplainer1'
-                                                        ),
-                                                        localeString(
-                                                            'views.Receive.routeHintSwitchExplainer2'
-                                                        )
-                                                    ]}
-                                                >
-                                                    {localeString(
-                                                        'views.Receive.routeHints'
-                                                    )}
-                                                </Text>
-                                                <Switch
-                                                    value={routeHints}
-                                                    onValueChange={() =>
-                                                        this.setState({
-                                                            routeHints:
-                                                                !routeHints
-                                                        })
-                                                    }
-                                                />
-                                            </>
-                                        )}
+                                        {BackendUtils.supportsCustomPreimages() &&
+                                            showCustomPreimageField && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Receive.customPreimage'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        value={customPreimage}
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                customPreimage:
+                                                                    text
+                                                            })
+                                                        }
+                                                    />
+                                                </>
+                                            )}
 
-                                    {BackendUtils.supportsAMP() &&
-                                        !(
-                                            BackendUtils.supportsLSPs() &&
-                                            enableLSP
-                                        ) && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.secondaryText,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        top: 20
-                                                    }}
-                                                    infoText={[
-                                                        localeString(
-                                                            'views.Receive.ampSwitchExplainer1'
-                                                        ),
-                                                        localeString(
-                                                            'views.Receive.ampSwitchExplainer2'
-                                                        )
-                                                    ]}
-                                                    infoLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
-                                                >
-                                                    {localeString(
-                                                        'views.Receive.ampInvoice'
-                                                    )}
-                                                </Text>
-                                                <Switch
-                                                    value={ampInvoice}
-                                                    onValueChange={() =>
-                                                        this.setState({
-                                                            ampInvoice:
-                                                                !ampInvoice
-                                                        })
-                                                    }
-                                                />
-                                            </>
-                                        )}
+                                        {BackendUtils.isLNDBased() &&
+                                            !(
+                                                BackendUtils.supportsLSPs() &&
+                                                enableLSP
+                                            ) && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            top: 20
+                                                        }}
+                                                        infoText={[
+                                                            localeString(
+                                                                'views.Receive.routeHintSwitchExplainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.Receive.routeHintSwitchExplainer2'
+                                                            )
+                                                        ]}
+                                                    >
+                                                        {localeString(
+                                                            'views.Receive.routeHints'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={routeHints}
+                                                        onValueChange={() =>
+                                                            this.setState({
+                                                                routeHints:
+                                                                    !routeHints
+                                                            })
+                                                        }
+                                                    />
+                                                </>
+                                            )}
 
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={
-                                                localeString(
-                                                    'views.Receive.createInvoice'
-                                                ) +
-                                                (lnurl
-                                                    ? ` ${localeString(
-                                                          'views.Receive.andSubmitTo'
-                                                      )} ${lnurl.domain}`
-                                                    : '')
-                                            }
-                                            onPress={() => {
-                                                createUnifiedInvoice(
-                                                    BackendUtils.supportsLSPs() &&
-                                                        enableLSP
-                                                        ? ''
-                                                        : memo,
-                                                    satAmount.toString() || '0',
-                                                    expiry,
-                                                    lnurl,
-                                                    BackendUtils.supportsLSPs() &&
-                                                        enableLSP
-                                                        ? false
-                                                        : ampInvoice || false,
-                                                    routeHints,
-                                                    BackendUtils.supportsAddressTypeSelection()
-                                                        ? addressType
-                                                        : undefined,
-                                                    BackendUtils.supportsCustomPreimages() &&
-                                                        showCustomPreimageField
-                                                        ? customPreimage
-                                                        : undefined
-                                                ).then(
-                                                    ({
-                                                        rHash,
-                                                        onChainAddress
-                                                    }: {
-                                                        rHash: string;
-                                                        onChainAddress?: string;
-                                                    }) => {
-                                                        this.subscribeInvoice(
+                                        {BackendUtils.supportsAMP() &&
+                                            !(
+                                                BackendUtils.supportsLSPs() &&
+                                                enableLSP
+                                            ) && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            top: 20
+                                                        }}
+                                                        infoText={[
+                                                            localeString(
+                                                                'views.Receive.ampSwitchExplainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.Receive.ampSwitchExplainer2'
+                                                            )
+                                                        ]}
+                                                        infoLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                                    >
+                                                        {localeString(
+                                                            'views.Receive.ampInvoice'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={ampInvoice}
+                                                        onValueChange={() =>
+                                                            this.setState({
+                                                                ampInvoice:
+                                                                    !ampInvoice
+                                                            })
+                                                        }
+                                                    />
+                                                </>
+                                            )}
+
+                                        <View style={styles.button}>
+                                            <Button
+                                                title={
+                                                    localeString(
+                                                        'views.Receive.createInvoice'
+                                                    ) +
+                                                    (lnurl
+                                                        ? ` ${localeString(
+                                                              'views.Receive.andSubmitTo'
+                                                          )} ${lnurl.domain}`
+                                                        : '')
+                                                }
+                                                onPress={() => {
+                                                    createUnifiedInvoice(
+                                                        BackendUtils.supportsLSPs() &&
+                                                            enableLSP
+                                                            ? ''
+                                                            : memo,
+                                                        satAmount.toString() ||
+                                                            '0',
+                                                        expiry,
+                                                        lnurl,
+                                                        BackendUtils.supportsLSPs() &&
+                                                            enableLSP
+                                                            ? false
+                                                            : ampInvoice ||
+                                                                  false,
+                                                        routeHints,
+                                                        BackendUtils.supportsAddressTypeSelection()
+                                                            ? addressType
+                                                            : undefined,
+                                                        BackendUtils.supportsCustomPreimages() &&
+                                                            showCustomPreimageField
+                                                            ? customPreimage
+                                                            : undefined
+                                                    ).then(
+                                                        ({
                                                             rHash,
                                                             onChainAddress
-                                                        );
-                                                    }
-                                                );
-                                            }}
-                                            disabled={belowMinAmount}
-                                        />
-                                    </View>
-                                </>
-                            )}
-                        </View>
+                                                        }: {
+                                                            rHash: string;
+                                                            onChainAddress?: string;
+                                                        }) => {
+                                                            this.subscribeInvoice(
+                                                                rHash,
+                                                                onChainAddress
+                                                            );
+                                                        }
+                                                    );
+                                                }}
+                                                disabled={belowMinAmount}
+                                            />
+                                        </View>
+                                    </>
+                                )}
+                            </View>
+                        )}
+                    </ScrollView>
+                </View>
+                <View style={{ bottom: 0 }}>
+                    {!belowDustLimit && haveUnifiedInvoice && !lnOnly && (
+                        <ButtonGroup
+                            onPress={this.updateIndex}
+                            selectedIndex={selectedIndex}
+                            buttons={buttons}
+                            selectedButtonStyle={{
+                                backgroundColor: themeColor('highlight'),
+                                borderRadius: 12
+                            }}
+                            containerStyle={{
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 12,
+                                borderColor: themeColor('secondary'),
+                                height: 80
+                            }}
+                            innerBorderStyle={{
+                                color: themeColor('secondary')
+                            }}
+                        />
                     )}
-                </ScrollView>
+                </View>
                 <ModalBox
                     style={{
                         backgroundColor: themeColor('background'),
