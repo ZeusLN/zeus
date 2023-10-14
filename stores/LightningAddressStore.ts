@@ -169,10 +169,9 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
-
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
@@ -233,6 +232,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
@@ -267,10 +271,9 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
-
                         const relays_sig = bytesToHex(
                             schnorr.sign(
                                 hashjs
@@ -365,6 +368,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
@@ -394,10 +402,9 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
-
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
@@ -458,6 +465,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
@@ -500,10 +512,9 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
-
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
@@ -582,6 +593,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
@@ -611,8 +627,8 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
 
                         BackendUtils.signMessage(verification)
@@ -664,6 +680,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
