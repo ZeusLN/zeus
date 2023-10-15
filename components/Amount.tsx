@@ -102,6 +102,7 @@ function AmountDisplay({
                         color={color}
                         accessible={accessible}
                     >
+                        {negative ? '-' : ''}
                         {amount}
                     </Body>
                     <Spacer width={2} />
@@ -237,6 +238,7 @@ interface AmountProps {
     fee?: boolean;
     accessible?: boolean;
     accessibilityLabel?: string;
+    negative?: boolean;
 }
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
@@ -256,7 +258,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
             pending = false,
             fee = false,
             accessible,
-            accessibilityLabel
+            accessibilityLabel,
+            negative = false
         } = this.props;
         const FiatStore = this.props.FiatStore!;
         const UnitsStore = this.props.UnitsStore!;
@@ -291,7 +294,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                             amount={amount}
                             unit={unit}
                             symbol={symbol}
-                            negative={false}
+                            negative={negative}
                             jumboText={jumboText}
                             pending={pending}
                             fee={fee}
@@ -308,7 +311,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     amount={amount}
                     unit={unit}
                     symbol={symbol}
-                    negative={false}
+                    negative={negative}
                     jumboText={jumboText}
                     pending={pending}
                     fee={fee}
@@ -351,7 +354,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 >
                     <AmountDisplay
                         {...unformattedAmount}
-                        negative={false}
+                        negative={negative}
                         jumboText={jumboText}
                         color={textColor}
                         pending={pending}
@@ -364,12 +367,10 @@ export default class Amount extends React.Component<AmountProps, {}> {
             );
         }
 
-        // TODO negative is hardcoded to false because we're inconsistent
-        // an on-chain debit is a negative number, but a lightning debit isn't
         return (
             <AmountDisplay
                 {...unformattedAmount}
-                negative={false}
+                negative={negative}
                 jumboText={jumboText}
                 color={textColor}
                 pending={pending}

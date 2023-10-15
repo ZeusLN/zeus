@@ -40,7 +40,14 @@ export default function LightningAddressPayment(props) {
         >
             <ListItem.Content>
                 <ListItem.Title>
-                    <Amount sats={item.amount_msat / 1000} />
+                    <Amount sats={item.amount_msat / 1000} />{' '}
+                    {item.opened_channel_fee_msat && (
+                        <Amount
+                            sats={item.opened_channel_fee_msat / 1000}
+                            debit
+                            negative={true}
+                        />
+                    )}
                 </ListItem.Title>
                 <ListItem.Subtitle>
                     <Text
