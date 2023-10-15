@@ -725,15 +725,33 @@ export const DEFAULT_NOSTR_RELAYS = [
 ];
 
 export const NOTIFICATIONS_PREF_KEYS = [
-    { key: 'Disabled', value: 0 },
-    { key: 'Push', value: 1 },
-    { key: 'Nostr', value: 2 }
+    { key: 'Disabled', translateKey: 'views.Settings.disabled', value: 0 },
+    {
+        key: 'Push',
+        translateKey:
+            'views.Settings.LightningAddressSettings.notifications.push',
+        value: 1
+    },
+    {
+        key: 'Nostr',
+        value: 2
+    }
 ];
 
 export const AUTOMATIC_ATTESTATION_KEYS = [
-    { key: 'Disabled', value: 0 },
-    { key: 'Successful only', value: 1 },
-    { key: 'Successful and not found', value: 2 }
+    { key: 'Disabled', translateKey: 'views.Settings.disabled', value: 0 },
+    {
+        key: 'Successful only',
+        translateKey:
+            'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel.successOnly',
+        value: 1
+    },
+    {
+        key: 'Successful and not found',
+        translateKey:
+            'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel.successAndNotFound',
+        value: 2
+    }
 ];
 
 const STORAGE_KEY = 'zeus-settings';
