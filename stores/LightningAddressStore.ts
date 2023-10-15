@@ -548,7 +548,9 @@ export default class LightningAddressStore {
                                                 handle;
                                             this.lightningAddressDomain =
                                                 domain;
-                                            this.lightningAddress = `${handle}@${domain}`;
+                                            if (handle && domain) {
+                                                this.lightningAddress = `${handle}@${domain}`;
+                                            }
 
                                             if (
                                                 this.lightningAddress &&
