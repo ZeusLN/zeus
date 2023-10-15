@@ -251,7 +251,7 @@ export default class LND {
                 ? Base64Utils.hexToBase64(data.preimage)
                 : undefined
         });
-    getPayments = () => this.getRequest('/v1/payments');
+    getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
     openChannel = (data: OpenChannelRequest) =>
         this.postRequest(

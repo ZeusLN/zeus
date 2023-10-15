@@ -77,7 +77,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
             payment_hash,
             getPreimage,
             enhancedPath,
-            getMemo
+            getMemo,
+            isInTransit
         } = payment;
         const date = getDisplayTime;
         const noteKey =
@@ -102,7 +103,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Payment.title'),
+                        text: isInTransit
+                            ? localeString('views.Payment.inTransitPayment')
+                            : localeString('views.Payment.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
@@ -119,6 +122,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             jumboText
                             sensitive
                             toggleable
+                            pending={isInTransit}
                         />
                     </View>
 
