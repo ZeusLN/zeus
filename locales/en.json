@@ -924,6 +924,8 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "Attestation is valid. Press to see details.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Invalid or conflicting attestations. Press to see details.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "No Nostr attestations found. Sender's wallet likely doesn't support it yet.",
+    "views.Settings.LightningAddressInfo.channelOpened": "Channel opened",
+    "views.Settings.LightningAddressInfo.channelOpenedDetails": "A channel was opened to you to help you redeem the payment. Enabled with 'Automatically request channels from OLYMPUS' under Lightning Address settings.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Learn more about Zaplocker",
     "views.Settings.Attestations.title": "Attestations",
     "views.Settings.Attestations.noAttestationsFound": "No attestations found",
