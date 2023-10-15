@@ -917,7 +917,7 @@
     "views.Settings.LightningAddressInfo.iconLegend": "Icon legend",
     "views.Settings.LightningAddressInfo.redeem": "Redeem",
     "views.Settings.LightningAddressInfo.pressToRedeem": "Press to redeem payment from ZEUS PAY.",
-    "views.Settings.LightningAddressInfo.notLoaded": "No attestations loaded",
+    "views.Settings.LightningAddressInfo.notLoaded": "Attestation not checked",
     "views.Settings.LightningAddressInfo.notLoadedDetails": "Press to lookup attestations on Nostr.",
     "views.Settings.LightningAddressInfo.validAttestationDetails": "Attestation is valid. Press to see details.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Invalid or conflicting attestations. Press to see details.",
