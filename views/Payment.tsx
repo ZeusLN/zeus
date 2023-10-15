@@ -182,7 +182,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             />
                         )}
 
-                        {getPreimage && (
+                        {getPreimage && !isInTransit && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Payment.paymentPreimage'
