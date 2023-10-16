@@ -625,7 +625,9 @@ export const listPayments = async (): Promise<lnrpc.ListPaymentsResponse> => {
         request: lnrpc.ListPaymentsRequest,
         response: lnrpc.ListPaymentsResponse,
         method: 'ListPayments',
-        options: {}
+        options: {
+            include_incomplete: true
+        }
     });
     return response;
 };
