@@ -202,7 +202,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             />
                         )}
 
-                        {enhancedPath.length > 0 && (
+                        {enhancedPath.length > 0 && enhancedPath[0][0] && (
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
