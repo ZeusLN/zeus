@@ -8,15 +8,11 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
-import SettingsStore, {
-    APP_LOCK_TIMEOUT_VALUES,
-    DEFAULT_APP_LOCK_TIMEOUT
-} from '../../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import { verifyBiometry } from '../../utils/BiometricUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import DropdownSetting from '../../components/DropdownSetting';
 
 interface SecurityProps {
     navigation: any;
@@ -31,7 +27,6 @@ interface SecurityState {
     passphraseExists: boolean;
     supportedBiometryType: BiometryType | undefined;
     isBiometryEnabled: boolean | undefined;
-    appLockTimeout: string;
 }
 
 const possibleSecurityItems = [
@@ -81,8 +76,7 @@ export default class Security extends React.Component<
         pinExists: false,
         passphraseExists: false,
         supportedBiometryType: undefined,
-        isBiometryEnabled: undefined,
-        appLockTimeout: DEFAULT_APP_LOCK_TIMEOUT
+        isBiometryEnabled: undefined
     };
 
     async componentDidMount() {
@@ -93,7 +87,6 @@ export default class Security extends React.Component<
         this.setState({
             scramblePin: settings.scramblePin ?? true,
             loginBackground: settings.loginBackground ?? false,
-            appLockTimeout: settings.appLockTimeout ?? DEFAULT_APP_LOCK_TIMEOUT,
             isBiometryEnabled: settings.isBiometryEnabled,
             supportedBiometryType: settings.supportedBiometryType
         });
@@ -229,8 +222,7 @@ export default class Security extends React.Component<
             pinExists,
             passphraseExists,
             loginBackground,
-            isBiometryEnabled = false,
-            appLockTimeout
+            isBiometryEnabled = false
         } = this.state;
         const { updateSettings, settings } = SettingsStore;
 
@@ -334,7 +326,7 @@ export default class Security extends React.Component<
                             </ListItem.Content>
                             <Switch
                                 value={loginBackground}
-                                onValueChange={() => {
+                                onValueChange={async () => {
                                     this.setState({
                                         loginBackground: !loginBackground
                                     });
@@ -345,35 +337,6 @@ export default class Security extends React.Component<
                             />
                         </ListItem>
                     )}
-                    {(pinExists || passphraseExists || isBiometryEnabled) &&
-                        loginBackground && (
-                            <View
-                                style={{
-                                    paddingLeft: 15,
-                                    paddingRight: 15,
-                                    marginTop: 15
-                                }}
-                            >
-                                <DropdownSetting
-                                    title={localeString(
-                                        'views.Settings.Security.appLockTimeout'
-                                    )}
-                                    infoText={localeString(
-                                        'views.Settings.Security.appLockTimeout.explainer'
-                                    )}
-                                    selectedValue={appLockTimeout}
-                                    values={APP_LOCK_TIMEOUT_VALUES}
-                                    onValueChange={(value) => {
-                                        this.setState({
-                                            appLockTimeout: value
-                                        });
-                                        updateSettings({
-                                            appLockTimeout: value
-                                        });
-                                    }}
-                                />
-                            </View>
-                        )}
                 </ScrollView>
             </Screen>
         );
