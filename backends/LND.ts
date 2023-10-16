@@ -75,12 +75,28 @@ export default class LND {
                             }
                             return response.json();
                         } else {
-                            const errorInfo = response.json();
-                            throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
-                            );
+                            try {
+                                const errorInfo = response.json();
+                                throw new Error(
+                                    (errorInfo.error &&
+                                        errorInfo.error.message) ||
+                                        errorInfo.message ||
+                                        errorInfo.error
+                                );
+                            } catch (e) {
+                                if (
+                                    response.data &&
+                                    typeof response.data === 'string'
+                                ) {
+                                    throw new Error(response.data);
+                                } else {
+                                    throw new Error(
+                                        localeString(
+                                            'backends.LND.restReq.connectionError'
+                                        )
+                                    );
+                                }
+                            }
                         }
                     })
             );
