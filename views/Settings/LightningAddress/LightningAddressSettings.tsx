@@ -7,7 +7,10 @@ import { Row } from '../../../components/layout/Row';
 import Text from '../../../components/Text';
 import DropdownSetting from '../../../components/DropdownSetting';
 import Screen from '../../../components/Screen';
+import Switch from '../../../components/Switch';
 import Header from '../../../components/Header';
+import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../../components/LoadingIndicator';
 
 import SettingsStore, {
     NOTIFICATIONS_PREF_KEYS,
@@ -15,11 +18,9 @@ import SettingsStore, {
 } from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 
+import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import Switch from '../../../components/Switch';
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
-import LoadingIndicator from '../../../components/LoadingIndicator';
 
 interface LightningAddressSettingsProps {
     navigation: any;
@@ -202,70 +203,72 @@ export default class LightningAddressSettings extends React.Component<
                                 disabled={!automaticallyAccept}
                             />
                         </View>
-                        <ListItem containerStyle={styles.listItem}>
-                            <Row align="flex-end">
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular',
-                                        fontSize: 17,
-                                        maxWidth: '80%'
-                                    }}
-                                    infoText={[
-                                        localeString(
-                                            'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannelsExplainer1'
-                                        ),
-                                        localeString(
-                                            'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannelsExplainer2'
-                                        )
-                                    ]}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannels'
-                                    )}
-                                </Text>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        flexDirection: 'row',
-                                        justifyContent: 'flex-end'
-                                    }}
-                                >
-                                    <Switch
-                                        value={
-                                            automaticallyRequestOlympusChannels
-                                        }
-                                        onValueChange={async () => {
-                                            try {
-                                                await update({
-                                                    request_channels:
-                                                        !automaticallyRequestOlympusChannels
-                                                }).then(async () => {
-                                                    this.setState({
-                                                        automaticallyRequestOlympusChannels:
-                                                            !automaticallyRequestOlympusChannels
-                                                    });
-                                                    await updateSettings({
-                                                        lightningAddress: {
-                                                            enabled,
-                                                            automaticallyAccept,
-                                                            automaticallyAcceptAttestationLevel,
-                                                            automaticallyRequestOlympusChannels:
-                                                                !automaticallyRequestOlympusChannels,
-                                                            routeHints,
-                                                            allowComments,
-                                                            nostrPrivateKey,
-                                                            nostrRelays,
-                                                            notifications
-                                                        }
-                                                    });
-                                                });
-                                            } catch (e) {}
+                        {BackendUtils.supportsLSPs() && (
+                            <ListItem containerStyle={styles.listItem}>
+                                <Row align="flex-end">
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'Lato-Regular',
+                                            fontSize: 17,
+                                            maxWidth: '80%'
                                         }}
-                                    />
-                                </View>
-                            </Row>
-                        </ListItem>
+                                        infoText={[
+                                            localeString(
+                                                'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannelsExplainer1'
+                                            ),
+                                            localeString(
+                                                'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannelsExplainer2'
+                                            )
+                                        ]}
+                                    >
+                                        {localeString(
+                                            'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannels'
+                                        )}
+                                    </Text>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={
+                                                automaticallyRequestOlympusChannels
+                                            }
+                                            onValueChange={async () => {
+                                                try {
+                                                    await update({
+                                                        request_channels:
+                                                            !automaticallyRequestOlympusChannels
+                                                    }).then(async () => {
+                                                        this.setState({
+                                                            automaticallyRequestOlympusChannels:
+                                                                !automaticallyRequestOlympusChannels
+                                                        });
+                                                        await updateSettings({
+                                                            lightningAddress: {
+                                                                enabled,
+                                                                automaticallyAccept,
+                                                                automaticallyAcceptAttestationLevel,
+                                                                automaticallyRequestOlympusChannels:
+                                                                    !automaticallyRequestOlympusChannels,
+                                                                routeHints,
+                                                                allowComments,
+                                                                nostrPrivateKey,
+                                                                nostrRelays,
+                                                                notifications
+                                                            }
+                                                        });
+                                                    });
+                                                } catch (e) {}
+                                            }}
+                                        />
+                                    </View>
+                                </Row>
+                            </ListItem>
+                        )}
                         <ListItem containerStyle={styles.listItem}>
                             <Row align="flex-end">
                                 <Text
