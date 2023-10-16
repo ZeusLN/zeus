@@ -231,7 +231,8 @@ export default class LND {
             addr: data.addr,
             sat_per_vbyte: data.sat_per_vbyte,
             amount: data.amount,
-            spend_unconfirmed: data.spend_unconfirmed
+            spend_unconfirmed: data.spend_unconfirmed,
+            send_all: data.send_all
         });
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = (data: any) =>
@@ -435,5 +436,6 @@ export default class LND {
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
+    supportsSweep = () => true;
     isLNDBased = () => true;
 }
