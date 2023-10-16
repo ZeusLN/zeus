@@ -13,6 +13,7 @@ import stores from '../../../stores/Stores';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
+import Channel from '../../../assets/images/SVG/Channel.svg';
 import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
 import Receive from '../../../assets/images/SVG/Receive.svg';
 
@@ -39,7 +40,14 @@ export default function LightningAddressPayment(props) {
         >
             <ListItem.Content>
                 <ListItem.Title>
-                    <Amount sats={item.amount_msat / 1000} />
+                    <Amount sats={item.amount_msat / 1000} />{' '}
+                    {item.opened_channel_fee_msat && (
+                        <Amount
+                            sats={item.opened_channel_fee_msat / 1000}
+                            debit
+                            negative={true}
+                        />
+                    )}
                 </ListItem.Title>
                 <ListItem.Subtitle>
                     <Text
@@ -57,6 +65,14 @@ export default function LightningAddressPayment(props) {
             </ListItem.Content>
             <ListItem.Content right>
                 <Row>
+                    {item.opened_channel && (
+                        <Channel
+                            fill={themeColor('text')}
+                            width={42}
+                            height={42}
+                            style={{ marginRight: 10 }}
+                        />
+                    )}
                     <TouchableOpacity
                         onPress={() => {
                             if (attestationStatus === 'neutral') {
