@@ -135,7 +135,9 @@ export default class LightningNodeConnect {
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
     getPayments = async () =>
         await this.lnc.lnd.lightning
-            .listPayments({})
+            .listPayments({
+                include_incomplete: true
+            })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
