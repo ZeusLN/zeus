@@ -64,7 +64,8 @@ export const sendCoins = async (
     address: string,
     sat: number,
     feeRate?: number,
-    spend_unconfirmed?: boolean
+    spend_unconfirmed?: boolean,
+    send_all?: boolean
 ): Promise<lnrpc.SendCoinsResponse> => {
     const response = await sendCommand<
         lnrpc.ISendCoinsRequest,
@@ -74,12 +75,19 @@ export const sendCoins = async (
         request: lnrpc.SendCoinsRequest,
         response: lnrpc.SendCoinsResponse,
         method: 'SendCoins',
-        options: {
-            addr: address,
-            amount: Long.fromValue(sat),
-            sat_per_vbyte: feeRate ? Long.fromValue(feeRate) : undefined,
-            spend_unconfirmed
-        }
+        options: send_all
+            ? {
+                  addr: address,
+                  sat_per_vbyte: feeRate ? Long.fromValue(feeRate) : undefined,
+                  spend_unconfirmed,
+                  send_all
+              }
+            : {
+                  addr: address,
+                  amount: Long.fromValue(sat),
+                  sat_per_vbyte: feeRate ? Long.fromValue(feeRate) : undefined,
+                  spend_unconfirmed
+              }
     });
     return response;
 };
