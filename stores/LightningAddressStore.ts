@@ -914,7 +914,11 @@ export default class LightningAddressStore {
             BackendUtils.createInvoice({
                 // 24 hrs
                 expiry: '86400',
-                value: automaticallyRequestOlympusChannels ? undefined : value,
+                value:
+                    BackendUtils.supportsLSPs() &&
+                    automaticallyRequestOlympusChannels
+                        ? undefined
+                        : value,
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
                 preimage,
                 private:
