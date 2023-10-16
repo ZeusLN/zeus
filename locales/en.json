@@ -22,6 +22,7 @@
     "general.onchain": "On-chain",
     "general.activity": "Activity",
     "general.transaction": "Transaction",
+    "general.confirmed": "Confirmed",
     "general.unconfirmed": "Unconfirmed",
     "general.sent": "Sent",
     "general.received": "Received",
@@ -951,5 +952,7 @@
     "views.LspExplanationOverview.step4": "The sender pays the invoice, which goes through the LSP",
     "views.LspExplanationOverview.step5": "The LSP detects the payment and opens up a 0-conf, just in time, channel to the receiver",
     "views.LspExplanationOverview.step6": "The LSP then forwards the payment to the receiver using that new channel and the payment is completed",
-    "views.LspExplanationOverview.buttonText": "Learn more about wrapped invoices"
+    "views.LspExplanationOverview.buttonText": "Learn more about wrapped invoices",
+    "views.Sweep.title": "Sweep on-chain wallet",
+    "views.Sweep.explainer": "Sweeping the on-chain wallet will send both the confirmed and unconfirmed balance to the destination address specified above."
 }

@@ -138,6 +138,7 @@ class BackendUtils {
     supportsSimpleTaprootChannels = () =>
         this.call('supportsSimpleTaprootChannels');
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
+    supportsSweep = () => this.call('supportsSweep');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC

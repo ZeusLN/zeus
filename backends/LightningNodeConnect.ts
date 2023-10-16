@@ -390,5 +390,6 @@ export default class LightningNodeConnect {
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
+    supportsSweep = () => true;
     isLNDBased = () => true;
 }
