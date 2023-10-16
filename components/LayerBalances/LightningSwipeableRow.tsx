@@ -64,8 +64,12 @@ export default class LightningSwipeableRow extends Component<
                     opacity: transOpacity
                 }}
             >
-                <RectButton style={[styles.action]} onPress={pressHandler}>
-                    <View accessible accessibilityRole="button">
+                <RectButton onPress={pressHandler}>
+                    <View
+                        style={[styles.view]}
+                        accessible
+                        accessibilityRole="button"
+                    >
                         {text === localeString('general.routing') && (
                             <Routing
                                 fill={themeColor('highlight')}
@@ -190,12 +194,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
         fontFamily: 'Lato-Regular'
     },
-    action: {
-        alignItems: 'center',
-        flex: 1,
-        justifyContent: 'center'
-    },
-    swipe: {
-        padding: 20
+    view: {
+        alignItems: 'center'
     }
 });
