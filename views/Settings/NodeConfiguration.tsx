@@ -1649,6 +1649,20 @@ export default class NodeConfiguration extends React.Component<
                             />
                         </View>
                     )}
+
+                    {implementation === 'embedded-lnd' && saved && (
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                textAlign: 'center',
+                                marginTop: 20
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.NodeConfiguration.embeddedDelete'
+                            )}
+                        </Text>
+                    )}
                 </ScrollView>
             </Screen>
         );
