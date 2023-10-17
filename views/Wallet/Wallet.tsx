@@ -50,6 +50,7 @@ import SyncStore from '../../stores/SyncStore';
 import LSPStore from '../../stores/LSPStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
+import LnurlPayStore from '../../stores/LnurlPayStore';
 
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
@@ -82,6 +83,7 @@ interface WalletProps {
     LSPStore: LSPStore;
     ChannelBackupStore: ChannelBackupStore;
     LightningAddressStore: LightningAddressStore;
+    LnurlPayStore: LnurlPayStore;
 }
 
 interface WalletState {
@@ -101,6 +103,7 @@ interface WalletState {
     'ModalStore',
     'SyncStore',
     'LSPStore',
+    'LnurlPayStore',
     'ChannelBackupStore',
     'LightningAddressStore'
 )
@@ -277,6 +280,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelsStore,
             ChannelBackupStore,
             LightningAddressStore,
+            LnurlPayStore,
             LSPStore,
             SyncStore,
             SettingsStore
@@ -291,6 +295,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.reset();
             ChannelBackupStore.reset();
         }
+
+        LnurlPayStore.reset();
 
         this.getSettingsAndNavigate();
     }
