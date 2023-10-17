@@ -124,6 +124,7 @@ class BackendUtils {
     supportsMPP = () => this.call('supportsMPP');
     supportsAMP = () => this.call('supportsAMP');
     supportsCoinControl = () => this.call('supportsCoinControl');
+    supportsChannelCoinControl = () => this.call('supportsChannelCoinControl');
     supportsHopPicking = () => this.call('supportsHopPicking');
     supportsAccounts = () => this.call('supportsAccounts');
     supportsRouting = () => this.call('supportsRouting');

@@ -270,54 +270,38 @@ export default class LND {
         });
     getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
-    openChannel = (data: OpenChannelRequest) =>
-        this.postRequest(
-            '/v1/channels',
-            data.simpleTaprootChannel
-                ? {
-                      private: data.privateChannel,
-                      scid_alias: data.scidAlias,
-                      local_funding_amount: data.local_funding_amount,
-                      min_confs: data.min_confs,
-                      node_pubkey_string: data.node_pubkey_string,
-                      sat_per_vbyte: data.sat_per_vbyte,
-                      spend_unconfirmed: data.spend_unconfirmed,
-                      fund_max: data.fundMax ? data.fundMax : undefined,
-                      outpoints:
-                          data.utxos && data.utxos.length > 0
-                              ? data.utxos.map((utxo: string) => {
-                                    const [txid_str, output_index] =
-                                        utxo.split(':');
-                                    return {
-                                        txid_str,
-                                        output_index: Number(output_index)
-                                    };
-                                })
-                              : undefined,
-                      commitment_type: 'SIMPLE_TAPROOT'
-                  }
-                : {
-                      private: data.privateChannel,
-                      scid_alias: data.scidAlias,
-                      local_funding_amount: data.local_funding_amount,
-                      min_confs: data.min_confs,
-                      node_pubkey_string: data.node_pubkey_string,
-                      sat_per_vbyte: data.sat_per_vbyte,
-                      spend_unconfirmed: data.spend_unconfirmed,
-                      fund_max: data.fundMax ? data.fundMax : undefined,
-                      outpoints:
-                          data.utxos && data.utxos.length > 0
-                              ? data.utxos.map((utxo: string) => {
-                                    const [txid_str, output_index] =
-                                        utxo.split(':');
-                                    return {
-                                        txid_str,
-                                        output_index: Number(output_index)
-                                    };
-                                })
-                              : undefined
-                  }
-        );
+    openChannel = (data: OpenChannelRequest) => {
+        let request: any = {
+            private: data.privateChannel,
+            scid_alias: data.scidAlias,
+            local_funding_amount: data.local_funding_amount,
+            min_confs: data.min_confs,
+            node_pubkey_string: data.node_pubkey_string,
+            sat_per_vbyte: data.sat_per_vbyte,
+            spend_unconfirmed: data.spend_unconfirmed
+        };
+
+        if (data.fundMax) {
+            request.fund_max = true;
+        }
+
+        if (data.simpleTaprootChannel) {
+            request.commitment_type = 'SIMPLE_TAPROOT';
+        }
+
+        if (data.utxos && data.utxos.length > 0) {
+            request.outpoints = data.utxos.map((utxo: string) => {
+                const [txid_str, output_index] = utxo.split(':');
+                return {
+                    txid_str,
+                    output_index: Number(output_index)
+                };
+            });
+        }
+
+        return this.postRequest('/v1/channels', request);
+    };
+
     openChannelStream = (data: OpenChannelRequest) =>
         this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
@@ -440,6 +424,7 @@ export default class LND {
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
     supportsCoinControl = () => this.supports('v0.12.0');
+    supportsChannelCoinControl = () => this.supports('v0.17.0');
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsAccounts = () => this.supports('v0.13.0');
     supportsRouting = () => true;
