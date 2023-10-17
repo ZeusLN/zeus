@@ -166,7 +166,7 @@ export default class CLightningREST extends LND {
         this.getRequest('/v1/pay/listPays').then((data: any) => ({
             payments: data.pays
         }));
-    getNewAddress = () => this.getRequest('/v1/newaddr');
+    getNewAddress = () => this.getRequest('/v1/newaddr?addrType=bech32');
     openChannel = (data: OpenChannelRequest) => {
         let request: any;
         if (data.utxos && data.utxos.length > 0) {
