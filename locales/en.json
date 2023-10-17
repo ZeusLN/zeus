@@ -894,6 +894,7 @@
     "views.Settings.LightningAddress.statusExplainer2": "More payment hashes will be sent to the server automatically when required, so that you can continue to receive payments.",
     "views.Settings.LightningAddress.generatingPreimages": "Generating preimages",
     "views.Settings.LightningAddress.ChangeAddress": "Change address",
+    "views.Settings.LightningAddress.nostrKeys.changeWarning": "Warning: changing your Nostr keys will delete your pending payments. Please redeem your pending payments before submitting new keys.",
     "views.Settings.LightningAddressSettings.title": "Lightning address settings",
     "views.Settings.LightningAddressSettings.automaticallyAccept": "Automatically accept payments on startup",
     "views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel": "Attestation level for automatic acceptance",

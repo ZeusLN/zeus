@@ -11,7 +11,11 @@ import Text from '../../../components/Text';
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import TextInput from '../../../components/TextInput';
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../../components/SuccessErrorMessage';
+import { Row } from '../../../components/layout/Row';
 
 import SettingsStore from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
@@ -20,6 +24,8 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 import DiceSVG from '../../../assets/images/SVG/Dice.svg';
+import HiddenSVG from '../../../assets/images/SVG/Hidden.svg';
+import VisibleSVG from '../../../assets/images/SVG/Visible.svg';
 
 interface NostrKeyProps {
     navigation: any;
@@ -35,6 +41,7 @@ interface NostrKeyState {
     nostrNpub: string;
     setup: boolean;
     editMode: boolean;
+    revealSensitive: boolean;
 }
 
 @inject('SettingsStore', 'LightningAddressStore')
@@ -50,7 +57,8 @@ export default class NostrKey extends React.Component<
         nostrNpub: '',
         nostrNsec: '',
         setup: false,
-        editMode: false
+        editMode: false,
+        revealSensitive: false
     };
 
     generateNostrKeys = () => {
@@ -91,7 +99,8 @@ export default class NostrKey extends React.Component<
             nostrNsec,
             nostrNpub,
             setup,
-            editMode: setup
+            editMode: setup,
+            revealSensitive: false
         });
     }
 
@@ -104,7 +113,8 @@ export default class NostrKey extends React.Component<
             nostrNsec,
             nostrNpub,
             setup,
-            editMode
+            editMode,
+            revealSensitive
         } = this.state;
         const { update, error_msg, loading } = LightningAddressStore;
         const { updateSettings, settings } = SettingsStore;
@@ -118,8 +128,34 @@ export default class NostrKey extends React.Component<
             notifications
         } = lightningAddress;
 
-        const EditButton = () => (
+        const VisibilityButton = () => (
             <View style={{ right: 15 }}>
+                <TouchableOpacity
+                    onPress={() => {
+                        this.setState({
+                            revealSensitive: !revealSensitive
+                        });
+                    }}
+                >
+                    {revealSensitive ? (
+                        <HiddenSVG
+                            fill={themeColor('text')}
+                            width={35}
+                            height={35}
+                        />
+                    ) : (
+                        <VisibleSVG
+                            fill={themeColor('text')}
+                            width={35}
+                            height={35}
+                        />
+                    )}
+                </TouchableOpacity>
+            </View>
+        );
+
+        const EditButton = () => (
+            <View style={{ right: 30 }}>
                 <Icon
                     name="edit"
                     onPress={() => {
@@ -150,16 +186,30 @@ export default class NostrKey extends React.Component<
                                 fontFamily: 'Lato-Regular'
                             }
                         }}
-                        rightComponent={!editMode && <EditButton />}
+                        rightComponent={
+                            <Row>
+                                {!editMode && <EditButton />}
+                                <VisibilityButton />
+                            </Row>
+                        }
                         navigation={navigation}
                     />
                     <View style={{ flex: 1, margin: 5 }}>
                         {loading && <LoadingIndicator />}
-                        {!loading && !!error_msg && (
-                            <ErrorMessage message={error_msg} dismissable />
-                        )}
-
                         <View style={styles.wrapper}>
+                            {!loading && !!error_msg && (
+                                <ErrorMessage message={error_msg} dismissable />
+                            )}
+
+                            {!setup && editMode && (
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.Settings.LightningAddress.nostrKeys.changeWarning'
+                                    )}
+                                    dismissable
+                                />
+                            )}
+
                             {editMode && (
                                 <>
                                     <Text style={styles.text}>
@@ -216,6 +266,7 @@ export default class NostrKey extends React.Component<
                                                 flex: 1,
                                                 flexDirection: 'row'
                                             }}
+                                            secureTextEntry={!revealSensitive}
                                         />
                                         <TouchableOpacity
                                             onPress={() =>
@@ -239,7 +290,11 @@ export default class NostrKey extends React.Component<
                             {!editMode && nostrPrivateKey && (
                                 <KeyValue
                                     keyValue={localeString('nostr.privkey')}
-                                    value={nostrPrivateKey}
+                                    value={
+                                        revealSensitive
+                                            ? nostrPrivateKey
+                                            : '*'.repeat(64)
+                                    }
                                     sensitive
                                 />
                             )}
@@ -255,7 +310,11 @@ export default class NostrKey extends React.Component<
                             {!editMode && nostrNsec && (
                                 <KeyValue
                                     keyValue={localeString('nostr.nsec')}
-                                    value={nostrNsec}
+                                    value={
+                                        revealSensitive
+                                            ? nostrNsec
+                                            : '*'.repeat(63)
+                                    }
                                     sensitive
                                 />
                             )}
