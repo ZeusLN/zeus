@@ -261,7 +261,8 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {BackendUtils.supportsCustomPreimages() &&
+                    {selectedNode &&
+                        BackendUtils.supportsCustomPreimages() &&
                         !NodeInfoStore.testnet && (
                             <View
                                 style={{
