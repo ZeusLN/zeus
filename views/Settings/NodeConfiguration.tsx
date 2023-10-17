@@ -29,7 +29,8 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import {
     SuccessMessage,
-    ErrorMessage
+    ErrorMessage,
+    WarningMessage
 } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
@@ -1448,12 +1449,22 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {implementation === 'embedded-lnd' && (
-                        <KeyValue
-                            keyValue={localeString('general.network')}
-                            value={embeddedLndNetwork}
-                        />
-                    )}
+                    {implementation === 'embedded-lnd' &&
+                        embeddedLndNetwork && (
+                            <KeyValue
+                                keyValue={localeString('general.network')}
+                                value={embeddedLndNetwork}
+                            />
+                        )}
+
+                    {implementation === 'embedded-lnd' &&
+                        recoveryCipherSeed && (
+                            <WarningMessage
+                                message={localeString(
+                                    'views.Settings.NodeConfiguration.restoreWarning'
+                                )}
+                            />
+                        )}
 
                     {implementation === 'embedded-lnd' && (
                         <View style={{ ...styles.button, marginTop: 20 }}>
