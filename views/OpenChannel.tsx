@@ -459,7 +459,7 @@ export default class OpenChannel extends React.Component<
 
                         {!connectPeerOnly && (
                             <>
-                                {BackendUtils.supportsCoinControl() && (
+                                {BackendUtils.supportsChannelCoinControl() && (
                                     <UTXOPicker
                                         onValueChange={this.selectUTXOs}
                                         UTXOsStore={UTXOsStore}

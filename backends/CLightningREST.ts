@@ -251,6 +251,8 @@ export default class CLightningREST extends LND {
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => this.supports('v0.8.2', undefined, 'v0.4.0');
+    supportsChannelCoinControl = () =>
+        this.supports('v0.8.2', undefined, 'v0.4.0');
     supportsHopPicking = () => false;
     supportsAccounts = () => false;
     supportsRouting = () => true;

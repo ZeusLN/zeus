@@ -489,6 +489,7 @@ export default class Eclair {
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;
+    supportsChannelCoinControl = () => false;
     supportsHopPicking = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
