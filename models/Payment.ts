@@ -63,6 +63,13 @@ export default class Payment extends BaseModel {
         return this.preimage || this.payment_preimage;
     }
 
+    @computed public get isInTransit(): boolean {
+        return (
+            this.getPreimage ===
+            '0000000000000000000000000000000000000000000000000000000000000000'
+        );
+    }
+
     @computed public get getTimestamp(): string | number {
         return this.creation_date || this.created_at || this.timestamp || 0;
     }

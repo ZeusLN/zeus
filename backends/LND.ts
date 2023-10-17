@@ -75,12 +75,28 @@ export default class LND {
                             }
                             return response.json();
                         } else {
-                            const errorInfo = response.json();
-                            throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
-                            );
+                            try {
+                                const errorInfo = response.json();
+                                throw new Error(
+                                    (errorInfo.error &&
+                                        errorInfo.error.message) ||
+                                        errorInfo.message ||
+                                        errorInfo.error
+                                );
+                            } catch (e) {
+                                if (
+                                    response.data &&
+                                    typeof response.data === 'string'
+                                ) {
+                                    throw new Error(response.data);
+                                } else {
+                                    throw new Error(
+                                        localeString(
+                                            'backends.LND.restReq.connectionError'
+                                        )
+                                    );
+                                }
+                            }
                         }
                     })
             );
@@ -231,7 +247,8 @@ export default class LND {
             addr: data.addr,
             sat_per_vbyte: data.sat_per_vbyte,
             amount: data.amount,
-            spend_unconfirmed: data.spend_unconfirmed
+            spend_unconfirmed: data.spend_unconfirmed,
+            send_all: data.send_all
         });
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = (data: any) =>
@@ -251,7 +268,7 @@ export default class LND {
                 ? Base64Utils.hexToBase64(data.preimage)
                 : undefined
         });
-    getPayments = () => this.getRequest('/v1/payments');
+    getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
     openChannel = (data: OpenChannelRequest) =>
         this.postRequest(
@@ -435,5 +452,6 @@ export default class LND {
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
+    supportsSweep = () => true;
     isLNDBased = () => true;
 }

@@ -278,9 +278,11 @@ export default class Activity extends React.PureComponent<
                                 item.model ===
                                 localeString('views.Payment.title')
                             ) {
-                                displayName = localeString(
-                                    'views.Activity.youSent'
-                                );
+                                displayName = item.isInTransit
+                                    ? localeString(
+                                          'views.Payment.inTransitPayment'
+                                      )
+                                    : localeString('views.Activity.youSent');
                                 subTitle = item.memo
                                     ? `${localeString('general.lightning')}: ${
                                           item.memo

@@ -131,6 +131,7 @@ export default class LightningAddress extends React.Component<
         const {
             create,
             status,
+            redeemAllOpenPayments,
             lightningAddressHandle,
             lightningAddressDomain,
             availableHashes,
@@ -609,34 +610,48 @@ export default class LightningAddress extends React.Component<
                                         </TouchableOpacity>
                                     )}
                                 {!loading && selectedIndex === 0 && (
-                                    <FlatList
-                                        data={paid}
-                                        renderItem={({
-                                            item,
-                                            index
-                                        }: {
-                                            item: any;
-                                            index: number;
-                                        }) => {
-                                            return (
-                                                <LightningAddressPayment
-                                                    index={index}
-                                                    item={item}
-                                                    selectedIndex={
-                                                        selectedIndex
-                                                    }
-                                                    navigation={navigation}
-                                                    isReady={isReady}
-                                                />
-                                            );
-                                        }}
-                                        ListFooterComponent={
-                                            <Spacer height={100} />
-                                        }
-                                        onRefresh={() => status()}
-                                        refreshing={loading}
-                                        keyExtractor={(_, index) => `${index}`}
-                                    />
+                                    <>
+                                        <FlatList
+                                            data={paid}
+                                            renderItem={({
+                                                item,
+                                                index
+                                            }: {
+                                                item: any;
+                                                index: number;
+                                            }) => {
+                                                return (
+                                                    <LightningAddressPayment
+                                                        index={index}
+                                                        item={item}
+                                                        selectedIndex={
+                                                            selectedIndex
+                                                        }
+                                                        navigation={navigation}
+                                                        isReady={isReady}
+                                                    />
+                                                );
+                                            }}
+                                            ListFooterComponent={
+                                                <Spacer height={100} />
+                                            }
+                                            onRefresh={() => status()}
+                                            refreshing={loading}
+                                            keyExtractor={(_, index) =>
+                                                `${index}`
+                                            }
+                                        />
+                                        {paid && paid.length > 0 && (
+                                            <Button
+                                                title={localeString(
+                                                    'views.Settings.LightningAddress.redeemAll'
+                                                )}
+                                                onPress={() =>
+                                                    redeemAllOpenPayments()
+                                                }
+                                            />
+                                        )}
+                                    </>
                                 )}
                                 {!loading && selectedIndex === 1 && (
                                     <FlatList

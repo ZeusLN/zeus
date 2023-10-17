@@ -3,12 +3,16 @@ import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
 import { lnrpc, routerrpc, invoicesrpc } from './../proto/lightning';
 import Long from 'long';
 import sha from 'sha.js';
+
 import Base64Utils from '../utils/Base64Utils';
+import { localeString } from '../utils/LocaleUtils';
 import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
 } from '../utils/LndMobileUtils';
+
 import { getChanInfo, listPrivateChannels } from './channel';
+
 const { LndMobile, LndMobileTools } = NativeModules;
 
 // const TLV_KEYSEND = 5482373484;
@@ -279,47 +283,66 @@ export const sendPaymentV2Sync = async (
         amp,
         dest
     };
-    return new Promise(async (resolve, reject) => {
-        const listener = LndMobileEventEmitter.addListener(
-            'RouterSendPaymentV2',
-            (e) => {
-                try {
-                    listener.remove();
-                    const error = checkLndStreamErrorResponse(
-                        'RouterSendPaymentV2',
-                        e
-                    );
-                    if (error === 'EOF') {
-                        return;
-                    } else if (error) {
-                        console.log('Got error from RouterSendPaymentV2', [
-                            error
-                        ]);
-                        return reject(error);
-                    }
 
-                    const response = decodeSendPaymentV2Result(e.data);
-                    resolve(response);
-                } catch (error) {
-                    reject(error.message);
-                }
-            }
-        );
-
-        const response = await sendStreamCommand<
-            routerrpc.ISendPaymentRequest,
-            routerrpc.SendPaymentRequest
-        >(
-            {
-                request: routerrpc.SendPaymentRequest,
-                method: 'RouterSendPaymentV2',
-                options
-            },
-            false
-        );
-
+    const forcedTimeout = async (time: number, response: any) => {
+        await new Promise((res) => setTimeout(res, time));
         return response;
-    });
+    };
+
+    const call = () =>
+        new Promise(async (resolve, reject) => {
+            const listener = LndMobileEventEmitter.addListener(
+                'RouterSendPaymentV2',
+                (e) => {
+                    try {
+                        listener.remove();
+                        const error = checkLndStreamErrorResponse(
+                            'RouterSendPaymentV2',
+                            e
+                        );
+
+                        if (error === 'EOF') {
+                            return;
+                        } else if (error) {
+                            console.log('Got error from RouterSendPaymentV2', [
+                                error
+                            ]);
+                            return reject(error);
+                        }
+
+                        const response = decodeSendPaymentV2Result(e.data);
+                        resolve(response);
+                    } catch (error: any) {
+                        reject(error.message || error.toString());
+                    }
+                }
+            );
+
+            const response = await sendStreamCommand<
+                routerrpc.ISendPaymentRequest,
+                routerrpc.SendPaymentRequest
+            >(
+                {
+                    request: routerrpc.SendPaymentRequest,
+                    method: 'RouterSendPaymentV2',
+                    options
+                },
+                false
+            );
+
+            return response;
+        });
+
+    const result: any = await Promise.race([
+        forcedTimeout((timeout_seconds + 1) * 1000, {
+            payment_error: localeString(
+                'views.SendingLightning.paymentTimedOut'
+            )
+        }),
+        call()
+    ]);
+
+    return result;
 };
 
 // TODO error handling
@@ -625,7 +648,9 @@ export const listPayments = async (): Promise<lnrpc.ListPaymentsResponse> => {
         request: lnrpc.ListPaymentsRequest,
         response: lnrpc.ListPaymentsResponse,
         method: 'ListPayments',
-        options: {}
+        options: {
+            include_incomplete: true
+        }
     });
     return response;
 };
