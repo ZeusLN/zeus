@@ -503,6 +503,7 @@
     "views.PaymentRequest.firstHop": "First Hop",
     "views.PaymentRequest.lastHop": "Last Hop",
     "views.PaymentRequest.lndGettingReady": "LND is getting ready to make payments. Please wait.",
+    "views.PaymentRequest.lndGettingReadyReceive": "LND is getting ready to receive payments. Please wait.",
     "views.PaymentRequest.isPmtHashSigValid": "Payment hash signature",
     "views.PaymentRequest.isRelaysSigValid": "Relays signature",
     "views.Receive.title": "Receive",

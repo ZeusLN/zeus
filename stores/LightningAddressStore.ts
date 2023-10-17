@@ -1036,10 +1036,15 @@ export default class LightningAddressStore {
 
     @action
     public prepareToAutomaticallyAccept = async () => {
+        const automaticallyRequestOlympusChannels =
+            this.settingsStore?.settings?.lightningAddress
+                ?.automaticallyRequestOlympusChannels;
+
         while (!this.readyToAutomaticallyAccept) {
             await sleep(7000);
-            const isReady =
-                await this.nodeInfoStore.isLightningReadyToReceive();
+            const isReady = await this.nodeInfoStore.isLightningReadyToReceive(
+                automaticallyRequestOlympusChannels
+            );
             if (isReady) {
                 this.readyToAutomaticallyAccept = true;
                 this.redeemAllOpenPayments();
