@@ -111,16 +111,20 @@ export default class NodeInfoStore {
     };
 
     @action
-    public isLightningReadyToReceive = async () => {
+    public isLightningReadyToReceive = async (
+        autoRequestChansEnabled?: boolean
+    ) => {
         await this.channelsStore.getChannels();
         await this.getNodeInfo();
         const syncedToChain = this.nodeInfo?.synced_to_chain;
 
         return (
             syncedToChain &&
-            this.channelsStore.channels.some(
-                (channel: Channel) => channel.active
-            )
+            ((autoRequestChansEnabled &&
+                this.channelsStore.channels.length === 0) ||
+                this.channelsStore.channels.some(
+                    (channel: Channel) => channel.active
+                ))
         );
     };
 }

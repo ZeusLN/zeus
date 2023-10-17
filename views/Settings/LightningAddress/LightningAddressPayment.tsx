@@ -18,7 +18,7 @@ import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
 import Receive from '../../../assets/images/SVG/Receive.svg';
 
 export default function LightningAddressPayment(props) {
-    const { item, index, selectedIndex, navigation } = props;
+    const { item, index, selectedIndex, navigation, isReady } = props;
     const { lightningAddressStore } = stores;
     const { lookupPreimageAndRedeem, lookupAttestations } =
         lightningAddressStore;
@@ -147,6 +147,7 @@ export default function LightningAddressPayment(props) {
                         <TouchableOpacity
                             onPress={() => {
                                 if (selectedIndex === 1) return;
+                                if (!isReady) return;
 
                                 const {
                                     hash,
@@ -166,7 +167,11 @@ export default function LightningAddressPayment(props) {
                             }}
                         >
                             <Receive
-                                fill={themeColor('text')}
+                                fill={
+                                    isReady
+                                        ? themeColor('text')
+                                        : themeColor('secondaryText')
+                                }
                                 width={45}
                                 height={45}
                             />

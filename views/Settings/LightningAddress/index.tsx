@@ -140,10 +140,13 @@ export default class LightningAddress extends React.Component<
             fees,
             error,
             error_msg,
-            loading
+            loading,
+            readyToAutomaticallyAccept
         } = LightningAddressStore;
 
         const { fontScale } = Dimensions.get('window');
+
+        const isReady = readyToAutomaticallyAccept;
 
         const InfoButton = () => (
             <View style={{ right: 15 }}>
@@ -529,6 +532,37 @@ export default class LightningAddress extends React.Component<
                                         }}
                                     />
                                 )}
+                                {!isReady &&
+                                    !loading &&
+                                    selectedIndex === 0 &&
+                                    paid &&
+                                    paid.length > 0 && (
+                                        <>
+                                            <View
+                                                style={{
+                                                    alignSelf: 'center'
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontFamily: 'Lato-Bold',
+                                                        color: themeColor(
+                                                            'highlight'
+                                                        ),
+                                                        margin: 5,
+                                                        alignSelf: 'center',
+                                                        marginTop: 10,
+                                                        marginBottom: 10
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.PaymentRequest.lndGettingReadyReceive'
+                                                    )}
+                                                </Text>
+                                                <LoadingIndicator size={30} />
+                                            </View>
+                                        </>
+                                    )}
                                 {!loading &&
                                     selectedIndex === 0 &&
                                     paid.length === 0 && (
@@ -594,6 +628,7 @@ export default class LightningAddress extends React.Component<
                                                             selectedIndex
                                                         }
                                                         navigation={navigation}
+                                                        isReady={isReady}
                                                     />
                                                 );
                                             }}
