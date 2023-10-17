@@ -49,6 +49,19 @@ export default function LightningAddressPayment(props) {
                         />
                     )}
                 </ListItem.Title>
+                {item.comment && (
+                    <ListItem.Subtitle>
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {`${localeString(
+                                'views.LnurlPay.LnurlPay.comment'
+                            )}: ${item.comment}`}
+                        </Text>
+                    </ListItem.Subtitle>
+                )}
                 <ListItem.Subtitle>
                     <Text
                         style={{
