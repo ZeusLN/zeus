@@ -497,7 +497,7 @@ export default class LightningAddressStore {
         });
 
     @action
-    public status = async () => {
+    public status = async (isRedeem?: boolean) => {
         this.loading = true;
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
@@ -547,7 +547,7 @@ export default class LightningAddressStore {
                                         if (status === 200 && success) {
                                             this.error = false;
                                             this.error_msg = '';
-                                            this.loading = false;
+                                            if (!isRedeem) this.loading = false;
                                             this.availableHashes = results || 0;
                                             this.paid =
                                                 this.enhanceWithFee(paid);
@@ -952,7 +952,7 @@ export default class LightningAddressStore {
             ? this.settingsStore.settings.lightningAddress
                   .automaticallyAcceptAttestationLevel
             : 2;
-        this.status().then(() => {
+        this.status(true).then(() => {
             // disabled
             if (attestationLevel === 0) {
                 this.paid.map((item: any) => {
