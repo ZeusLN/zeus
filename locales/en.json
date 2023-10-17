@@ -869,6 +869,7 @@
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Restore mainnet wallet",
     "views.Settings.NodeConfiguration.restoreTestnetWallet": "Restore testnet wallet",
     "views.Settings.NodeConfiguration.backUpWallet": "Back up wallet",
+    "views.Settings.NodeConfiguration.restoreWarning": "Restoring a wallet will trigger a force close of all your channels. Consider closing your channels on your original device first, if possible, to save on fees and recover your funds more quickly.",
     "views.Settings.LightningAddress.create": "Create lightning address",
     "views.Settings.LightningAddress.redeemAll": "Redeem all",
     "views.Settings.LightningAddress.change": "Change lightning address",
