@@ -375,24 +375,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                     ChannelBackupStore.initSubscribeChannelEvents();
             }
-
-            if (
-                lightningAddress.enabled &&
-                BackendUtils.supportsCustomPreimages() &&
-                !NodeInfoStore.testnet
-            ) {
-                LightningAddressStore.status();
-
-                if (lightningAddress.automaticallyAccept) {
-                    LightningAddressStore.prepareToAutomaticallyAccept();
-                }
-
-                if (
-                    SettingsStore.settings.lightningAddress?.notifications === 1
-                ) {
-                    LightningAddressStore.updatePushCredentials();
-                }
-            }
         } else if (implementation === 'lndhub') {
             if (connecting) {
                 await login({ login: username, password }).then(async () => {
@@ -422,6 +404,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
             await BalanceStore.getCombinedBalance();
             ChannelsStore.getChannels();
+        }
+
+        if (
+            lightningAddress.enabled &&
+            BackendUtils.supportsCustomPreimages() &&
+            !NodeInfoStore.testnet
+        ) {
+            LightningAddressStore.status();
+
+            if (lightningAddress.automaticallyAccept) {
+                LightningAddressStore.prepareToAutomaticallyAccept();
+            }
+
+            if (SettingsStore.settings.lightningAddress?.notifications === 1) {
+                LightningAddressStore.updatePushCredentials();
+            }
         }
 
         if (connecting) {
