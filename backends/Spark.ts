@@ -363,6 +363,7 @@ export default class Spark {
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;
+    supportsChannelCoinControl = () => false;
     supportsHopPicking = () => false;
     supportsAccounts = () => false;
     supportsRouting = () => true;

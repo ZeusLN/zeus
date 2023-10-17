@@ -176,6 +176,7 @@ export default class EmbeddedLND extends LND {
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
     supportsCoinControl = () => this.supports('v0.12.0');
+    supportsChannelCoinControl = () => this.supports('v0.17.0');
     supportsHopPicking = () => this.supports('v0.11.0');
     // TODO wire up accounts
     // supportsAccounts = () => this.supports('v0.13.0');
