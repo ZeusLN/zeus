@@ -884,6 +884,7 @@
     "views.Settings.NodeConfiguration.restoreTestnetWallet": "Restore testnet wallet",
     "views.Settings.NodeConfiguration.backUpWallet": "Back up wallet",
     "views.Settings.LightningAddress.create": "Create lightning address",
+    "views.Settings.LightningAddress.redeemAll": "Redeem all",
     "views.Settings.LightningAddress.change": "Change lightning address",
     "views.Settings.LightningAddress.changeNostrKeys": "Change Nostr keys",
     "views.Settings.LightningAddress.chooseHandle": "Choose a handle",
