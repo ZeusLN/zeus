@@ -12,6 +12,7 @@ import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 
 import ChannelsStore from '../stores/ChannelsStore';
+import LightningAddressStore from '../stores/LightningAddressStore';
 import SettingsStore from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
@@ -34,6 +35,7 @@ import POS from '../assets/images/SVG/POS.svg';
 import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
 import Sync from '../assets/images/SVG/Sync.svg';
+import MailboxFlagUp from '../assets/images/SVG/MailboxFlagUp.svg';
 
 import stores from '../stores/Stores';
 
@@ -138,6 +140,7 @@ interface WalletHeaderProps {
     ChannelsStore?: ChannelsStore;
     SettingsStore?: SettingsStore;
     NodeInfoStore?: NodeInfoStore;
+    LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
     SyncStore?: SyncStore;
     navigation: any;
@@ -153,6 +156,7 @@ interface WalletHeaderState {
 
 @inject(
     'ChannelsStore',
+    'LightningAddressStore',
     'SettingsStore',
     'NodeInfoStore',
     'PosStore',
@@ -193,10 +197,12 @@ export default class WalletHeader extends React.Component<
             SettingsStore,
             NodeInfoStore,
             ChannelsStore,
+            LightningAddressStore,
             PosStore,
             SyncStore
         } = this.props;
         const { settings, posStatus, setPosStatus } = SettingsStore!;
+        const { paid } = LightningAddressStore!;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
         const multipleNodes: boolean =
@@ -347,7 +353,27 @@ export default class WalletHeader extends React.Component<
 
         return (
             <Header
-                leftComponent={loading ? undefined : <SettingsButton />}
+                leftComponent={
+                    loading ? undefined : (
+                        <Row>
+                            <SettingsButton />
+                            {paid && paid.length > 0 && (
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('LightningAddress')
+                                    }
+                                    style={{ left: 18 }}
+                                >
+                                    <MailboxFlagUp
+                                        fill={themeColor('highlight')}
+                                        width={35}
+                                        height={35}
+                                    />
+                                </TouchableOpacity>
+                            )}
+                        </Row>
+                    )
+                }
                 centerComponent={
                     title ? (
                         <View style={{ top: 5 }}>

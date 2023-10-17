@@ -27,7 +27,8 @@ import SendIcon from '../../assets/images/SVG/Send.svg';
 import KeyIcon from '../../assets/images/SVG/Key.svg';
 import NetworkIcon from '../../assets/images/SVG/Network.svg';
 import CloudIcon from '../../assets/images/SVG/Cloud.svg';
-import MailboxFlagIcon from '../../assets/images/SVG/MailboxFlag.svg';
+import MailboxFlagUp from '../../assets/images/SVG/MailboxFlagUp.svg';
+import MailboxFlagDown from '../../assets/images/SVG/MailboxFlagDown.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 import Header from '../../components/Header';
@@ -40,6 +41,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
 
@@ -48,6 +50,7 @@ import { version } from '../../package.json';
 interface SettingsProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
+    LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
 }
@@ -57,7 +60,7 @@ interface SettingsState {
     easterEggCount: number;
 }
 
-@inject('NodeInfoStore', 'SettingsStore', 'UnitsStore')
+@inject('NodeInfoStore', 'LightningAddressStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class Settings extends React.Component<
     SettingsProps,
@@ -85,9 +88,15 @@ export default class Settings extends React.Component<
     }
 
     render() {
-        const { navigation, NodeInfoStore, SettingsStore } = this.props;
+        const {
+            navigation,
+            NodeInfoStore,
+            LightningAddressStore,
+            SettingsStore
+        } = this.props;
         const { showHiddenSettings, easterEggCount } = this.state;
         const { implementation, settings, seedPhrase } = SettingsStore;
+        const { paid } = LightningAddressStore;
 
         const selectedNode: any =
             (settings &&
@@ -277,9 +286,15 @@ export default class Settings extends React.Component<
                                             paddingTop: 3
                                         }}
                                     >
-                                        <MailboxFlagIcon
-                                            fill={themeColor('text')}
-                                        />
+                                        {paid && paid.length > 0 ? (
+                                            <MailboxFlagUp
+                                                fill={themeColor('highlight')}
+                                            />
+                                        ) : (
+                                            <MailboxFlagDown
+                                                fill={themeColor('text')}
+                                            />
+                                        )}
                                     </View>
                                     <Text
                                         style={{
