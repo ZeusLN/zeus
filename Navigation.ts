@@ -19,6 +19,7 @@ import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
 import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
+import Sweep from './views/Sweep';
 
 import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
@@ -128,6 +129,9 @@ const AppScenes = {
     },
     Send: {
         screen: Send
+    },
+    Sweep: {
+        screen: Sweep
     },
     EditFee: {
         screen: EditFee

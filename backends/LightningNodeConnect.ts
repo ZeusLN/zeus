@@ -135,7 +135,9 @@ export default class LightningNodeConnect {
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
     getPayments = async () =>
         await this.lnc.lnd.lightning
-            .listPayments({})
+            .listPayments({
+                include_incomplete: true
+            })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
@@ -390,5 +392,6 @@ export default class LightningNodeConnect {
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
+    supportsSweep = () => true;
     isLNDBased = () => true;
 }

@@ -169,10 +169,9 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
-
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
@@ -233,6 +232,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
@@ -267,10 +271,9 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
-
                         const relays_sig = bytesToHex(
                             schnorr.sign(
                                 hashjs
@@ -365,6 +368,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
@@ -394,10 +402,9 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
-
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
@@ -458,6 +465,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
@@ -485,7 +497,7 @@ export default class LightningAddressStore {
         });
 
     @action
-    public status = async () => {
+    public status = async (isRedeem?: boolean) => {
         this.loading = true;
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
@@ -500,10 +512,9 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
-
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
@@ -536,7 +547,7 @@ export default class LightningAddressStore {
                                         if (status === 200 && success) {
                                             this.error = false;
                                             this.error_msg = '';
-                                            this.loading = false;
+                                            if (!isRedeem) this.loading = false;
                                             this.availableHashes = results || 0;
                                             this.paid =
                                                 this.enhanceWithFee(paid);
@@ -584,6 +595,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
@@ -613,8 +629,8 @@ export default class LightningAddressStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
+                    const data = response.json();
                     if (status == 200) {
-                        const data = response.json();
                         const { verification } = data;
 
                         BackendUtils.signMessage(verification)
@@ -666,6 +682,11 @@ export default class LightningAddressStore {
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
+                    } else {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = data.error.toString();
+                        reject(data.error);
                     }
                 })
                 .catch((error: any) => {
@@ -886,10 +907,18 @@ export default class LightningAddressStore {
                 }
             };
 
+            const automaticallyRequestOlympusChannels =
+                this.settingsStore?.settings?.lightningAddress
+                    ?.automaticallyRequestOlympusChannels;
+
             BackendUtils.createInvoice({
                 // 24 hrs
                 expiry: '86400',
-                value,
+                value:
+                    BackendUtils.supportsLSPs() &&
+                    automaticallyRequestOlympusChannels
+                        ? undefined
+                        : value,
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
                 preimage,
                 private:
@@ -923,7 +952,7 @@ export default class LightningAddressStore {
             ? this.settingsStore.settings.lightningAddress
                   .automaticallyAcceptAttestationLevel
             : 2;
-        this.status().then(() => {
+        this.status(true).then(() => {
             // disabled
             if (attestationLevel === 0) {
                 this.paid.map((item: any) => {

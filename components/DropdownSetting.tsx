@@ -4,17 +4,16 @@ import {
     Platform,
     View,
     StyleSheet,
+    Text,
     TouchableOpacity
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { themeColor } from './../utils/ThemeUtils';
 import CaretDown from './../assets/images/SVG/Caret Down.svg';
 import { localeString } from './../utils/LocaleUtils';
-import Text from './Text';
 
 interface DropdownSettingProps {
     title: string;
-    infoText?: string;
     selectedValue: string | boolean;
     onValueChange: (value: any) => void;
     values: Array<any>;
@@ -26,14 +25,8 @@ export default class DropdownSetting extends React.Component<
     {}
 > {
     render() {
-        const {
-            title,
-            infoText,
-            selectedValue,
-            onValueChange,
-            values,
-            disabled
-        } = this.props;
+        const { title, selectedValue, onValueChange, values, disabled } =
+            this.props;
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
@@ -68,7 +61,6 @@ export default class DropdownSetting extends React.Component<
                                 ...styles.secondaryText,
                                 color: themeColor('secondaryText')
                             }}
-                            infoText={infoText}
                         >
                             {title}
                         </Text>

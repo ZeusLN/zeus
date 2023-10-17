@@ -50,8 +50,9 @@ import NFCUtils from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-import Scan from '../assets/images/SVG/Scan.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
+import Scan from '../assets/images/SVG/Scan.svg';
+import Sweep from '../assets/images/SVG/Sweep.svg';
 
 interface SendProps {
     exitSetup: any;
@@ -446,6 +447,31 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <LoadingIndicator size={30} />
                                 </View>
                             )}
+                            {BackendUtils.supportsSweep() &&
+                                isValid &&
+                                transactionType === 'On-chain' && (
+                                    <View
+                                        style={{
+                                            marginTop: 3,
+                                            marginRight: 20
+                                        }}
+                                    >
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                navigation.navigate('Sweep', {
+                                                    destination,
+                                                    isValid
+                                                })
+                                            }
+                                        >
+                                            <Sweep
+                                                fill={themeColor('text')}
+                                                width={30}
+                                                height={30}
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
                             <View style={{ marginTop: 3 }}>
                                 <TouchableOpacity
                                     onPress={() =>

@@ -45,7 +45,8 @@ export default class EmbeddedLND extends LND {
             data.addr,
             data.amount,
             data.sat_per_vbyte,
-            data.spend_unconfirmed
+            data.spend_unconfirmed,
+            data.send_all
         );
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
@@ -189,5 +190,6 @@ export default class EmbeddedLND extends LND {
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
+    supportsSweep = () => true;
     isLNDBased = () => true;
 }
