@@ -649,6 +649,7 @@ export default class LightningAddress extends React.Component<
                                                 onPress={() =>
                                                     redeemAllOpenPayments()
                                                 }
+                                                disabled={!isReady}
                                             />
                                         )}
                                     </>
