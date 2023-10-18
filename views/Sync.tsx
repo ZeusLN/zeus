@@ -79,7 +79,9 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                         />
                     </View>
 
-                    <View style={{ marginLeft: 20, marginRight: 20 }}>
+                    <View
+                        style={{ marginLeft: 20, marginRight: 20, height: 140 }}
+                    >
                         {currentBlockHeight && (
                             <KeyValue
                                 keyValue={localeString(
