@@ -24,7 +24,9 @@ import { Row } from '../../../components/layout/Row';
 import { Spacer } from '../../../components/layout/Spacer';
 
 import LightningAddressStore from '../../../stores/LightningAddressStore';
-import { DEFAULT_NOSTR_RELAYS } from '../../../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_NOSTR_RELAYS
+} from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -32,6 +34,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 interface LightningAddressProps {
     navigation: any;
     LightningAddressStore: LightningAddressStore;
+    SettingsStore: SettingsStore;
 }
 
 interface LightningAddressState {
@@ -43,7 +46,7 @@ interface LightningAddressState {
     nostrRelays: Array<string>;
 }
 
-@inject('LightningAddressStore')
+@inject('LightningAddressStore', 'SettingsStore')
 @observer
 export default class LightningAddress extends React.Component<
     LightningAddressProps,
@@ -119,7 +122,7 @@ export default class LightningAddress extends React.Component<
     };
 
     render() {
-        const { navigation, LightningAddressStore } = this.props;
+        const { navigation, LightningAddressStore, SettingsStore } = this.props;
         const {
             newLightningAddress,
             nostrPrivateKey,
@@ -146,7 +149,9 @@ export default class LightningAddress extends React.Component<
 
         const { fontScale } = Dimensions.get('window');
 
-        const isReady = readyToAutomaticallyAccept;
+        const automaticallyAccept =
+            SettingsStore.settings?.lightningAddress?.automaticallyAccept;
+        const isReady = !automaticallyAccept || readyToAutomaticallyAccept;
 
         const InfoButton = () => (
             <View style={{ right: 15 }}>
