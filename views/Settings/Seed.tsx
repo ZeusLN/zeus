@@ -50,17 +50,19 @@ const MnemonicWord = ({ index, word }) => {
                 flexDirection: 'row'
             }}
         >
-            <Text
-                style={{
-                    flex: 1,
-                    fontFamily: 'Lato-Regular',
-                    color: themeColor('secondaryText'),
-                    fontSize: 18,
-                    alignSelf: 'flex-start'
-                }}
-            >
-                {index + 1}
-            </Text>
+            <View style={{ width: 35 }}>
+                <Text
+                    style={{
+                        flex: 1,
+                        fontFamily: 'Lato-Regular',
+                        color: themeColor('secondaryText'),
+                        fontSize: 18,
+                        alignSelf: 'flex-start'
+                    }}
+                >
+                    {index + 1}
+                </Text>
+            </View>
             <Text
                 style={{
                     flex: 1,
@@ -72,7 +74,7 @@ const MnemonicWord = ({ index, word }) => {
                     padding: 0
                 }}
             >
-                {isRevealed ? word : '*******'}
+                {isRevealed ? word : '********'}
             </Text>
         </TouchableOpacity>
     );
