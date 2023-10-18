@@ -483,6 +483,7 @@ export default class Eclair {
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
+    supportsLightningSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => false;
