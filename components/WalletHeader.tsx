@@ -27,6 +27,7 @@ import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 import { localeString } from '../utils/LocaleUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
@@ -285,6 +286,20 @@ export default class WalletHeader extends React.Component<
             </>
         );
 
+        const ReadOnlyBadge = () => {
+            return !BackendUtils.supportsLightningSends() ? (
+                <Badge
+                    value={localeString('general.readOnlyWallet')}
+                    badgeStyle={{
+                        backgroundColor: themeColor('error'),
+                        borderWidth: 0,
+                        marginLeft: 8,
+                        marginRight: 8
+                    }}
+                />
+            ) : null;
+        };
+
         const SearchButton = () => (
             <TouchableOpacity
                 onPress={() => ChannelsStore!.toggleSearch()}
@@ -426,12 +441,14 @@ export default class WalletHeader extends React.Component<
                                     )?.toString()}
                                 </Text>
                                 <NetworkBadge />
+                                <ReadOnlyBadge />
                                 <TorBadge />
                             </Row>
                         </View>
                     ) : (
                         <Row>
                             <NetworkBadge />
+                            <ReadOnlyBadge />
                             <TorBadge />
                         </Row>
                     )

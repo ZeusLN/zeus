@@ -449,6 +449,9 @@ export default class KeypadPane extends React.PureComponent<
                                         });
                                     }}
                                     buttonStyle={{ height: 40 }}
+                                    disabled={
+                                        !BackendUtils.supportsLightningSends()
+                                    }
                                 />
                             </View>
                         </View>
