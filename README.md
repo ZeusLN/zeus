@@ -56,9 +56,9 @@ and
 - [x] On-chain coin control 
 - [ ] External signer support
 - [ ] Watch-only accounts
-- [ ] Contact list for easier payments
+- [x] Contact list for easier payments
 - [ ] Multiple profile types (payments, merchant etc.)
-- [ ] Lightning address receive
+- [x] Lightning address receive
 - [x] Taproot support 
 - [ ] Connect a watchtower
 - [ ] Advanced security center
