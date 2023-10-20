@@ -17,7 +17,12 @@ import {
     Keyboard
 } from 'react-native';
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const {
+    height: SCREEN_HEIGHT,
+    width: SCREEN_WIDTH,
+    fontScale: FONT_SCALE
+} = Dimensions.get('window');
+
 const styles = StyleSheet.create({
     wrapper: {
         backgroundColor: 'white'
@@ -518,6 +523,9 @@ export default class ModalBox extends React.PureComponent {
                     styles.wrapper,
                     size,
                     this.props.style,
+                    this.props.style.height
+                        ? { height: this.props.style.height * FONT_SCALE }
+                        : undefined,
                     {
                         transform: [
                             { translateY: this.state.position },
