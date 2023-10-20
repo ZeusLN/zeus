@@ -50,17 +50,19 @@ const MnemonicWord = ({ index, word }) => {
                 flexDirection: 'row'
             }}
         >
-            <Text
-                style={{
-                    flex: 1,
-                    fontFamily: 'Lato-Regular',
-                    color: themeColor('secondaryText'),
-                    fontSize: 18,
-                    alignSelf: 'flex-start'
-                }}
-            >
-                {index + 1}
-            </Text>
+            <View style={{ width: 35 }}>
+                <Text
+                    style={{
+                        flex: 1,
+                        fontFamily: 'Lato-Regular',
+                        color: themeColor('secondaryText'),
+                        fontSize: 18,
+                        alignSelf: 'flex-start'
+                    }}
+                >
+                    {index + 1}
+                </Text>
+            </View>
             <Text
                 style={{
                     flex: 1,
@@ -72,7 +74,7 @@ const MnemonicWord = ({ index, word }) => {
                     padding: 0
                 }}
             >
-                {isRevealed ? word : '*******'}
+                {isRevealed ? word : '********'}
             </Text>
         </TouchableOpacity>
     );
@@ -251,7 +253,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 alignSelf: 'center',
                                 position: 'absolute',
                                 bottom: 35,
-                                width: '90%'
+                                width: '100%'
                             }}
                         >
                             <Button
@@ -264,16 +266,21 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     </>
                 )}
                 {understood && (
-                    <>
-                        <ScrollView style={{ flex: 1, marginBottom: 80 }}>
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                        <ScrollView
+                            contentContainerStyle={{
+                                flexGrow: 1,
+                                justifyContent: 'center'
+                            }}
+                        >
                             <View
                                 style={{
-                                    flex: 1,
                                     marginTop: 8,
-                                    maxHeight: 720,
+                                    maxHeight: 620,
                                     flexWrap: 'wrap',
                                     alignItems: 'flex-start',
-                                    flexDirection: 'row'
+                                    alignSelf: 'center',
+                                    flexDirection: 'column'
                                 }}
                             >
                                 {seedPhrase &&
@@ -293,9 +300,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         <View
                             style={{
                                 alignSelf: 'center',
-                                position: 'absolute',
+                                marginTop: 45,
                                 bottom: 35,
-                                width: '90%'
+                                width: '100%',
+                                backgroundColor: themeColor('background')
                             }}
                         >
                             <Button
@@ -311,7 +319,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 )}
                             />
                         </View>
-                    </>
+                    </View>
                 )}
             </Screen>
         );
