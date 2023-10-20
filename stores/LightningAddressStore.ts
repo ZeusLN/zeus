@@ -936,11 +936,28 @@ export default class LightningAddressStore {
                     }
                 })
                 .catch(() => {
-                    // if payment request has already been submitted, try to redeem without new pay req
-                    this.redeem(hash).then((success) => {
-                        if (success === true) fireLocalNotification();
-                        this.status();
-                    });
+                    // first, try looking up invoice for redeem
+                    try {
+                        BackendUtils.lookupInvoice({
+                            r_hash: hash
+                        }).then((result: any) => {
+                            if (result.payment_request) {
+                                this.redeem(hash, result.payment_request).then(
+                                    (success) => {
+                                        if (success === true)
+                                            fireLocalNotification();
+                                        this.status();
+                                    }
+                                );
+                            }
+                        });
+                    } catch (e) {
+                        // then, try to redeem without new pay req
+                        this.redeem(hash).then((success) => {
+                            if (success === true) fireLocalNotification();
+                            this.status();
+                        });
+                    }
                 });
         });
     };

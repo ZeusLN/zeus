@@ -340,6 +340,10 @@ export default class LightningNodeConnect {
                 .digest()
         };
     };
+    lookupInvoice = async (data: lnrpc.PaymentHash) =>
+        await this.lnc.lnd.lightning
+            .lookupInvoice({ r_hash: Base64Utils.hexToBase64(data.r_hash) })
+            .then((data: lnrpc.Invoice) => snakeize(data));
     subscribeInvoice = (r_hash: string) =>
         this.lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
     subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
