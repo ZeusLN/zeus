@@ -16,7 +16,8 @@ const {
     sendKeysendPaymentV2,
     listPayments,
     getNetworkInfo,
-    queryRoutes
+    queryRoutes,
+    lookupInvoice
 } = lndMobile.index;
 const {
     channelBalance,
@@ -152,6 +153,7 @@ export default class EmbeddedLND extends LND {
     // publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
     getUTXOs = async () => await listUnspent();
     bumpFee = async (data: any) => await bumpFee(data);
+    lookupInvoice = async (data: any) => await lookupInvoice(data.r_hash);
 
     // TODO inject
     // listAccounts = () => this.getRequest('/v2/wallet/accounts');
