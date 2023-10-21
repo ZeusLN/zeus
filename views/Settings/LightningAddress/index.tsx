@@ -151,7 +151,10 @@ export default class LightningAddress extends React.Component<
 
         const automaticallyAccept =
             SettingsStore.settings?.lightningAddress?.automaticallyAccept;
-        const isReady = !automaticallyAccept || readyToAutomaticallyAccept;
+        const isReady =
+            SettingsStore.implementation !== 'embedded-lnd' ||
+            !automaticallyAccept ||
+            readyToAutomaticallyAccept;
 
         const InfoButton = () => (
             <View style={{ right: 15 }}>
