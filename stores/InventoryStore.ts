@@ -107,16 +107,15 @@ export default class InventoryStore {
     };
 
     @action
-    public deleteProduct = async (productId: string) => {
+    public deleteProduct = async (productIds: string[]) => {
         const { products: existingProducts } = await this.getInventory();
 
-        const idx = existingProducts.findIndex((c) => c.id === productId);
-        if (idx > -1) {
-            existingProducts.splice(idx, 1);
-            await this.setProducts(JSON.stringify(existingProducts));
+        const updatedProducts = existingProducts.filter(
+            (p) => !productIds.includes(p.id)
+        );
+        await this.setProducts(JSON.stringify(updatedProducts));
 
-            const { products } = await this.getInventory();
-            return products;
-        }
+        const { products } = await this.getInventory();
+        return products;
     };
 }
