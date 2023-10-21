@@ -82,10 +82,19 @@ export default class ProductDetails extends React.Component<
                 const { getInventory } = InventoryStore;
                 const { products, categories } = await getInventory();
 
-                const categoryOptions = categories.map((category: any) => ({
+                const mappedCategories = categories.map((category: any) => ({
                     key: category.name,
                     value: category.name
                 }));
+                let categoryOptions: any[] = [
+                    {
+                        key: 'Uncategorized',
+                        value: '',
+                        translateKey: 'pos.views.Wallet.PosPane.uncategorized'
+                    }
+                ];
+                categoryOptions = categoryOptions.concat(...mappedCategories);
+                console.log('options', categoryOptions);
 
                 const productId = this.props.navigation.getParam(
                     'productId',
@@ -180,7 +189,7 @@ export default class ProductDetails extends React.Component<
 
         try {
             if (product) {
-                await deleteProduct(product.id);
+                await deleteProduct([product.id]);
                 this.props.PosStore.clearCurrentOrder();
                 this.props.navigation.goBack();
             }
@@ -214,6 +223,7 @@ export default class ProductDetails extends React.Component<
                 size={35}
             />
         );
+
         const Delete = () => (
             <TouchableOpacity onPress={() => this.confirmDelete()}>
                 <View
@@ -221,13 +231,12 @@ export default class ProductDetails extends React.Component<
                         width: 35,
                         height: 35,
                         borderRadius: 25,
-                        backgroundColor: themeColor('chain'),
+                        backgroundColor: themeColor('delete'),
                         justifyContent: 'center',
                         alignItems: 'center'
                     }}
                 >
                     <DeleteIcon
-                        fill={themeColor('background')}
                         width={16}
                         height={16}
                         style={{ alignSelf: 'center' }}
@@ -380,7 +389,7 @@ export default class ProductDetails extends React.Component<
                                         title={localeString(
                                             'views.Settings.POS.Category.name'
                                         )}
-                                        selectedValue={product?.category!}
+                                        selectedValue={product?.category ?? ''}
                                         onValueChange={async (
                                             value: string
                                         ) => {
@@ -449,10 +458,14 @@ export default class ProductDetails extends React.Component<
                                                 'views.Settings.POS.confirmDelete'
                                             )}
                                             onPress={() => this.deleteItem()}
-                                            buttonStyle={{
-                                                backgroundColor:
-                                                    themeColor('chain')
+                                            containerStyle={{
+                                                borderColor:
+                                                    themeColor('delete')
                                             }}
+                                            titleStyle={{
+                                                color: themeColor('delete')
+                                            }}
+                                            secondary
                                         />
                                     ) : (
                                         <Button

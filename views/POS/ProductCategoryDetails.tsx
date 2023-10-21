@@ -135,11 +135,10 @@ export default class ProductCategoryDetails extends React.Component<
 
         try {
             if (category) {
-                products
-                    ?.filter((product) => product.category === category.name)
-                    .map(async (product) => {
-                        await deleteProduct(product.id);
-                    });
+                const deleteProductIds = products
+                    .filter((product) => product.category === category.name)
+                    .map((product) => product.id);
+                await deleteProduct(deleteProductIds);
                 await deleteCategory(category.id);
                 this.props.PosStore.clearCurrentOrder();
                 this.props.navigation.goBack();
@@ -168,6 +167,7 @@ export default class ProductCategoryDetails extends React.Component<
                 size={35}
             />
         );
+
         const Delete = () => (
             <TouchableOpacity onPress={() => this.confirmDelete()}>
                 <View
@@ -175,13 +175,12 @@ export default class ProductCategoryDetails extends React.Component<
                         width: 35,
                         height: 35,
                         borderRadius: 25,
-                        backgroundColor: themeColor('chain'),
+                        backgroundColor: themeColor('delete'),
                         justifyContent: 'center',
                         alignItems: 'center'
                     }}
                 >
                     <DeleteIcon
-                        fill={themeColor('background')}
                         width={16}
                         height={16}
                         style={{ alignSelf: 'center' }}
@@ -245,9 +244,9 @@ export default class ProductCategoryDetails extends React.Component<
                                 />
                                 <View
                                     style={{
-                                        alignSelf: 'center',
-                                        marginTop: 22,
-                                        padding: Platform.OS === 'ios' ? 8 : 0
+                                        padding: Platform.OS === 'ios' ? 8 : 0,
+                                        paddingLeft: 15,
+                                        paddingRight: 15
                                     }}
                                 >
                                     <TextInput
@@ -281,10 +280,14 @@ export default class ProductCategoryDetails extends React.Component<
                                                 'views.Settings.POS.confirmDelete'
                                             )}
                                             onPress={() => this.deleteItem()}
-                                            buttonStyle={{
-                                                backgroundColor:
-                                                    themeColor('chain')
+                                            containerStyle={{
+                                                borderColor:
+                                                    themeColor('delete')
                                             }}
+                                            titleStyle={{
+                                                color: themeColor('delete')
+                                            }}
+                                            secondary
                                         />
                                     ) : (
                                         <Button
