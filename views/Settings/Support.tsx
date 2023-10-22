@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, Linking, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 
 import Header from '../../components/Header';
@@ -9,11 +9,11 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
-interface HelpProps {
+interface SupportProps {
     navigation: any;
 }
 
-function Help(props: HelpProps) {
+function Support(props: SupportProps) {
     const { navigation } = props;
 
     const renderSeparator = () => (
@@ -25,18 +25,15 @@ function Help(props: HelpProps) {
         />
     );
 
-    const HELP_ITEMS = [
+    const ABOUT_ITEMS = [
+        { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         {
-            label: localeString('views.Settings.Help.docs'),
-            url: 'https://docs.zeusln.app'
+            label: localeString('views.Settings.Support.store'),
+            url: 'https://store.zeusln.app'
         },
         {
-            label: localeString('views.Settings.Help.github'),
-            url: 'https://github.com/ZeusLN/zeus/issues'
-        },
-        {
-            label: localeString('views.Settings.Help.email'),
-            email: 'support@zeusln.com'
+            label: localeString('views.Settings.SocialMedia.title'),
+            path: 'SocialMedia'
         }
     ];
 
@@ -45,7 +42,7 @@ function Help(props: HelpProps) {
             <Header
                 leftComponent="Back"
                 centerComponent={{
-                    text: localeString('general.help'),
+                    text: localeString('views.Settings.Support.title'),
                     style: {
                         color: themeColor('text'),
                         fontFamily: 'Lato-Regular'
@@ -54,7 +51,7 @@ function Help(props: HelpProps) {
                 navigation={navigation}
             />
             <FlatList
-                data={HELP_ITEMS}
+                data={ABOUT_ITEMS}
                 renderItem={({ item }) => (
                     <ListItem
                         containerStyle={{
@@ -62,16 +59,7 @@ function Help(props: HelpProps) {
                             backgroundColor: 'transparent'
                         }}
                         onPress={() => {
-                            if (item.email) {
-                                const url = `to:${item.email}`;
-                                Linking.canOpenURL(url).then(
-                                    (supported: boolean) => {
-                                        if (supported) {
-                                            Linking.openURL(url);
-                                        }
-                                    }
-                                );
-                            }
+                            if (item.path) navigation.navigate(item.path);
                             if (item.url) UrlUtils.goToUrl(item.url);
                         }}
                     >
@@ -98,4 +86,4 @@ function Help(props: HelpProps) {
     );
 }
 
-export default Help;
+export default Support;
