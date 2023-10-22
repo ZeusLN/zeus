@@ -63,7 +63,7 @@ function Help(props: HelpProps) {
                         }}
                         onPress={() => {
                             if (item.email) {
-                                const url = `to:${item.email}`;
+                                const url = `mailto:${item.email}`;
                                 Linking.canOpenURL(url).then(
                                     (supported: boolean) => {
                                         if (supported) {
