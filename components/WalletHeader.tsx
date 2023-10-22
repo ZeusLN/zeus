@@ -225,11 +225,11 @@ export default class WalletHeader extends React.Component<
                 {multipleNodes ? (
                     <NodeIdenticon
                         selectedNode={selectedNode}
-                        width={30}
+                        width={35}
                         rounded
                     />
                 ) : (
-                    <Image source={Contact} style={{ width: 30, height: 30 }} />
+                    <Image source={Contact} style={{ width: 35, height: 35 }} />
                 )}
             </TouchableOpacity>
         );
