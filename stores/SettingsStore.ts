@@ -669,8 +669,8 @@ const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
 const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
 
 export const DEFAULT_NOSTR_RELAYS = [
+    'wss://nostr.mutinywallet.com',
     'wss://relay.damus.io',
-    'wss://nostr.wine',
     'wss://nostr.lnproxy.org'
 ];
 
