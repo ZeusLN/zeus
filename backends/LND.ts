@@ -307,12 +307,30 @@ export default class LND {
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
-    payLightningInvoice = (data: any) => {
+    payLightningInvoice = async (data: any) => {
         if (data.pubkey) delete data.pubkey;
-        return this.postRequest('/v2/router/send', {
-            ...data,
-            allow_self_payment: true
-        });
+
+        const forcedTimeout = async (time_ms: number, response: any) => {
+            await new Promise((res) => setTimeout(res, time_ms));
+            return response;
+        };
+
+        const call = () =>
+            this.postRequest('/v2/router/send', {
+                ...data,
+                allow_self_payment: true
+            });
+
+        const result: any = await Promise.race([
+            forcedTimeout((data.timeout_seconds + 1) * 1000, {
+                payment_error: localeString(
+                    'views.SendingLightning.paymentTimedOut'
+                )
+            }),
+            call()
+        ]);
+
+        return result;
     };
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams && urlParams.length === 4) {
