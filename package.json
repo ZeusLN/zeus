@@ -21,7 +21,6 @@
     "lint": "eslint --ext .js,.ts,.tsx \"*.@(js|ts|tsx)\" .",
     "prettier": "prettier --check \"**/*.ts*\"",
     "prettier-write": "prettier --check --write \"**/*.ts*\"",
-    "install-lnc": "cd node_modules/@lightninglabs/lnc-rn; yarn run fetch-libraries",
     "patch": "git apply patches/react-native-camera-kit.patch && git apply patches/rnqli-build.gradle.patch",
     "gen-proto": "pbjs -t static-module --keep-case -w es6 --force-long -o proto/lightning.js proto/*.proto proto/*/*.proto && pbts -o proto/lightning.d.ts proto/lightning.js",
     "gradlew": "cd android && ./gradlew",
