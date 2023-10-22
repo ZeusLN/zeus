@@ -42,8 +42,9 @@ import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import SignVerifyMessage from './views/Settings/SignVerifyMessage';
-import About from './views/Settings/About';
+import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
+import SocialMedia from './views/Settings/SocialMedia';
 import Sponsors from './views/Settings/Sponsors';
 import Olympians from './views/Settings/Olympians';
 import Gods from './views/Settings/Gods';
@@ -175,8 +176,8 @@ const AppScenes = {
     Display: {
         screen: Display
     },
-    About: {
-        screen: About
+    Support: {
+        screen: Support
     },
     Help: {
         screen: Help
@@ -387,6 +388,9 @@ const AppScenes = {
     },
     ChangeAddress: {
         screen: ChangeAddress
+    },
+    SocialMedia: {
+        screen: SocialMedia
     }
 };
 

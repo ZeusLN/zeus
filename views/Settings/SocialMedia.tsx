@@ -7,12 +7,13 @@ import Screen from '../../components/Screen';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
-interface AboutProps {
+interface HelpProps {
     navigation: any;
 }
 
-function About(props: AboutProps) {
+function Help(props: HelpProps) {
     const { navigation } = props;
 
     const renderSeparator = () => (
@@ -24,9 +25,19 @@ function About(props: AboutProps) {
         />
     );
 
-    const ABOUT_ITEMS = [
-        { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
-        { label: localeString('general.help'), path: 'Help' }
+    const SOCIAL_ITEMS = [
+        {
+            label: localeString('nostr.nostr'),
+            url: 'https://nostr.band/npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5'
+        },
+        {
+            label: localeString('views.Settings.Help.telegram'),
+            url: 'https://t.me/ZeusLN'
+        },
+        {
+            label: localeString('views.Settings.SocialMedia.twitter'),
+            url: 'https://twitter.com/ZeusLN'
+        }
     ];
 
     return (
@@ -34,7 +45,7 @@ function About(props: AboutProps) {
             <Header
                 leftComponent="Back"
                 centerComponent={{
-                    text: localeString('general.about'),
+                    text: localeString('views.Settings.SocialMedia.title'),
                     style: {
                         color: themeColor('text'),
                         fontFamily: 'Lato-Regular'
@@ -43,14 +54,14 @@ function About(props: AboutProps) {
                 navigation={navigation}
             />
             <FlatList
-                data={ABOUT_ITEMS}
+                data={SOCIAL_ITEMS}
                 renderItem={({ item }) => (
                     <ListItem
                         containerStyle={{
                             borderBottomWidth: 0,
                             backgroundColor: 'transparent'
                         }}
-                        onPress={() => navigation.navigate(item.path)}
+                        onPress={() => UrlUtils.goToUrl(item.url)}
                     >
                         <ListItem.Content>
                             <ListItem.Title
@@ -75,4 +86,4 @@ function About(props: AboutProps) {
     );
 }
 
-export default About;
+export default Help;

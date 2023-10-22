@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
+import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import BlockIcon from '../../assets/images/SVG/Block.svg';
@@ -18,7 +19,6 @@ import SignIcon from '../../assets/images/SVG/Pen.svg';
 import CurrencyIcon from '../../assets/images/SVG/Currency.svg';
 import BrushIcon from '../../assets/images/SVG/Brush.svg';
 import LanguageIcon from '../../assets/images/SVG/Globe.svg';
-import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
 import NodeOn from '../../assets/images/SVG/Node On.svg';
 import Olympus from '../../assets/images/SVG/Olympus.svg';
 import POS from '../../assets/images/SVG/POS.svg';
@@ -988,6 +988,7 @@ export default class Settings extends React.Component<
                             </TouchableOpacity>
                         </View>
                     )}
+
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -1000,10 +1001,15 @@ export default class Settings extends React.Component<
                     >
                         <TouchableOpacity
                             style={styles.columnField}
-                            onPress={() => navigation.navigate('About')}
+                            onPress={() => navigation.navigate('Support')}
                         >
                             <View style={{ paddingLeft: 5, paddingTop: 4 }}>
-                                <HelpIcon />
+                                <Icon
+                                    name="favorite"
+                                    color={themeColor('text')}
+                                    underlayColor="transparent"
+                                    size={25}
+                                />
                             </View>
                             <Text
                                 style={{
@@ -1011,7 +1017,45 @@ export default class Settings extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString('general.about')}
+                                {localeString(
+                                    'views.Settings.Support.titleAlt'
+                                )}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginTop: 5,
+                            marginBottom: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Help')}
+                        >
+                            <View style={{ paddingLeft: 5, paddingTop: 4 }}>
+                                <Icon
+                                    name="support"
+                                    color={themeColor('text')}
+                                    underlayColor="transparent"
+                                    size={25}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('general.help')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
