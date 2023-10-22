@@ -284,8 +284,8 @@ export const sendPaymentV2Sync = async (
         dest
     };
 
-    const forcedTimeout = async (time: number, response: any) => {
-        await new Promise((res) => setTimeout(res, time));
+    const forcedTimeout = async (time_ms: number, response: any) => {
+        await new Promise((res) => setTimeout(res, time_ms));
         return response;
     };
 

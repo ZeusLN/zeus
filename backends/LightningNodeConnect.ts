@@ -2,10 +2,14 @@ import LNC, { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-rn';
 
 import stores from '../stores/Stores';
 import CredentialStore from './LNC/credentialStore';
-import OpenChannelRequest from './../models/OpenChannelRequest';
-import Base64Utils from './../utils/Base64Utils';
-import { snakeize } from './../utils/DataFormatUtils';
-import VersionUtils from './../utils/VersionUtils';
+
+import OpenChannelRequest from '../models/OpenChannelRequest';
+
+import Base64Utils from '../utils/Base64Utils';
+import { snakeize } from '../utils/DataFormatUtils';
+import { localeString } from '../utils/LocaleUtils';
+import VersionUtils from '../utils/VersionUtils';
+
 import { Hash as sha256Hash } from 'fast-sha256';
 
 const ADDRESS_TYPES = [
@@ -188,12 +192,30 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .decodePayReq({ pay_req: urlParams && urlParams[0] })
             .then((data: lnrpc.PayReq) => snakeize(data));
-    payLightningInvoice = (data: any) => {
+    payLightningInvoice = async (data: any) => {
         if (data.pubkey) delete data.pubkey;
-        return this.lnc.lnd.router.sendPaymentV2({
-            ...data,
-            allow_self_payment: true
-        });
+
+        const forcedTimeout = async (time_ms: number, response: any) => {
+            await new Promise((res) => setTimeout(res, time_ms));
+            return response;
+        };
+
+        const call = () =>
+            this.lnc.lnd.router.sendPaymentV2({
+                ...data,
+                allow_self_payment: true
+            });
+
+        const result: any = await Promise.race([
+            forcedTimeout((data.timeout_seconds + 1) * 1000, {
+                payment_error: localeString(
+                    'views.SendingLightning.paymentTimedOut'
+                )
+            }),
+            call()
+        ]);
+
+        return result;
     };
     closeChannel = async (urlParams?: Array<string>) => {
         let params;
