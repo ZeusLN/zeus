@@ -65,7 +65,7 @@ export default class OnchainSwipeableRow extends Component<
                     opacity: transOpacity
                 }}
             >
-                <RectButton onPress={pressHandler}>
+                <RectButton style={[styles.action]} onPress={pressHandler}>
                     <View
                         style={[styles.view]}
                         accessible
@@ -192,6 +192,10 @@ const styles = StyleSheet.create({
         paddingTop: 10,
         paddingHorizontal: 4,
         fontFamily: 'Lato-Regular'
+    },
+    action: {
+        flex: 1,
+        justifyContent: 'center'
     },
     view: {
         alignItems: 'center'
