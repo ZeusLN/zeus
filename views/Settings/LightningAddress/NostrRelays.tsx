@@ -257,9 +257,26 @@ export default class NostrRelays extends React.Component<
                                                                 relays: newNostrRelays
                                                             });
                                                         } else {
+                                                            const relays_sig =
+                                                                bytesToHex(
+                                                                    schnorr.sign(
+                                                                        hashjs
+                                                                            .sha256()
+                                                                            .update(
+                                                                                JSON.stringify(
+                                                                                    newNostrRelays
+                                                                                )
+                                                                            )
+                                                                            .digest(
+                                                                                'hex'
+                                                                            ),
+                                                                        nostrPrivateKey
+                                                                    )
+                                                                );
                                                             try {
                                                                 await update({
-                                                                    relays: newNostrRelays
+                                                                    relays: newNostrRelays,
+                                                                    relays_sig
                                                                 }).then(
                                                                     async () => {
                                                                         this.setState(
