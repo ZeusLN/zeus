@@ -419,7 +419,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         ) {
             LightningAddressStore.status();
 
-            if (lightningAddress.automaticallyAccept) {
+            if (lightningAddress.automaticallyAccept && connecting) {
                 LightningAddressStore.prepareToAutomaticallyAccept();
             }
 
