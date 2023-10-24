@@ -43,10 +43,10 @@ const MnemonicWord = ({ index, word }) => {
             style={{
                 padding: 8,
                 backgroundColor: themeColor('secondary'),
-                width: '45%',
                 borderRadius: 5,
-                margin: 9,
+                margin: 6,
                 marginTop: 4,
+                marginBottom: 4,
                 flexDirection: 'row'
             }}
         >
@@ -71,6 +71,7 @@ const MnemonicWord = ({ index, word }) => {
                     fontSize: 18,
                     alignSelf: 'flex-end',
                     margin: 0,
+                    marginLeft: 10,
                     padding: 0
                 }}
             >
@@ -270,22 +271,14 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         <ScrollView
                             contentContainerStyle={{
                                 flexGrow: 1,
-                                justifyContent: 'center'
+                                flexDirection: 'row'
                             }}
                         >
-                            <View
-                                style={{
-                                    marginTop: 8,
-                                    maxHeight: 620,
-                                    flexWrap: 'wrap',
-                                    alignItems: 'flex-start',
-                                    alignSelf: 'center',
-                                    flexDirection: 'column'
-                                }}
-                            >
+                            <View style={styles.column}>
                                 {seedPhrase &&
-                                    seedPhrase.map(
-                                        (word: string, index: number) => {
+                                    seedPhrase
+                                        .slice(0, 12)
+                                        .map((word: string, index: number) => {
                                             return (
                                                 <MnemonicWord
                                                     index={index}
@@ -293,8 +286,21 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                                     key={`mnemonic-${index}`}
                                                 />
                                             );
-                                        }
-                                    )}
+                                        })}
+                            </View>
+                            <View style={styles.column}>
+                                {seedPhrase &&
+                                    seedPhrase
+                                        .slice(12, 24)
+                                        .map((word: string, index: number) => {
+                                            return (
+                                                <MnemonicWord
+                                                    index={index + 12}
+                                                    word={word}
+                                                    key={`mnemonic-${index}`}
+                                                />
+                                            );
+                                        })}
                             </View>
                         </ScrollView>
                         <View
@@ -302,8 +308,8 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 alignSelf: 'center',
                                 marginTop: 45,
                                 bottom: 35,
-                                width: '100%',
-                                backgroundColor: themeColor('background')
+                                backgroundColor: themeColor('background'),
+                                width: '100%'
                             }}
                         >
                             <Button
@@ -364,5 +370,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 22
+    },
+    column: {
+        marginTop: 8,
+        flexWrap: 'wrap',
+        alignItems: 'flex-start',
+        alignSelf: 'center',
+        flexDirection: 'column',
+        width: '50%'
     }
 });
