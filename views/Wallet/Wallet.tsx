@@ -280,7 +280,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelsStore,
             ChannelBackupStore,
             LightningAddressStore,
-            LnurlPayStore,
             LSPStore,
             SyncStore,
             SettingsStore
@@ -295,8 +294,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.reset();
             ChannelBackupStore.reset();
         }
-
-        LnurlPayStore.reset();
 
         this.getSettingsAndNavigate();
     }
@@ -313,7 +310,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore,
             ChannelBackupStore,
             SyncStore,
-            LightningAddressStore
+            LightningAddressStore,
+            LnurlPayStore
         } = this.props;
         const {
             settings,
@@ -333,6 +331,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { fiatEnabled, pos, rescan, recovery, lightningAddress } =
             settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
+
+        LnurlPayStore.reset();
 
         if (pos && pos.squareEnabled && posStatus === 'active')
             PosStore.getOrders();
