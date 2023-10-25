@@ -54,7 +54,7 @@
     "console-browserify": "1.2.0",
     "constants-browserify": "1.0.0",
     "create-hash": "1.2.0",
-    "crypto-js": "4.1.1",
+    "crypto-js": "4.2.0",
     "date-fns": "2.30.0",
     "dateformat": "5.0.3",
     "dns.js": "1.0.1",
