@@ -112,7 +112,8 @@ export default class LightningNodeConnect {
                 addr: data.addr,
                 sat_per_vbyte: data.sat_per_vbyte,
                 amount: data.amount,
-                spend_unconfirmed: data.spend_unconfirmed
+                spend_unconfirmed: data.spend_unconfirmed,
+                send_all: data.send_all
             })
             .then((data: lnrpc.SendCoinsResponse) => snakeize(data));
     getMyNodeInfo = async () =>
