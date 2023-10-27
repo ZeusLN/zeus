@@ -37,7 +37,6 @@ import Product, { PricedIn } from '../../models/Product';
 
 interface StandalonePosPaneProps {
     navigation: any;
-    onOrderChange: () => void;
     ActivityStore: ActivityStore;
     FiatStore: FiatStore;
     NodeInfoStore: NodeInfoStore;
@@ -61,6 +60,7 @@ interface StandalonePosPaneState {
     search: string;
     fadeAnimation: any;
     productsList: Array<ProductSectionList>;
+    itemQty: number;
 }
 
 @inject(
@@ -83,7 +83,8 @@ export default class StandalonePosPane extends React.PureComponent<
             selectedIndex: 0,
             search: '',
             fadeAnimation: new Animated.Value(1),
-            productsList: []
+            productsList: [],
+            itemQty: 0
         };
 
         Animated.loop(
@@ -295,7 +296,14 @@ export default class StandalonePosPane extends React.PureComponent<
         }
 
         PosStore.recalculateCurrentOrder();
-        this.props.onOrderChange();
+
+        this.setState({
+            itemQty:
+                order?.line_items.reduce(
+                    (n, { quantity }) => n + quantity,
+                    0
+                ) ?? 0
+        });
     };
 
     renderGridItem = ({ item }) => {
@@ -405,6 +413,7 @@ export default class StandalonePosPane extends React.PureComponent<
             SettingsStore,
             PosStore,
             FiatStore,
+            UnitsStore,
             NodeInfoStore,
             navigation
         } = this.props;
@@ -418,13 +427,27 @@ export default class StandalonePosPane extends React.PureComponent<
             updateSearch,
             hideOrder
         } = PosStore;
-        const { getRate, getFiatRates } = FiatStore;
+        const { fiatRates, getRate, getFiatRates }: any = FiatStore;
         const orders =
             selectedIndex === 0
                 ? []
                 : selectedIndex === 1
                 ? filteredOpenOrders
                 : filteredPaidOrders;
+
+        const currentOrder = PosStore.currentOrder;
+        const { units } = UnitsStore;
+        const { settings } = SettingsStore;
+        const fiat = settings.fiat;
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+        const rate =
+            fiat && fiatRates && fiatEntry ? fiatEntry.rate.toFixed(2) : 0;
+        const exchangeRate = getRate(false);
+        const disableButtons =
+            !currentOrder || currentOrder.total_money.amount === 0;
 
         const headerString = `${localeString('general.pos')} (${
             orders.length || 0
@@ -662,16 +685,104 @@ export default class StandalonePosPane extends React.PureComponent<
                     selectedIndex === 0 &&
                     this.state.productsList &&
                     this.state.productsList.length > 0 && (
-                        <SectionList
-                            sections={this.state.productsList}
-                            renderSectionHeader={this.renderSectionHeader}
-                            renderItem={this.renderSection}
-                            keyExtractor={(item, index) => `${index}`}
-                            contentContainerStyle={{
-                                marginLeft: 10,
-                                marginRight: 10
-                            }}
-                        />
+                        <>
+                            <SectionList
+                                sections={this.state.productsList}
+                                renderSectionHeader={this.renderSectionHeader}
+                                renderItem={this.renderSection}
+                                keyExtractor={(item, index) => `${index}`}
+                                contentContainerStyle={{
+                                    marginLeft: 10,
+                                    marginRight: 10
+                                }}
+                            />
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    paddingLeft: 10,
+                                    paddingRight: 10,
+                                    paddingTop: 5
+                                }}
+                            >
+                                <Button
+                                    title={`${localeString(
+                                        'general.charge'
+                                    )} (${
+                                        currentOrder
+                                            ? (this.state.itemQty > 0
+                                                  ? `${this.state.itemQty} - `
+                                                  : '') +
+                                              (currentOrder.getTotalMoneyDisplay ||
+                                                  0)
+                                            : '0'
+                                    })`}
+                                    containerStyle={{
+                                        borderRadius: 12,
+                                        flex: 3,
+                                        marginRight: 5
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: themeColor('highlight')
+                                    }}
+                                    disabled={disableButtons}
+                                    onPress={async () => {
+                                        // there is no order so we can't charge
+                                        if (!currentOrder) return;
+
+                                        // save the current order. This will move it to the open orders screen
+                                        await PosStore.saveStandaloneOrder(
+                                            currentOrder
+                                        );
+
+                                        // now let's create the charge
+                                        this.props.navigation.navigate(
+                                            'Receive',
+                                            {
+                                                amount:
+                                                    units === 'sats'
+                                                        ? currentOrder
+                                                              .total_money.sats
+                                                        : units === 'BTC'
+                                                        ? new BigNumber(
+                                                              currentOrder
+                                                                  .total_money
+                                                                  .sats || 0
+                                                          )
+                                                              .div(SATS_PER_BTC)
+                                                              .toFixed(8)
+                                                        : currentOrder.getTotalMoney,
+                                                autoGenerate: true,
+                                                // For displaying paid orders
+                                                orderId: currentOrder.id,
+                                                // sats
+                                                orderTotal:
+                                                    currentOrder.total_money
+                                                        .sats,
+                                                // formatted string rate
+                                                exchangeRate,
+                                                // numerical rate
+                                                rate
+                                            }
+                                        );
+                                    }}
+                                />
+                                <Button
+                                    title={localeString('general.clear')}
+                                    containerStyle={{
+                                        borderRadius: 12,
+                                        flex: 1
+                                    }}
+                                    onPress={() => {
+                                        PosStore.clearCurrentOrder();
+                                        this.setState({ itemQty: 0 });
+                                    }}
+                                    disabled={disableButtons}
+                                />
+                            </View>
+                        </>
                     )}
 
                 {!loading &&

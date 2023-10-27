@@ -95,7 +95,6 @@ interface WalletProps {
 interface WalletState {
     unlocked: boolean;
     initialLoad: boolean;
-    currentOrder: Order | null;
 }
 
 @inject(
@@ -126,8 +125,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         super(props);
         this.state = {
             unlocked: false,
-            initialLoad: true,
-            currentOrder: null
+            initialLoad: true
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -341,7 +339,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             posStatus === 'active'
         ) {
             PosStore.getOrders();
-            this.setState({ currentOrder: PosStore.currentOrder });
         }
 
         if (fiatEnabled) {
@@ -469,112 +466,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
     };
 
-    onOrderChange = () => {
-        const { PosStore } = this.props;
-        this.setState({ currentOrder: PosStore.currentOrder });
-    };
-
-    chargeOrder = () => {
-        const { PosStore, UnitsStore, FiatStore, SettingsStore } = this.props;
-        const currentOrder = this.state.currentOrder;
-        const { units } = UnitsStore;
-        const { fiatRates, getRate }: any = FiatStore;
-        const { settings } = SettingsStore;
-        const fiat = settings.fiat;
-
-        const fiatEntry =
-            fiat && fiatRates
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
-
-        const rate =
-            fiat && fiatRates && fiatEntry ? fiatEntry.rate.toFixed(2) : 0;
-
-        const exchangeRate = getRate();
-
-        const disableButtons =
-            !currentOrder || currentOrder.total_money.amount === 0;
-
-        const itemQty =
-            currentOrder?.line_items.reduce(
-                (n, { quantity }) => n + quantity,
-                0
-            ) ?? 0;
-
-        return (
-            <View
-                style={{
-                    flexDirection: 'row',
-                    paddingLeft: 10,
-                    paddingRight: 10
-                }}
-            >
-                <Button
-                    title={`${localeString('general.charge')} (${
-                        currentOrder
-                            ? (itemQty > 0 ? `${itemQty} - ` : '') +
-                              (currentOrder.getTotalMoneyDisplay || 0)
-                            : '0'
-                    })`}
-                    containerStyle={{
-                        borderRadius: 12,
-                        flex: 3,
-                        marginRight: 5
-                    }}
-                    titleStyle={{
-                        color: themeColor('background')
-                    }}
-                    buttonStyle={{
-                        backgroundColor: themeColor('highlight')
-                    }}
-                    disabled={disableButtons}
-                    onPress={async () => {
-                        // there is no order so we can't charge
-                        if (!currentOrder) return;
-
-                        // save the current order. This will move it to the open orders screen
-                        await PosStore.saveStandaloneOrder(currentOrder);
-
-                        // now let's create the charge
-                        this.props.navigation.navigate('Receive', {
-                            amount:
-                                units === 'sats'
-                                    ? currentOrder.total_money.sats
-                                    : units === 'BTC'
-                                    ? new BigNumber(
-                                          currentOrder.total_money.sats || 0
-                                      )
-                                          .div(SATS_PER_BTC)
-                                          .toFixed(8)
-                                    : currentOrder.getTotalMoney,
-                            autoGenerate: true,
-                            // For displaying paid orders
-                            orderId: currentOrder.id,
-                            // sats
-                            orderTotal: currentOrder.total_money.sats,
-                            // formatted string rate
-                            exchangeRate,
-                            // numerical rate
-                            rate
-                        });
-                    }}
-                />
-                <Button
-                    title={localeString('general.clear')}
-                    containerStyle={{
-                        borderRadius: 12,
-                        flex: 1
-                    }}
-                    onPress={() => {
-                        PosStore.clearCurrentOrder();
-                        this.onOrderChange();
-                    }}
-                    disabled={disableButtons}
-                />
-            </View>
-        );
-    };
-
     render() {
         const Tab = createBottomTabNavigator();
         const {
@@ -685,10 +576,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         <SquarePosPane navigation={navigation} />
                     )}
                     {posEnabled === PosEnabled.Standalone && (
-                        <StandalonePosPane
-                            navigation={navigation}
-                            onOrderChange={() => this.onOrderChange()}
-                        />
+                        <StandalonePosPane navigation={navigation} />
                     )}
                 </Screen>
             );
@@ -759,13 +647,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             return <Temple fill={color} />;
                                         }
                                         if (route.name === 'POS') {
-                                            if (
-                                                posEnabled ===
-                                                PosEnabled.Standalone
-                                            ) {
-                                                return this.chargeOrder();
-                                            }
-
                                             return (
                                                 <POS
                                                     stroke={themeColor('text')}
