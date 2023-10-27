@@ -94,7 +94,6 @@ export default class ProductDetails extends React.Component<
                     }
                 ];
                 categoryOptions = categoryOptions.concat(...mappedCategories);
-                console.log('options', categoryOptions);
 
                 const productId = this.props.navigation.getParam(
                     'productId',
