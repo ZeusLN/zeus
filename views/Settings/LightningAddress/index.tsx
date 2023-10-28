@@ -19,10 +19,14 @@ import Text from '../../../components/Text';
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import TextInput from '../../../components/TextInput';
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../../components/SuccessErrorMessage';
 import { Row } from '../../../components/layout/Row';
 import { Spacer } from '../../../components/layout/Spacer';
 
+import ChannelsStore from '../../../stores/ChannelsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 import SettingsStore, {
     DEFAULT_NOSTR_RELAYS
@@ -33,6 +37,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 
 interface LightningAddressProps {
     navigation: any;
+    ChannelsStore: ChannelsStore;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
 }
@@ -46,7 +51,7 @@ interface LightningAddressState {
     nostrRelays: Array<string>;
 }
 
-@inject('LightningAddressStore', 'SettingsStore')
+@inject('LightningAddressStore', 'ChannelsStore', 'SettingsStore')
 @observer
 export default class LightningAddress extends React.Component<
     LightningAddressProps,
@@ -122,7 +127,12 @@ export default class LightningAddress extends React.Component<
     };
 
     render() {
-        const { navigation, LightningAddressStore, SettingsStore } = this.props;
+        const {
+            navigation,
+            LightningAddressStore,
+            ChannelsStore,
+            SettingsStore
+        } = this.props;
         const {
             newLightningAddress,
             nostrPrivateKey,
@@ -151,10 +161,16 @@ export default class LightningAddress extends React.Component<
 
         const automaticallyAccept =
             SettingsStore.settings?.lightningAddress?.automaticallyAccept;
+        const automaticallyRequestOlympusChannels =
+            SettingsStore.settings?.lightningAddress
+                ?.automaticallyRequestOlympusChannels;
         const isReady =
             SettingsStore.implementation !== 'embedded-lnd' ||
             !automaticallyAccept ||
             readyToAutomaticallyAccept;
+
+        const hasChannels =
+            ChannelsStore.channels && ChannelsStore.channels.length > 0;
 
         const InfoButton = () => (
             <View style={{ right: 15 }}>
@@ -345,6 +361,22 @@ export default class LightningAddress extends React.Component<
                                 </Row>
                                 <QRButton />
                             </View>
+                        )}
+                        {!loading && lightningAddressHandle && !hasChannels && (
+                            <WarningMessage
+                                message={
+                                    automaticallyRequestOlympusChannels
+                                        ? `${localeString(
+                                              'views.Settings.LightningAddress.receiveExplainer1'
+                                          )} ${localeString(
+                                              'views.Settings.LightningAddress.receiveExplainer2'
+                                          )}`
+                                        : localeString(
+                                              'views.Settings.LightningAddress.receiveExplainer1'
+                                          )
+                                }
+                                dismissable
+                            />
                         )}
                         {!loading && !lightningAddressHandle && (
                             <>
