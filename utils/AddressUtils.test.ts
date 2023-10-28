@@ -400,6 +400,17 @@ describe('AddressUtils', () => {
                 ).toBeTruthy();
             });
 
+            it('validates lightning addresses with uppercase chars in the handle', () => {
+                // will be converted to lowercase in handleAnything
+                expect(
+                    AddressUtils.isValidLightningAddress('Evan@zeuspay.com')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('Acronym@zeuspay.com')
+                ).toBeTruthy();
+            });
+
             it("rejects LNURLPay Lightning Addresses with ports - let's not mix this up with nodes", () => {
                 expect(
                     AddressUtils.isValidLightningAddress(
