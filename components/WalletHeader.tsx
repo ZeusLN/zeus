@@ -201,6 +201,7 @@ export default class WalletHeader extends React.Component<
             PosStore,
             SyncStore
         } = this.props;
+        const { filteredPendingChannels } = ChannelsStore!;
         const { settings, posStatus, setPosStatus } = SettingsStore!;
         const { paid } = LightningAddressStore!;
         const { isSyncing } = SyncStore!;
@@ -387,6 +388,18 @@ export default class WalletHeader extends React.Component<
                                         title={title}
                                         noUppercase
                                         buttonStyle={{ alignSelf: 'center' }}
+                                        icon={
+                                            filteredPendingChannels?.length > 0
+                                                ? {
+                                                      name: 'clockcircle',
+                                                      type: 'antdesign',
+                                                      size: 20,
+                                                      color: themeColor(
+                                                          'background'
+                                                      )
+                                                  }
+                                                : null
+                                        }
                                     />
                                 </View>
                             ) : (
