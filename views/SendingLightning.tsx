@@ -196,7 +196,7 @@ export default class SendingLightning extends React.Component<
                                 </Text>
                             </View>
                         )}
-                        {!loading && LnurlPayStore.isZaplocker && (
+                        {!loading && LnurlPayStore.isZaplocker && !success && (
                             <View
                                 style={{
                                     padding: 20,
