@@ -97,7 +97,7 @@ const ScanBadge = ({ navigation }: { navigation: any }) => (
         onPress={() => navigation.navigate('HandleAnythingQRScanner')}
         accessibilityLabel={localeString('general.scan')}
     >
-        <Scan fill={themeColor('text')} />
+        <Scan fill={themeColor('text')} height={35} />
     </TouchableOpacity>
 );
 
@@ -204,6 +204,7 @@ export default class WalletHeader extends React.Component<
         const { filteredPendingChannels } = ChannelsStore!;
         const { settings, posStatus, setPosStatus } = SettingsStore!;
         const { paid } = LightningAddressStore!;
+        const laLoading = LightningAddressStore?.loading;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
         const multipleNodes: boolean =
@@ -448,10 +449,10 @@ export default class WalletHeader extends React.Component<
                     ) : (
                         <View style={{ flex: 1, flexDirection: 'row' }}>
                             {(stores.balanceStore.loadingBlockchainBalance ||
-                                stores.balanceStore
-                                    .loadingLightningBalance) && (
-                                <View style={{ paddingRight: 10 }}>
-                                    <LoadingIndicator size={30} />
+                                stores.balanceStore.loadingLightningBalance ||
+                                laLoading) && (
+                                <View style={{ paddingRight: 20 }}>
+                                    <LoadingIndicator size={35} />
                                 </View>
                             )}
                             {!!clipboard && (
