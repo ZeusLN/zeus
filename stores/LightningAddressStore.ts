@@ -287,6 +287,9 @@ export default class LightningAddressStore {
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
+                                const request_channels =
+                                    this.settingsStore.implementation ===
+                                    'embedded-lnd';
                                 ReactNativeBlobUtil.fetch(
                                     'POST',
                                     `${LNURL_HOST}/lnurl/create`,
@@ -302,7 +305,8 @@ export default class LightningAddressStore {
                                         domain: 'zeuspay.com',
                                         nostr_pk,
                                         relays,
-                                        relays_sig
+                                        relays_sig,
+                                        request_channels
                                     })
                                 )
                                     .then(async (response: any) => {
@@ -330,7 +334,7 @@ export default class LightningAddressStore {
                                                         automaticallyAccept:
                                                             true,
                                                         automaticallyRequestOlympusChannels:
-                                                            true,
+                                                            request_channels,
                                                         allowComments: true,
                                                         nostrPrivateKey,
                                                         nostrRelays: relays,
