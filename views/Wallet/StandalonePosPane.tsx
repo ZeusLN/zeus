@@ -61,6 +61,7 @@ interface StandalonePosPaneState {
     fadeAnimation: any;
     productsList: Array<ProductSectionList>;
     itemQty: number;
+    totalMoneyDisplay: string;
 }
 
 @inject(
@@ -84,7 +85,8 @@ export default class StandalonePosPane extends React.PureComponent<
             search: '',
             fadeAnimation: new Animated.Value(1),
             productsList: [],
-            itemQty: 0
+            itemQty: 0,
+            totalMoneyDisplay: '0'
         };
 
         Animated.loop(
@@ -302,7 +304,8 @@ export default class StandalonePosPane extends React.PureComponent<
                 order?.line_items.reduce(
                     (n, { quantity }) => n + quantity,
                     0
-                ) ?? 0
+                ) ?? 0,
+            totalMoneyDisplay: order.getTotalMoneyDisplay
         });
     };
 
@@ -712,7 +715,7 @@ export default class StandalonePosPane extends React.PureComponent<
                                             ? (this.state.itemQty > 0
                                                   ? `${this.state.itemQty} - `
                                                   : '') +
-                                              (currentOrder.getTotalMoneyDisplay ||
+                                              (this.state.totalMoneyDisplay ||
                                                   0)
                                             : '0'
                                     })`}
@@ -777,7 +780,10 @@ export default class StandalonePosPane extends React.PureComponent<
                                     }}
                                     onPress={() => {
                                         PosStore.clearCurrentOrder();
-                                        this.setState({ itemQty: 0 });
+                                        this.setState({
+                                            itemQty: 0,
+                                            totalMoneyDisplay: '0'
+                                        });
                                     }}
                                     disabled={disableButtons}
                                 />
