@@ -408,6 +408,21 @@ export default class PaymentRequest extends React.Component<
                     {!loading && !loadingFeeEstimate && !!pay_req && (
                         <View style={styles.content}>
                             <>
+                                {isZaplocker &&
+                                    implementation === 'embedded-lnd' && (
+                                        <View
+                                            style={{
+                                                paddingTop: 10,
+                                                paddingBottom: 10
+                                            }}
+                                        >
+                                            <WarningMessage
+                                                message={localeString(
+                                                    'views.Send.zaplockerWarning'
+                                                )}
+                                            />
+                                        </View>
+                                    )}
                                 {noBalance && (
                                     <View
                                         style={{

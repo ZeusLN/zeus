@@ -560,6 +560,7 @@
     "views.Send.lookup": "Look Up Payment Request",
     "views.Send.noOnchainBalance": "No on-chain balance available. Close a channel or receive an on-chain transaction first.",
     "views.Send.noLightningBalance": "No lightning balance available. Open a channel or receive a lightning payment first.",
+    "views.Send.zaplockerWarning": "It currently is not recommended to pay Zaplocker invoices with nodes that aren't online 24/7. Not coming online during the period between the payment completion and the final expiration may result in a force closed channel. Open ZEUS regularly to mitigate the issue. Proceed at your own risk.",
     "views.SendingLightning.sending": "Sending Transaction",
     "views.SendingLightning.success": "Transaction successfully sent",
     "views.SendingLightning.paymentHash": "Payment Hash",
