@@ -196,34 +196,36 @@ export default class SendingLightning extends React.Component<
                                 </Text>
                             </View>
                         )}
-                        {!loading && LnurlPayStore.isZaplocker && !success && (
-                            <View
-                                style={{
-                                    padding: 20,
-                                    marginTop: 10,
-                                    marginBottom: 10,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <Clock
-                                    color={themeColor('bitcoin')}
-                                    width={180}
-                                    height={180}
-                                />
-                                <Text
+                        {!loading &&
+                            LnurlPayStore.isZaplocker &&
+                            !(!!success && !error) && (
+                                <View
                                     style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular',
-                                        fontSize: 22,
-                                        marginTop: 25
+                                        padding: 20,
+                                        marginTop: 10,
+                                        marginBottom: 10,
+                                        alignItems: 'center'
                                     }}
                                 >
-                                    {localeString(
-                                        'views.SendingLightning.isZaplocker'
-                                    )}
-                                </Text>
-                            </View>
-                        )}
+                                    <Clock
+                                        color={themeColor('bitcoin')}
+                                        width={180}
+                                        height={180}
+                                    />
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'Lato-Regular',
+                                            fontSize: 22,
+                                            marginTop: 25
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.SendingLightning.isZaplocker'
+                                        )}
+                                    </Text>
+                                </View>
+                            )}
                         {(!!error || !!payment_error) &&
                             !loading &&
                             !LnurlPayStore.isZaplocker && (
