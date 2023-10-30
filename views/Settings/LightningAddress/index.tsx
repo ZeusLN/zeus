@@ -154,7 +154,8 @@ export default class LightningAddress extends React.Component<
             error,
             error_msg,
             loading,
-            readyToAutomaticallyAccept
+            readyToAutomaticallyAccept,
+            prepareToAutomaticallyAcceptStart
         } = LightningAddressStore;
 
         const { fontScale } = Dimensions.get('window');
@@ -166,6 +167,7 @@ export default class LightningAddress extends React.Component<
                 ?.automaticallyRequestOlympusChannels;
         const isReady =
             SettingsStore.implementation !== 'embedded-lnd' ||
+            !prepareToAutomaticallyAcceptStart ||
             !automaticallyAccept ||
             readyToAutomaticallyAccept;
 
