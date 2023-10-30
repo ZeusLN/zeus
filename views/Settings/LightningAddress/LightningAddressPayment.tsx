@@ -14,7 +14,10 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 import Channel from '../../../assets/images/SVG/Channel.svg';
-import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
+import NostrichNotLoaded from '../../../assets/images/SVG/Nostrich_not-loaded.svg';
+import NostrichValid from '../../../assets/images/SVG/Nostrich_valid.svg';
+import NostrichInvalid from '../../../assets/images/SVG/Nostrich_invalid.svg';
+import NostrichNotFound from '../../../assets/images/SVG/Nostrich_not-found.svg';
 import Receive from '../../../assets/images/SVG/Receive.svg';
 
 export default function LightningAddressPayment(props) {
@@ -129,15 +132,27 @@ export default function LightningAddressPayment(props) {
                     >
                         {loading ? (
                             <LoadingIndicator />
+                        ) : attestationStatus === 'warning' ? (
+                            <NostrichNotFound
+                                fill="#FFC300"
+                                width={32}
+                                height={32}
+                            />
+                        ) : attestationStatus === 'neutral' ? (
+                            <NostrichNotLoaded
+                                fill={themeColor('text')}
+                                width={32}
+                                height={32}
+                            />
+                        ) : attestationStatus === 'success' ? (
+                            <NostrichValid
+                                fill={themeColor(attestationStatus)}
+                                width={32}
+                                height={32}
+                            />
                         ) : (
-                            <Nostrich
-                                fill={
-                                    attestationStatus === 'warning'
-                                        ? '#FFC300'
-                                        : attestationStatus === 'neutral'
-                                        ? themeColor('text')
-                                        : themeColor(attestationStatus)
-                                }
+                            <NostrichInvalid
+                                fill={themeColor(attestationStatus)}
                                 width={32}
                                 height={32}
                             />
