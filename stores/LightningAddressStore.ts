@@ -50,6 +50,7 @@ export default class LightningAddressStore {
     // Push
     @observable public deviceToken: string;
     @observable public readyToAutomaticallyAccept: boolean = false;
+    @observable public prepareToAutomaticallyAcceptStart: boolean = false;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -1089,6 +1090,8 @@ export default class LightningAddressStore {
         const automaticallyRequestOlympusChannels =
             this.settingsStore?.settings?.lightningAddress
                 ?.automaticallyRequestOlympusChannels;
+
+        this.prepareToAutomaticallyAcceptStart = true;
 
         while (!this.readyToAutomaticallyAccept) {
             await sleep(7000);
