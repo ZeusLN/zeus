@@ -172,6 +172,11 @@ If you'd like to help us with the cost of running Zeus project (iOS developer ac
 
 Thank you.
 
+### Our Contributors
+<a href="https://github.com/zeusLN/zeus/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=zeusLN/zeus" />
+</a>
+
 ## License
 
 Distributed under the GNU Affero General Public License (AGPL v3). See [LICENSE file](LICENSE).
