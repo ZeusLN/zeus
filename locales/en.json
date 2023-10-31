@@ -156,6 +156,7 @@
     "views.LnurlPay.LnurlPay.confirm": "Confirm",
     "views.LnurlPay.LnurlPay.invalidParams": "Invalid lnurl params!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Got an invalid invoice!",
+    "views.LnurlPay.Success.servicedBy": "Serviced by",
     "views.LnurlPay.Success.uriAlert": "Don't know how to open URI",
     "views.LnurlChannel.title": "Incoming Channel",
     "views.LnurlChannel.uri": "Remote Node ID",

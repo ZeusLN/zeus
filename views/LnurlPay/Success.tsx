@@ -1,14 +1,24 @@
 import * as React from 'react';
-import { Alert, View, Text, TouchableOpacity, Linking } from 'react-native';
+import {
+    Alert,
+    Linking,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { LNURLPaySuccessAction, decipherAES } from 'js-lnurl';
 import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPaySuccessProps {
     color?: string;
     domain: any;
     successAction: LNURLPaySuccessAction;
     preimage: string;
+    scrollable: boolean;
+    maxHeight?: number;
 }
 
 export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProps> {
@@ -31,7 +41,14 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
     };
 
     render() {
-        const { color, domain, successAction, preimage } = this.props;
+        const {
+            color,
+            domain,
+            successAction,
+            preimage,
+            scrollable,
+            maxHeight
+        } = this.props;
 
         let body;
         if (successAction) {
@@ -43,8 +60,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                         <Text
                             style={{
                                 fontFamily: 'PPNeueMontreal-Book',
-                                color: color || themeColor('text'),
-                                fontSize: 40
+                                color: themeColor('text')
                             }}
                         >
                             {message}
@@ -57,11 +73,18 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
-                                    color: color || themeColor('text'),
-                                    fontSize: 18
+                                    color: color || themeColor('text')
                                 }}
                             >
-                                {description}: {url}
+                                {description}
+                            </Text>
+                            <Text
+                                style={{
+                                    fontFamily: 'Lato-Regular',
+                                    color: color || themeColor('text')
+                                }}
+                            >
+                                {url}
                             </Text>
                         </TouchableOpacity>
                     );
@@ -73,45 +96,50 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                         plaintext = `<error decrypting message: ${err.message}>`;
                     }
                     body = (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: color || themeColor('text'),
-                                    fontSize: 18
-                                }}
-                            >
-                                {description}:{' '}
-                            </Text>
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: color || themeColor('text'),
-                                    fontSize: 18
-                                }}
-                            >
-                                {plaintext}
-                            </Text>
-                        </React.Fragment>
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('text')
+                            }}
+                        >
+                            {description}
+                            {'\n'}
+                            {plaintext}
+                        </Text>
                     );
                     break;
             }
         }
 
-        return (
-            <View>
-                <Text
-                    style={{
-                        padding: 20,
-                        fontSize: 22,
-                        fontFamily: 'PPNeueMontreal-Medium',
-                        color: color || themeColor('text')
-                    }}
-                >
-                    {domain}
-                </Text>
+        const servicedBy = (
+            <Text style={{ color: themeColor('text') }}>
+                {localeString('views.LnurlPay.Success.servicedBy')}: {domain}
+            </Text>
+        );
+
+        return scrollable ? (
+            <ScrollView
+                style={{ ...styles.container, maxHeight }}
+                contentContainerStyle={{ gap: 5, padding: 15 }}
+            >
                 {body}
+                {servicedBy}
+            </ScrollView>
+        ) : (
+            <View style={{ ...styles.container, maxHeight, padding: 15 }}>
+                {body}
+                {servicedBy}
             </View>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    container: {
+        borderWidth: 1,
+        borderRadius: 5,
+        borderColor: themeColor('text'),
+        backgroundColor: themeColor('secondary'),
+        gap: 5
+    }
+});
