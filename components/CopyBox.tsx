@@ -88,17 +88,17 @@ const styles = StyleSheet.create({
     container: {
         borderWidth: 1,
         borderRadius: 5,
-        marginBottom: 25,
         minWidth: '100%'
     },
     headingText: {
-        padding: 20,
+        padding: 15,
         paddingRight: 45,
-        paddingBottom: 5,
+        paddingBottom: 0,
         fontWeight: 'bold'
     },
     URL: {
-        padding: 20,
+        padding: 15,
+        paddingTop: 5,
         paddingRight: 45
     },
     copyIcon: {

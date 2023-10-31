@@ -124,7 +124,8 @@ export default class ExternalLinkModal extends React.Component<
 
 const styles = StyleSheet.create({
     buttons: {
-        width: '100%'
+        width: '100%',
+        marginTop: 25
     },
     button: {
         marginBottom: 20,
