@@ -191,6 +191,11 @@ export async function initializeLnd(isTestnet?: boolean, rescan?: boolean) {
     await initialize();
 }
 
+export function removeListeners() {
+    LndMobileEventEmitter.removeAllListeners &&
+        LndMobileEventEmitter.removeAllListeners('SubscribeState');
+}
+
 export async function startLnd(walletPassword: string) {
     const { checkStatus, startLnd, decodeState, subscribeState } =
         lndMobile.index;

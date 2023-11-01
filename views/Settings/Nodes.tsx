@@ -182,7 +182,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         }).then(() => {
                                             if (
                                                 currentImplementation ===
-                                                'lightning-node-connect'
+                                                    'lightning-node-connect' ||
+                                                currentImplementation ===
+                                                    'embedded-lnd'
                                             ) {
                                                 BackendUtils.disconnect();
                                             }
