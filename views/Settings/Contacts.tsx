@@ -244,8 +244,8 @@ export default class Contacts extends React.Component<
                 >
                     <AddIcon
                         fill={themeColor('background')}
-                        width={16}
-                        height={16}
+                        width={20}
+                        height={20}
                         style={{ alignSelf: 'center' }}
                     />
                 </View>

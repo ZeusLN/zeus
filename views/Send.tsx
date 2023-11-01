@@ -480,7 +480,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         )
                                     }
                                 >
-                                    <Scan fill={themeColor('text')} />
+                                    <Scan
+                                        fill={themeColor('text')}
+                                        width={35}
+                                        height={35}
+                                    />
                                 </TouchableOpacity>
                             </View>
                         </View>

@@ -613,9 +613,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         return;
                                     }
                                     if (route.name === 'Keypad') {
-                                        return (
-                                            <Bitcoin height={20} fill={color} />
-                                        );
+                                        return <Bitcoin fill={color} />;
                                     }
                                     if (route.name === 'Balance') {
                                         return <Temple fill={color} />;
