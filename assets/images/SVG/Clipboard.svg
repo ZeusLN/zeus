@@ -1,66 +1,22 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   height="30"
-   id="Layer_1"
-   version="1.1"
-   viewBox="0 0 30 30"
-   width="30"
-   xml:space="preserve"
-   sodipodi:docname="Clipboard.svg"
-   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg"><defs
-     id="defs23" /><sodipodi:namedview
-     id="namedview21"
-     pagecolor="#ffffff"
-     bordercolor="#666666"
-     borderopacity="1.0"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     showgrid="false"
-     inkscape:document-units="px"
-     inkscape:zoom="20.85965"
-     inkscape:cx="19.223717"
-     inkscape:cy="17.737594"
-     inkscape:window-width="2560"
-     inkscape:window-height="1377"
-     inkscape:window-x="-8"
-     inkscape:window-y="-8"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="Layer_1" /><g
-     id="g18"
-     transform="matrix(0.06694934,0,0,0.06694934,-2.139031,-2.1356839)"><g
-       id="g6"><path
-         d="m 160,160 h 192 c -1.7,-20 -9.7,-35.2 -27.9,-40.1 -0.4,-0.1 -0.9,-0.3 -1.3,-0.4 C 310.8,116.1 302,112 302,98.8 V 78.2 c 0,-25.5 -20.5,-46.3 -46,-46.3 -25.5,0 -46,20.7 -46,46.3 v 20.6 c 0,13.1 -8.8,17.2 -20.8,20.6 -0.4,0.1 -0.9,0.4 -1.4,0.5 -18.2,4.9 -25.9,20.1 -27.8,40.1 z m 96,-95.6 c 7.6,0 13.8,6.2 13.8,13.8 0,7.7 -6.2,13.8 -13.8,13.8 -7.6,0 -13.8,-6.2 -13.8,-13.8 0,-7.6 6.2,-13.8 13.8,-13.8 z"
-         id="path2" /><path
-         d="M 404.6,63 H 331 v 14.5 c 0,10.6 8.7,18.5 19,18.5 h 37.2 c 6.7,0 12.1,5.7 12.4,12.5 l 0.1,327.2 c -0.3,6.4 -5.3,11.6 -11.5,12.1 l -264.4,0.1 c -6.2,-0.5 -11.1,-5.7 -11.5,-12.1 L 112.2,108.5 C 112.5,101.7 118.1,96 124.7,96 H 162 c 10.3,0 19,-7.9 19,-18.5 V 63 H 107.4 C 92.3,63 80,76.1 80,91.6 V 452 c 0,15.5 12.3,28 27.4,28 H 256 404.6 c 15.1,0 27.4,-12.5 27.4,-28 V 91.6 C 432,76.1 419.7,63 404.6,63 Z"
-         id="path4" /></g><rect
-       height="16"
-       width="112"
-       x="144"
-       y="192"
-       id="rect8" /><rect
-       height="16"
-       width="160"
-       x="144"
-       y="288"
-       id="rect10" /><rect
-       height="16"
-       width="129"
-       x="144"
-       y="384"
-       id="rect12" /><rect
-       height="16"
-       width="176"
-       x="144"
-       y="336"
-       id="rect14" /><rect
-       height="16"
-       width="208"
-       x="144"
-       y="240"
-       id="rect16" /></g></svg>
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="24px" height="30px" viewBox="3 0.02 24 30" enable-background="new 3 0.02 24 30" xml:space="preserve">
+<g id="g18" transform="matrix(0.06694934,0,0,0.06694934,-2.139031,-2.1356839)">
+	<g id="g6">
+		<path id="path2" d="M159.999,160.292h192.012c-1.707-19.991-9.715-35.198-27.919-40.099c-0.394-0.102-0.904-0.292-1.284-0.401
+			c-12.005-3.399-20.801-7.498-20.801-20.698V78.49c0-25.497-20.509-46.298-46.006-46.298S210.002,52.89,210.002,78.49v20.604
+			c0,13.099-8.803,17.198-20.801,20.596c-0.401,0.102-0.897,0.401-1.4,0.503C169.604,125.094,161.903,140.301,159.999,160.292z
+			 M256.001,64.691c7.6,0,13.799,6.199,13.799,13.799c0,7.702-6.199,13.799-13.799,13.799c-7.6,0-13.799-6.199-13.799-13.799
+			C242.202,70.89,248.402,64.691,256.001,64.691L256.001,64.691z"/>
+		<path id="path4" d="M404.61,63.298h-73.604V77.79c0,10.604,8.694,18.503,18.992,18.503h37.196c6.71,0,12.092,5.696,12.399,12.508
+			l0.117,327.179c-0.306,6.418-5.31,11.611-11.509,12.107l-264.398,0.117c-6.199-0.496-11.1-5.718-11.502-12.107l-0.102-327.296
+			c0.299-6.812,5.893-12.508,12.501-12.508h37.298c10.305,0,19.006-7.899,19.006-18.503V63.298H107.4
+			c-15.097,0-27.401,13.092-27.401,28.597v360.393c0,15.506,12.304,28.006,27.401,28.006h148.602H404.61
+			c15.083,0,27.394-12.501,27.394-28.006V91.895C432.004,76.389,419.693,63.298,404.61,63.298z"/>
+	</g>
+	<rect id="rect8" x="143.998" y="192.295" width="112.004" height="16.002"/>
+	<rect id="rect10" x="143.998" y="288.29" width="159.994" height="16.002"/>
+	<rect id="rect12" x="143.998" y="384.285" width="129.012" height="16.016"/>
+	<rect id="rect14" x="143.998" y="336.294" width="176.01" height="16.002"/>
+	<rect id="rect16" x="143.998" y="240.292" width="208.013" height="16.002"/>
+</g>
+</svg>

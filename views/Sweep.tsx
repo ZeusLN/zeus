@@ -179,7 +179,11 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                                         )
                                     }
                                 >
-                                    <Scan fill={themeColor('text')} />
+                                    <Scan
+                                        fill={themeColor('text')}
+                                        width={35}
+                                        height={35}
+                                    />
                                 </TouchableOpacity>
                             </View>
                         </View>
