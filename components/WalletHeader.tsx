@@ -345,8 +345,8 @@ export default class WalletHeader extends React.Component<
                     >
                         <Sync
                             fill={themeColor('text')}
-                            width="40"
-                            height="40"
+                            width="45"
+                            height="45"
                         />
                     </TouchableOpacity>
                 </Animated.View>
