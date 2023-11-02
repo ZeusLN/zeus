@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import PinPad from './PinPad';
 import PinCircles from './PinCircles';
+import ShowHideToggle from '../components/ShowHideToggle';
 
 interface PinProps {
     onSubmit: (value: string, pinConfirm?: boolean) => void;
@@ -21,6 +22,7 @@ export default function Pin({
     shuffle = true
 }: PinProps) {
     const [pinValue, setPinValue] = useState('');
+    const [showPin, setShowPin] = useState(false);
     const maxLength = 8;
     const minLength = 4;
 
@@ -47,6 +49,10 @@ export default function Pin({
         setPinValue('');
     };
 
+    const toggleShowPin = () => {
+        setShowPin(!showPin);
+    };
+
     useEffect(() => {
         if (!hidePinLength && pinValue.length === pinLength) {
             onSubmit(pinValue, pinConfirm);
@@ -60,20 +66,40 @@ export default function Pin({
         <View
             style={{
                 flex: 1,
-                justifyContent: 'flex-end'
+                justifyContent: 'flex-start'
             }}
         >
             <View
                 style={{
-                    flex: 1,
-                    justifyContent: 'flex-start'
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}
             >
-                <PinCircles
-                    pinLength={pinLength}
-                    numFilled={pinValue.length}
-                    hidePinLength={hidePinLength}
-                />
+                {showPin ? (
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Bold',
+                            fontSize: 27,
+                            letterSpacing: 21,
+                            left: Platform.OS === 'ios' ? 12 : 0,
+                            color: '#FFD93F'
+                        }}
+                    >
+                        {pinValue}
+                    </Text>
+                ) : (
+                    <PinCircles
+                        pinLength={pinLength}
+                        numFilled={pinValue.length}
+                        hidePinLength={hidePinLength}
+                    />
+                )}
+                {pinValue.length > 0 && (
+                    <View style={{ marginTop: 20 }}>
+                        <ShowHideToggle onPress={toggleShowPin} />
+                    </View>
+                )}
             </View>
             <View
                 style={{
