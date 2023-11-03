@@ -23,6 +23,7 @@ interface SetPassphraseState {
     savedPassphrase: string;
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
+    confirmDelete: boolean;
 }
 
 @inject('SettingsStore')
@@ -36,7 +37,8 @@ export default class SetPassphrase extends React.Component<
         passphraseConfirm: '',
         savedPassphrase: '',
         passphraseMismatchError: false,
-        passphraseInvalidError: false
+        passphraseInvalidError: false,
+        confirmDelete: false
     };
 
     async componentDidMount() {
@@ -205,15 +207,26 @@ export default class SetPassphrase extends React.Component<
                     {!!savedPassphrase && (
                         <View style={{ paddingTop: 10, margin: 10 }}>
                             <Button
-                                title={localeString(
-                                    'views.Settings.SetPassword.deletePassword'
-                                )}
-                                onPress={() => this.deletePassword()}
-                                containerStyle={{
-                                    borderColor: 'red'
+                                title={
+                                    this.state.confirmDelete
+                                        ? localeString(
+                                              'views.Settings.AddEditNode.tapToConfirm'
+                                          )
+                                        : localeString(
+                                              'views.Settings.SetPassword.deletePassword'
+                                          )
+                                }
+                                onPress={() => {
+                                    if (!this.state.confirmDelete) {
+                                        this.setState({
+                                            confirmDelete: true
+                                        });
+                                    } else {
+                                        this.deletePassword();
+                                    }
                                 }}
                                 titleStyle={{
-                                    color: 'red'
+                                    color: themeColor('delete')
                                 }}
                                 secondary
                             />
