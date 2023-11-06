@@ -129,7 +129,8 @@ export default class AddNotes extends React.Component<
                         style={{
                             padding: 20,
                             flexGrow: 1,
-                            flexShrink: 1
+                            flexShrink: 1,
+                            backgroundColor: 'none'
                         }}
                         textInputStyle={{
                             height: '100%',
