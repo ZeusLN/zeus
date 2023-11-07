@@ -61,7 +61,7 @@ const Hop = (props: any) => {
                         style={{
                             fontSize: 17,
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Bold',
+                            fontFamily: 'PPNeueMontreal-Medium',
                             margin: 10
                         }}
                     >
@@ -83,7 +83,7 @@ const Hop = (props: any) => {
                             style={{
                                 fontSize: 15,
                                 color: themeColor('background'),
-                                fontFamily: 'Lato-Bold'
+                                fontFamily: 'PPNeueMontreal-Medium'
                             }}
                         >
                             {path.length}
@@ -128,7 +128,7 @@ const ExpandedHop = (props: any) => {
                         style={{
                             fontSize: 15,
                             color: themeColor('background'),
-                            fontFamily: 'Lato-Bold'
+                            fontFamily: 'PPNeueMontreal-Medium'
                         }}
                     >
                         {`${pathIndex + 1}`}
@@ -150,7 +150,7 @@ const ExpandedHop = (props: any) => {
                             style={{
                                 fontSize: 15,
                                 color: themeColor('highlight'),
-                                fontFamily: 'Lato-Bold'
+                                fontFamily: 'PPNeueMontreal-Medium'
                             }}
                         >
                             {`${

@@ -1209,7 +1209,7 @@ const styles = StyleSheet.create({
     textInput: {
         fontSize: 20,
         width: '100%',
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         top: 5,
         color: themeColor('text')
     },

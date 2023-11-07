@@ -1,3 +1,6 @@
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M12.2476 8.23741C12.15 8.13978 11.9917 8.13978 11.894 8.23741L5.53009 14.6014C5.23719 14.8943 4.76232 14.8943 4.46943 14.6014C4.17653 14.3085 4.17653 13.8336 4.46943 13.5407L10.8334 7.17675C11.5168 6.49333 12.6248 6.49333 13.3083 7.17675L19.6722 13.5407C19.9651 13.8336 19.9651 14.3085 19.6722 14.6014C19.3793 14.8943 18.9045 14.8943 18.6116 14.6014L12.2476 8.23741Z"/>
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Layer_2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="38px" height="15px" viewBox="287 0 38 15" enable-background="new 287 0 38 15" xml:space="preserve">
+<polygon points="287,9.523 297.925,15 306.003,10.955 314.075,15 325,9.523 306.003,0 "/>
 </svg>

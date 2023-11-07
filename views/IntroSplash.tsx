@@ -1,31 +1,31 @@
 import * as React from 'react';
 import {
     BackHandler,
+    Dimensions,
     NativeEventSubscription,
-    Image,
     View,
     SafeAreaView,
-    Text,
-    TouchableOpacity
+    Text
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Globe from '../assets/images/SVG/Globe.svg';
-import WordLogo from '../assets/images/SVG/Word Logo.svg';
+import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 import Button from '../components/Button';
-import Header from '../components/Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { LOCALE_KEYS } from '../stores/SettingsStore';
 
 import { createLndWallet } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-const Splash = require('../assets/images/intro/splash.png');
+import SplashView from '../components/Splash';
+
+import TresArrows from '../assets/images/SVG/TresArrows.svg';
 
 interface IntroSplashProps {
     navigation: any;
@@ -35,6 +35,7 @@ interface IntroSplashProps {
 interface IntroSplashState {
     creatingWallet: boolean;
     error: boolean;
+    modalBlur: number;
 }
 
 @inject('SettingsStore')
@@ -44,10 +45,10 @@ export default class IntroSplash extends React.Component<
     IntroSplashState
 > {
     private backPressSubscription: NativeEventSubscription;
-
     state = {
         creatingWallet: false,
-        error: false
+        error: false,
+        modalBlur: 90
     };
 
     componentDidMount() {
@@ -75,18 +76,15 @@ export default class IntroSplash extends React.Component<
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        const locale = settings.locale || '';
 
-        const LanguageButton = () => (
-            <TouchableOpacity
-                onPress={() => navigation.navigate('Language')}
-                accessibilityLabel={localeString(
-                    'views.Settings.Language.title'
-                )}
-            >
-                <Globe fill={themeColor('text')} stroke={themeColor('text')} />
-            </TouchableOpacity>
+        const localeItem: any = LOCALE_KEYS.filter((item: any) =>
+            item.key.includes(locale)
         );
+        let localeName;
+        if (localeItem[0]) localeName = localeItem[0].value;
 
         if (this.state.creatingWallet) {
             return (
@@ -99,16 +97,20 @@ export default class IntroSplash extends React.Component<
                             top: 10
                         }}
                     >
-                        <WordLogo
-                            height={100}
+                        <View
                             style={{
+                                width: Dimensions.get('window').width * 0.85,
+                                maxHeight: 200,
+                                marginTop: 10,
                                 alignSelf: 'center'
                             }}
-                        />
+                        >
+                            <Wordmark fill={themeColor('highlight')} />
+                        </View>
                         <Text
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 alignSelf: 'center',
                                 fontSize: 15,
                                 padding: 8
@@ -133,126 +135,167 @@ export default class IntroSplash extends React.Component<
 
         return (
             <Screen>
-                <Header rightComponent={LanguageButton} />
                 <SafeAreaView
                     style={{
                         flex: 1,
                         paddingTop: 50
                     }}
                 >
-                    <View
-                        style={{
-                            flex: 1,
-                            flexDirection: 'column',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <Image
-                            source={Splash}
-                            style={{
-                                flex: 1,
-                                width: '80%',
-                                height: '80%',
-                                resizeMode: 'contain',
-                                alignSelf: 'center'
-                            }}
-                        />
-                    </View>
-                    <WordLogo width="55%" height="20%" alignSelf="center" />
-                    <View style={{ height: 40 }}></View>
-                    {this.state.error && (
-                        <ErrorMessage
-                            message={localeString(
-                                'views.Intro.errorCreatingWallet'
-                            )}
-                        />
-                    )}
-                    <>
-                        <View
-                            style={{
-                                padding: 10
-                            }}
-                        >
-                            <Button
-                                title={localeString('views.Intro.whatIsZeus')}
-                                onPress={() => navigation.navigate('Intro')}
-                                quaternary
-                            />
-                        </View>
-                        <View
-                            style={{
-                                padding: 10
-                            }}
-                        >
-                            <Button
-                                title={localeString('views.Intro.quickStart')}
-                                onPress={async () => {
-                                    this.setState({
-                                        creatingWallet: true
-                                    });
-                                    const { SettingsStore } = this.props;
-                                    const {
-                                        setConnectingStatus,
-                                        updateSettings
-                                    } = SettingsStore;
-
-                                    let response;
-                                    try {
-                                        response = await createLndWallet(
-                                            undefined
-                                        );
-                                    } catch (e) {
-                                        this.setState({
-                                            error: true,
-                                            creatingWallet: false
-                                        });
-                                    }
-
-                                    const { wallet, seed, randomBase64 }: any =
-                                        response;
-                                    if (wallet && wallet.admin_macaroon) {
-                                        let nodes = [
-                                            {
-                                                adminMacaroon:
-                                                    wallet.admin_macaroon,
-                                                seedPhrase:
-                                                    seed.cipher_seed_mnemonic,
-                                                walletPassword: randomBase64,
-                                                embeddedLndNetwork: 'Mainnet',
-                                                implementation: 'embedded-lnd'
-                                            }
-                                        ];
-
-                                        updateSettings({ nodes }).then(() => {
-                                            setConnectingStatus(true);
-                                            navigation.navigate('Wallet', {
-                                                refresh: true
-                                            });
-                                        });
-                                    } else {
-                                        this.setState({
-                                            error: true,
-                                            creatingWallet: false
-                                        });
-                                    }
+                    <SplashView>
+                        <View style={{ flex: 1, flexDirection: 'column' }}>
+                            <View
+                                style={{
+                                    width:
+                                        Dimensions.get('window').width * 0.95,
+                                    maxHeight: 200,
+                                    marginTop: 10,
+                                    alignSelf: 'center'
                                 }}
-                            />
+                            >
+                                <Wordmark fill={themeColor('background')} />
+                            </View>
+                            <View style={{ height: 40 }}></View>
+                            {this.state.error && (
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.Intro.errorCreatingWallet'
+                                    )}
+                                />
+                            )}
                         </View>
-                        <View
-                            style={{
-                                padding: 10,
-                                marginBottom: 40
-                            }}
-                        >
-                            <Button
-                                title={localeString(
-                                    'views.Intro.advancedSetUp'
-                                )}
-                                onPress={() => navigation.navigate('Settings')}
-                                secondary
-                            />
+                        <View style={{ bottom: 0 }}>
+                            <View
+                                style={{
+                                    padding: 10
+                                }}
+                            >
+                                <Button
+                                    title={locale ? localeName : 'English'}
+                                    icon={
+                                        <Globe
+                                            fill={themeColor('background')}
+                                            stroke={themeColor('background')}
+                                            style={{ marginRight: 5 }}
+                                        />
+                                    }
+                                    onPress={() =>
+                                        navigation.navigate('Language')
+                                    }
+                                    tertiary
+                                />
+                            </View>
+                            <View
+                                style={{
+                                    padding: 10
+                                }}
+                            >
+                                <Button
+                                    title={localeString(
+                                        'views.Intro.whatIsZeus'
+                                    )}
+                                    onPress={() => navigation.navigate('Intro')}
+                                    quaternary
+                                />
+                            </View>
+                            <View
+                                style={{
+                                    padding: 10
+                                }}
+                            >
+                                <Button
+                                    title={localeString(
+                                        'views.Intro.advancedSetUp'
+                                    )}
+                                    onPress={() =>
+                                        navigation.navigate('Settings')
+                                    }
+                                    secondary
+                                />
+                            </View>
+                            <View
+                                style={{
+                                    padding: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <Button
+                                    icon={
+                                        <TresArrows
+                                            fill={themeColor('background')}
+                                        />
+                                    }
+                                    titleStyle={{
+                                        paddingLeft: 10,
+                                        color: themeColor('background')
+                                    }}
+                                    title={localeString(
+                                        'views.Intro.quickStart'
+                                    )}
+                                    onPress={async () => {
+                                        this.setState({
+                                            creatingWallet: true
+                                        });
+                                        const { SettingsStore } = this.props;
+                                        const {
+                                            setConnectingStatus,
+                                            updateSettings
+                                        } = SettingsStore;
+
+                                        let response;
+                                        try {
+                                            response = await createLndWallet(
+                                                undefined
+                                            );
+                                        } catch (e) {
+                                            this.setState({
+                                                error: true,
+                                                creatingWallet: false
+                                            });
+                                        }
+
+                                        const {
+                                            wallet,
+                                            seed,
+                                            randomBase64
+                                        }: any = response;
+                                        if (wallet && wallet.admin_macaroon) {
+                                            let nodes = [
+                                                {
+                                                    adminMacaroon:
+                                                        wallet.admin_macaroon,
+                                                    seedPhrase:
+                                                        seed.cipher_seed_mnemonic,
+                                                    walletPassword:
+                                                        randomBase64,
+                                                    embeddedLndNetwork:
+                                                        'Mainnet',
+                                                    implementation:
+                                                        'embedded-lnd'
+                                                }
+                                            ];
+
+                                            updateSettings({ nodes }).then(
+                                                () => {
+                                                    setConnectingStatus(true);
+                                                    navigation.navigate(
+                                                        'Wallet',
+                                                        {
+                                                            refresh: true
+                                                        }
+                                                    );
+                                                }
+                                            );
+                                        } else {
+                                            this.setState({
+                                                error: true,
+                                                creatingWallet: false
+                                            });
+                                        }
+                                    }}
+                                />
+                            </View>
                         </View>
-                    </>
+                    </SplashView>
                 </SafeAreaView>
             </Screen>
         );

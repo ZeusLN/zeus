@@ -63,7 +63,7 @@ export default class NetworkInfo extends React.Component<NetworkInfoProps, {}> {
                         text: localeString('views.NetworkInfo.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -96,6 +96,6 @@ const styles = StyleSheet.create({
     error: {
         paddingBottom: 5,
         color: 'red',
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });

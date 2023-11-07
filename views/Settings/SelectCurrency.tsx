@@ -89,7 +89,7 @@ export default class SelectCurrency extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         navigation={navigation}
@@ -100,7 +100,7 @@ export default class SelectCurrency extends React.Component<
                         value={search}
                         inputStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
@@ -148,7 +148,7 @@ export default class SelectCurrency extends React.Component<
                                                     item.value === DEFAULT_FIAT)
                                                     ? themeColor('highlight')
                                                     : themeColor('text'),
-                                            fontFamily: 'Lato-Regular'
+                                            fontFamily: 'PPNeueMontreal-Book'
                                         }}
                                     >
                                         {item.key}

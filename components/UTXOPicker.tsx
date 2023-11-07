@@ -309,10 +309,10 @@ export default class UTXOPicker extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     secondaryText: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     button: {
         paddingTop: 10,

@@ -49,7 +49,7 @@ function Button(props: ButtonProps) {
                   (containerStyle && containerStyle.borderColor) ||
                   themeColor('highlight'),
               alignSelf: 'center',
-              borderRadius: 30
+              borderRadius: 5
           }
         : {
               ...containerStyle,
@@ -57,9 +57,11 @@ function Button(props: ButtonProps) {
                   (containerStyle && containerStyle.borderColor) ||
                   themeColor('highlight'),
               alignSelf: 'center',
-              borderRadius: 30,
+              borderRadius: 5,
               width: '90%'
           };
+
+    const textColor = themeColor('buttonText') || themeColor('text');
 
     return (
         <ElementsButton
@@ -69,7 +71,7 @@ function Button(props: ButtonProps) {
                           color: icon.color
                               ? icon.color
                               : iconOnly
-                              ? themeColor('text')
+                              ? textColor
                               : secondary
                               ? themeColor('highlight')
                               : themeColor('background'),
@@ -82,7 +84,7 @@ function Button(props: ButtonProps) {
                 backgroundColor: iconOnly
                     ? 'transparent'
                     : quinary
-                    ? themeColor('secondary')
+                    ? themeColor('buttonBackground') || themeColor('secondary')
                     : quaternary
                     ? themeColor('background')
                     : tertiary
@@ -97,24 +99,24 @@ function Button(props: ButtonProps) {
                     ? {
                           ...titleStyle,
                           textTransform: noUppercase ? 'none' : 'uppercase',
-                          fontFamily: 'Lato-Bold'
+                          fontFamily: 'PPNeueMontreal-Book'
                       }
                     : {
                           color: iconOnly
-                              ? themeColor('text')
+                              ? textColor
                               : quinary
                               ? warning
                                   ? themeColor('warning')
-                                  : themeColor('text')
+                                  : textColor
                               : quaternary
                               ? warning
                                   ? themeColor('warning')
-                                  : themeColor('text')
+                                  : textColor
                               : secondary
                               ? themeColor('highlight')
                               : themeColor('background'),
                           textTransform: noUppercase ? 'none' : 'uppercase',
-                          fontFamily: 'Lato-Bold'
+                          fontFamily: 'PPNeueMontreal-Book'
                       }
             }
             onPress={onPress}

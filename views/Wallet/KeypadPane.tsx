@@ -242,7 +242,7 @@ export default class KeypadPane extends React.PureComponent<
                         >
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Bold',
+                                    fontFamily: 'PPNeueMontreal-Medium',
                                     color: themeColor('text'),
                                     fontSize: 15
                                 }}
@@ -262,7 +262,7 @@ export default class KeypadPane extends React.PureComponent<
                             </Text>
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Bold',
+                                    fontFamily: 'PPNeueMontreal-Medium',
                                     color: themeColor('secondaryText'),
                                     fontSize: 15,
                                     top: 5,
@@ -295,7 +295,7 @@ export default class KeypadPane extends React.PureComponent<
                                     : color,
                             fontSize: this.amountSize(),
                             textAlign: 'center',
-                            fontFamily: 'Lato-Bold'
+                            fontFamily: 'PPNeueMontreal-Medium'
                         }}
                     >
                         {FiatStore.numberWithCommas(amount)}
@@ -409,8 +409,7 @@ export default class KeypadPane extends React.PureComponent<
                                     icon={{
                                         name: 'pencil',
                                         type: 'font-awesome',
-                                        size: 20,
-                                        color: themeColor('text')
+                                        size: 20
                                     }}
                                     quinary
                                     noUppercase

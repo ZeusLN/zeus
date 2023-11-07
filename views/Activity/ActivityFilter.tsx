@@ -88,7 +88,7 @@ export default class ActivityFilter extends React.Component<
             >
                 <Text
                     style={{
-                        fontFamily: 'Lato-Regular',
+                        fontFamily: 'PPNeueMontreal-Book',
                         color: themeColor('text'),
                         marginRight: 30
                     }}
@@ -122,7 +122,7 @@ export default class ActivityFilter extends React.Component<
                     }}
                     titleStyle={{
                         color: themeColor('text'),
-                        fontFamily: 'Lato-Regular'
+                        fontFamily: 'PPNeueMontreal-Book'
                     }}
                     title={
                         (props.type === 'startDate' && startDate) ||
@@ -219,7 +219,7 @@ export default class ActivityFilter extends React.Component<
                         text: localeString('views.ActivityFilter.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={
@@ -242,7 +242,7 @@ export default class ActivityFilter extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {item.label}

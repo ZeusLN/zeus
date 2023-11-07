@@ -124,7 +124,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const twentyPercentButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 0
                             ? themeColor('background')
@@ -137,7 +137,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const twentyFivePercentButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 1
                             ? themeColor('background')
@@ -150,7 +150,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const thirtyPercentButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 2
                             ? themeColor('background')
@@ -163,7 +163,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const customButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 3
                             ? themeColor('background')
@@ -308,7 +308,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         text: localeString('general.order'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}

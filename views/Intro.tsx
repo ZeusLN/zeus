@@ -90,7 +90,7 @@ const Intro: React.FC<IntroProps> = (props) => {
                     style={{
                         fontSize: 23,
                         color: themeColor('text'),
-                        fontFamily: 'Lato-Regular',
+                        fontFamily: 'PPNeueMontreal-Book',
                         alignSelf: 'center',
                         paddingTop: 10
                     }}
@@ -101,7 +101,7 @@ const Intro: React.FC<IntroProps> = (props) => {
                     style={{
                         fontSize: 20,
                         color: themeColor('secondaryText'),
-                        fontFamily: 'Lato-Regular',
+                        fontFamily: 'PPNeueMontreal-Book',
                         alignSelf: 'center',
                         padding: 10
                     }}
@@ -256,7 +256,7 @@ const Intro: React.FC<IntroProps> = (props) => {
                     <Text
                         style={{
                             color: themeColor('secondaryText'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             alignSelf: 'center',
                             fontSize: 15,
                             padding: 8

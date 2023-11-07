@@ -181,7 +181,7 @@ export default class BalancePane extends React.PureComponent<
                                 >
                                     <Text
                                         style={{
-                                            fontFamily: 'Lato-Bold',
+                                            fontFamily: 'PPNeueMontreal-Medium',
                                             color: themeColor('text')
                                         }}
                                     >
@@ -191,7 +191,7 @@ export default class BalancePane extends React.PureComponent<
                                     </Text>
                                     <Text
                                         style={{
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             color: themeColor('text'),
                                             marginTop: 20
                                         }}
@@ -231,7 +231,8 @@ export default class BalancePane extends React.PureComponent<
                                             />
                                             <Text
                                                 style={{
-                                                    fontFamily: 'Lato-Bold',
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Medium',
                                                     color: themeColor('text'),
                                                     marginTop: -8,
                                                     marginLeft: 14,
@@ -280,7 +281,8 @@ export default class BalancePane extends React.PureComponent<
                                         </View>
                                         <Text
                                             style={{
-                                                fontFamily: 'Lato-Bold',
+                                                fontFamily:
+                                                    'PPNeueMontreal-Medium',
                                                 color: themeColor('text')
                                             }}
                                         >
@@ -290,7 +292,8 @@ export default class BalancePane extends React.PureComponent<
                                         </Text>
                                         <Text
                                             style={{
-                                                fontFamily: 'Lato-Regular',
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
                                                 color: themeColor('text'),
                                                 marginTop: 20
                                             }}
@@ -301,7 +304,8 @@ export default class BalancePane extends React.PureComponent<
                                         </Text>
                                         <Text
                                             style={{
-                                                fontFamily: 'Lato-Regular',
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
                                                 fontWeight: 'bold',
                                                 color: themeColor('text'),
                                                 marginTop: 20
@@ -338,7 +342,7 @@ export default class BalancePane extends React.PureComponent<
                 >
                     <Text
                         style={{
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             color: '#fff',
                             fontSize: 20,
                             marginTop: 20,
@@ -372,7 +376,7 @@ export default class BalancePane extends React.PureComponent<
                     />
                     <Text
                         style={{
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             color: '#fff',
                             fontSize: 12,
                             marginTop: 20,

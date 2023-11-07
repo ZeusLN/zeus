@@ -31,7 +31,7 @@ export default class LspExplanation extends React.PureComponent<
                         text: localeString('views.LspExplanation.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -40,7 +40,7 @@ export default class LspExplanation extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE
                         }}
@@ -50,7 +50,7 @@ export default class LspExplanation extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE + 10
                         }}

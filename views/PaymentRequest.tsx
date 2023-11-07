@@ -377,7 +377,7 @@ export default class PaymentRequest extends React.Component<
                         text: localeString('views.PaymentRequest.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={<QRButton />}
@@ -1099,7 +1099,7 @@ export default class PaymentRequest extends React.Component<
                                 <>
                                     <Text
                                         style={{
-                                            fontFamily: 'Lato-Bold',
+                                            fontFamily: 'PPNeueMontreal-Medium',
                                             color: themeColor('highlight'),
                                             margin: 5,
                                             alignSelf: 'center',
@@ -1184,11 +1184,11 @@ const styles = StyleSheet.create({
         paddingRight: 20
     },
     label: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         paddingTop: 5
     },
     labelSecondary: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         paddingTop: 5
     },
     button: {

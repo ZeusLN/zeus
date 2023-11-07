@@ -108,7 +108,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             : localeString('views.Payment.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={<EditNotesButton />}
@@ -151,7 +151,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                         {getFeePercentage && (
                                             <Text
                                                 style={{
-                                                    fontFamily: 'Lato-Regular',
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
                                                     color: themeColor('text')
                                                 }}
                                             >
@@ -220,7 +221,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'Lato-Regular'
+                                            fontFamily: 'PPNeueMontreal-Book'
                                         }}
                                     >
                                         {enhancedPath.length > 1

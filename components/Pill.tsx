@@ -28,7 +28,7 @@ function Pill(props: PillProps) {
             <Text
                 style={{
                     color: textColor || themeColor('highlight'),
-                    fontFamily: 'Lato-Regular'
+                    fontFamily: 'PPNeueMontreal-Book'
                 }}
             >
                 {title}

@@ -3,6 +3,7 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 
 import {
     BackHandler,
+    Dimensions,
     Image,
     NativeEventSubscription,
     ScrollView,
@@ -27,7 +28,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import Clock from '../assets/images/SVG/Clock.svg';
 import Error from '../assets/images/SVG/Error.svg';
 import Success from '../assets/images/GIF/Success.gif';
-import WordLogo from '../assets/images/SVG/Word Logo.svg';
+import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import CopyBox from '../components/CopyBox';
 
 interface SendingLightningProps {
@@ -140,19 +141,25 @@ export default class SendingLightning extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {localeString('views.SendingLightning.sending')}
                             </Text>
                         )}
                         {!loading && (!!success || !!inTransit) && !error && (
-                            <WordLogo
-                                height={150}
+                            <View
                                 style={{
-                                    alignSelf: 'center'
+                                    width:
+                                        Dimensions.get('window').width * 0.85,
+                                    maxHeight: 200,
+                                    alignSelf: 'center',
+                                    // TODO add in mixmaster fix
+                                    marginTop: -80
                                 }}
-                            />
+                            >
+                                <Wordmark fill={themeColor('highlight')} />
+                            </View>
                         )}
                         {!loading && !!success && !error && (
                             <>
@@ -185,7 +192,7 @@ export default class SendingLightning extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 22,
                                         marginTop: 25
                                     }}
@@ -234,7 +241,7 @@ export default class SendingLightning extends React.Component<
                                     <Text
                                         style={{
                                             color: '#FF9090',
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             fontSize: 32
                                         }}
                                     >
@@ -243,7 +250,7 @@ export default class SendingLightning extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             padding: 20,
                                             marginBottom: 60,
                                             fontSize:
@@ -264,7 +271,7 @@ export default class SendingLightning extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     padding: 20,
                                     fontSize: 22
                                 }}
@@ -346,7 +353,7 @@ export default class SendingLightning extends React.Component<
                                         style={{
                                             textAlign: 'center',
                                             color: 'white',
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             marginTop: 50,
                                             padding: 20,
                                             fontSize: 14

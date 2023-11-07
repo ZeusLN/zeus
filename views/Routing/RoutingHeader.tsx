@@ -85,7 +85,7 @@ export function RoutingHeader(props) {
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
                             {localeString(

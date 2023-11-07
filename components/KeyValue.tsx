@@ -68,7 +68,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             <Text
                 style={{
                     color: color || themeColor('text'),
-                    fontFamily: 'Lato-Regular'
+                    fontFamily: 'PPNeueMontreal-Book'
                 }}
             >
                 {sensitive ? PrivacyUtils.sensitiveValue(value) : value}

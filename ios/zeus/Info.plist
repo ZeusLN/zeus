@@ -2,12 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSFaceIDUsageDescription</key>
-	<string>FaceID is used to login to Zeus</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Zeus</string>
+	<string>ZEUS</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -45,10 +43,14 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>mailto</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NFCReaderUsageDescription</key>
-	<string>Zeus would like permission to use NFC to supplement QR code scanning</string>
+	<string>ZEUS would like permission to use NFC to supplement QR code scanning</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -71,7 +73,9 @@
 	<key>NSCalendarsUsageDescription</key>
 	<string>Not Used</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Zeus would like permission to use your camera to scan QR codes</string>
+	<string>ZEUS would like permission to use your camera to scan QR codes</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>FaceID is used to login to ZEUS</string>
 	<key>NSLocationAlwaysDescription</key>
 	<string>Not Used</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -81,11 +85,13 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Not Used</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Zeus would like permission to use load QR codes from your photo library</string>
+	<string>ZEUS would like permission to use load QR codes from your photo library</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Not Used</string>
 	<key>UIAppFonts</key>
 	<array>
+		<string>Marlide-Display.ttf</string>
+		<string>Marlide-Display-Bold.ttf</string>
 		<string>AntDesign.ttf</string>
 		<string>Entypo.ttf</string>
 		<string>EvilIcons.ttf</string>
@@ -102,8 +108,7 @@
 		<string>SimpleLineIcons.ttf</string>
 		<string>Zocial.ttf</string>
 		<string>Fontisto.ttf</string>
-		<string>Lato-Regular.ttf</string>
-		<string>Lato-Bold.ttf</string>
+		<string>ppneuemontreal-medium.otf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -124,10 +129,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>mailto</string>
-	</array>
-
 </dict>
 </plist>

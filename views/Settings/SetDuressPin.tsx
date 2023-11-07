@@ -230,13 +230,13 @@ export default class SetDuressPin extends React.Component<
 
 const styles = StyleSheet.create({
     mainText: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         fontSize: 20,
         textAlign: 'center',
         marginTop: 50
     },
     secondaryText: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         textAlign: 'center'
     }
 });

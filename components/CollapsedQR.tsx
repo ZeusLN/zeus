@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         paddingLeft: 20,
         color: themeColor('secondaryText'),
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     qrPadding: {
         backgroundColor: 'white',

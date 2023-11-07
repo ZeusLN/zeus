@@ -38,7 +38,7 @@ export default class Gods extends React.Component<GodsProps, {}> {
                         text: localeString('views.Gods.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}

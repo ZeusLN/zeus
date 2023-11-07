@@ -36,7 +36,7 @@ export default class Peers extends React.Component<PeersProps, {}> {
                             ).slice(1)}`,
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         navigation={navigation}
@@ -52,7 +52,7 @@ export default class Peers extends React.Component<PeersProps, {}> {
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {localeString(
@@ -62,7 +62,7 @@ export default class Peers extends React.Component<PeersProps, {}> {
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {neutrinoPeers && neutrinoPeers.length > 0
@@ -121,7 +121,7 @@ export default class Peers extends React.Component<PeersProps, {}> {
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {localeString(
@@ -131,7 +131,7 @@ export default class Peers extends React.Component<PeersProps, {}> {
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {zeroConfPeers && zeroConfPeers.length > 0

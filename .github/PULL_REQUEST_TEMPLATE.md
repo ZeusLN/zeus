@@ -45,7 +45,7 @@ I have tested this PR with the following types of nodes (please specify node ver
 
 ### Locales
 - [ ] I’ve added new locale text that requires translations
-- [ ] I’m aware that new translations should be made on the Zeus [Transfix page](https://app.transifex.com/ZeusLN/zeus/) and not directly to this repo
+- [ ] I’m aware that new translations should be made on the ZEUS [Transfix page](https://app.transifex.com/ZeusLN/zeus/) and not directly to this repo
 
 ### Third Party Dependencies and Packages
 

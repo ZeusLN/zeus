@@ -116,9 +116,7 @@ export default class Settings extends React.Component<
                 onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
                 accessibilityLabel={localeString('views.Settings.olympus')}
             >
-                <View style={{ top: -7 }}>
-                    <Olympus width="45" height="45" fill={themeColor('text')} />
-                </View>
+                <Olympus width="35" height="35" fill={themeColor('text')} />
             </TouchableOpacity>
         );
 
@@ -141,7 +139,7 @@ export default class Settings extends React.Component<
                         text: localeString('views.Settings.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={OlympusButton}
@@ -189,7 +187,7 @@ export default class Settings extends React.Component<
                                         fontSize: 20,
                                         color: themeColor('text'),
                                         paddingLeft: 20,
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {selectedNode
@@ -216,7 +214,7 @@ export default class Settings extends React.Component<
                                         opacity: 0.6,
                                         top: -10,
                                         paddingLeft: 85,
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {nodeSubtitle}
@@ -1079,12 +1077,12 @@ export default class Settings extends React.Component<
                                 fontSize: 16,
                                 color: '#A7A9AC',
                                 alignSelf: 'center',
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 marginTop: 5,
                                 marginBottom: 20
                             }}
                         >
-                            {`Zeus v${version}`}
+                            {`ZEUS v${version}`}
                         </Text>
                     </TouchableWithoutFeedback>
                 </ScrollView>
@@ -1106,7 +1104,7 @@ const styles = StyleSheet.create({
         marginLeft: -55,
         paddingTop: 5,
         flex: 1,
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     separationLine: {
         left: 100,
