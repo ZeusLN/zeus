@@ -31,8 +31,8 @@ export default class PointOfSaleReconExport extends React.PureComponent<
             <TouchableOpacity onPress={() => Clipboard.setString(copyValue)}>
                 <ClipboardSVG
                     fill={themeColor('highlight')}
-                    width="27"
-                    height="27"
+                    width="24"
+                    height="30"
                 />
             </TouchableOpacity>
         );

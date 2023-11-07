@@ -286,7 +286,7 @@ export default class OpenChannel extends React.Component<
             <TouchableOpacity
                 onPress={() => navigation.navigate('NodeQRCodeScanner')}
             >
-                <Scan fill={themeColor('text')} />
+                <Scan fill={themeColor('text')} width={35} height={35} />
             </TouchableOpacity>
         );
 

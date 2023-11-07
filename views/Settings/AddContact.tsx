@@ -373,8 +373,8 @@ export default class AddContact extends React.Component<
         const AddPhotos = () => (
             <AddIcon
                 fill={themeColor('background')}
-                width="20"
-                height="20"
+                width="30"
+                height="30"
                 style={{ alignSelf: 'center' }}
             />
         );
