@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { Text, View, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+    Text,
+    View,
+    Image,
+    StyleSheet,
+    TouchableOpacity,
+    ScrollView
+} from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Header, Icon } from 'react-native-elements';
 import Screen from '../components/Screen';
@@ -218,11 +225,11 @@ export default class ContactDetails extends React.Component<
                                 borderBottomWidth: 0
                             }}
                         />
-                        <View
-                            style={{
+                        <ScrollView
+                            contentContainerStyle={{
                                 backgroundColor: 'none',
                                 alignItems: 'center',
-                                marginTop: 60
+                                paddingBottom: 10
                             }}
                         >
                             {contact.photo && (
@@ -472,7 +479,7 @@ export default class ContactDetails extends React.Component<
                                         )}
                                     </View>
                                 )}
-                        </View>
+                        </ScrollView>
                     </Screen>
                 )}
             </>
