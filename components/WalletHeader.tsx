@@ -85,9 +85,9 @@ const TempleButton = ({ navigation }: { navigation: any }) => (
     >
         <Temple
             fill={themeColor('text')}
-            width="40"
-            height="40"
-            style={{ right: -6, top: -8, alignSelf: 'center' }}
+            width="22"
+            height="22"
+            style={{ top: -8, alignSelf: 'center' }}
         />
     </TouchableOpacity>
 );
@@ -97,7 +97,7 @@ const ScanBadge = ({ navigation }: { navigation: any }) => (
         onPress={() => navigation.navigate('HandleAnythingQRScanner')}
         accessibilityLabel={localeString('general.scan')}
     >
-        <Scan fill={themeColor('text')} height={35} />
+        <Scan fill={themeColor('text')} width={35} height={35} />
     </TouchableOpacity>
 );
 
@@ -115,7 +115,7 @@ const ClipboardBadge = ({
             navigation.navigate(route, props);
         }}
     >
-        <ClipboardSVG fill={themeColor('text')} width="30" height="30" />
+        <ClipboardSVG fill={themeColor('text')} width="28" height="35" />
     </TouchableOpacity>
 );
 
@@ -132,7 +132,7 @@ const POSBadge = ({
             setPosStatus('active');
         }}
     >
-        <POS stroke={themeColor('text')} width="30" height="30" />
+        <POS stroke={themeColor('text')} width="26.83" height="35" />
     </TouchableOpacity>
 );
 
@@ -293,10 +293,7 @@ export default class WalletHeader extends React.Component<
                     fill={themeColor('text')}
                     width="30"
                     height="30"
-                    style={{
-                        alignSelf: 'center',
-                        marginRight: 20
-                    }}
+                    style={{ alignSelf: 'center', marginRight: 15 }}
                 />
             </TouchableOpacity>
         );
@@ -345,8 +342,8 @@ export default class WalletHeader extends React.Component<
                     >
                         <Sync
                             fill={themeColor('text')}
-                            width="45"
-                            height="45"
+                            width="35"
+                            height="25.66"
                         />
                     </TouchableOpacity>
                 </Animated.View>
@@ -447,11 +444,17 @@ export default class WalletHeader extends React.Component<
                             <OpenChannelButton />
                         </Row>
                     ) : (
-                        <View style={{ flex: 1, flexDirection: 'row' }}>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}
+                        >
                             {(stores.balanceStore.loadingBlockchainBalance ||
                                 stores.balanceStore.loadingLightningBalance ||
                                 laLoading) && (
-                                <View style={{ paddingRight: 20 }}>
+                                <View style={{ paddingRight: 15 }}>
                                     <LoadingIndicator size={35} />
                                 </View>
                             )}
@@ -466,8 +469,7 @@ export default class WalletHeader extends React.Component<
                             {isSyncing && (
                                 <View
                                     style={{
-                                        marginTop: -6,
-                                        marginRight: 20
+                                        marginRight: 15
                                     }}
                                 >
                                     <SyncBadge navigation={navigation} />

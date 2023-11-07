@@ -23,6 +23,7 @@ interface SetDuressPassphraseState {
     savedDuressPassphrase: string;
     duressPassphraseMismatchError: boolean;
     duressPassphraseInvalidError: boolean;
+    confirmDelete: boolean;
 }
 
 @inject('SettingsStore')
@@ -36,7 +37,8 @@ export default class SetDuressPassphrase extends React.Component<
         duressPassphraseConfirm: '',
         savedDuressPassphrase: '',
         duressPassphraseMismatchError: false,
-        duressPassphraseInvalidError: false
+        duressPassphraseInvalidError: false,
+        confirmDelete: false
     };
 
     async componentDidMount() {
@@ -210,15 +212,26 @@ export default class SetDuressPassphrase extends React.Component<
                     {!!savedDuressPassphrase && (
                         <View style={{ paddingTop: 10, margin: 10 }}>
                             <Button
-                                title={localeString(
-                                    'views.Settings.SetDuressPassword.deletePassword'
-                                )}
-                                onPress={() => this.deleteDuressPassword()}
-                                containerStyle={{
-                                    borderColor: 'red'
+                                title={
+                                    this.state.confirmDelete
+                                        ? localeString(
+                                              'views.Settings.AddEditNode.tapToConfirm'
+                                          )
+                                        : localeString(
+                                              'views.Settings.SetDuressPassword.deletePassword'
+                                          )
+                                }
+                                onPress={() => {
+                                    if (!this.state.confirmDelete) {
+                                        this.setState({
+                                            confirmDelete: true
+                                        });
+                                    } else {
+                                        this.deleteDuressPassword();
+                                    }
                                 }}
                                 titleStyle={{
-                                    color: 'red'
+                                    color: themeColor('delete')
                                 }}
                                 secondary
                             />

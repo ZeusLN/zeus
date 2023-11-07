@@ -972,6 +972,8 @@ export default class Settings extends React.Component<
                                     <POS
                                         stroke={themeColor('text')}
                                         fill={themeColor('secondary')}
+                                        width={25}
+                                        height={25}
                                     />
                                 </View>
                                 <Text
