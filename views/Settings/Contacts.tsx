@@ -7,7 +7,7 @@ import {
     Image,
     ScrollView
 } from 'react-native';
-import { Header, Icon, SearchBar, Divider } from 'react-native-elements';
+import { SearchBar, Divider } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
@@ -15,6 +15,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import Header from '../../components/Header';
 import { localeString } from '../../utils/LocaleUtils';
 
 interface ContactsSettingsProps {
@@ -226,17 +227,6 @@ export default class Contacts extends React.Component<
             );
         });
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.goBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
-        );
         const Add = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity onPress={() => navigation.navigate('AddContact')}>
                 <View
@@ -274,14 +264,14 @@ export default class Contacts extends React.Component<
                 }}
             >
                 <Header
-                    leftComponent={<BackButton />}
-                    backgroundColor="none"
+                    leftComponent="Back"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                     rightComponent={
                         !SendScreen && <Add navigation={navigation} />
                     }
+                    navigation={navigation}
                 />
                 {contacts.length > 0 && (
                     <>
