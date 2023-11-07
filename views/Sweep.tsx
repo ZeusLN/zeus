@@ -166,7 +166,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                         text: localeString('views.Sweep.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={
@@ -236,7 +236,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                             <>
                                 <Text
                                     style={{
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         color: themeColor('secondaryText')
                                     }}
                                 >
@@ -257,7 +257,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                             <>
                                 <Text
                                     style={{
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         color: themeColor('secondaryText')
                                     }}
                                 >
@@ -318,10 +318,10 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     secondaryText: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     content: {
         padding: 20
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     label: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         paddingTop: 5
     }
 });

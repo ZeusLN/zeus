@@ -18,6 +18,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
+import LinearGradient from 'react-native-linear-gradient';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
@@ -40,22 +41,28 @@ type DataRow = {
 
 const Row = ({ item }: { item: DataRow }) => (
     <RectButton>
-        <View
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={localeString(
-                'views.index.accessibilityLabel.' + item.layer
-            )}
+        <LinearGradient
+            colors={
+                themeColor('gradientBackground')
+                    ? themeColor('gradientBackground')
+                    : [
+                          themeColor('buttonBackground'),
+                          themeColor('buttonBackground')
+                      ]
+            }
             style={{
                 ...styles.rectButton,
-                backgroundColor: themeColor('secondary')
+                flex: 1
             }}
         >
             <View style={styles.left}>
                 {item.layer === 'On-chain' ? <OnChainSvg /> : <LightningSvg />}
                 <Spacer width={5} />
                 <Text
-                    style={{ ...styles.layerText, color: themeColor('text') }}
+                    style={{
+                        ...styles.layerText,
+                        color: themeColor('buttonText') || themeColor('text')
+                    }}
                 >
                     {item.layer === 'Lightning'
                         ? localeString('general.lightning')
@@ -63,8 +70,12 @@ const Row = ({ item }: { item: DataRow }) => (
                 </Text>
             </View>
 
-            <Amount sats={item.balance} sensitive />
-        </View>
+            <Amount
+                sats={item.balance}
+                sensitive
+                color={themeColor('buttonText')}
+            />
+        </LinearGradient>
     </RectButton>
 );
 
@@ -180,7 +191,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         marginLeft: 15,
         marginRight: 15,
-        borderRadius: 15
+        borderRadius: 50
     },
     left: {
         flexDirection: 'row',
@@ -194,6 +205,6 @@ const styles = StyleSheet.create({
     layerText: {
         backgroundColor: 'transparent',
         fontSize: 15,
-        fontFamily: 'Lato-Bold'
+        fontFamily: 'PPNeueMontreal-Medium'
     }
 });

@@ -418,7 +418,14 @@ export default class Contacts extends React.Component<
                                     size: 25,
                                     color: themeColor('text')
                                 }}
-                                iconOnly
+                                buttonStyle={{
+                                    backgroundColor: 'transparent',
+                                    borderRadius: 30
+                                }}
+                                titleStyle={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
                             />
                         )
                     )}

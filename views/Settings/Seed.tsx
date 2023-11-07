@@ -54,7 +54,7 @@ const MnemonicWord = ({ index, word }) => {
                 <Text
                     style={{
                         flex: 1,
-                        fontFamily: 'Lato-Regular',
+                        fontFamily: 'PPNeueMontreal-Book',
                         color: themeColor('secondaryText'),
                         fontSize: 18,
                         alignSelf: 'flex-start'
@@ -66,7 +66,7 @@ const MnemonicWord = ({ index, word }) => {
             <Text
                 style={{
                     flex: 1,
-                    fontFamily: 'Lato-Bold',
+                    fontFamily: 'PPNeueMontreal-Medium',
                     color: themeColor('text'),
                     fontSize: 18,
                     alignSelf: 'flex-end',
@@ -115,7 +115,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         text: localeString('views.Settings.Seed.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={
@@ -208,7 +208,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 textAlign: 'center',
                                 margin: 10,
                                 fontSize: 20
@@ -219,7 +219,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 textAlign: 'center',
                                 margin: 10,
                                 fontSize: 20
@@ -230,7 +230,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 textAlign: 'center',
                                 margin: 10,
                                 fontSize: 20
@@ -241,7 +241,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 textAlign: 'center',
                                 margin: 10,
                                 fontSize: 20
@@ -334,15 +334,15 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     whiteText: {
         color: 'white',
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     blackText: {
         color: 'black',
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     button: {
         paddingTop: 10,

@@ -38,7 +38,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                         text: localeString('views.Olympians.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}

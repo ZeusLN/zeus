@@ -35,7 +35,7 @@ export default function Attestation(props: AttestationProps) {
                         text: localeString('views.Settings.Attestation.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}

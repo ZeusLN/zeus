@@ -212,7 +212,7 @@ export default class RoutingEvent extends React.Component<
 
 const styles = StyleSheet.create({
     highlight: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     content: {
         paddingLeft: 20,

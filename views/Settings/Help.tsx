@@ -48,7 +48,7 @@ function Help(props: HelpProps) {
                     text: localeString('general.help'),
                     style: {
                         color: themeColor('text'),
-                        fontFamily: 'Lato-Regular'
+                        fontFamily: 'PPNeueMontreal-Book'
                     }
                 }}
                 navigation={navigation}
@@ -79,7 +79,7 @@ function Help(props: HelpProps) {
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {item.label}

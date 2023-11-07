@@ -33,7 +33,7 @@ export default class PaymentPathsView extends React.Component<PaymentPathsViewPr
                                 : localeString('views.Payment.path'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}

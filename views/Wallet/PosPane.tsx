@@ -222,7 +222,7 @@ export default class PosPane extends React.PureComponent<
         const openOrdersButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 0
                             ? themeColor('background')
@@ -236,7 +236,7 @@ export default class PosPane extends React.PureComponent<
         const paidOrdersButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 1
                             ? themeColor('background')
@@ -264,7 +264,7 @@ export default class PosPane extends React.PureComponent<
                 >
                     <Text
                         style={{
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             color: '#fff',
                             fontSize: 20,
                             marginTop: 20,
@@ -313,7 +313,7 @@ export default class PosPane extends React.PureComponent<
                     />
                     <Text
                         style={{
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             color: '#fff',
                             fontSize: 12,
                             marginTop: 20,

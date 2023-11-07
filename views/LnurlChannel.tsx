@@ -190,7 +190,7 @@ export default class LnurlChannel extends React.Component<
                         text: localeString('views.LnurlChannel.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -201,7 +201,7 @@ export default class LnurlChannel extends React.Component<
                             padding: 20,
                             fontSize: 22,
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Bold'
+                            fontFamily: 'PPNeueMontreal-Medium'
                         }}
                     >
                         {domain}
@@ -211,7 +211,7 @@ export default class LnurlChannel extends React.Component<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }}
                     >
                         {localeString('views.LnurlChannel.uri')}
@@ -220,7 +220,7 @@ export default class LnurlChannel extends React.Component<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }}
                     >
                         {lnurl.uri}
@@ -232,7 +232,7 @@ export default class LnurlChannel extends React.Component<
                                 style={{
                                     top: 10,
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {localeString('views.OpenChannel.private')}
@@ -280,7 +280,7 @@ export default class LnurlChannel extends React.Component<
                             <Text
                                 style={{
                                     color: 'green',
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {localeString('views.OpenChannel.peerSuccess')}
@@ -290,7 +290,7 @@ export default class LnurlChannel extends React.Component<
                             <Text
                                 style={{
                                     color: 'green',
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {localeString('views.LnurlChannel.success')}
@@ -302,7 +302,7 @@ export default class LnurlChannel extends React.Component<
                                 <Text
                                     style={{
                                         color: 'red',
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {this.state.errorMsgPeer ||

@@ -1671,15 +1671,15 @@ export default class NodeConfiguration extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     whiteText: {
         color: 'white',
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     blackText: {
         color: 'black',
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     form: {
         paddingTop: 20,

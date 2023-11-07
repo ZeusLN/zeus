@@ -130,7 +130,7 @@ export default class DisasterRecovery extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         navigation={navigation}
@@ -175,7 +175,7 @@ export default class DisasterRecovery extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {localeString(

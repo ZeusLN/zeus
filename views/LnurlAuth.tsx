@@ -259,7 +259,7 @@ export default class LnurlAuth extends React.Component<
                         text: localeString('views.LnurlAuth.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -270,7 +270,7 @@ export default class LnurlAuth extends React.Component<
                             padding: 20,
                             fontSize: 22,
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Bold',
+                            fontFamily: 'PPNeueMontreal-Medium',
                             textAlign: 'center'
                         }}
                     >

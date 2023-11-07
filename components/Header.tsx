@@ -1,10 +1,17 @@
 import React from 'react';
-import { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import {
+    StyleProp,
+    TextStyle,
+    TouchableOpacity,
+    ViewStyle
+} from 'react-native';
 import { Header, Icon, TextProps } from 'react-native-elements';
 import { IconObject } from 'react-native-elements/dist/icons/Icon';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+
+import Back from '../assets/images/SVG/Back.svg';
 
 interface HeaderIcon extends IconObject {
     icon?: string;
@@ -30,17 +37,15 @@ interface HeaderProps {
 
 function ZeusHeader(props: HeaderProps) {
     const BackButton = (onBack?: () => void) => (
-        <Icon
-            name="arrow-back"
+        <TouchableOpacity
             onPress={() => {
                 if (onBack) onBack();
                 props.navigation.goBack();
             }}
-            color={themeColor('text')}
-            underlayColor="transparent"
-            size={35}
             accessibilityLabel={localeString('general.goBack')}
-        />
+        >
+            <Back stroke={themeColor('text')} />
+        </TouchableOpacity>
     );
 
     const CloseButton = (onBack?: () => void) => (

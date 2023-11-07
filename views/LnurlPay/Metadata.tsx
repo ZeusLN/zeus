@@ -47,7 +47,7 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
                 <Text
                     style={{
                         color: themeColor('text'),
-                        fontFamily: 'Lato-Regular'
+                        fontFamily: 'PPNeueMontreal-Book'
                     }}
                 >
                     {text}
