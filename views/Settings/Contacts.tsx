@@ -1,12 +1,20 @@
 import * as React from 'react';
-import { Text, View, TouchableOpacity, FlatList, Image } from 'react-native';
-import { Header, Icon, SearchBar, Divider } from 'react-native-elements';
+import {
+    Text,
+    View,
+    TouchableOpacity,
+    FlatList,
+    Image,
+    ScrollView
+} from 'react-native';
+import { Icon, SearchBar, Divider } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
+import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import { localeString } from '../../utils/LocaleUtils';
 
@@ -219,17 +227,6 @@ export default class Contacts extends React.Component<
             );
         });
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.goBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
-        );
         const Add = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity onPress={() => navigation.navigate('AddContact')}>
                 <View
@@ -244,8 +241,8 @@ export default class Contacts extends React.Component<
                 >
                     <AddIcon
                         fill={themeColor('background')}
-                        width={16}
-                        height={16}
+                        width={20}
+                        height={20}
                         style={{ alignSelf: 'center' }}
                     />
                 </View>
@@ -267,66 +264,26 @@ export default class Contacts extends React.Component<
                 }}
             >
                 <Header
-                    leftComponent={<BackButton />}
-                    backgroundColor="none"
+                    leftComponent="Back"
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                     rightComponent={
                         !SendScreen && <Add navigation={navigation} />
                     }
+                    navigation={navigation}
                 />
-                <View>
-                    {contacts.length > 0 && (
-                        <>
-                            {SendScreen ? (
-                                <View>
-                                    <Divider
-                                        orientation="horizontal"
-                                        style={{ marginTop: 14 }}
-                                    />
-                                    <SearchBar
-                                        placeholder={localeString(
-                                            'views.Settings.Contacts.searchBar1'
-                                        )}
-                                        onChangeText={this.updateSearch}
-                                        value={this.state.search}
-                                        inputStyle={{
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor={themeColor(
-                                            'secondaryText'
-                                        )}
-                                        containerStyle={{
-                                            backgroundColor: 'none',
-                                            borderTopWidth: 0,
-                                            borderBottomWidth: 0
-                                        }}
-                                        inputContainerStyle={{
-                                            backgroundColor: 'none'
-                                        }}
-                                        searchIcon={
-                                            <Text
-                                                style={{
-                                                    fontSize: 20,
-                                                    color: themeColor('text'),
-                                                    fontWeight: 'bold'
-                                                }}
-                                            >
-                                                To
-                                            </Text>
-                                        }
-                                        leftIconContainerStyle={{
-                                            marginLeft: 18,
-                                            marginRight: -8
-                                        }}
-                                    />
-                                    <Divider orientation="horizontal" />
-                                </View>
-                            ) : (
+                {contacts.length > 0 && (
+                    <>
+                        {SendScreen ? (
+                            <View>
+                                <Divider
+                                    orientation="horizontal"
+                                    style={{ marginTop: 14 }}
+                                />
                                 <SearchBar
                                     placeholder={localeString(
-                                        'views.Settings.Contacts.searchBar2'
+                                        'views.Settings.Contacts.searchBar1'
                                     )}
                                     onChangeText={this.updateSearch}
                                     value={this.state.search}
@@ -337,19 +294,58 @@ export default class Contacts extends React.Component<
                                         'secondaryText'
                                     )}
                                     containerStyle={{
-                                        backgroundColor: 'transparent',
+                                        backgroundColor: 'none',
                                         borderTopWidth: 0,
                                         borderBottomWidth: 0
                                     }}
                                     inputContainerStyle={{
-                                        borderRadius: 15,
-                                        backgroundColor: themeColor('secondary')
+                                        backgroundColor: 'none'
+                                    }}
+                                    searchIcon={
+                                        <Text
+                                            style={{
+                                                fontSize: 20,
+                                                color: themeColor('text'),
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            To
+                                        </Text>
+                                    }
+                                    leftIconContainerStyle={{
+                                        marginLeft: 18,
+                                        marginRight: -8
                                     }}
                                 />
-                            )}
-                        </>
-                    )}
-
+                                <Divider orientation="horizontal" />
+                            </View>
+                        ) : (
+                            <SearchBar
+                                placeholder={localeString(
+                                    'views.Settings.Contacts.searchBar2'
+                                )}
+                                onChangeText={this.updateSearch}
+                                value={this.state.search}
+                                inputStyle={{
+                                    color: themeColor('text')
+                                }}
+                                placeholderTextColor={themeColor(
+                                    'secondaryText'
+                                )}
+                                containerStyle={{
+                                    backgroundColor: 'transparent',
+                                    borderTopWidth: 0,
+                                    borderBottomWidth: 0
+                                }}
+                                inputContainerStyle={{
+                                    borderRadius: 15,
+                                    backgroundColor: themeColor('secondary')
+                                }}
+                            />
+                        )}
+                    </>
+                )}
+                <ScrollView>
                     {/* Render favorite contacts */}
                     {favoriteContacts.length > 0 && (
                         <View style={{ margin: 28 }}>
@@ -416,7 +412,7 @@ export default class Contacts extends React.Component<
                             />
                         )
                     )}
-                </View>
+                </ScrollView>
             </Screen>
         );
     }

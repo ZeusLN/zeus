@@ -1,9 +1,17 @@
 import * as React from 'react';
-import { Text, View, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+    Text,
+    View,
+    Image,
+    StyleSheet,
+    TouchableOpacity,
+    ScrollView
+} from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { Header, Icon } from 'react-native-elements';
+import { Icon } from 'react-native-elements';
 import Screen from '../components/Screen';
 import LoadingIndicator from '../components/LoadingIndicator';
+import Header from '../components/Header';
 
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
@@ -155,17 +163,7 @@ export default class ContactDetails extends React.Component<
     render() {
         const { contact, isLoading } = this.state;
         const { navigation } = this.props;
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.goBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
-        );
+
         const StarButton = () => (
             <Icon
                 name={contact.isFavourite ? 'star' : 'star-outline'}
@@ -192,11 +190,11 @@ export default class ContactDetails extends React.Component<
                 {isLoading ? (
                     <Screen>
                         <Header
-                            leftComponent={<BackButton />}
-                            backgroundColor="none"
+                            leftComponent="Back"
                             containerStyle={{
                                 borderBottomWidth: 0
                             }}
+                            navigation={navigation}
                         />
                         <View style={{ marginTop: 60 }}>
                             <LoadingIndicator />
@@ -205,7 +203,7 @@ export default class ContactDetails extends React.Component<
                 ) : (
                     <Screen>
                         <Header
-                            leftComponent={<BackButton />}
+                            leftComponent="Back"
                             centerComponent={<EditContactButton />}
                             rightComponent={<StarButton />}
                             centerContainerStyle={{
@@ -213,16 +211,16 @@ export default class ContactDetails extends React.Component<
                                 marginTop: -3
                             }}
                             placement="right"
-                            backgroundColor="none"
                             containerStyle={{
                                 borderBottomWidth: 0
                             }}
+                            navigation={navigation}
                         />
-                        <View
-                            style={{
+                        <ScrollView
+                            contentContainerStyle={{
                                 backgroundColor: 'none',
                                 alignItems: 'center',
-                                marginTop: 60
+                                paddingBottom: 10
                             }}
                         >
                             {contact.photo && (
@@ -472,7 +470,7 @@ export default class ContactDetails extends React.Component<
                                         )}
                                     </View>
                                 )}
-                        </View>
+                        </ScrollView>
                     </Screen>
                 )}
             </>
