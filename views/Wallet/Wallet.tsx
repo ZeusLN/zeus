@@ -273,31 +273,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         });
     }
 
-    async refresh() {
-        const {
-            NodeInfoStore,
-            BalanceStore,
-            ChannelsStore,
-            ChannelBackupStore,
-            LightningAddressStore,
-            LSPStore,
-            SyncStore,
-            SettingsStore
-        } = this.props;
-
-        if (SettingsStore.connecting) {
-            NodeInfoStore.reset();
-            BalanceStore.reset();
-            ChannelsStore.reset();
-            SyncStore.reset();
-            LightningAddressStore.reset();
-            LSPStore.reset();
-            ChannelBackupStore.reset();
-        }
-
-        this.getSettingsAndNavigate();
-    }
-
     async fetchData() {
         const {
             NodeInfoStore,
@@ -331,6 +306,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { fiatEnabled, pos, rescan, recovery, lightningAddress } =
             settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
+
+        if (connecting) {
+            NodeInfoStore.reset();
+            BalanceStore.reset();
+            ChannelsStore.reset();
+            SyncStore.reset();
+            LightningAddressStore.reset();
+            LSPStore.reset();
+            ChannelBackupStore.reset();
+        }
 
         LnurlPayStore.reset();
 
@@ -503,7 +488,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         RNRestart.Restart();
                                     } else {
                                         setConnectingStatus(true);
-                                        this.refresh();
+                                        this.getSettingsAndNavigate();
                                     }
                                 }}
                             />
@@ -516,7 +501,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 navigation={navigation}
                                 BalanceStore={BalanceStore}
                                 UnitsStore={UnitsStore}
-                                onRefresh={() => this.refresh()}
+                                onRefresh={() => this.getSettingsAndNavigate()}
                                 locked={isSyncing}
                             />
 
