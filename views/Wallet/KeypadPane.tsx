@@ -409,7 +409,10 @@ export default class KeypadPane extends React.PureComponent<
                                     icon={{
                                         name: 'pencil',
                                         type: 'font-awesome',
-                                        size: 20
+                                        size: 20,
+                                        color:
+                                            themeColor('buttonText') ||
+                                            themeColor('text')
                                     }}
                                     quinary
                                     noUppercase
