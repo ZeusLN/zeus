@@ -43,12 +43,14 @@ const Row = ({ item }: { item: DataRow }) => (
     <RectButton>
         <LinearGradient
             colors={
-                themeColor('gradientBackground')
-                    ? themeColor('gradientBackground')
-                    : [
+                themeColor('buttonGradient')
+                    ? themeColor('buttonGradient')
+                    : themeColor('buttonBackground')
+                    ? [
                           themeColor('buttonBackground'),
                           themeColor('buttonBackground')
                       ]
+                    : [themeColor('secondary'), themeColor('secondary')]
             }
             style={{
                 ...styles.rectButton,
