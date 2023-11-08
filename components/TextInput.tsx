@@ -188,6 +188,6 @@ const styles = StyleSheet.create({
     input: {
         fontSize: 20,
         width: '100%',
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });

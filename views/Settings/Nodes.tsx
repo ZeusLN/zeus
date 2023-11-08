@@ -136,7 +136,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         text: localeString('views.Settings.Nodes.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={<AddButton />}
@@ -205,7 +205,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         <ListItem.Title
                                             style={{
                                                 color: themeColor('text'),
-                                                fontFamily: 'Lato-Regular'
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {NodeTitle(item, 32)}
@@ -215,7 +216,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily: 'Lato-Regular'
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {nodeSubtitle}

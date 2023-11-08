@@ -87,7 +87,7 @@ export default class handleAnythingQRScanner extends React.Component<
                             text: localeString('general.loading'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         backgroundColor={themeColor('background')}

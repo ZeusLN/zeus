@@ -138,7 +138,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         text: localeString('views.Transaction.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={EditNotesButton}
@@ -175,7 +175,8 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                     {getFeePercentage && (
                                         <Text
                                             style={{
-                                                fontFamily: 'Lato-Regular',
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
                                                 color: themeColor('text')
                                             }}
                                         >
@@ -362,6 +363,6 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });

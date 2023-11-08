@@ -89,7 +89,7 @@ export default class Display extends React.Component<
                         text: localeString('views.Settings.Display.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -149,7 +149,7 @@ export default class Display extends React.Component<
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 left: -10
                             }}
                         >
@@ -193,7 +193,7 @@ export default class Display extends React.Component<
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 left: -10
                             }}
                         >
@@ -237,7 +237,7 @@ export default class Display extends React.Component<
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 left: -10
                             }}
                         >

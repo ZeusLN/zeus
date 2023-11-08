@@ -91,7 +91,7 @@ export default class PaymentsSettings extends React.Component<
                         text: localeString('views.Settings.Payments.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -106,7 +106,7 @@ export default class PaymentsSettings extends React.Component<
                         <>
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     paddingTop: 5,
                                     color: themeColor('secondaryText')
                                 }}
@@ -163,7 +163,7 @@ export default class PaymentsSettings extends React.Component<
                                 />
                                 <Text
                                     style={{
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         paddingTop: 5,
                                         color: themeColor('text'),
                                         top: 28,
@@ -207,7 +207,7 @@ export default class PaymentsSettings extends React.Component<
                                 />
                                 <Text
                                     style={{
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         paddingTop: 5,
                                         color: themeColor('text'),
                                         top: 28,
@@ -227,7 +227,7 @@ export default class PaymentsSettings extends React.Component<
                         <>
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     paddingTop: 5,
                                     color: themeColor('secondaryText')
                                 }}
@@ -266,7 +266,7 @@ export default class PaymentsSettings extends React.Component<
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 left: -10
                             }}
                         >

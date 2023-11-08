@@ -4,6 +4,30 @@ export function themeColor(themeString: string): any {
     const { settings } = stores.settingsStore;
     const theme = settings.display && settings.display.theme;
 
+    const Kyriaki: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#1E2022',
+        secondary: '#31363F',
+        text: 'white',
+        secondaryText: '#A7A9AC',
+        highlight: '#FFA900',
+        error: '#992600',
+        separator: '#31363F',
+        outbound: '#FFD93F',
+        inbound: '#FFF0CA',
+        success: '#46BE43',
+        warning: '#E14C4C',
+        bitcoin: '#FFB040',
+        delete: '#992600',
+        qrFrame: '#FFD93F',
+        bolt: '#FFF',
+        chain: '#FFF',
+        disabled: '#767577',
+        buttonBackground: '#FFA900',
+        buttonGradient: ['#FF9000', '#FFA900'],
+        buttonText: '#000000'
+    };
+
     const Light: { [key: string]: any } = {
         generalStyle: 'light',
         background: '#fff',
@@ -268,6 +292,8 @@ export function themeColor(themeString: string): any {
     };
 
     switch (theme) {
+        case 'kyriaki':
+            return Kyriaki[themeString] || Dark[themeString];
         case 'light':
             return Light[themeString] || Dark[themeString];
         case 'junkie':

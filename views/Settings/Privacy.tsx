@@ -94,7 +94,7 @@ export default class Privacy extends React.Component<
                         text: localeString('views.Settings.Privacy.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -130,7 +130,7 @@ export default class Privacy extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {localeString(
@@ -168,7 +168,7 @@ export default class Privacy extends React.Component<
                             style={{
                                 color: themeColor('secondaryText'),
                                 fontSize: 17,
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 left: -10
                             }}
                             infoText={localeString(
@@ -213,7 +213,7 @@ export default class Privacy extends React.Component<
                             style={{
                                 color: themeColor('secondaryText'),
                                 fontSize: 17,
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 left: -10
                             }}
                             infoText={[
@@ -262,7 +262,7 @@ export default class Privacy extends React.Component<
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 left: -10
                             }}
                         >

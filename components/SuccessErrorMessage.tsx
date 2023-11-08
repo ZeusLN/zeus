@@ -89,7 +89,7 @@ const ErrorMessage = ({
 
 const styles = StyleSheet.create({
     field: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         width: '100%',
         top: 10,
         borderRadius: 6,

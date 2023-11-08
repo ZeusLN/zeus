@@ -93,7 +93,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         text: localeString('views.Invoice.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={

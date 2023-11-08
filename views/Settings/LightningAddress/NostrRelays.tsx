@@ -110,7 +110,7 @@ export default class NostrRelays extends React.Component<
                             text: localeString('views.Settings.Nostr.relays'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         rightComponent={

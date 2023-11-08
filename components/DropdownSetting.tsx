@@ -143,7 +143,7 @@ export default class DropdownSetting extends React.Component<
 
 const styles = StyleSheet.create({
     secondaryText: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     field: {
         fontSize: 20,
@@ -156,6 +156,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         paddingLeft: 10,
         overflow: 'hidden',
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });

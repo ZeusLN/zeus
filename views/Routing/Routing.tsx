@@ -108,7 +108,7 @@ export default class Routing extends React.PureComponent<
         const oneDButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 0
                             ? themeColor('background')
@@ -121,7 +121,7 @@ export default class Routing extends React.PureComponent<
         const oneWButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 1
                             ? themeColor('background')
@@ -134,7 +134,7 @@ export default class Routing extends React.PureComponent<
         const oneMButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 2
                             ? themeColor('background')
@@ -147,7 +147,7 @@ export default class Routing extends React.PureComponent<
         const threeMButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 3
                             ? themeColor('background')
@@ -160,7 +160,7 @@ export default class Routing extends React.PureComponent<
         const sixMButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 4
                             ? themeColor('background')
@@ -173,7 +173,7 @@ export default class Routing extends React.PureComponent<
         const oneYButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 5
                             ? themeColor('background')
@@ -256,7 +256,7 @@ export default class Routing extends React.PureComponent<
                         {forwardingEvents.length === 0 && !loading && (
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     color: themeColor('text'),
                                     alignSelf: 'center',
                                     top: 100

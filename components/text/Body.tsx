@@ -41,7 +41,10 @@ export function Body({
                     ? themeColor('secondaryText')
                     : themeColor('text'),
                 fontSize: small ? 12 : big ? 20 : jumbo ? 40 : 16,
-                fontFamily: bold || jumbo ? 'Lato-Bold' : 'Lato-Regular'
+                fontFamily:
+                    bold || jumbo
+                        ? 'PPNeueMontreal-Medium'
+                        : 'PPNeueMontreal-Book'
             }}
             accessible={accessible}
             accessibilityLabel={accessibilityLabel}

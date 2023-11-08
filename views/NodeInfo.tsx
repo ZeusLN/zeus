@@ -80,7 +80,9 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
 
                 {nodeInfo.version && (
                     <KeyValue
-                        keyValue={localeString('views.NodeInfo.zeusVersion')}
+                        keyValue={localeString(
+                            'views.NodeInfo.zeusVersion'
+                        ).replace('Zeus', 'ZEUS')}
                         value={`v${version}`}
                     />
                 )}
@@ -150,7 +152,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                         text: localeString('views.NodeInfo.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}

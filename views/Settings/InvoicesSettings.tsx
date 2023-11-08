@@ -139,7 +139,7 @@ export default class InvoicesSettings extends React.Component<
                         text: localeString('views.Settings.Invoices.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={
@@ -400,6 +400,6 @@ export default class InvoicesSettings extends React.Component<
 
 const styles = StyleSheet.create({
     secondaryText: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });

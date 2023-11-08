@@ -109,7 +109,7 @@ export default class LightningAddressSettings extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         rightComponent={
@@ -125,7 +125,7 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     width: '85%'
                                 }}
                             >
@@ -209,7 +209,7 @@ export default class LightningAddressSettings extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             fontSize: 17,
                                             maxWidth: '80%'
                                         }}
@@ -274,7 +274,7 @@ export default class LightningAddressSettings extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 17
                                     }}
                                     infoText={[
@@ -317,7 +317,7 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     width: '85%'
                                 }}
                             >
@@ -412,7 +412,7 @@ export default class LightningAddressSettings extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {localeString('nostr.keys')}
@@ -433,7 +433,7 @@ export default class LightningAddressSettings extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {`${localeString(
@@ -456,7 +456,7 @@ export default class LightningAddressSettings extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {localeString(

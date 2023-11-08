@@ -1,0 +1,465 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/PPNeueMontreal-Medium.ttf",
+      "sha1": "d67fee08c79a82ce375ab9629ae5a903da8bb321"
+    },
+    {
+      "path": "assets/fonts/PPNeueMontreal-Book.ttf",
+      "sha1": "e923c72eda5e50a87e18ff5c71e9ef4b3b6455a3"
+    },
+    {
+      "path": "assets/fonts/Marlide-Display-Bold.ttf",
+      "sha1": "ed2c5555ef073d63910fe6f686e98867e3cde63c"
+    },
+    {
+      "path": "assets/fonts/Marlide-Display.ttf",
+      "sha1": "04a807b744dacda4766f2f09d222cb34b86d4f5b"
+    },
+    {
+      "path": "assets/images/GIF/Loading.gif",
+      "sha1": "b0695fc4aaa609075202bb3b732f0702f260542b"
+    },
+    {
+      "path": "assets/images/GIF/Success.gif",
+      "sha1": "8dd99d418b8e3223ed8c8881b978aeb17f8c7ea6"
+    },
+    {
+      "path": "assets/images/Launcher.png",
+      "sha1": "db916cdabf2cb8575e7646e26cc81ebbdc4d96d4"
+    },
+    {
+      "path": "assets/images/Lottie/lightning1.json",
+      "sha1": "e4e9778e89455cd092b38ab91e21173bd7e7a795"
+    },
+    {
+      "path": "assets/images/Lottie/lightning2.json",
+      "sha1": "2d001ce857a72f0e729a6a1ba5fdcd17c4ce7258"
+    },
+    {
+      "path": "assets/images/Lottie/lightning3.json",
+      "sha1": "82aee96931c5e96d4c52ea9904b129273ac23aa7"
+    },
+    {
+      "path": "assets/images/Lottie/loader.json",
+      "sha1": "db9db1aee58a5f3658091bf00b0b38c25c4b6999"
+    },
+    {
+      "path": "assets/images/Mascot.png",
+      "sha1": "b4874a29eaa3aad2a857ec403a77ba9c4c5da296"
+    },
+    {
+      "path": "assets/images/SPLASH copy 2.png",
+      "sha1": "e1f6cd5ef48885b7009712ae7d1b0a668ae9419e"
+    },
+    {
+      "path": "assets/images/SPLASH copy.png",
+      "sha1": "7021fbab05ae61d4f7b379b87e5f51e49529befe"
+    },
+    {
+      "path": "assets/images/SPLASH.png",
+      "sha1": "aa65f7f847a8da8ec9c054b6b376420e3e4fdd9c"
+    },
+    {
+      "path": "assets/images/SVG/Add.svg",
+      "sha1": "b808375425fd1495b93a7f3f1a128f228956e0d8"
+    },
+    {
+      "path": "assets/images/SVG/Alert.svg",
+      "sha1": "c5ddacf94d09e3b95717862ec269f856a98906cf"
+    },
+    {
+      "path": "assets/images/SVG/Backspace.svg",
+      "sha1": "bbae4f69c82aaf560e135e071facc0682b70d012"
+    },
+    {
+      "path": "assets/images/SVG/Bitcoin.svg",
+      "sha1": "86abc191b64dc5d17144c385c42d658bf934a4e0"
+    },
+    {
+      "path": "assets/images/SVG/BitcoinIcon.svg",
+      "sha1": "0e4e16c812f7dd0095f99e167572fb3b4e5288b1"
+    },
+    {
+      "path": "assets/images/SVG/Block.svg",
+      "sha1": "baccbd5d5913b5fbf6956cce7199a5a446104b9d"
+    },
+    {
+      "path": "assets/images/SVG/Brush.svg",
+      "sha1": "5e4791151130cf4ec78a5093b23d07f27461dfad"
+    },
+    {
+      "path": "assets/images/SVG/Caret Down.svg",
+      "sha1": "7874f61c1e90daca8f5c0559e95d89d3190c1853"
+    },
+    {
+      "path": "assets/images/SVG/Caret Left.svg",
+      "sha1": "b44b478eabdef4efdd895602fb7f0cc177496220"
+    },
+    {
+      "path": "assets/images/SVG/Caret Right-1.svg",
+      "sha1": "2833aa8ca4c92d5b7658c8aa5611696a2708a6c8"
+    },
+    {
+      "path": "assets/images/SVG/Caret Right-3.svg",
+      "sha1": "2b78a9a3b846ea94495866e4a35c34bb46cd518f"
+    },
+    {
+      "path": "assets/images/SVG/Caret Right.svg",
+      "sha1": "c4420cdcaddbb709987c5ae6aa55c31688d45ad8"
+    },
+    {
+      "path": "assets/images/SVG/Caret Up.svg",
+      "sha1": "a4df241bd3151cb377b105b244f00f2a3e35cfd7"
+    },
+    {
+      "path": "assets/images/SVG/Channel.svg",
+      "sha1": "4bacc36b25805d3c5726c79c135d7dbd9d2d9e37"
+    },
+    {
+      "path": "assets/images/SVG/Channels.svg",
+      "sha1": "c9b401d8b683c9d8aadcfb41576c80a847b82a9a"
+    },
+    {
+      "path": "assets/images/SVG/Checkmark.svg",
+      "sha1": "dd4277c8c5ac09d80110302ab53c562f6df6fbf1"
+    },
+    {
+      "path": "assets/images/SVG/Clipboard.svg",
+      "sha1": "0ad18c819e47391650279bb3fb07a6d483a4c9da"
+    },
+    {
+      "path": "assets/images/SVG/Clock.svg",
+      "sha1": "47bf29b262ea5d0fc1b83a4e32fbd31c2ecc3f2b"
+    },
+    {
+      "path": "assets/images/SVG/Cloud.svg",
+      "sha1": "c5b2c4a9a91c7e539514159d566a785a84a2b789"
+    },
+    {
+      "path": "assets/images/SVG/Coins.svg",
+      "sha1": "3599f2b50d0191fa130242538f15d61e20ebd1e9"
+    },
+    {
+      "path": "assets/images/SVG/Contact.svg",
+      "sha1": "09164507bf311947980d3ae9b9a494d105502baf"
+    },
+    {
+      "path": "assets/images/SVG/Copy.svg",
+      "sha1": "e5a7f74dcec6e11fbace65eb4d6c31f5db8dbf02"
+    },
+    {
+      "path": "assets/images/SVG/Cross.svg",
+      "sha1": "c00a094d6852a14a30ab507e6a1009ee13d51352"
+    },
+    {
+      "path": "assets/images/SVG/Currency.svg",
+      "sha1": "83123b0668b524f68dd8fcca5a120aa564062274"
+    },
+    {
+      "path": "assets/images/SVG/Delete.svg",
+      "sha1": "e85cbe324ba7c6394eb955926be760d8ebb9c773"
+    },
+    {
+      "path": "assets/images/SVG/Dice.svg",
+      "sha1": "de127e1cc3af907bf48b97b9c7c19c58a43102f0"
+    },
+    {
+      "path": "assets/images/SVG/DynamicSVG/AddressSvg.tsx",
+      "sha1": "59a3a23aac20636a348f3dada90338db4dfe3344"
+    },
+    {
+      "path": "assets/images/SVG/DynamicSVG/LightningSvg.tsx",
+      "sha1": "8f38594b1abd0d4877075e1621013f353180862d"
+    },
+    {
+      "path": "assets/images/SVG/DynamicSVG/OnChainSvg.tsx",
+      "sha1": "e959c75860607b476bca2b0a9078cb3cb46eb23e"
+    },
+    {
+      "path": "assets/images/SVG/DynamicSVG/ScanFrameSvg.tsx",
+      "sha1": "7485e1c143ccdfadb765d53dc9fc1626b251a637"
+    },
+    {
+      "path": "assets/images/SVG/DynamicSVG/UnifiedSvg.tsx",
+      "sha1": "e61cf6ad20fb18b3919d84a47bd4db8b0ab7bc4a"
+    },
+    {
+      "path": "assets/images/SVG/Edit.svg",
+      "sha1": "1f6acf36aa5a17040c73377b528ed5b953a48850"
+    },
+    {
+      "path": "assets/images/SVG/Error.svg",
+      "sha1": "1bf7ab74cc3be1adca93c821e0c577374a2238de"
+    },
+    {
+      "path": "assets/images/SVG/ErrorIcon.svg",
+      "sha1": "05da1a652815c751b35361d0433742894988be0a"
+    },
+    {
+      "path": "assets/images/SVG/ExchangeBitcoin.svg",
+      "sha1": "ed26dc3a06b31b446d7b8d58a1446d1ff6584125"
+    },
+    {
+      "path": "assets/images/SVG/ExchangeFiat.svg",
+      "sha1": "308dfb3ceeabeb74ead32307bdd370f41382be72"
+    },
+    {
+      "path": "assets/images/SVG/Export.svg",
+      "sha1": "d2d30904d8d20321e0842bb5bbaabcf0f56a749d"
+    },
+    {
+      "path": "assets/images/SVG/Eye Off.svg",
+      "sha1": "2f483794844c8460de09ee50fb42c7917572ad16"
+    },
+    {
+      "path": "assets/images/SVG/Eye On.svg",
+      "sha1": "f73cd4fa4a5b1d681cc80f01ed6e2228e6a11cba"
+    },
+    {
+      "path": "assets/images/SVG/Filter Off.svg",
+      "sha1": "8b03e309c5faa1a790364c103398ac314994a284"
+    },
+    {
+      "path": "assets/images/SVG/Filter On.svg",
+      "sha1": "a431acfb7747c76b2443349619ab9a4bb79f0d31"
+    },
+    {
+      "path": "assets/images/SVG/Flash Off.svg",
+      "sha1": "2ac9327adcc428b5aaa8ed22aba65b9620179fc2"
+    },
+    {
+      "path": "assets/images/SVG/Flash On.svg",
+      "sha1": "3d4ad8daac2cddbd4540c67e55759e7b0f50b784"
+    },
+    {
+      "path": "assets/images/SVG/Gallery.svg",
+      "sha1": "d412cc304689aa141f566bfd6401b7a4448453fb"
+    },
+    {
+      "path": "assets/images/SVG/Globe.svg",
+      "sha1": "e952a3834d1ec34a7c6d0a551586136a634e6d5d"
+    },
+    {
+      "path": "assets/images/SVG/Help Icon.svg",
+      "sha1": "0da32a38426d02ae6b42fcee6cd6537f90b5dd6d"
+    },
+    {
+      "path": "assets/images/SVG/Hidden.svg",
+      "sha1": "f66e7f438a9407cc7d974ad3b2688a5fa8c511d2"
+    },
+    {
+      "path": "assets/images/SVG/Key Security.svg",
+      "sha1": "10641278df5aaef43d279329d03398f8358d9a31"
+    },
+    {
+      "path": "assets/images/SVG/Key.svg",
+      "sha1": "a5cf54329c9972768de23a95d8d817992392a243"
+    },
+    {
+      "path": "assets/images/SVG/Leaving.svg",
+      "sha1": "99158d62a92b691277250928c33ca045ba171c14"
+    },
+    {
+      "path": "assets/images/SVG/Lightning Bolt.svg",
+      "sha1": "ee6a28d6dfb9c981e9b2ad1eb0a8b27c0e6bb25e"
+    },
+    {
+      "path": "assets/images/SVG/Lock.svg",
+      "sha1": "64c7a312c6ff48ce22bdb3bb9e59609bd50ef21f"
+    },
+    {
+      "path": "assets/images/SVG/MailboxFlagDown.svg",
+      "sha1": "b2bbcf0b05a18261e9a553120f740a62e82b3871"
+    },
+    {
+      "path": "assets/images/SVG/MailboxFlagUp.svg",
+      "sha1": "1234c0c30f2ccea138922b8d16d5e34891306e35"
+    },
+    {
+      "path": "assets/images/SVG/Menu.svg",
+      "sha1": "08ecea9250a0a37bf85b6b521e4a036f26ff033a"
+    },
+    {
+      "path": "assets/images/SVG/Mnemonic.svg",
+      "sha1": "9fdf0dd6fa4fa5a561bf9c15ef9ee5a554bef772"
+    },
+    {
+      "path": "assets/images/SVG/NFC.svg",
+      "sha1": "a2dce857e44d12de95f6419c116cec062e07069a"
+    },
+    {
+      "path": "assets/images/SVG/Network.svg",
+      "sha1": "e72d0d9a62aa40fb77487f2658cbb3028ab88e33"
+    },
+    {
+      "path": "assets/images/SVG/Node Off.svg",
+      "sha1": "6f25ab510cf2415259a7db9ec58af7f91164694b"
+    },
+    {
+      "path": "assets/images/SVG/Node On.svg",
+      "sha1": "48ff7f8fb7c94d8cfc218b0a3079e22e338e00f1"
+    },
+    {
+      "path": "assets/images/SVG/Nostrich.svg",
+      "sha1": "866c5f6e9260ee90e22ea9df31258817fa27707a"
+    },
+    {
+      "path": "assets/images/SVG/Olympus.svg",
+      "sha1": "d88863cc6fed7ac2b098ebef9373af2bc13bbd0e"
+    },
+    {
+      "path": "assets/images/SVG/POS.svg",
+      "sha1": "5172319e19822254b87371c34e862ea4fe320b33"
+    },
+    {
+      "path": "assets/images/SVG/PeersContact.svg",
+      "sha1": "b1afcf645adcb61c7628561a8efaa1ff1be3efc6"
+    },
+    {
+      "path": "assets/images/SVG/Pen.svg",
+      "sha1": "0313e976f8c6c5f68210bf9884f66656bd65df99"
+    },
+    {
+      "path": "assets/images/SVG/Pie.svg",
+      "sha1": "4aa3ce69b70c3b6c13bfc7faed578dab2bc97df3"
+    },
+    {
+      "path": "assets/images/SVG/PinFilled.svg",
+      "sha1": "13c88dd39432c3e1bad5b587869eaa44e232c453"
+    },
+    {
+      "path": "assets/images/SVG/PinHollow.svg",
+      "sha1": "95efff086bd2f7dba7b3f0f3588a17d64155e4fb"
+    },
+    {
+      "path": "assets/images/SVG/QR.svg",
+      "sha1": "74cbde34da61782db454ec97da749fb7e2d096c7"
+    },
+    {
+      "path": "assets/images/SVG/Question.svg",
+      "sha1": "e83146564d41d2ba1dde5eca1e047759f1ea1402"
+    },
+    {
+      "path": "assets/images/SVG/Receive.svg",
+      "sha1": "3b8b7934fe17297dfe8f804ffe49ba314550d5e5"
+    },
+    {
+      "path": "assets/images/SVG/Refresh.svg",
+      "sha1": "28d45ef696f318848142211b6f8ed952fab45fdf"
+    },
+    {
+      "path": "assets/images/SVG/Routing.svg",
+      "sha1": "dcc0022299a0cfbdf917d675a1e382789acb2e88"
+    },
+    {
+      "path": "assets/images/SVG/Save.svg",
+      "sha1": "0c1a0ff55c618ef676f03e1469d2e03b95c7e334"
+    },
+    {
+      "path": "assets/images/SVG/Scan.svg",
+      "sha1": "3d7c24f875c6cc0c220a49728f11009109e8e32e"
+    },
+    {
+      "path": "assets/images/SVG/Search.svg",
+      "sha1": "42dd718471d07ba2d16647e30cdb2592a261b7ab"
+    },
+    {
+      "path": "assets/images/SVG/Send.svg",
+      "sha1": "c676f713fc2b7eb9f8be38bf8a66f8071ac43255"
+    },
+    {
+      "path": "assets/images/SVG/Share.svg",
+      "sha1": "9377ff7d12976011aa61e53a7cec0e1529c251fa"
+    },
+    {
+      "path": "assets/images/SVG/Skull.svg",
+      "sha1": "5a57cf55416a2a24a6b5a7bbd0e31b4f1ebc8731"
+    },
+    {
+      "path": "assets/images/SVG/Success.svg",
+      "sha1": "76294dfd8e78b342f92321b79d96a3868c916302"
+    },
+    {
+      "path": "assets/images/SVG/Sweep.svg",
+      "sha1": "54b670e961879603e958838ded5ee974d548c752"
+    },
+    {
+      "path": "assets/images/SVG/Switch.svg",
+      "sha1": "0dbeafd08c1cc10a4f55a1aef6bb492096565b99"
+    },
+    {
+      "path": "assets/images/SVG/Sync.svg",
+      "sha1": "5f165ef4da154e50d1b6e9d025d2ed10fa55481c"
+    },
+    {
+      "path": "assets/images/SVG/Temple.svg",
+      "sha1": "8fbecb0af0b3274d4362dad97108119fea725eb4"
+    },
+    {
+      "path": "assets/images/SVG/Verified Account.svg",
+      "sha1": "0c4eeceb8ce7816709647ac8d5ee370a8e5da8ad"
+    },
+    {
+      "path": "assets/images/SVG/Visible.svg",
+      "sha1": "c8ae98f0f57fae7532a6939e4565c49d2905f0e5"
+    },
+    {
+      "path": "assets/images/SVG/WORDMARK.svg",
+      "sha1": "3e4135caea90ab77a1a3e6c40ada89758c3b27d2"
+    },
+    {
+      "path": "assets/images/SVG/Wallet.svg",
+      "sha1": "784c98c26959c5f15313fa88dd552eea4feacd0f"
+    },
+    {
+      "path": "assets/images/SVG/Wallet2.svg",
+      "sha1": "27203006e06921dce9c2d754cef239cf10187e55"
+    },
+    {
+      "path": "assets/images/SVG/Word Logo - no outline.svg",
+      "sha1": "e464c8cc57ed280aa7d1fa69b70499e32168cfd8"
+    },
+    {
+      "path": "assets/images/SVG/Word Logo.svg",
+      "sha1": "7986cb0127380cb0222dd01ae86b787ee790fd89"
+    },
+    {
+      "path": "assets/images/Untitled.png",
+      "sha1": "9fb18e964c88961fed7274dc648392516e2e1b16"
+    },
+    {
+      "path": "assets/images/affiliates/Mempool.svg",
+      "sha1": "021a4b2bf1926a534169d507dccb291b2d41941b"
+    },
+    {
+      "path": "assets/images/intro/1.png",
+      "sha1": "6b9a0d65e0d3d0586a902904792994313e18c539"
+    },
+    {
+      "path": "assets/images/intro/2.png",
+      "sha1": "caaf76dc5a583c3ef174277bac5202ff190ac30c"
+    },
+    {
+      "path": "assets/images/intro/3.png",
+      "sha1": "dbd40f35f191302803cb58e32521e601671791a5"
+    },
+    {
+      "path": "assets/images/intro/4.png",
+      "sha1": "4ab92a8c0423d3472c2194cb1585fd42ed03aba2"
+    },
+    {
+      "path": "assets/images/intro/splash.png",
+      "sha1": "c503c27ead2f63874ce878841b94f3fd6f797a88"
+    },
+    {
+      "path": "assets/images/tor.png",
+      "sha1": "846a80b5f9b2bdfcec9f1ac86812f8b7d562993a"
+    },
+    {
+      "path": "assets/images/zeus-pay.png",
+      "sha1": "da09f2edc838ccfb019830ac4f30c53ee8a631e5"
+    }
+  ]
+}

@@ -408,11 +408,11 @@ export default class FeeBreakdown extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         alignSelf: 'center'
     },
     secondaryText: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         alignSelf: 'center'
     },
     title: {

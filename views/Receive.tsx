@@ -1004,7 +1004,7 @@ export default class Receive extends React.Component<
                             selectedIndex === 0
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'Lato-Regular'
+                        fontFamily: 'PPNeueMontreal-Book'
                     }}
                 >
                     {localeString('general.unified')}
@@ -1021,7 +1021,7 @@ export default class Receive extends React.Component<
                             selectedIndex === 1
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'Lato-Regular'
+                        fontFamily: 'PPNeueMontreal-Book'
                     }}
                 >
                     {localeString('general.lightning')}
@@ -1038,7 +1038,7 @@ export default class Receive extends React.Component<
                             selectedIndex === 2
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'Lato-Regular'
+                        fontFamily: 'PPNeueMontreal-Book'
                     }}
                 >
                     {localeString('general.onchain')}
@@ -1055,7 +1055,7 @@ export default class Receive extends React.Component<
                             selectedIndex === 3
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'Lato-Regular'
+                        fontFamily: 'PPNeueMontreal-Book'
                     }}
                 >
                     {localeString('general.lightningAddressCondensed')}
@@ -1144,7 +1144,7 @@ export default class Receive extends React.Component<
                                 : localeString('views.Receive.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={
@@ -1297,7 +1297,8 @@ export default class Receive extends React.Component<
                                         >
                                             <Text
                                                 style={{
-                                                    fontFamily: 'Lato-Bold',
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Medium',
                                                     color: themeColor('text'),
                                                     fontSize: 15
                                                 }}
@@ -1336,7 +1337,8 @@ export default class Receive extends React.Component<
                                             >
                                                 <Text
                                                     style={{
-                                                        fontFamily: 'Lato-Bold',
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
                                                         color: themeColor(
                                                             'text'
                                                         ),
@@ -1363,7 +1365,8 @@ export default class Receive extends React.Component<
                                                 />
                                                 <Text
                                                     style={{
-                                                        fontFamily: 'Lato-Bold',
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
                                                         color: themeColor(
                                                             'secondaryText'
                                                         ),
@@ -1460,7 +1463,7 @@ export default class Receive extends React.Component<
                                                     <Text
                                                         style={{
                                                             fontFamily:
-                                                                'Lato-Regular',
+                                                                'PPNeueMontreal-Book',
                                                             fontSize:
                                                                 26 / fontScale,
                                                             color: themeColor(
@@ -1707,7 +1710,7 @@ export default class Receive extends React.Component<
                                                     <Text
                                                         style={{
                                                             fontFamily:
-                                                                'Lato-Bold',
+                                                                'PPNeueMontreal-Medium',
                                                             color: themeColor(
                                                                 'text'
                                                             ),
@@ -1732,7 +1735,7 @@ export default class Receive extends React.Component<
                                                     <Text
                                                         style={{
                                                             fontFamily:
-                                                                'Lato-Bold',
+                                                                'PPNeueMontreal-Medium',
                                                             color: themeColor(
                                                                 'secondaryText'
                                                             ),
@@ -2051,9 +2054,9 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     secondaryText: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });

@@ -228,7 +228,7 @@ export default class LightningAddress extends React.Component<
         const openOrdersButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 0
                             ? themeColor('background')
@@ -242,7 +242,7 @@ export default class LightningAddress extends React.Component<
         const paidOrdersButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 1
                             ? themeColor('background')
@@ -267,7 +267,7 @@ export default class LightningAddress extends React.Component<
                             text: localeString('general.lightningAddress'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         rightComponent={
@@ -302,7 +302,7 @@ export default class LightningAddress extends React.Component<
                                 >
                                     <Text
                                         style={{
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             fontSize: 26 / fontScale,
                                             color: themeColor('text'),
                                             textAlign: 'center'
@@ -319,7 +319,7 @@ export default class LightningAddress extends React.Component<
                                 >
                                     <Text
                                         style={{
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
 
                                             color: themeColor('text'),
                                             textAlign: 'center'
@@ -331,7 +331,7 @@ export default class LightningAddress extends React.Component<
                                     </Text>
                                     <Text
                                         style={{
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             color: statusGood
                                                 ? themeColor('success')
                                                 : themeColor('error'),
@@ -344,7 +344,7 @@ export default class LightningAddress extends React.Component<
                                     </Text>
                                     <Text
                                         style={{
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             fontSize: 11,
                                             color: themeColor('secondaryText'),
                                             left: 5
@@ -428,7 +428,8 @@ export default class LightningAddress extends React.Component<
                                         <View style={styles.wrapper}>
                                             <Text
                                                 style={{
-                                                    fontFamily: 'Lato-Regular',
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
                                                     color: themeColor('text'),
                                                     marginTop: 15,
                                                     marginBottom: 10
@@ -469,7 +470,7 @@ export default class LightningAddress extends React.Component<
                                                             'text'
                                                         ),
                                                         fontFamily:
-                                                            'Lato-Regular'
+                                                            'PPNeueMontreal-Book'
                                                     }}
                                                 >
                                                     {localeString(
@@ -505,7 +506,7 @@ export default class LightningAddress extends React.Component<
                                                             'text'
                                                         ),
                                                         fontFamily:
-                                                            'Lato-Regular'
+                                                            'PPNeueMontreal-Book'
                                                     }}
                                                 >
                                                     {`${localeString(
@@ -587,7 +588,8 @@ export default class LightningAddress extends React.Component<
                                             >
                                                 <Text
                                                     style={{
-                                                        fontFamily: 'Lato-Bold',
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
                                                         color: themeColor(
                                                             'highlight'
                                                         ),
@@ -736,7 +738,7 @@ export default class LightningAddress extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         color: themeColor('text')
     },
     wrapper: {

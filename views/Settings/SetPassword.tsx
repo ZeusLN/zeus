@@ -126,7 +126,7 @@ export default class SetPassphrase extends React.Component<
                         text: localeString('views.Settings.SetPassword.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -240,6 +240,6 @@ export default class SetPassphrase extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });
