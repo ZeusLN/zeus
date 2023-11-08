@@ -403,17 +403,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             BackendUtils.supportsCustomPreimages() &&
             !NodeInfoStore.testnet
         ) {
-            LightningAddressStore.status();
+            if (connecting) {
+                LightningAddressStore.status();
 
-            if (lightningAddress.automaticallyAccept && connecting) {
-                LightningAddressStore.prepareToAutomaticallyAccept();
-            }
+                if (lightningAddress.automaticallyAccept) {
+                    LightningAddressStore.prepareToAutomaticallyAccept();
+                }
 
-            if (
-                SettingsStore.settings.lightningAddress?.notifications === 1 &&
-                connecting
-            ) {
-                LightningAddressStore.updatePushCredentials();
+                if (
+                    // TODO add enum
+                    SettingsStore.settings.lightningAddress?.notifications === 1
+                ) {
+                    LightningAddressStore.updatePushCredentials();
+                }
             }
         }
 
