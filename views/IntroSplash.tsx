@@ -193,7 +193,6 @@ export default class IntroSplash extends React.Component<
                                         'views.Intro.whatIsZeus'
                                     )}
                                     onPress={() => navigation.navigate('Intro')}
-                                    quaternary
                                 />
                             </View>
                             <View
