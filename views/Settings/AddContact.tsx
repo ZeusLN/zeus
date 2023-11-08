@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { Header, Icon, Divider } from 'react-native-elements';
+import { Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
@@ -27,6 +27,7 @@ import AddressUtils from '../../utils/AddressUtils';
 import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
 import Screen from '../../components/Screen';
+import Header from '../../components/Header';
 
 interface AddContactProps {
     navigation: any;
@@ -356,20 +357,6 @@ export default class AddContact extends React.Component<
             { key: 'Nostr npub', translateKey: '', value: 'nostrNpub' }
         ];
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.navigate('Contacts', {
-                        refresh: true
-                    });
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
-        );
-
         const AddPhotos = () => (
             <AddIcon
                 fill={themeColor('background')}
@@ -409,17 +396,17 @@ export default class AddContact extends React.Component<
                         }}
                     >
                         <Header
-                            leftComponent={<BackButton />}
+                            leftComponent="Back"
                             rightComponent={
                                 <StarButton
                                     isFavourite={this.state.isFavourite}
                                     onPress={this.toggleFavorite}
                                 />
                             }
-                            backgroundColor="transparent"
                             containerStyle={{
                                 borderBottomWidth: 0
                             }}
+                            navigation={navigation}
                         />
                         <View
                             style={{
