@@ -137,8 +137,7 @@ export default class IntroSplash extends React.Component<
             <Screen>
                 <SafeAreaView
                     style={{
-                        flex: 1,
-                        paddingTop: 50
+                        flex: 1
                     }}
                 >
                     <SplashView>
