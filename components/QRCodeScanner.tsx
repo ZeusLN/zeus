@@ -261,7 +261,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     <View style={styles.content}>
                         <Text
                             style={{
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 textAlign: 'center',
                                 padding: 15
                             }}

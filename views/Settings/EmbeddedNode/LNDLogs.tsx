@@ -76,7 +76,7 @@ export default class LNDLogs extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         navigation={navigation}

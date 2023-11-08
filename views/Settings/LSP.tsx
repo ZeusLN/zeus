@@ -64,7 +64,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                             text: localeString('general.lsp'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         navigation={navigation}
@@ -78,7 +78,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
                             {localeString('views.Settings.LSP.enableLSP')}
@@ -128,7 +128,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                     >
                         <Text
                             style={{
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 color: themeColor('secondaryText')
                             }}
                         >
@@ -163,7 +163,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                     >
                         <Text
                             style={{
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 color: themeColor('secondaryText')
                             }}
                         >
@@ -193,7 +193,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
                             {localeString(

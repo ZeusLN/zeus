@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         paddingTop: 10,
         paddingHorizontal: 4,
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     action: {
         flex: 1,

@@ -81,7 +81,7 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                             : localeString('views.Routing.SetFees'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}

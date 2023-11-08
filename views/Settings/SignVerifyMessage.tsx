@@ -132,7 +132,7 @@ export default class SignVerifyMessage extends React.Component<
                         text: localeString('views.Settings.SignMessage.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
         paddingRight: 5
     },
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     textInput: {
         fontSize: 20,

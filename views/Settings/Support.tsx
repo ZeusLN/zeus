@@ -45,7 +45,7 @@ function Support(props: SupportProps) {
                     text: localeString('views.Settings.Support.title'),
                     style: {
                         color: themeColor('text'),
-                        fontFamily: 'Lato-Regular'
+                        fontFamily: 'PPNeueMontreal-Book'
                     }
                 }}
                 navigation={navigation}
@@ -67,7 +67,7 @@ function Support(props: SupportProps) {
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {item.label}

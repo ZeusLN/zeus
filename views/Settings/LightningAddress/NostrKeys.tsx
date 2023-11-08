@@ -183,7 +183,7 @@ export default class NostrKey extends React.Component<
                                 : localeString('nostr.keys'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         rightComponent={
@@ -382,7 +382,7 @@ export default class NostrKey extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         color: themeColor('text')
     },
     wrapper: {

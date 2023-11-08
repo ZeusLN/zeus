@@ -109,7 +109,7 @@ export default class PointOfSale extends React.Component<
                         text: localeString('general.pos'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -151,7 +151,7 @@ export default class PointOfSale extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         left: -10
                                     }}
                                 >
@@ -194,7 +194,7 @@ export default class PointOfSale extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'Lato-Regular'
+                                            fontFamily: 'PPNeueMontreal-Book'
                                         }}
                                     >
                                         {localeString(
@@ -225,7 +225,7 @@ export default class PointOfSale extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'Lato-Regular'
+                                            fontFamily: 'PPNeueMontreal-Book'
                                         }}
                                     >
                                         {localeString(
@@ -256,7 +256,7 @@ export default class PointOfSale extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'Lato-Regular'
+                                            fontFamily: 'PPNeueMontreal-Book'
                                         }}
                                     >
                                         {localeString(
@@ -323,7 +323,8 @@ export default class PointOfSale extends React.Component<
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily: 'Lato-Regular',
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
                                                 left: -10
                                             }}
                                         >
@@ -374,7 +375,8 @@ export default class PointOfSale extends React.Component<
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily: 'Lato-Regular',
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
                                                 left: -10
                                             }}
                                         >
@@ -433,7 +435,8 @@ export default class PointOfSale extends React.Component<
                                             <ListItem.Title
                                                 style={{
                                                     color: themeColor('text'),
-                                                    fontFamily: 'Lato-Regular'
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
                                                 }}
                                             >
                                                 {item.label}

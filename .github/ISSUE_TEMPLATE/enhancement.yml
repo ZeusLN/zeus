@@ -1,16 +1,16 @@
 name: Enhancement
-description: Suggest an enhancement you'd like to see in Zeus!
+description: Suggest an enhancement you'd like to see in ZEUS!
 labels: ["Enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        We're always looking for suggestions on how we could improve Zeus!
+        We're always looking for suggestions on how we could improve ZEUS!
   - type: textarea
     id: describe
     attributes:
       label: Describe your enhancement idea
       description: A clear and concise description of your enhancement idea. Include images / mockups if relevant.
-      placeholder: Zeus would be even better if...
+      placeholder: ZEUS would be even better if...
     validations:
       required: true

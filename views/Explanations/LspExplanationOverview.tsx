@@ -31,7 +31,7 @@ export default class LspExplanationOverview extends React.PureComponent<
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -40,7 +40,7 @@ export default class LspExplanationOverview extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE
                         }}
@@ -50,7 +50,7 @@ export default class LspExplanationOverview extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE
                         }}
@@ -60,7 +60,7 @@ export default class LspExplanationOverview extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE + 10
                         }}
@@ -72,7 +72,7 @@ export default class LspExplanationOverview extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE + 10
                         }}
@@ -84,7 +84,7 @@ export default class LspExplanationOverview extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE + 10
                         }}
@@ -96,7 +96,7 @@ export default class LspExplanationOverview extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE + 10
                         }}
@@ -108,7 +108,7 @@ export default class LspExplanationOverview extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE + 10
                         }}
@@ -120,7 +120,7 @@ export default class LspExplanationOverview extends React.PureComponent<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: FONT_SIZE,
                             marginBottom: FONT_SIZE + 10
                         }}

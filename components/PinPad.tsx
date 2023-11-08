@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     pinPadNumber: {
-        fontFamily: 'Lato-Bold'
+        fontFamily: 'PPNeueMontreal-Medium'
     },
     pad: {
         justifyContent: 'flex-end',

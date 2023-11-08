@@ -57,7 +57,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                 : localeString('general.coins'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -132,7 +132,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                         }}
                         titleStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }}
                     />
                 )}

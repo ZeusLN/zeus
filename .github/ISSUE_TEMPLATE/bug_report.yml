@@ -1,5 +1,5 @@
 name: "Bug Report"
-description: "Found a bug in Zeus? Use this issue template to report it."
+description: "Found a bug in ZEUS? Use this issue template to report it."
 labels: ["Bug"]
 body:
   - type: markdown
@@ -26,8 +26,8 @@ body:
   - type: dropdown
     id: version
     attributes:
-      label: Zeus version
-      description: What version of Zeus were you running when the bug occurred?
+      label: ZEUS version
+      description: What version of ZEUS were you running when the bug occurred?
       options:
         - v0.8.0
         - v0.7.7
@@ -58,7 +58,7 @@ body:
     id: network
     attributes:
       label: Network
-      description: What network were you using Zeus with when the bug occurred?
+      description: What network were you using ZEUS with when the bug occurred?
       options:
         - Tor
         - Clearnet

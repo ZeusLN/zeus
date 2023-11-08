@@ -38,7 +38,7 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
                         text: localeString('views.Mortals.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}

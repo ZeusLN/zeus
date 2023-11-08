@@ -34,7 +34,7 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                         text: localeString('views.Sync.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}

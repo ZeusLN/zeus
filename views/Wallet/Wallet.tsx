@@ -3,6 +3,7 @@ import {
     Animated,
     AppState,
     BackHandler,
+    Dimensions,
     Linking,
     NativeEventSubscription,
     PanResponder,
@@ -58,7 +59,7 @@ import CaretUp from '../../assets/images/SVG/Caret Up.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
-import WordLogo from '../../assets/images/SVG/Word Logo.svg';
+import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
 import {
     initializeLnd,
@@ -666,16 +667,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 top: 10
                             }}
                         >
-                            <WordLogo
-                                height={100}
+                            <View
                                 style={{
+                                    width:
+                                        Dimensions.get('window').width * 0.85,
+                                    maxHeight: 200,
+                                    marginTop: 10,
                                     alignSelf: 'center'
                                 }}
-                            />
+                            >
+                                <Wordmark fill={themeColor('highlight')} />
+                            </View>
                             <Text
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     alignSelf: 'center',
                                     fontSize: 15,
                                     padding: 8

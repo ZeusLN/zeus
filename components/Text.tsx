@@ -28,7 +28,7 @@ export default class ZeusText extends React.Component<TextProps, {}> {
             <Row>
                 <Text
                     style={{
-                        fontFamily: 'Lato-Regular',
+                        fontFamily: 'PPNeueMontreal-Book',
                         color: themeColor('text'),
                         ...style
                     }}

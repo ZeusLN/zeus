@@ -219,7 +219,7 @@ export default class ChannelView extends React.Component<
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 ...styles.alias
                             }}
                         >
@@ -237,7 +237,7 @@ export default class ChannelView extends React.Component<
                                 <Text
                                     style={{
                                         color: '#FFD93F',
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         ...styles.pubkey
                                     }}
                                 >
@@ -600,11 +600,11 @@ export default class ChannelView extends React.Component<
 const styles = StyleSheet.create({
     text: {
         color: themeColor('text'),
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     secondaryText: {
         color: themeColor('secondaryText'),
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     content: {
         paddingLeft: 20,
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     status: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         color: themeColor('text'),
         alignSelf: 'center',
         marginBottom: 10

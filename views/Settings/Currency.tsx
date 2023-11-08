@@ -88,7 +88,7 @@ export default class Currency extends React.Component<
                             text: localeString('views.Settings.Currency.title'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
                         navigation={navigation}
@@ -102,7 +102,7 @@ export default class Currency extends React.Component<
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular'
+                                fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
                             {localeString('views.Settings.Currency.enabled')}
@@ -170,7 +170,7 @@ export default class Currency extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {localeString(

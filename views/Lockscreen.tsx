@@ -344,7 +344,7 @@ export default class Lockscreen extends React.Component<
                             <Text
                                 style={{
                                     color: '#A7A9AC',
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {localeString('views.Lockscreen.passphrase')}
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
         textAlign: 'center'
     },
     mainText: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         fontSize: 20,
         textAlign: 'center'
     }

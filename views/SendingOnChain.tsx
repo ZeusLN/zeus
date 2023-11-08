@@ -1,6 +1,13 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
@@ -16,7 +23,7 @@ import TransactionsStore from '../stores/TransactionsStore';
 
 import Error from '../assets/images/SVG/Error.svg';
 import Success from '../assets/images/GIF/Success.gif';
-import WordLogo from '../assets/images/SVG/Word Logo.svg';
+import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import CopyBox from '../components/CopyBox';
 
 interface SendingOnChainProps {
@@ -76,12 +83,24 @@ export default class SendingOnChain extends React.Component<
                         )}
                         {publishSuccess && (
                             <>
-                                <WordLogo
-                                    height={150}
+                                <View
                                     style={{
-                                        alignSelf: 'center'
+                                        width:
+                                            Dimensions.get('window').width *
+                                            0.85,
+                                        maxHeight: 150,
+                                        alignSelf: 'center',
+                                        // TODO add in mixmaster fix
+                                        marginTop: -80
                                     }}
-                                />
+                                >
+                                    <Wordmark
+                                        style={{
+                                            alignSelf: 'center'
+                                        }}
+                                        fill={themeColor('text')}
+                                    />
+                                </View>
                                 <Image
                                     source={Success}
                                     style={{
@@ -99,7 +118,7 @@ export default class SendingOnChain extends React.Component<
                                 <Text
                                     style={{
                                         color: '#FF9090',
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 32
                                     }}
                                 >
@@ -242,7 +261,7 @@ export default class SendingOnChain extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     container: {
         flex: 1

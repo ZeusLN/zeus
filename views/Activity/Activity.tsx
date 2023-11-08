@@ -226,7 +226,7 @@ export default class Activity extends React.PureComponent<
                         text: localeString('general.activity'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     rightComponent={
@@ -394,7 +394,8 @@ export default class Activity extends React.PureComponent<
                                                             : themeColor(
                                                                   'text'
                                                               ),
-                                                    fontFamily: 'Lato-Regular'
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
                                                 }}
                                             >
                                                 {displayName}
@@ -411,7 +412,8 @@ export default class Activity extends React.PureComponent<
                                                             : themeColor(
                                                                   'secondaryText'
                                                               ),
-                                                    fontFamily: 'Lato-Regular'
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
                                                 }}
                                             >
                                                 {subTitle}
@@ -458,7 +460,8 @@ export default class Activity extends React.PureComponent<
                                                     color: themeColor(
                                                         'secondaryText'
                                                     ),
-                                                    fontFamily: 'Lato-Regular'
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
                                                 }}
                                             >
                                                 {order
@@ -494,7 +497,7 @@ export default class Activity extends React.PureComponent<
                         }}
                         titleStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }}
                     />
                 )}

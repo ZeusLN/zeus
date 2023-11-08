@@ -292,7 +292,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                                 value={search}
                                 inputStyle={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                                 placeholderTextColor={themeColor(
                                     'secondaryText'

@@ -200,7 +200,7 @@ export default class Security extends React.Component<
                     <ListItem.Title
                         style={{
                             color: themeColor('secondaryText'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }}
                     >
                         {localeString(item.translateKey)}
@@ -234,7 +234,7 @@ export default class Security extends React.Component<
                         text: localeString('views.Settings.Security.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -258,7 +258,7 @@ export default class Security extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {localeString(
@@ -285,7 +285,7 @@ export default class Security extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {localeString(
@@ -316,7 +316,7 @@ export default class Security extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {localeString(

@@ -759,11 +759,11 @@ export default class OpenChannel extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     textWhite: {
         color: 'white',
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     content: {
         paddingTop: 20,

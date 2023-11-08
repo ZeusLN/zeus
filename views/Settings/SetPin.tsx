@@ -231,13 +231,13 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
 
 const styles = StyleSheet.create({
     mainText: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         fontSize: 20,
         textAlign: 'center',
         marginTop: 10
     },
     secondaryText: {
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         textAlign: 'center'
     }
 });

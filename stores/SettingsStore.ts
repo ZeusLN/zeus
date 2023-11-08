@@ -545,6 +545,7 @@ export const CURRENCY_KEYS = [
 ];
 
 export const THEME_KEYS = [
+    { key: 'Kyriaki', value: 'kyriaki' },
     { key: 'Dark', translateKey: 'views.Settings.Theme.dark', value: 'dark' },
     {
         key: 'Light',
@@ -649,7 +650,7 @@ export const DEFAULT_VIEW_KEYS = [
     }
 ];
 
-export const DEFAULT_THEME = 'dark';
+export const DEFAULT_THEME = 'kyriaki';
 export const DEFAULT_FIAT = 'USD';
 export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
 export const DEFAULT_LOCALE = 'English';

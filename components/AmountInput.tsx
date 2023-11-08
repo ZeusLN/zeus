@@ -138,7 +138,7 @@ export default class AmountInput extends React.Component<
             <React.Fragment>
                 <Text
                     style={{
-                        fontFamily: 'Lato-Regular',
+                        fontFamily: 'PPNeueMontreal-Book',
                         color: themeColor('secondaryText')
                     }}
                 >
@@ -199,7 +199,7 @@ export default class AmountInput extends React.Component<
                         {fiatEnabled && (
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     color: themeColor('text')
                                 }}
                             >

@@ -69,7 +69,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'Lato-Regular',
+                                fontFamily: 'PPNeueMontreal-Book',
                                 fontSize: 26 / fontScale,
                                 marginBottom: 20
                             }}

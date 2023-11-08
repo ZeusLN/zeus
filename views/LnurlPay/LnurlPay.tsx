@@ -186,7 +186,7 @@ export default class LnurlPay extends React.Component<
                         text: localeString('general.send'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
                     navigation={navigation}
@@ -331,7 +331,7 @@ export default class LnurlPay extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'PPNeueMontreal-Book'
     },
     textInput: { paddingVertical: 10 },
     content: { paddingHorizontal: 20 },
