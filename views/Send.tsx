@@ -184,12 +184,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
     }
 
-    async componentDidUpdate(prevProps, prevState) {
-        if (this.state.destination !== prevState.destination) {
-            this.validateAddress(this.state.destination);
-        }
-    }
-
     subscribePayment = (streamingCall: string) => {
         const { handlePayment, handlePaymentError } =
             this.props.TransactionsStore;
@@ -536,9 +530,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                             value={!contactName && destination}
                             onChangeText={(text: string) => {
                                 this.setState({
-                                    destination: text
+                                    destination: text,
+                                    error_msg: !text && ''
                                 });
-                                this.validateAddress(text);
                             }}
                             style={{
                                 flex: 1,
@@ -612,7 +606,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <ErrorMessage message={error_msg} />
                         </View>
                     )}
-                    {!isValid && !!destination && (
+                    {!isValid && !!destination && error_msg && (
                         <Text
                             style={{
                                 ...styles.text,
@@ -959,7 +953,18 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    <View style={styles.button}>
+                    {destination && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.proceed')}
+                                onPress={() =>
+                                    this.validateAddress(destination)
+                                }
+                            />
+                        </View>
+                    )}
+
+                    <View style={{ ...styles.button, paddingTop: 20 }}>
                         <Button
                             title={localeString('general.enableNfc')}
                             icon={{
