@@ -116,7 +116,7 @@ export default class Settings extends React.Component<
                 onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
                 accessibilityLabel={localeString('views.Settings.olympus')}
             >
-                <Olympus width="35" height="35" fill={themeColor('text')} />
+                <Olympus width="37" height="30" fill={themeColor('text')} />
             </TouchableOpacity>
         );
 

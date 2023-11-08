@@ -8,7 +8,7 @@ import {
     ScrollView
 } from 'react-native';
 import { SearchBar, Divider } from 'react-native-elements';
-import AddIcon from '../../assets/images/SVG/Add.svg';
+import Add from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import { themeColor } from '../../utils/ThemeUtils';
@@ -227,25 +227,17 @@ export default class Contacts extends React.Component<
             );
         });
 
-        const Add = ({ navigation }: { navigation: any }) => (
-            <TouchableOpacity onPress={() => navigation.navigate('AddContact')}>
-                <View
-                    style={{
-                        width: 35,
-                        height: 35,
-                        borderRadius: 25,
-                        backgroundColor: themeColor('chain'),
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}
-                >
-                    <AddIcon
-                        fill={themeColor('background')}
-                        width={20}
-                        height={20}
-                        style={{ alignSelf: 'center' }}
-                    />
-                </View>
+        const AddButton = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('AddContact')}
+                accessibilityLabel={localeString('general.add')}
+            >
+                <Add
+                    fill={themeColor('text')}
+                    width="30"
+                    height="30"
+                    style={{ alignSelf: 'center' }}
+                />
             </TouchableOpacity>
         );
 
@@ -268,9 +260,7 @@ export default class Contacts extends React.Component<
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
-                    rightComponent={
-                        !SendScreen && <Add navigation={navigation} />
-                    }
+                    rightComponent={!SendScreen && <AddButton />}
                     navigation={navigation}
                 />
                 {contacts.length > 0 && (
