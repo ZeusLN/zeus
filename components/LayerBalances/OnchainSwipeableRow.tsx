@@ -110,20 +110,20 @@ export default class OnchainSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: BackendUtils.supportsCoinControl() ? 200 : 135,
+                width: BackendUtils.supportsCoinControl() ? 210 : 145,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
             {this.renderAction(
                 localeString('general.receive'),
-                BackendUtils.supportsCoinControl() ? 200 : 135,
+                BackendUtils.supportsCoinControl() ? 210 : 145,
                 progress
             )}
             {BackendUtils.supportsCoinControl() &&
                 this.renderAction(localeString('general.coins'), 200, progress)}
             {this.renderAction(
                 localeString('general.send'),
-                BackendUtils.supportsCoinControl() ? 200 : 135,
+                BackendUtils.supportsCoinControl() ? 210 : 145,
                 progress
             )}
         </View>
