@@ -2,8 +2,8 @@ import React from 'react';
 import {
     StyleProp,
     TextStyle,
-    TouchableOpacity,
-    ViewStyle
+    ViewStyle,
+    TouchableOpacity
 } from 'react-native';
 import { Header, Icon, TextProps } from 'react-native-elements';
 import { IconObject } from 'react-native-elements/dist/icons/Icon';
@@ -11,7 +11,7 @@ import { IconObject } from 'react-native-elements/dist/icons/Icon';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-import Back from '../assets/images/SVG/Back.svg';
+import ArrowLeft from '../assets/images/SVG/Arrow_left.svg';
 
 interface HeaderIcon extends IconObject {
     icon?: string;
@@ -44,7 +44,12 @@ function ZeusHeader(props: HeaderProps) {
             }}
             accessibilityLabel={localeString('general.goBack')}
         >
-            <Back stroke={themeColor('text')} />
+            <ArrowLeft
+                fill={themeColor('text')}
+                width="30"
+                height="30"
+                style={{ alignSelf: 'center' }}
+            />
         </TouchableOpacity>
     );
 
