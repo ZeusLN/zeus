@@ -48,7 +48,7 @@ function Help(props: HelpProps) {
                     text: localeString('views.Settings.SocialMedia.title'),
                     style: {
                         color: themeColor('text'),
-                        fontFamily: 'Lato-Regular'
+                        fontFamily: 'PPNeueMontreal-Book'
                     }
                 }}
                 navigation={navigation}
@@ -67,7 +67,7 @@ function Help(props: HelpProps) {
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular'
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {item.label}

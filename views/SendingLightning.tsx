@@ -184,7 +184,7 @@ export default class SendingLightning extends React.Component<
                                             color: themeColor('text'),
                                             paddingTop:
                                                 windowSize.height * 0.03,
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             fontSize:
                                                 windowSize.width *
                                                 windowSize.scale *
@@ -247,7 +247,7 @@ export default class SendingLightning extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular',
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         fontSize:
                                             windowSize.width *
                                             windowSize.scale *
