@@ -111,7 +111,7 @@ export default class Language extends React.Component<
                                 }}
                                 onPress={async () => {
                                     await updateSettings({
-                                        locale: item.value
+                                        locale: item.key
                                     }).then(() => {
                                         navigation.goBack();
                                     });
@@ -123,7 +123,7 @@ export default class Language extends React.Component<
                                             color:
                                                 selectedLocale === item.key ||
                                                 (!selectedLocale &&
-                                                    item.value === 'English')
+                                                    item.key === 'en')
                                                     ? themeColor('highlight')
                                                     : themeColor('text')
                                         }}
@@ -132,8 +132,7 @@ export default class Language extends React.Component<
                                     </ListItem.Title>
                                 </ListItem.Content>
                                 {(selectedLocale === item.key ||
-                                    (!selectedLocale &&
-                                        item.value === 'English')) && (
+                                    (!selectedLocale && item.key === 'en')) && (
                                     <View style={{ textAlign: 'right' }}>
                                         <Icon
                                             name="check"
