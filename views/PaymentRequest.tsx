@@ -146,13 +146,13 @@ export default class PaymentRequest extends React.Component<
             this.isComponentMounted &&
             !noBalance
         ) {
-            await sleep(3000);
             const isReady = await isLightningReadyToSend();
             if (isReady) {
                 this.setState({
                     lightningReadyToSend: true
                 });
             }
+            await sleep(3000);
         }
     };
 
