@@ -187,7 +187,8 @@ const styles = StyleSheet.create({
     rectButton: {
         height: 80,
         paddingVertical: 10,
-        paddingHorizontal: 20,
+        paddingLeft: 6,
+        paddingRight: 20,
         justifyContent: 'space-between',
         alignItems: 'center',
         flexDirection: 'row',
