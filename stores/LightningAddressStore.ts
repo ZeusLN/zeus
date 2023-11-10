@@ -1094,7 +1094,6 @@ export default class LightningAddressStore {
         this.prepareToAutomaticallyAcceptStart = true;
 
         while (!this.readyToAutomaticallyAccept) {
-            await sleep(7000);
             const isReady = await this.nodeInfoStore.isLightningReadyToReceive(
                 automaticallyRequestOlympusChannels
             );
@@ -1103,6 +1102,7 @@ export default class LightningAddressStore {
                 this.redeemAllOpenPayments();
                 this.subscribeUpdates();
             }
+            await sleep(3000);
         }
     };
 
