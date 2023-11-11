@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { ListItem } from 'react-native-elements';
+import { ListItem, Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -138,7 +138,12 @@ export default class DisasterRecovery extends React.Component<
                     <ScrollView>
                         <>
                             {lastDisasterRecoveryBackupStatus && (
-                                <View style={{ margin: 10 }}>
+                                <View
+                                    style={{
+                                        marginHorizontal: 10,
+                                        marginBottom: 10
+                                    }}
+                                >
                                     <KeyValue
                                         keyValue={localeString(
                                             'views.Settings.EmbeddedNode.DisasterRecovery.lastStatus'
@@ -169,7 +174,10 @@ export default class DisasterRecovery extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
+                                    backgroundColor: 'transparent',
+                                    marginHorizontal: 10,
+                                    marginBottom: 5,
+                                    padding: 0
                                 }}
                             >
                                 <ListItem.Title
@@ -206,7 +214,7 @@ export default class DisasterRecovery extends React.Component<
                             </ListItem>
                             <View
                                 style={{
-                                    margin: 10
+                                    marginHorizontal: 10
                                 }}
                             >
                                 <Text
@@ -221,7 +229,16 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                         </>
                         <>
-                            <View style={{ margin: 10 }}>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ margin: 20 }}
+                            />
+                            <View
+                                style={{
+                                    marginTop: 6,
+                                    marginBottom: 10
+                                }}
+                            >
                                 <Button
                                     title={
                                         disasterRecoveryCopied
@@ -277,7 +294,8 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                             <View
                                 style={{
-                                    margin: 10
+                                    marginHorizontal: 10,
+                                    marginBottom: 10
                                 }}
                             >
                                 <Text
@@ -292,7 +310,7 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                             <View
                                 style={{
-                                    margin: 10
+                                    marginHorizontal: 10
                                 }}
                             >
                                 <Text
@@ -307,7 +325,16 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                         </>
                         <>
-                            <View style={{ margin: 10 }}>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ margin: 20 }}
+                            />
+                            <View
+                                style={{
+                                    marginTop: 6,
+                                    marginBottom: 10
+                                }}
+                            >
                                 <Button
                                     title={
                                         disasterRecoveryBackupOlympusError
@@ -355,7 +382,7 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                             <View
                                 style={{
-                                    margin: 10
+                                    marginHorizontal: 10
                                 }}
                             >
                                 <Text
@@ -370,7 +397,16 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                         </>
                         <>
-                            <View style={{ margin: 10 }}>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ margin: 20 }}
+                            />
+                            <View
+                                style={{
+                                    marginTop: 6,
+                                    marginBottom: 10
+                                }}
+                            >
                                 <Button
                                     title={
                                         disasterRecoveryFileRecoveredErrorMessage
@@ -419,7 +455,8 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                             <View
                                 style={{
-                                    margin: 10
+                                    marginHorizontal: 10,
+                                    marginBottom: 10
                                 }}
                             >
                                 <Text
@@ -434,7 +471,7 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                             <View
                                 style={{
-                                    margin: 10
+                                    marginHorizontal: 10
                                 }}
                             >
                                 <Text
@@ -449,7 +486,16 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                         </>
                         <>
-                            <View style={{ margin: 10 }}>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ margin: 20 }}
+                            />
+                            <View
+                                style={{
+                                    marginTop: 6,
+                                    marginBottom: 10
+                                }}
+                            >
                                 <Button
                                     title={localeString(
                                         'views.Settings.EmbeddedNode.initiateAdvancedDisasterRecoveryOlympus'
@@ -470,7 +516,8 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                             <View
                                 style={{
-                                    margin: 10
+                                    marginHorizontal: 10,
+                                    marginBottom: 10
                                 }}
                             >
                                 <Text
@@ -485,7 +532,8 @@ export default class DisasterRecovery extends React.Component<
                             </View>
                             <View
                                 style={{
-                                    margin: 10
+                                    marginHorizontal: 10,
+                                    marginBottom: 10
                                 }}
                             >
                                 <Text
