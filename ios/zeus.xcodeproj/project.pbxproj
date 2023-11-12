@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		005E25528DB94022ABAFE58E /* Caret Right-3.svg in Resources */ = {isa = PBXBuildFile; fileRef = FB2BF1C8E61649A58A6E1A61 /* Caret Right-3.svg */; };
 		00E356F31AD99517003FC87E /* zeusTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* zeusTests.m */; };
-		0649A4AEF26A4CEEAE114396 /* Launcher.png in Resources */ = {isa = PBXBuildFile; fileRef = E9CA42E45FF64512B2D7C632 /* Launcher.png */; };
 		0A7D9EFFF994475C9E89AD34 /* Lock.svg in Resources */ = {isa = PBXBuildFile; fileRef = 65EBEDD6824B433F875FF553 /* Lock.svg */; };
 		0D6056C7AD2B42AE97EF31CA /* Mnemonic.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8F39D8AB5C2348B699E16A96 /* Mnemonic.svg */; };
 		0E5CAE8C45F0483BB8C8020C /* Eye On.svg in Resources */ = {isa = PBXBuildFile; fileRef = AC03A7A4319C4366A52D94FE /* Eye On.svg */; };
@@ -51,7 +50,6 @@
 		4132F00F76CB488AAA77C848 /* ScanFrameSvg.tsx in Resources */ = {isa = PBXBuildFile; fileRef = AC3DB90B22364D909A09B3E0 /* ScanFrameSvg.tsx */; };
 		42261FC8680748CB8F34DD98 /* MailboxFlagUp.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8E405B6CB7D64A44907B0DB0 /* MailboxFlagUp.svg */; };
 		43264510AFC64A6E89EC9BDA /* Menu.svg in Resources */ = {isa = PBXBuildFile; fileRef = 226FAAEEA94A478A945F9A57 /* Menu.svg */; };
-		44DF6141999C471D9F26E104 /* zeus-pay.png in Resources */ = {isa = PBXBuildFile; fileRef = 913EA077718B4284A6998780 /* zeus-pay.png */; };
 		452DE3B3EC174D45A6007ACD /* Brush.svg in Resources */ = {isa = PBXBuildFile; fileRef = 5CC0E65B8E6447A38BD1EE91 /* Brush.svg */; };
 		46E5F71A7C0C4114922F6ED0 /* LightningSvg.tsx in Resources */ = {isa = PBXBuildFile; fileRef = 84817A27B5CC4C869EA8ABF3 /* LightningSvg.tsx */; };
 		47ECEA24A11A4DCFB6640276 /* Clock.svg in Resources */ = {isa = PBXBuildFile; fileRef = 0739DA7692B644DEBC3BAFFC /* Clock.svg */; };
@@ -450,7 +448,6 @@
 		8F0CAEBF09CC44E0A55DFB2A /* Coins.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Coins.svg; path = ../assets/images/SVG/Coins.svg; sourceTree = "<group>"; };
 		8F39D8AB5C2348B699E16A96 /* Mnemonic.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Mnemonic.svg; path = ../assets/images/SVG/Mnemonic.svg; sourceTree = "<group>"; };
 		8F531F57A66C4D86B3D226D7 /* Verified Account.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Verified Account.svg"; path = "../assets/images/SVG/Verified Account.svg"; sourceTree = "<group>"; };
-		913EA077718B4284A6998780 /* zeus-pay.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-pay.png"; path = "../assets/images/zeus-pay.png"; sourceTree = "<group>"; };
 		956E2E16008F4EA0B54DF09B /* Add.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Add.svg; path = ../assets/images/SVG/Add.svg; sourceTree = "<group>"; };
 		970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RNRandomBytes.xcodeproj; path = "../node_modules/react-native-randombytes/RNRandomBytes.xcodeproj"; sourceTree = "<group>"; };
 		97D6EB5926C47CF5002ADC8C /* ioslauncher.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ioslauncher.png; sourceTree = "<group>"; };
@@ -516,7 +513,6 @@
 		E21D3D5587114764BC296D83 /* Key Security.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Key Security.svg"; path = "../assets/images/SVG/Key Security.svg"; sourceTree = "<group>"; };
 		E30C8201B5B64E99A22BBCE0 /* loader.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = loader.json; path = ../assets/images/Lottie/loader.json; sourceTree = "<group>"; };
 		E475512AC9944749B58EEAC1 /* Clipboard.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Clipboard.svg; path = ../assets/images/SVG/Clipboard.svg; sourceTree = "<group>"; };
-		E9CA42E45FF64512B2D7C632 /* Launcher.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Launcher.png; path = ../assets/images/Launcher.png; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		EF00F35A868F4C26B9288D74 /* Receive.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Receive.svg; path = ../assets/images/SVG/Receive.svg; sourceTree = "<group>"; };
 		F049B384F839491FBB33BBA4 /* Checkmark.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Checkmark.svg; path = ../assets/images/SVG/Checkmark.svg; sourceTree = "<group>"; };
@@ -919,7 +915,6 @@
 				AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */,
 				DAB0850D6CA542288A565578 /* Success.svg */,
 				8E58364B7EB64F938378D743 /* Currency.svg */,
-				E9CA42E45FF64512B2D7C632 /* Launcher.png */,
 				44AA4B9E77FB4B7E92D6E495 /* lightning1.json */,
 				6971DB04094F4130B4741426 /* lightning2.json */,
 				D7C5B50BC6594569B19AE135 /* lightning3.json */,
@@ -968,7 +963,6 @@
 				8F531F57A66C4D86B3D226D7 /* Verified Account.svg */,
 				D27437A6874C42CDB9C5662B /* Visible.svg */,
 				5BF5971FD22D4660A5240C68 /* Untitled.png */,
-				913EA077718B4284A6998780 /* zeus-pay.png */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -1384,7 +1378,6 @@
 				E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */,
 				830A2C4CEE3F4349832AC893 /* Success.svg in Resources */,
 				D568F3B438EB4A808C0FDF80 /* Currency.svg in Resources */,
-				0649A4AEF26A4CEEAE114396 /* Launcher.png in Resources */,
 				2399885DFDAB4C90B7232496 /* lightning1.json in Resources */,
 				9A72311BC6F347239EB6AFAA /* lightning2.json in Resources */,
 				9A4C556D9C324870BE6E441F /* lightning3.json in Resources */,
@@ -1433,7 +1426,6 @@
 				B8067346D38044A7B3100972 /* Verified Account.svg in Resources */,
 				615320DD69744BC4A8D3E80E /* Visible.svg in Resources */,
 				E2A87233B6EE487090D3FE9F /* Untitled.png in Resources */,
-				44DF6141999C471D9F26E104 /* zeus-pay.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2142,6 +2134,8 @@
 					"-ld_classic",
 					"-Wl",
 					"-ld_classic",
+					"-Wl",
+					"-ld_classic",
 				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
@@ -2199,6 +2193,8 @@
 				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
+					"-Wl",
+					"-ld_classic",
 					"-Wl",
 					"-ld_classic",
 					"-Wl",

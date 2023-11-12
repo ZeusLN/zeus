@@ -25,7 +25,8 @@ export function themeColor(themeString: string): any {
         disabled: '#767577',
         buttonBackground: '#FFA900',
         buttonGradient: ['#FF9000', '#FFA900'],
-        buttonText: '#000000'
+        buttonText: '#000000',
+        qr: '#FFA900'
     };
 
     const Light: { [key: string]: any } = {

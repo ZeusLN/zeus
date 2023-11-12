@@ -26,10 +26,6 @@
       "sha1": "8dd99d418b8e3223ed8c8881b978aeb17f8c7ea6"
     },
     {
-      "path": "assets/images/Launcher.png",
-      "sha1": "db916cdabf2cb8575e7646e26cc81ebbdc4d96d4"
-    },
-    {
       "path": "assets/images/Lottie/lightning1.json",
       "sha1": "e4e9778e89455cd092b38ab91e21173bd7e7a795"
     },
@@ -448,10 +444,6 @@
     {
       "path": "assets/images/tor.png",
       "sha1": "846a80b5f9b2bdfcec9f1ac86812f8b7d562993a"
-    },
-    {
-      "path": "assets/images/zeus-pay.png",
-      "sha1": "da09f2edc838ccfb019830ac4f30c53ee8a631e5"
     }
   ]
 }

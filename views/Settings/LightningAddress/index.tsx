@@ -209,7 +209,7 @@ export default class LightningAddress extends React.Component<
                         value: `${lightningAddressHandle}@${lightningAddressDomain}`,
                         hideText: true,
                         jumboLabel: true,
-                        logo: require('../../../assets/images/zeus-pay.png')
+                        logo: require('../../../assets/images/pay-z-black.png')
                     })
                 }
                 style={{ marginTop: 5 }}
