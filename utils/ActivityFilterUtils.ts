@@ -70,6 +70,17 @@ class ActivityFilterUtils {
             );
         }
 
+        if (filter.inTransit == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(
+                        activity.model ===
+                            localeString('views.Payment.title') &&
+                        activity.isInTransit
+                    )
+            );
+        }
+
         if (filter.minimumAmount > 0) {
             filteredActivity = filteredActivity.filter(
                 (activity: any) =>
