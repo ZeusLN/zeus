@@ -531,10 +531,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         'general.activity'
                                     )}
                                 >
-                                    <CaretUp
-                                        stroke={themeColor('text')}
-                                        fill={themeColor('text')}
-                                    />
+                                    <CaretUp fill={themeColor('text')} />
                                 </TouchableOpacity>
                             </Animated.View>
                         </>
