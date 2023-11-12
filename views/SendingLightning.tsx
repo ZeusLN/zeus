@@ -6,7 +6,6 @@ import {
     Dimensions,
     Image,
     NativeEventSubscription,
-    ScrollView,
     StyleSheet,
     Text,
     View
@@ -120,6 +119,7 @@ export default class SendingLightning extends React.Component<
 
         const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
+        const windowSize = Dimensions.get('window');
 
         const noteKey =
             typeof payment_hash === 'string'
@@ -130,52 +130,75 @@ export default class SendingLightning extends React.Component<
 
         return (
             <Screen>
-                <ScrollView keyboardShouldPersistTaps="handled">
+                {loading && (
                     <View
                         style={{
-                            ...styles.content
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '100%'
                         }}
                     >
-                        {loading && <LightningIndicator />}
-                        {loading && (
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book'
-                                }}
-                            >
-                                {localeString('views.SendingLightning.sending')}
-                            </Text>
+                        <LightningIndicator size={windowSize.height / 4} />
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                // paddingBottom for centering
+                                paddingBottom: windowSize.height / 10,
+                                fontSize:
+                                    windowSize.width * windowSize.scale * 0.014
+                            }}
+                        >
+                            {localeString('views.SendingLightning.sending')}
+                        </Text>
+                    </View>
+                )}
+                {!loading && (
+                    <View
+                        style={{
+                            ...styles.content,
+                            paddingTop: windowSize.height * 0.05
+                        }}
+                    >
+                        {(!!success || !!inTransit) && !error && (
+                            <Wordmark
+                                height={windowSize.width * 0.2}
+                                width={windowSize.width}
+                                fill={themeColor('highlight')}
+                            />
                         )}
-                        {!loading && (!!success || !!inTransit) && !error && (
-                            <View
-                                style={{
-                                    width:
-                                        Dimensions.get('window').width * 0.85,
-                                    maxHeight: 200,
-                                    alignSelf: 'center',
-                                    // TODO add in mixmaster fix
-                                    marginTop: -80
-                                }}
-                            >
-                                <Wordmark fill={themeColor('highlight')} />
-                            </View>
-                        )}
-                        {!loading && !!success && !error && (
+                        {!!success && !error && (
                             <>
-                                <Image
-                                    source={Success}
-                                    style={{
-                                        width: 290,
-                                        height: 290,
-                                        marginTop: -50,
-                                        marginBottom: -50
-                                    }}
-                                />
                                 <PaidIndicator />
+                                <View style={{ alignItems: 'center' }}>
+                                    <Image
+                                        source={Success}
+                                        style={{
+                                            width: windowSize.width * 0.3,
+                                            height: windowSize.width * 0.3
+                                        }}
+                                        resizeMode="cover"
+                                    />
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            paddingTop:
+                                                windowSize.height * 0.03,
+                                            fontFamily: 'Lato-Regular',
+                                            fontSize:
+                                                windowSize.width *
+                                                windowSize.scale *
+                                                0.017
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.SendingLightning.success'
+                                        )}
+                                    </Text>
+                                </View>
                             </>
                         )}
-                        {!loading && !!inTransit && !error && (
+                        {!!inTransit && !error && (
                             <View
                                 style={{
                                     padding: 20,
@@ -186,15 +209,19 @@ export default class SendingLightning extends React.Component<
                             >
                                 <Clock
                                     color={themeColor('bitcoin')}
-                                    width={180}
-                                    height={180}
+                                    width={windowSize.height * 0.2}
+                                    height={windowSize.height * 0.2}
                                 />
                                 <Text
                                     style={{
                                         color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 22,
-                                        marginTop: 25
+                                        fontSize:
+                                            windowSize.width *
+                                            windowSize.scale *
+                                            0.014,
+                                        marginTop: windowSize.height * 0.03,
+                                        textAlign: 'center'
                                     }}
                                 >
                                     {localeString(
@@ -203,100 +230,95 @@ export default class SendingLightning extends React.Component<
                                 </Text>
                             </View>
                         )}
-                        {!loading &&
-                            LnurlPayStore.isZaplocker &&
-                            !(!!success && !error) && (
-                                <View
+                        {LnurlPayStore.isZaplocker && (!success || !!error) && (
+                            <View
+                                style={{
+                                    padding: 20,
+                                    marginTop: 10,
+                                    marginBottom: 10,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <Clock
+                                    color={themeColor('bitcoin')}
+                                    width={windowSize.height * 0.2}
+                                    height={windowSize.height * 0.2}
+                                />
+                                <Text
                                     style={{
-                                        padding: 20,
-                                        marginTop: 10,
-                                        marginBottom: 10,
-                                        alignItems: 'center'
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular',
+                                        fontSize:
+                                            windowSize.width *
+                                            windowSize.scale *
+                                            0.014,
+                                        marginTop: windowSize.height * 0.03,
+                                        textAlign: 'center'
                                     }}
                                 >
-                                    <Clock
-                                        color={themeColor('bitcoin')}
-                                        width={180}
-                                        height={180}
-                                    />
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontFamily: 'Lato-Regular',
-                                            fontSize: 22,
-                                            marginTop: 25
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.SendingLightning.isZaplocker'
-                                        )}
-                                    </Text>
-                                </View>
-                            )}
+                                    {localeString(
+                                        'views.SendingLightning.isZaplocker'
+                                    )}
+                                </Text>
+                            </View>
+                        )}
                         {(!!error || !!payment_error) &&
-                            !loading &&
                             !LnurlPayStore.isZaplocker && (
-                                <>
-                                    <Error width="27%" />
+                                <View style={{ alignItems: 'center' }}>
+                                    <Error
+                                        width={windowSize.height * 0.13}
+                                        height={windowSize.height * 0.13}
+                                    />
                                     <Text
                                         style={{
                                             color: '#FF9090',
                                             fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 32
+                                            fontSize: 32,
+                                            marginTop: windowSize.height * 0.07
                                         }}
                                     >
                                         {localeString('general.error')}
                                     </Text>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            padding: 20,
-                                            marginBottom: 60,
-                                            fontSize:
-                                                (
-                                                    payment_error ||
-                                                    error_msg ||
-                                                    ''
-                                                ).length > 100
-                                                    ? 20
-                                                    : 24
-                                        }}
-                                    >
-                                        {payment_error || error_msg}
-                                    </Text>
-                                </>
+                                    {(payment_error || error_msg) && (
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize:
+                                                    windowSize.width *
+                                                    windowSize.scale *
+                                                    0.014,
+                                                textAlign: 'center',
+                                                marginTop:
+                                                    windowSize.height * 0.025
+                                            }}
+                                        >
+                                            {payment_error || error_msg}
+                                        </Text>
+                                    )}
+                                </View>
                             )}
-                        {!!success && !error && (
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    padding: 20,
-                                    fontSize: 22
-                                }}
-                            >
-                                {localeString('views.SendingLightning.success')}
-                            </Text>
-                        )}
                         {!!success &&
                             !error &&
                             !!payment_preimage &&
                             payment_hash === LnurlPayStore.paymentHash &&
                             LnurlPayStore.successAction && (
-                                <LnurlPaySuccess
-                                    color="white"
-                                    domain={LnurlPayStore.domain}
-                                    successAction={LnurlPayStore.successAction}
-                                    preimage={payment_preimage}
-                                />
+                                <View style={{ width: '90%' }}>
+                                    <LnurlPaySuccess
+                                        color="white"
+                                        domain={LnurlPayStore.domain}
+                                        successAction={
+                                            LnurlPayStore.successAction
+                                        }
+                                        preimage={payment_preimage}
+                                        scrollable={true}
+                                        maxHeight={windowSize.height * 0.15}
+                                    />
+                                </View>
                             )}
-                        {!!payment_hash && !(!!error || !!payment_error) && (
-                            <View
-                                style={{
-                                    padding: 20
-                                }}
-                            >
+                        {!!payment_hash && !error && !payment_error && (
+                            <View style={{ width: '90%' }}>
                                 <CopyBox
                                     heading={localeString(
                                         'views.SendingLightning.paymentHash'
@@ -311,84 +333,75 @@ export default class SendingLightning extends React.Component<
                                 />
                             </View>
                         )}
-                        {noteKey && !loading && !(!!error || !!payment_error) && (
-                            <Button
-                                title={
-                                    storedNotes
-                                        ? localeString(
-                                              'views.SendingLightning.UpdateNote'
-                                          )
-                                        : localeString(
-                                              'views.SendingLightning.AddANote'
-                                          )
-                                }
-                                onPress={() =>
-                                    navigation.navigate('AddNotes', {
-                                        payment_hash: noteKey
-                                    })
-                                }
-                                secondary
-                                buttonStyle={{ padding: 15 }}
-                            />
-                        )}
-                        <View
-                            style={[
-                                styles.buttons,
-                                !noteKey && { marginTop: 14 }
-                            ]}
-                        >
-                            {payment_hash && !(!!error || !!payment_error) && (
-                                <View
-                                    style={{
-                                        marginTop: 10,
-                                        marginBottom: 10,
-                                        width: '100%'
-                                    }}
-                                ></View>
-                            )}
-
-                            {payment_error == `FAILURE_REASON_NO_ROUTE` && (
-                                <>
-                                    <Text
-                                        style={{
-                                            textAlign: 'center',
-                                            color: 'white',
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            marginTop: 50,
-                                            padding: 20,
-                                            fontSize: 14
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.SendingLightning.lowFeeLimitMessage'
-                                        )}
-                                    </Text>
+                        {
+                            <View
+                                style={[
+                                    styles.buttons,
+                                    !noteKey && { marginTop: 14 }
+                                ]}
+                            >
+                                {noteKey && !error && !payment_error && (
                                     <Button
-                                        title={localeString(
-                                            'views.SendingLightning.tryAgain'
-                                        )}
-                                        icon={{
-                                            name: 'return-up-back',
-                                            type: 'ionicon',
-                                            size: 25
-                                        }}
-                                        onPress={() => navigation.goBack()}
-                                        buttonStyle={{
-                                            backgroundColor: 'white'
-                                        }}
-                                        containerStyle={{
-                                            width: '100%',
-                                            margin: 10
-                                        }}
+                                        title={
+                                            storedNotes
+                                                ? localeString(
+                                                      'views.SendingLightning.UpdateNote'
+                                                  )
+                                                : localeString(
+                                                      'views.SendingLightning.AddANote'
+                                                  )
+                                        }
+                                        onPress={() =>
+                                            navigation.navigate('AddNotes', {
+                                                payment_hash: noteKey
+                                            })
+                                        }
+                                        secondary
+                                        buttonStyle={{ height: 40 }}
                                     />
-                                </>
-                            )}
+                                )}
+                                {payment_error == `FAILURE_REASON_NO_ROUTE` && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                textAlign: 'center',
+                                                color: 'white',
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                padding: 20,
+                                                fontSize: 14
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.SendingLightning.lowFeeLimitMessage'
+                                            )}
+                                        </Text>
+                                        <Button
+                                            title={localeString(
+                                                'views.SendingLightning.tryAgain'
+                                            )}
+                                            icon={{
+                                                name: 'return-up-back',
+                                                type: 'ionicon',
+                                                size: 25
+                                            }}
+                                            onPress={() => navigation.goBack()}
+                                            buttonStyle={{
+                                                backgroundColor: 'white',
+                                                height: 40
+                                            }}
+                                            containerStyle={{
+                                                width: '100%',
+                                                margin: 10
+                                            }}
+                                        />
+                                    </>
+                                )}
 
-                            {(!!error ||
-                                !!payment_error ||
-                                !!success ||
-                                !!inTransit) &&
-                                !loading && (
+                                {(!!error ||
+                                    !!payment_error ||
+                                    !!success ||
+                                    !!inTransit) && (
                                     <Button
                                         title={localeString(
                                             'views.SendingLightning.goToWallet'
@@ -403,15 +416,17 @@ export default class SendingLightning extends React.Component<
                                                 refresh: true
                                             })
                                         }
+                                        buttonStyle={{ height: 40 }}
                                         titleStyle={{
                                             color: themeColor('background')
                                         }}
                                         containerStyle={{ width: '100%' }}
                                     />
                                 )}
-                        </View>
+                            </View>
+                        }
                     </View>
-                </ScrollView>
+                )}
             </Screen>
         );
     }
@@ -422,15 +437,13 @@ const styles = StyleSheet.create({
         flex: 1
     },
     content: {
-        flex: 1,
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 125
+        justifyContent: 'space-evenly',
+        height: '100%'
     },
     buttons: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        marginBottom: 35,
-        width: '100%'
+        width: '100%',
+        justifyContent: 'space-between',
+        gap: 15
     }
 });

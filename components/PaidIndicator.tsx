@@ -9,30 +9,28 @@ const lightning3 = require('../assets/images/Lottie/lightning3.json');
 
 const lightning = [lightning1, lightning2, lightning3];
 
-interface PaidIndicatorProps {
-    size?: number;
-}
-
-function PaidIndicator(props: PaidIndicatorProps) {
-    const { size } = props;
-    const randomNumber = Math.ceil(Math.random() * 3) - 1;
-
+function PaidIndicator() {
     // vibrate upon payment completion
     Vibration.vibrate([250, 250, 1000]);
+
+    const randomNumber = Math.ceil(Math.random() * 3) - 1;
+    const indicatorSize = Dimensions.get('window').height * 0.4;
 
     return (
         <View
             style={{
                 position: 'absolute',
-                alignSelf: 'center',
-                width: size || Dimensions.get('window').width,
-                height: size || Dimensions.get('window').height
+                top: 0,
+                zIndex: 1000,
+                width: indicatorSize,
+                height: indicatorSize
             }}
         >
             <Lottie
                 source={lightning[randomNumber]}
                 autoPlay
                 loop={false}
+                resizeMode="cover"
                 colorFilters={[
                     {
                         keypath: '81 Outlines 2',
