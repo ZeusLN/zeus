@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import FiatStore from '../stores/FiatStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -57,14 +57,14 @@ function AmountDisplay({
     const Pending = () => (
         <View
             style={{
-                paddingBottom: jumboText ? 8 : 2,
-                paddingHorizontal: jumboText ? 0 : 1
+                paddingHorizontal: 4,
+                paddingTop: jumboText ? 4 : 1
             }}
         >
             <ClockIcon
                 color={themeColor('bitcoin')}
-                width={jumboText ? 30 : 15}
-                height={jumboText ? 30 : 15}
+                width={jumboText ? 24 : 12}
+                height={jumboText ? 24 : 12}
             />
         </View>
     );
@@ -92,37 +92,36 @@ function AmountDisplay({
         case 'sats':
             return (
                 <Row
-                    align="flex-end"
+                    style={styles.row}
                     accessible={accessible}
                     accessibilityLabel={accessibilityLabel}
                 >
-                    {pending ? <Pending /> : null}
-                    <Body
-                        jumbo={jumboText}
-                        color={color}
-                        accessible={accessible}
-                    >
-                        {negative ? '-' : ''}
-                        {amount}
-                    </Body>
-                    <Spacer width={2} />
-                    <View
-                        style={{ paddingBottom: jumboText ? 8 : 1.5 }}
-                        accessible={accessible}
-                    >
+                    {pending && <Pending />}
+                    <View style={styles.textContainer}>
                         <Body
-                            secondary
-                            small={!jumboText}
+                            jumbo={jumboText}
                             color={color}
                             accessible={accessible}
                         >
-                            {plural ? 'sats' : 'sat'}{' '}
-                            {fee
-                                ? localeString(
-                                      'views.Payment.fee'
-                                  ).toLowerCase()
-                                : ''}
+                            {negative ? '-' : ''}
+                            {amount}
                         </Body>
+                        <Spacer width={2} />
+                        <View accessible={accessible}>
+                            <Body
+                                secondary
+                                small={!jumboText}
+                                color={color}
+                                accessible={accessible}
+                            >
+                                {plural ? 'sats' : 'sat'}{' '}
+                                {fee
+                                    ? localeString(
+                                          'views.Payment.fee'
+                                      ).toLowerCase()
+                                    : ''}
+                            </Body>
+                        </View>
                     </View>
                 </Row>
             );
@@ -131,33 +130,13 @@ function AmountDisplay({
             if (rtl) {
                 return (
                     <Row
-                        align="flex-end"
+                        style={styles.row}
                         accessible={accessible}
                         accessibilityLabel={accessibilityLabel}
                     >
-                        <Body
-                            jumbo={jumboText}
-                            color={color}
-                            accessible={accessible}
-                        >
-                            {negative ? '-' : ''}
-                            {amount === 'N/A' && fiatRatesLoading ? (
-                                <LoadingIndicator size={20} />
-                            ) : (
-                                amount.toString()
-                            )}
-                        </Body>
-                        {space ? <TextSpace /> : <Spacer width={1} />}
-                        {amount !== 'N/A' && <FiatSymbol accessible />}
-                        {pending ? <Pending /> : null}
-                        {fee && (
-                            <>
-                                <Spacer width={2} />
-                                <View
-                                    style={{
-                                        paddingBottom: jumboText ? 8 : 1.5
-                                    }}
-                                >
+                        <View style={styles.textContainer}>
+                            {fee && (
+                                <>
                                     <Body
                                         secondary
                                         small={!jumboText}
@@ -167,53 +146,67 @@ function AmountDisplay({
                                             'views.Payment.fee'
                                         ).toLowerCase()}
                                     </Body>
-                                </View>
-                            </>
-                        )}
+                                    <Spacer width={2} />
+                                </>
+                            )}
+                            <Body
+                                jumbo={jumboText}
+                                color={color}
+                                accessible={accessible}
+                            >
+                                {negative ? '-' : ''}
+                                {amount === 'N/A' && fiatRatesLoading ? (
+                                    <LoadingIndicator size={20} />
+                                ) : (
+                                    amount.toString()
+                                )}
+                            </Body>
+                            {space ? <TextSpace /> : <Spacer width={1} />}
+                            {amount !== 'N/A' && <FiatSymbol accessible />}
+                        </View>
+                        {pending && <Pending />}
                     </Row>
                 );
             } else {
                 return (
                     <Row
-                        align="flex-end"
+                        style={styles.row}
                         accessible={accessible}
                         accessibilityLabel={accessibilityLabel}
                     >
-                        {pending ? <Pending /> : null}
-                        {amount !== 'N/A' && <FiatSymbol accessible />}
-                        {space ? <TextSpace /> : <Spacer width={1} />}
-                        <Body
-                            jumbo={jumboText}
-                            color={color}
-                            accessible={accessible}
-                        >
-                            {negative ? '-' : ''}
-                            {amount === 'N/A' && fiatRatesLoading ? (
-                                <LoadingIndicator size={20} />
-                            ) : (
-                                amount.toString()
+                        {pending && <Pending />}
+                        <View style={styles.textContainer}>
+                            {amount !== 'N/A' && <FiatSymbol accessible />}
+                            {space ? <TextSpace /> : <Spacer width={1} />}
+                            <Body
+                                jumbo={jumboText}
+                                color={color}
+                                accessible={accessible}
+                            >
+                                {negative ? '-' : ''}
+                                {amount === 'N/A' && fiatRatesLoading ? (
+                                    <LoadingIndicator size={20} />
+                                ) : (
+                                    amount.toString()
+                                )}
+                            </Body>
+                            {fee && (
+                                <>
+                                    <Spacer width={2} />
+                                    <View>
+                                        <Body
+                                            secondary
+                                            small={!jumboText}
+                                            color={color}
+                                        >
+                                            {localeString(
+                                                'views.Payment.fee'
+                                            ).toLowerCase()}
+                                        </Body>
+                                    </View>
+                                </>
                             )}
-                        </Body>
-                        {fee && (
-                            <>
-                                <Spacer width={2} />
-                                <View
-                                    style={{
-                                        paddingBottom: jumboText ? 8 : 1.5
-                                    }}
-                                >
-                                    <Body
-                                        secondary
-                                        small={!jumboText}
-                                        color={color}
-                                    >
-                                        {localeString(
-                                            'views.Payment.fee'
-                                        ).toLowerCase()}
-                                    </Body>
-                                </View>
-                            </>
-                        )}
+                        </View>
                     </Row>
                 );
             }
@@ -382,3 +375,14 @@ export default class Amount extends React.Component<AmountProps, {}> {
         );
     }
 }
+
+const styles = StyleSheet.create({
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    textContainer: {
+        flexDirection: 'row',
+        alignItems: 'baseline'
+    }
+});
