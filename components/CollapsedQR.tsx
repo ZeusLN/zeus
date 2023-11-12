@@ -10,7 +10,7 @@ import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 
-const defaultLogo = require('../assets/images/Launcher.png');
+const defaultLogo = require('../assets/images/icon-black.png');
 
 let simulation: any;
 
@@ -138,6 +138,10 @@ export default class CollapsedQR extends React.Component<
                             value={value}
                             size={height > width ? width * 0.8 : height * 0.6}
                             logo={logo || defaultLogo}
+                            backgroundColor={themeColor('qr')}
+                            logoBackgroundColor={themeColor('qr') || 'white'}
+                            logoMargin={10}
+                            quietZone={0}
                         />
                     </View>
                 )}
@@ -201,7 +205,7 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     },
     qrPadding: {
-        backgroundColor: 'white',
+        backgroundColor: themeColor('qr') || 'white',
         alignItems: 'center',
         alignSelf: 'center',
         padding: 5,

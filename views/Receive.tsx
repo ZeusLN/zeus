@@ -26,6 +26,10 @@ import handleAnything from '../utils/handleAnything';
 
 import Success from '../assets/images/GIF/Success.gif';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
+import ZIcon from '../assets/images/icon-black.png';
+import LightningIcon from '../assets/images/lightning-black.png';
+import OnChainIcon from '../assets/images/onchain-black.png';
+import ZPayIcon from '../assets/images/pay-z-black.png';
 
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
@@ -1403,6 +1407,7 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
+                                                    logo={ZIcon}
                                                 />
                                             )}
                                         {selectedIndex == 1 &&
@@ -1419,6 +1424,7 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
+                                                    logo={LightningIcon}
                                                 />
                                             )}
                                         {selectedIndex == 2 &&
@@ -1435,6 +1441,7 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
+                                                    logo={OnChainIcon}
                                                 />
                                             )}
 
@@ -1496,7 +1503,7 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     hideText
-                                                    logo={require('../assets/images/zeus-pay.png')}
+                                                    logo={ZPayIcon}
                                                 />
                                             )}
 
