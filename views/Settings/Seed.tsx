@@ -236,7 +236,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 fontSize: 20
                             }}
                         >
-                            {localeString('views.Settings.Seed.text3')}
+                            {localeString('views.Settings.Seed.text3').replace(
+                                'Zeus',
+                                'ZEUS'
+                            )}
                         </Text>
                         <Text
                             style={{

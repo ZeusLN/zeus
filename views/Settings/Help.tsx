@@ -27,7 +27,10 @@ function Help(props: HelpProps) {
 
     const HELP_ITEMS = [
         {
-            label: localeString('views.Settings.Help.docs'),
+            label: localeString('views.Settings.Help.docs').replace(
+                'Zeus',
+                'ZEUS'
+            ),
             url: 'https://docs.zeusln.app'
         },
         {

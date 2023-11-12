@@ -87,7 +87,10 @@ export default class Lockscreen extends React.Component<
             !modifySecurityScreen
         ) {
             const isVerified = await verifyBiometry(
-                localeString('views.Lockscreen.Biometrics.prompt')
+                localeString('views.Lockscreen.Biometrics.prompt').replace(
+                    'Zeus',
+                    'ZEUS'
+                )
             );
 
             if (isVerified) {

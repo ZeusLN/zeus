@@ -173,7 +173,7 @@ export default class Privacy extends React.Component<
                             }}
                             infoText={localeString(
                                 'views.Settings.Privacy.clipboard.explainer'
-                            )}
+                            ).replace('Zeus', 'ZEUS')}
                         >
                             {localeString('views.Settings.Privacy.clipboard')}
                         </Text>

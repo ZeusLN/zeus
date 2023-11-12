@@ -116,7 +116,10 @@ export default class IntroSplash extends React.Component<
                                 padding: 8
                             }}
                         >
-                            {localeString('views.Intro.creatingWallet')}
+                            {localeString('views.Intro.creatingWallet').replace(
+                                'Zeus',
+                                'ZEUS'
+                            )}
                         </Text>
                         <View style={{ marginTop: 40 }}>
                             <LoadingIndicator />
@@ -191,7 +194,7 @@ export default class IntroSplash extends React.Component<
                                 <Button
                                     title={localeString(
                                         'views.Intro.whatIsZeus'
-                                    )}
+                                    ).replace('Zeus', 'ZEUS')}
                                     onPress={() => navigation.navigate('Intro')}
                                 />
                             </View>

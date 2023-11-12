@@ -75,7 +75,7 @@ export default class ExternalLinkModal extends React.Component<
                         >
                             {localeString(
                                 'components.ExternalLinkModal.externalLink'
-                            )}
+                            ).replace('Zeus', 'ZEUS')}
                         </Text>
                         <Text
                             style={{
