@@ -5,13 +5,14 @@ import {
     ViewStyle,
     TouchableOpacity
 } from 'react-native';
-import { Header, Icon, TextProps } from 'react-native-elements';
+import { Header, TextProps } from 'react-native-elements';
 import { IconObject } from 'react-native-elements/dist/icons/Icon';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import ArrowLeft from '../assets/images/SVG/Arrow_left.svg';
+import Close from '../assets/images/SVG/Close.svg';
 
 interface HeaderIcon extends IconObject {
     icon?: string;
@@ -54,17 +55,20 @@ function ZeusHeader(props: HeaderProps) {
     );
 
     const CloseButton = (onBack?: () => void) => (
-        <Icon
-            name="close"
+        <TouchableOpacity
             onPress={() => {
                 if (onBack) onBack();
                 props.navigation.goBack();
             }}
-            color={themeColor('text')}
-            underlayColor="transparent"
-            size={35}
             accessibilityLabel={localeString('general.close')}
-        />
+        >
+            <Close
+                fill={themeColor('text')}
+                width="30"
+                height="30"
+                style={{ alignSelf: 'center' }}
+            />
+        </TouchableOpacity>
     );
 
     const {
