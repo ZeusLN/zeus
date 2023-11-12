@@ -173,7 +173,7 @@ export default class ProductDetails extends React.Component<
 
         try {
             if (product) {
-                await updateProducts(product);
+                await updateProducts([product]);
                 this.props.navigation.goBack();
             }
         } catch (error) {
