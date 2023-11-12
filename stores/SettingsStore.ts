@@ -115,6 +115,7 @@ export interface Settings {
     waitForGraphSync: boolean;
     rescan: boolean;
     recovery: boolean;
+    initialLoad: boolean;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -766,6 +767,7 @@ export default class SettingsStore {
         waitForGraphSync: false,
         rescan: false,
         recovery: false,
+        initialLoad: true,
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
