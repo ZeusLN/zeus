@@ -236,7 +236,7 @@ export default class ChannelView extends React.Component<
                             >
                                 <Text
                                     style={{
-                                        color: '#FFD93F',
+                                        color: themeColor('highlight'),
                                         fontFamily: 'PPNeueMontreal-Book',
                                         ...styles.pubkey
                                     }}
