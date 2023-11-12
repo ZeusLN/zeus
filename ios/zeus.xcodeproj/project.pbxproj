@@ -11,7 +11,6 @@
 		00E356F31AD99517003FC87E /* zeusTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* zeusTests.m */; };
 		0649A4AEF26A4CEEAE114396 /* Launcher.png in Resources */ = {isa = PBXBuildFile; fileRef = E9CA42E45FF64512B2D7C632 /* Launcher.png */; };
 		0A7D9EFFF994475C9E89AD34 /* Lock.svg in Resources */ = {isa = PBXBuildFile; fileRef = 65EBEDD6824B433F875FF553 /* Lock.svg */; };
-		0D0C9325D9514324BC10BE73 /* Word Logo.svg in Resources */ = {isa = PBXBuildFile; fileRef = 454EDE72420A4964823DF6F2 /* Word Logo.svg */; };
 		0D6056C7AD2B42AE97EF31CA /* Mnemonic.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8F39D8AB5C2348B699E16A96 /* Mnemonic.svg */; };
 		0E5CAE8C45F0483BB8C8020C /* Eye On.svg in Resources */ = {isa = PBXBuildFile; fileRef = AC03A7A4319C4366A52D94FE /* Eye On.svg */; };
 		0EB04476647C460EA1358028 /* Switch.svg in Resources */ = {isa = PBXBuildFile; fileRef = 647B3F8EC6A6487CB6606AD9 /* Switch.svg */; };
@@ -147,7 +146,6 @@
 		E457D12FB1D26D19F91B52B9 /* libPods-zeus-zeusTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C9B32E9846A8346A32A3BDC6 /* libPods-zeus-zeusTests.a */; };
 		E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */ = {isa = PBXBuildFile; fileRef = AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */; };
 		E691022067D14B198BFF83DB /* Dice.svg in Resources */ = {isa = PBXBuildFile; fileRef = CE4931FF962B4189AC3F3EEB /* Dice.svg */; };
-		ECAC6EABDA3B4277AE5D6B7C /* Word Logo - no outline.svg in Resources */ = {isa = PBXBuildFile; fileRef = 904B772D015A42D58EF60A9A /* Word Logo - no outline.svg */; };
 		ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED297162215061F000B7C4FE /* JavaScriptCore.framework */; };
 		EE7264005C294AE58E30C834 /* Error.svg in Resources */ = {isa = PBXBuildFile; fileRef = DD470243A7FC45D882EF1B0D /* Error.svg */; };
 		F15BCD255F194C84973AB51D /* Skull.svg in Resources */ = {isa = PBXBuildFile; fileRef = B813A99762CC4756A18E0C20 /* Skull.svg */; };
@@ -385,7 +383,6 @@
 		3D193586DE804DF89F2C9EC4 /* Leaving.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Leaving.svg; path = ../assets/images/SVG/Leaving.svg; sourceTree = "<group>"; };
 		41B36F82E42440E0AD72FC42 /* MailboxFlagDown.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MailboxFlagDown.svg; path = ../assets/images/SVG/MailboxFlagDown.svg; sourceTree = "<group>"; };
 		44AA4B9E77FB4B7E92D6E495 /* lightning1.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = lightning1.json; path = ../assets/images/Lottie/lightning1.json; sourceTree = "<group>"; };
-		454EDE72420A4964823DF6F2 /* Word Logo.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Word Logo.svg"; path = "../assets/images/SVG/Word Logo.svg"; sourceTree = "<group>"; };
 		49BD28A15F4B4FECA6EE0CDE /* SimpleLineIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = SimpleLineIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf"; sourceTree = "<group>"; };
 		4A6B733324794E60B618DACE /* Export.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Export.svg; path = ../assets/images/SVG/Export.svg; sourceTree = "<group>"; };
 		4C8C38BFCA8A45C99AA6FF28 /* MaterialCommunityIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialCommunityIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf"; sourceTree = "<group>"; };
@@ -453,7 +450,6 @@
 		8F0CAEBF09CC44E0A55DFB2A /* Coins.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Coins.svg; path = ../assets/images/SVG/Coins.svg; sourceTree = "<group>"; };
 		8F39D8AB5C2348B699E16A96 /* Mnemonic.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Mnemonic.svg; path = ../assets/images/SVG/Mnemonic.svg; sourceTree = "<group>"; };
 		8F531F57A66C4D86B3D226D7 /* Verified Account.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Verified Account.svg"; path = "../assets/images/SVG/Verified Account.svg"; sourceTree = "<group>"; };
-		904B772D015A42D58EF60A9A /* Word Logo - no outline.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Word Logo - no outline.svg"; path = "../assets/images/SVG/Word Logo - no outline.svg"; sourceTree = "<group>"; };
 		913EA077718B4284A6998780 /* zeus-pay.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-pay.png"; path = "../assets/images/zeus-pay.png"; sourceTree = "<group>"; };
 		956E2E16008F4EA0B54DF09B /* Add.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Add.svg; path = ../assets/images/SVG/Add.svg; sourceTree = "<group>"; };
 		970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RNRandomBytes.xcodeproj; path = "../node_modules/react-native-randombytes/RNRandomBytes.xcodeproj"; sourceTree = "<group>"; };
@@ -918,8 +914,6 @@
 				259ED6E1C36A4BB38A5BFB8B /* Temple.svg */,
 				CCFEAC399BB842A091ADB042 /* Wallet.svg */,
 				D7E370054BBF42359E7A5112 /* Wallet2.svg */,
-				904B772D015A42D58EF60A9A /* Word Logo - no outline.svg */,
-				454EDE72420A4964823DF6F2 /* Word Logo.svg */,
 				C79E350A2A9640088B2E0231 /* tor.png */,
 				01471298AE544A2F89251D67 /* PinFilled.svg */,
 				AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */,
@@ -1385,8 +1379,6 @@
 				74668A542AE3CA570023695A /* Marlide-Display.ttf in Resources */,
 				F6BA97FE98FB4D8890855BEC /* Wallet.svg in Resources */,
 				395880B8BA0647E3908DBD6A /* Wallet2.svg in Resources */,
-				ECAC6EABDA3B4277AE5D6B7C /* Word Logo - no outline.svg in Resources */,
-				0D0C9325D9514324BC10BE73 /* Word Logo.svg in Resources */,
 				D66A263DF39F48088A0F8784 /* tor.png in Resources */,
 				2E994829C4BA49738466EA86 /* PinFilled.svg in Resources */,
 				E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */,

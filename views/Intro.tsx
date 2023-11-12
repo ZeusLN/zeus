@@ -26,7 +26,7 @@ const Two = require('../assets/images/intro/2.png');
 const Three = require('../assets/images/intro/3.png');
 const Four = require('../assets/images/intro/4.png');
 
-import WordLogo from '../assets/images/SVG/Word Logo.svg';
+import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 interface IntroProps {
     navigation: any;
@@ -254,12 +254,16 @@ const Intro: React.FC<IntroProps> = (props) => {
                         top: 10
                     }}
                 >
-                    <WordLogo
-                        height={100}
+                    <View
                         style={{
+                            width: Dimensions.get('window').width * 0.85,
+                            maxHeight: 200,
+                            marginTop: 10,
                             alignSelf: 'center'
                         }}
-                    />
+                    >
+                        <Wordmark fill={themeColor('highlight')} />
+                    </View>
                     <Text
                         style={{
                             color: themeColor('secondaryText'),
