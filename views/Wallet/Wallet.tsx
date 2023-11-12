@@ -3,7 +3,6 @@ import {
     Animated,
     AppState,
     BackHandler,
-    Dimensions,
     Linking,
     NativeEventSubscription,
     PanResponder,
@@ -30,10 +29,12 @@ import PosPane from './PosPane';
 
 import Button from '../../components/Button';
 import LayerBalances from '../../components/LayerBalances';
+import LoadingColumns from '../../components/LoadingColumns';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -53,13 +54,11 @@ import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 
-import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
-import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
 import {
     initializeLnd,
@@ -665,48 +664,46 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             style={{
                                 flex: 1,
                                 justifyContent: 'center',
-                                alignItems: 'center',
-                                top: 10
+                                alignItems: 'center'
                             }}
                         >
+                            <LoadingColumns />
                             <View
                                 style={{
-                                    width:
-                                        Dimensions.get('window').width * 0.85,
-                                    maxHeight: 200,
-                                    marginTop: 10,
-                                    alignSelf: 'center'
+                                    position: 'absolute',
+                                    bottom: 130
                                 }}
                             >
-                                <Wordmark fill={themeColor('highlight')} />
-                            </View>
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    alignSelf: 'center',
-                                    fontSize: 15,
-                                    padding: 8
-                                }}
-                            >
-                                {settings.nodes && loggedIn && implementation
-                                    ? implementation === 'embedded-lnd'
-                                        ? isInExpressGraphSync
-                                            ? localeString(
-                                                  'views.Wallet.Wallet.expressGraphSync'
-                                              )
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        alignSelf: 'center',
+                                        fontSize: 15,
+                                        padding: 8
+                                    }}
+                                >
+                                    {settings.nodes &&
+                                    loggedIn &&
+                                    implementation
+                                        ? implementation === 'embedded-lnd'
+                                            ? isInExpressGraphSync
+                                                ? localeString(
+                                                      'views.Wallet.Wallet.expressGraphSync'
+                                                  )
+                                                : localeString(
+                                                      'views.Wallet.Wallet.startingNode'
+                                                  )
                                             : localeString(
-                                                  'views.Wallet.Wallet.startingNode'
+                                                  'views.Wallet.Wallet.connecting'
                                               )
                                         : localeString(
-                                              'views.Wallet.Wallet.connecting'
-                                          )
-                                    : localeString(
-                                          'views.Wallet.Wallet.startingUp'
-                                      )}
-                            </Text>
-                            <View style={{ marginTop: 40 }}>
-                                <LoadingIndicator />
+                                              'views.Wallet.Wallet.startingUp'
+                                          )}
+                                </Text>
+                                <View style={{ marginTop: 40 }}>
+                                    <LoadingIndicator />
+                                </View>
                             </View>
                         </View>
                         {posStatus !== 'active' && (
