@@ -8,6 +8,7 @@ import Pin from '../components/Pin';
 import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 import TextInput from '../components/TextInput';
+import ShowHideToggle from '../components/ShowHideToggle';
 
 import SettingsStore from '../stores/SettingsStore';
 
@@ -349,35 +350,31 @@ export default class Lockscreen extends React.Component<
                             >
                                 {localeString('views.Lockscreen.passphrase')}
                             </Text>
-                            <TextInput
-                                placeholder={'****************'}
-                                placeholderTextColor="darkgray"
-                                value={passphraseAttempt}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        passphraseAttempt: text,
-                                        error: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                secureTextEntry={hidden}
-                                autoFocus={true}
-                                style={styles.textInput}
-                            />
-                            <View style={styles.button}>
-                                <Button
-                                    title={
-                                        hidden
-                                            ? localeString('general.show')
-                                            : localeString('general.hide')
+                            <View style={styles.inputContainer}>
+                                <TextInput
+                                    placeholder={'****************'}
+                                    placeholderTextColor="darkgray"
+                                    value={passphraseAttempt}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            passphraseAttempt: text,
+                                            error: false
+                                        })
                                     }
-                                    onPress={() => this.onInputLabelPressed()}
-                                    containerStyle={{ width: 300 }}
-                                    adaptiveWidth
-                                    secondary
+                                    numberOfLines={1}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    secureTextEntry={hidden}
+                                    autoFocus={true}
+                                    style={styles.textInput}
                                 />
+                                <View style={styles.showHideToggle}>
+                                    <ShowHideToggle
+                                        onPress={() =>
+                                            this.onInputLabelPressed()
+                                        }
+                                    />
+                                </View>
                             </View>
                             <View style={styles.button}>
                                 <Button
@@ -479,8 +476,15 @@ const styles = StyleSheet.create({
         paddingTop: 15,
         paddingBottom: 15
     },
+    inputContainer: {
+        flexDirection: 'row'
+    },
     textInput: {
-        textAlign: 'center'
+        flex: 1
+    },
+    showHideToggle: {
+        alignSelf: 'center',
+        marginLeft: 10
     },
     mainText: {
         fontFamily: 'PPNeueMontreal-Book',
