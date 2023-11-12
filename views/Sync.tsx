@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Dimensions, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import CircularProgress from 'react-native-circular-progress-indicator';
 
@@ -25,6 +25,8 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
         const { navigation, SyncStore } = this.props;
         const { bestBlockHeight, currentBlockHeight, numBlocksUntilSynced } =
             SyncStore;
+
+        const { width } = Dimensions.get('window');
 
         return (
             <Screen>
@@ -53,10 +55,10 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                                       ) * 100
                                     : 0
                             }
-                            radius={120}
+                            radius={width / 3}
                             inActiveStrokeOpacity={0.5}
-                            activeStrokeWidth={15}
-                            inActiveStrokeWidth={20}
+                            activeStrokeWidth={width / 20}
+                            inActiveStrokeWidth={width / 40}
                             progressValueStyle={{
                                 fontWeight: '100',
                                 color: 'white'
