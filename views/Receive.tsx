@@ -1018,7 +1018,7 @@ export default class Receive extends React.Component<
 
         const lightningButton = () => (
             <React.Fragment>
-                <LightningSvg />
+                <LightningSvg width={50} height={50} />
                 <Text
                     style={{
                         color:
@@ -1035,7 +1035,7 @@ export default class Receive extends React.Component<
 
         const onChainButton = () => (
             <React.Fragment>
-                <OnChainSvg />
+                <OnChainSvg width={50} height={50} />
                 <Text
                     style={{
                         color:
