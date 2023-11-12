@@ -90,7 +90,7 @@ export default class SendingOnChain extends React.Component<
                         {publishSuccess && (
                             <>
                                 <Wordmark
-                                    height={windowSize.width * 0.2}
+                                    height={windowSize.width * 0.25}
                                     width={windowSize.width}
                                     fill={themeColor('highlight')}
                                 />
