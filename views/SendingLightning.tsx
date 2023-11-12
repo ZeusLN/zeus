@@ -162,7 +162,7 @@ export default class SendingLightning extends React.Component<
                     >
                         {(!!success || !!inTransit) && !error && (
                             <Wordmark
-                                height={windowSize.width * 0.2}
+                                height={windowSize.width * 0.25}
                                 width={windowSize.width}
                                 fill={themeColor('highlight')}
                             />
