@@ -443,7 +443,7 @@
     "views.Intro.advancedSetUp": "Advanced set-up",
     "views.Intro.creatingWallet": "Zeus is creating your wallet.",
     "views.Intro.carousel1.title": "Payments you can trust",
-    "views.Intro.carousel1.text": "Zeus connects to and uses your own Bitcoin and Lightning node to verify and keep your transactions private.",
+    "views.Intro.carousel1.text": "ZEUS runs a Bitcoin and Lightning node to verify and keep your transactions private.",
     "views.Intro.carousel2.title": "On-chain transfers",
     "views.Intro.carousel2.text": "Make regular, on-chain bitcoin transfers with Zeus.",
     "views.Intro.carousel3.title": "Lightning payments",

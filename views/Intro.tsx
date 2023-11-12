@@ -43,10 +43,7 @@ const Intro: React.FC<IntroProps> = (props) => {
     const carouselItems = [
         {
             title: localeString('views.Intro.carousel1.title'),
-            text: localeString('views.Intro.carousel1.text').replace(
-                'Zeus',
-                'ZEUS'
-            ),
+            text: localeString('views.Intro.carousel1.text'),
             illustration: One
         },
         {
@@ -74,22 +71,26 @@ const Intro: React.FC<IntroProps> = (props) => {
     const renderItem = ({ item }: { item: any }) => (
         <View
             style={{
-                borderRadius: 5
+                borderRadius: 5,
+                height: '100%'
             }}
         >
             <Image
                 source={item.illustration}
                 style={{
                     width: screenWidth,
-                    height: '65%'
+                    minHeight: '60%',
+                    maxHeight: '80%'
                 }}
             />
             <View
                 style={{
                     backgroundColor: themeColor('background'),
                     width: '100%',
-                    flexGrow: 1,
-                    justifyContent: 'flex-end'
+                    bottom: 0,
+                    zIndex: 2,
+                    minHeight: 250,
+                    position: 'absolute'
                 }}
             >
                 <Text
