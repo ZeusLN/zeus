@@ -33,7 +33,8 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import { version } from './../../package.json';
-import Product, { PricedIn } from '../../models/Product';
+import Product, { PricedIn, ProductStatus } from '../../models/Product';
+import moment from 'moment';
 
 interface StandalonePosPaneProps {
     navigation: any;
@@ -108,7 +109,23 @@ export default class StandalonePosPane extends React.PureComponent<
 
     async UNSAFE_componentWillMount(): Promise<void> {
         this.fetchProducts();
+        this.loadCurrentOrder();
     }
+
+    loadCurrentOrder = async () => {
+        const { PosStore } = this.props;
+        if (PosStore.currentOrder) {
+            const { currentOrder } = PosStore;
+            this.setState({
+                itemQty:
+                    currentOrder?.line_items.reduce(
+                        (n, { quantity }) => n + quantity,
+                        0
+                    ) ?? 0,
+                totalMoneyDisplay: currentOrder.getTotalMoneyDisplay
+            });
+        }
+    };
 
     fetchProducts = async () => {
         try {
@@ -119,6 +136,7 @@ export default class StandalonePosPane extends React.PureComponent<
             const uncategorized: Array<Product> = [];
             const productsList: Array<ProductSectionList> = [];
             products.forEach((product) => {
+                if (product.status !== ProductStatus.Active) return;
                 if (product.category === '') {
                     uncategorized.push(product);
                 } else {
@@ -358,8 +376,7 @@ export default class StandalonePosPane extends React.PureComponent<
                 style={{
                     padding: 10,
                     borderColor: themeColor('secondary'),
-                    borderBottomWidth: 1,
-                    backgroundColor: themeColor('background')
+                    borderBottomWidth: 1
                 }}
             >
                 <Text
@@ -692,6 +709,7 @@ export default class StandalonePosPane extends React.PureComponent<
                             <SectionList
                                 sections={this.state.productsList}
                                 renderSectionHeader={this.renderSectionHeader}
+                                stickySectionHeadersEnabled={false}
                                 renderItem={this.renderSection}
                                 keyExtractor={(item, index) => `${index}`}
                                 contentContainerStyle={{
@@ -813,7 +831,14 @@ export default class StandalonePosPane extends React.PureComponent<
                     orders.length > 0 &&
                     selectedIndex !== 0 && (
                         <FlatList
-                            data={orders}
+                            data={orders
+                                .slice()
+                                .sort((a, b) =>
+                                    moment(a.updated_at).unix() >
+                                    moment(b.updated_at).unix()
+                                        ? -1
+                                        : 1
+                                )}
                             renderItem={(v: any) =>
                                 this.renderItem(
                                     v,

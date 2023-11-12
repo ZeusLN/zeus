@@ -51,6 +51,17 @@ export default class InventoryStore {
 
         const found = existingCategories.find((c) => c.id === newCategory.id);
         if (found) {
+            const { products } = await this.getInventory();
+            const updatedProducts = products
+                .filter((product) => product.category === found.name)
+                .map(
+                    (product) =>
+                        ({ ...product, category: newCategory.name } as Product)
+                );
+            if (updatedProducts.length > 0) {
+                await this.updateProducts(updatedProducts);
+            }
+
             found.name = newCategory.name;
         } else {
             existingCategories.push(newCategory);
@@ -85,20 +96,22 @@ export default class InventoryStore {
     }
 
     @action
-    public updateProducts = async (newProduct: Product) => {
+    public updateProducts = async (newProducts: Product[]) => {
         const { products: existingProducts } = await this.getInventory();
 
-        const found = existingProducts.find((c) => c.id === newProduct.id);
-        if (found) {
-            found.name = newProduct.name;
-            found.sku = newProduct.sku;
-            found.price = newProduct.price;
-            found.pricedIn = newProduct.pricedIn;
-            found.category = newProduct.category;
-            found.status = newProduct.status;
-        } else {
-            existingProducts.push(newProduct);
-        }
+        newProducts.forEach((newProduct) => {
+            const found = existingProducts.find((c) => c.id === newProduct.id);
+            if (found) {
+                found.name = newProduct.name;
+                found.sku = newProduct.sku;
+                found.price = newProduct.price;
+                found.pricedIn = newProduct.pricedIn;
+                found.category = newProduct.category;
+                found.status = newProduct.status;
+            } else {
+                existingProducts.push(newProduct);
+            }
+        });
 
         await this.setProducts(JSON.stringify(existingProducts));
         // ensure we get the enhanced settings set
