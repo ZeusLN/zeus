@@ -198,7 +198,7 @@ export default class BalancePane extends React.PureComponent<
                                     >
                                         {localeString(
                                             'views.Wallet.BalancePane.sync.text'
-                                        )}
+                                        ).replace('Zeus', 'ZEUS')}
                                     </Text>
                                     {currentBlockHeight && bestBlockHeight && (
                                         <View

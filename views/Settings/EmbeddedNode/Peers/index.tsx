@@ -81,7 +81,7 @@ export default class Peers extends React.Component<PeersProps, {}> {
                                               'general.noneSelected'
                                           )}. ${localeString(
                                               'general.zeusDefaults'
-                                          )}.`}{' '}
+                                          ).replace('Zeus', 'ZEUS')}.`}{' '}
                                     {dontAllowOtherPeers
                                         ? localeString(
                                               'views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers'

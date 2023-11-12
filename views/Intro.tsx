@@ -43,12 +43,18 @@ const Intro: React.FC<IntroProps> = (props) => {
     const carouselItems = [
         {
             title: localeString('views.Intro.carousel1.title'),
-            text: localeString('views.Intro.carousel1.text'),
+            text: localeString('views.Intro.carousel1.text').replace(
+                'Zeus',
+                'ZEUS'
+            ),
             illustration: One
         },
         {
             title: localeString('views.Intro.carousel2.title'),
-            text: localeString('views.Intro.carousel2.text'),
+            text: localeString('views.Intro.carousel2.text').replace(
+                'Zeus',
+                'ZEUS'
+            ),
             illustration: Two
         },
         {
@@ -262,7 +268,10 @@ const Intro: React.FC<IntroProps> = (props) => {
                             padding: 8
                         }}
                     >
-                        {localeString('views.Intro.creatingWallet')}
+                        {localeString('views.Intro.creatingWallet').replace(
+                            'Zeus',
+                            'ZEUS'
+                        )}
                     </Text>
                     <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />

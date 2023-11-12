@@ -690,16 +690,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             ? isInExpressGraphSync
                                                 ? localeString(
                                                       'views.Wallet.Wallet.expressGraphSync'
-                                                  )
+                                                  ).replace('Zeus', 'ZEUS')
                                                 : localeString(
                                                       'views.Wallet.Wallet.startingNode'
-                                                  )
+                                                  ).replace('Zeus', 'ZEUS')
                                             : localeString(
                                                   'views.Wallet.Wallet.connecting'
-                                              )
+                                              ).replace('Zeus', 'ZEUS')
                                         : localeString(
                                               'views.Wallet.Wallet.startingUp'
-                                          )}
+                                          ).replace('Zeus', 'ZEUS')}
                                 </Text>
                                 <View style={{ marginTop: 40 }}>
                                     <LoadingIndicator />

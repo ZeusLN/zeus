@@ -55,7 +55,9 @@ export default class LspExplanationOverview extends React.PureComponent<
                             marginBottom: FONT_SIZE
                         }}
                     >
-                        {localeString('views.LspExplanationOverview.text2')}
+                        {localeString(
+                            'views.LspExplanationOverview.text2'
+                        ).replace('Zeus', 'ZEUS')}
                     </Text>
                     <Text
                         style={{

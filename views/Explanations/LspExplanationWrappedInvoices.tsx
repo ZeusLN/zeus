@@ -80,7 +80,7 @@ export default class LspExplanationWrappedInvoices extends React.PureComponent<
                     >
                         {localeString(
                             'views.LspExplanationWrappedInvoices.text4'
-                        )}
+                        ).replace('Zeus', 'ZEUS')}
                     </Text>
                 </ScrollView>
             </Screen>

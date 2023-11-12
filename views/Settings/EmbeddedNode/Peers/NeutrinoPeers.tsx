@@ -95,7 +95,7 @@ export default class NeutrinoPeers extends React.Component<
                                         'general.note'
                                     ).toUpperCase()}: ${localeString(
                                         'general.restartZeusChanges'
-                                    )}`}
+                                    ).replace('Zeus', 'ZEUS')}`}
                                 </Text>
                             </View>
                             <ListItem
@@ -258,7 +258,7 @@ export default class NeutrinoPeers extends React.Component<
                                     'general.noneSelected'
                                 )}. ${localeString(
                                     'general.zeusDefaults'
-                                )}.`}</Text>
+                                ).replace('Zeus', 'ZEUS')}.`}</Text>
                             )}
                         </View>
                     </ScrollView>
