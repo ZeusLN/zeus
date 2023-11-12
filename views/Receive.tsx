@@ -25,7 +25,7 @@ import NfcManager, {
 import handleAnything from '../utils/handleAnything';
 
 import Success from '../assets/images/GIF/Success.gif';
-import WordLogo from '../assets/images/SVG/Word Logo.svg';
+import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
@@ -1132,6 +1132,8 @@ export default class Receive extends React.Component<
         const belowDustLimit: boolean =
             Number(satAmount) !== 0 && Number(satAmount) < 546;
 
+        const windowSize = Dimensions.get('window');
+
         return (
             <Screen>
                 <Header
@@ -1162,91 +1164,97 @@ export default class Receive extends React.Component<
                 />
 
                 <View style={{ flex: 1 }}>
-                    <ScrollView
-                        style={styles.content}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        {creatingInvoiceError && (
-                            <ErrorMessage
-                                message={localeString(
-                                    'views.Receive.errorCreate'
-                                )}
+                    {watchedInvoicePaid ? (
+                        <View
+                            style={{
+                                alignItems: 'center',
+                                justifyContent: 'space-evenly',
+                                height: '100%'
+                            }}
+                        >
+                            <PaidIndicator />
+                            <Wordmark
+                                height={windowSize.width * 0.2}
+                                width={windowSize.width}
+                                fill={themeColor('highlight')}
                             />
-                        )}
-                        {error_msg && <ErrorMessage message={error_msg} />}
-
-                        {showLspSettings && (
-                            <View style={{ margin: 10 }}>
-                                <Button
-                                    title={localeString(
-                                        'views.Receive.goToLspSettings'
-                                    )}
-                                    onPress={() =>
-                                        navigation.navigate('LSPSettings')
-                                    }
-                                />
-                            </View>
-                        )}
-
-                        {watchedInvoicePaid ? (
-                            <View
-                                style={{
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%',
-                                    paddingTop: 100
-                                }}
-                            >
-                                <WordLogo
-                                    height={150}
-                                    style={{
-                                        alignSelf: 'center'
-                                    }}
-                                />
-                                <Image
-                                    source={Success}
-                                    style={{ width: 290, height: 290 }}
-                                />
-                                <PaidIndicator />
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        fontSize: 20,
-                                        top: -50,
-                                        alignSelf: 'center',
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {posStatus === 'active'
-                                        ? localeString(
-                                              'views.Wallet.Invoices.paid'
-                                          )
-                                        : `${localeString(
-                                              'views.Receive.youReceived'
-                                          )} ${getAmount(
-                                              watchedInvoicePaidAmt ||
-                                                  payment_request_amt
-                                          )}`}
-                                </Text>
-                                <Button
-                                    title={
-                                        posStatus === 'active'
-                                            ? localeString('general.goBack')
-                                            : localeString(
-                                                  'views.SendingLightning.goToWallet'
+                            <View style={{ alignItems: 'center' }}>
+                                <>
+                                    <Image
+                                        source={Success}
+                                        style={{
+                                            width: windowSize.width * 0.4,
+                                            height: windowSize.width * 0.4
+                                        }}
+                                    />
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            fontSize:
+                                                windowSize.width *
+                                                windowSize.scale *
+                                                0.017,
+                                            alignSelf: 'center',
+                                            color: themeColor('text'),
+                                            textAlign: 'center'
+                                        }}
+                                    >
+                                        {posStatus === 'active'
+                                            ? localeString(
+                                                  'views.Wallet.Invoices.paid'
                                               )
-                                    }
-                                    icon={{
-                                        name: 'list',
-                                        size: 25
-                                    }}
-                                    onPress={() =>
-                                        navigation.navigate('Wallet')
-                                    }
-                                    containerStyle={{ width: '100%' }}
-                                />
+                                            : `${localeString(
+                                                  'views.Receive.youReceived'
+                                              )} ${getAmount(
+                                                  watchedInvoicePaidAmt ||
+                                                      payment_request_amt
+                                              )}`}
+                                    </Text>
+                                </>
                             </View>
-                        ) : (
+                            <Button
+                                title={
+                                    posStatus === 'active'
+                                        ? localeString('general.goBack')
+                                        : localeString(
+                                              'views.SendingLightning.goToWallet'
+                                          )
+                                }
+                                icon={{
+                                    name: 'list',
+                                    size: 25
+                                }}
+                                onPress={() => navigation.navigate('Wallet')}
+                                containerStyle={{ width: '100%' }}
+                            />
+                        </View>
+                    ) : (
+                        <ScrollView
+                            style={styles.content}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {creatingInvoiceError && (
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.Receive.errorCreate'
+                                    )}
+                                />
+                            )}
+                            {error_msg && <ErrorMessage message={error_msg} />}
+
+                            {showLspSettings && (
+                                <View style={{ margin: 10 }}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Receive.goToLspSettings'
+                                        )}
+                                        onPress={() =>
+                                            navigation.navigate('LSPSettings')
+                                        }
+                                    />
+                                </View>
+                            )}
+
                             <View>
                                 {!!payment_request && (
                                     <>
@@ -1947,8 +1955,8 @@ export default class Receive extends React.Component<
                                     </>
                                 )}
                             </View>
-                        )}
-                    </ScrollView>
+                        </ScrollView>
+                    )}
                 </View>
                 <View style={{ bottom: 0 }}>
                     {!belowDustLimit && haveUnifiedInvoice && !lnOnly && (

@@ -1,13 +1,6 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import {
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
-} from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
@@ -59,101 +52,113 @@ export default class SendingOnChain extends React.Component<
             TransactionsStore;
         const { testnet } = NodeInfoStore;
         const { storedNotes } = this.state;
+        const windowSize = Dimensions.get('window');
 
         return (
             <Screen>
-                <ScrollView keyboardShouldPersistTaps="handled">
+                {loading && (
                     <View
                         style={{
-                            ...styles.content
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '100%'
                         }}
                     >
-                        {loading && <LoadingIndicator />}
-                        {loading && (
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.SendingOnChain.broadcasting'
-                                )}
-                            </Text>
-                        )}
+                        <LoadingIndicator size={windowSize.height / 24} />
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('text'),
+                                paddingTop: 30,
+                                // paddingBottom for centering
+                                paddingBottom: windowSize.height / 10,
+                                fontSize:
+                                    windowSize.width * windowSize.scale * 0.014
+                            }}
+                        >
+                            {localeString('views.SendingOnChain.broadcasting')}
+                        </Text>
+                    </View>
+                )}
+                {!loading && (
+                    <View
+                        style={{
+                            ...styles.content,
+                            paddingTop: windowSize.height * 0.05
+                        }}
+                    >
                         {publishSuccess && (
                             <>
-                                <View
-                                    style={{
-                                        width:
-                                            Dimensions.get('window').width *
-                                            0.85,
-                                        maxHeight: 150,
-                                        alignSelf: 'center',
-                                        // TODO add in mixmaster fix
-                                        marginTop: -80
-                                    }}
-                                >
-                                    <Wordmark
+                                <Wordmark
+                                    height={windowSize.width * 0.2}
+                                    width={windowSize.width}
+                                    fill={themeColor('highlight')}
+                                />
+                                <View style={{ alignItems: 'center' }}>
+                                    <Image
+                                        source={Success}
                                         style={{
+                                            width: windowSize.width * 0.3,
+                                            height: windowSize.width * 0.3
+                                        }}
+                                        resizeMode="cover"
+                                    />
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text'),
+                                            paddingTop:
+                                                windowSize.height * 0.03,
+                                            fontSize:
+                                                windowSize.width *
+                                                windowSize.scale *
+                                                0.017,
                                             alignSelf: 'center'
                                         }}
-                                        fill={themeColor('text')}
-                                    />
+                                    >
+                                        {localeString(
+                                            'views.SendingOnChain.success'
+                                        )}
+                                    </Text>
                                 </View>
-                                <Image
-                                    source={Success}
-                                    style={{
-                                        width: 290,
-                                        height: 290,
-                                        marginTop: -50,
-                                        marginBottom: -50
-                                    }}
-                                />
                             </>
                         )}
                         {(error || error_msg) && (
-                            <>
-                                <Error width="27%" />
+                            <View style={{ alignItems: 'center' }}>
+                                <Error
+                                    width={windowSize.height * 0.13}
+                                    height={windowSize.height * 0.13}
+                                />
                                 <Text
                                     style={{
                                         color: '#FF9090',
                                         fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 32
+                                        fontSize: 32,
+                                        marginTop: windowSize.height * 0.07
                                     }}
                                 >
                                     {localeString('general.error')}
                                 </Text>
-                            </>
-                        )}
-                        {error && error_msg && (
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: 'white',
-                                    padding: 20,
-                                    fontSize: 30,
-                                    alignSelf: 'center'
-                                }}
-                            >
-                                {error_msg}
-                            </Text>
-                        )}
-                        {publishSuccess && (
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('text'),
-                                    padding: 20,
-                                    fontSize: 22,
-                                    alignSelf: 'center'
-                                }}
-                            >
-                                {localeString('views.SendingOnChain.success')}
-                            </Text>
+                                {error_msg && (
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'Lato-Regular',
+                                            fontSize:
+                                                windowSize.width *
+                                                windowSize.scale *
+                                                0.014,
+                                            textAlign: 'center',
+                                            marginTop: windowSize.height * 0.025
+                                        }}
+                                    >
+                                        {error_msg}
+                                    </Text>
+                                )}
+                            </View>
                         )}
                         {txid && (
-                            <View style={{ padding: 20 }}>
+                            <View style={{ width: '90%' }}>
                                 <CopyBox
                                     heading={localeString(
                                         'views.SendingOnChain.txid'
@@ -188,7 +193,7 @@ export default class SendingOnChain extends React.Component<
                                             })
                                         }
                                         secondary
-                                        buttonStyle={{ padding: 14 }}
+                                        buttonStyle={{ height: 40 }}
                                     />
                                     <Button
                                         title={localeString(
@@ -200,16 +205,13 @@ export default class SendingOnChain extends React.Component<
                                                 testnet
                                             )
                                         }
-                                        containerStyle={{
-                                            width: '100%',
-                                            margin: 20
-                                        }}
+                                        containerStyle={{ width: '100%' }}
                                         secondary
                                         icon={{
                                             name: 'exit-to-app',
                                             size: 25
                                         }}
-                                        buttonStyle={{ padding: 10 }}
+                                        buttonStyle={{ height: 40 }}
                                     />
                                 </>
                             )}
@@ -225,10 +227,8 @@ export default class SendingOnChain extends React.Component<
                                         size: 25
                                     }}
                                     onPress={() => navigation.goBack()}
-                                    containerStyle={{
-                                        width: '100%',
-                                        margin: 20
-                                    }}
+                                    containerStyle={{ width: '100%' }}
+                                    buttonStyle={{ height: 40 }}
                                 />
                             )}
 
@@ -249,11 +249,12 @@ export default class SendingOnChain extends React.Component<
                                     onPress={() =>
                                         navigation.navigate('Wallet')
                                     }
+                                    buttonStyle={{ height: 40 }}
                                 />
                             )}
                         </View>
                     </View>
-                </ScrollView>
+                )}
             </Screen>
         );
     }
@@ -267,15 +268,13 @@ const styles = StyleSheet.create({
         flex: 1
     },
     content: {
-        flex: 1,
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 125
+        justifyContent: 'space-evenly',
+        height: '100%'
     },
     buttons: {
-        flex: 1,
         justifyContent: 'flex-end',
-        marginBottom: 35,
-        width: '100%'
+        width: '100%',
+        gap: 15
     }
 });

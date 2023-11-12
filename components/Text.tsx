@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
+import { Text, TextStyle, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Row } from './layout/Row';
 
@@ -9,7 +9,7 @@ import ModalStore from '../stores/ModalStore';
 
 interface TextProps {
     ModalStore: ModalStore;
-    style?: any;
+    style?: TextStyle;
     children: string;
     infoText?: string | Array<string>;
     infoLink?: string;
