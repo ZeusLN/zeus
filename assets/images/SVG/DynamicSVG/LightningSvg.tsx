@@ -2,10 +2,10 @@ import React from 'react';
 import { Svg, Circle, Polygon } from 'react-native-svg';
 import { themeColor } from '../../../../utils/ThemeUtils';
 
-export default function LightningSvg() {
+export default function LightningSvg({ width = 70, height = 70 }) {
     const svgProps = {
-        width: '70',
-        height: '70',
+        width: `${width}`,
+        height: `${height}`,
         viewBox: '0 0 50 50',
         fill: 'none',
         xmlns: 'http://www.w3.org/2000/svg'
