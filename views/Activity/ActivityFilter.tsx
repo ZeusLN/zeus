@@ -73,6 +73,7 @@ export default class ActivityFilter extends React.Component<
             sent,
             received,
             unpaid,
+            inTransit,
             minimumAmount,
             startDate,
             endDate
@@ -183,6 +184,12 @@ export default class ActivityFilter extends React.Component<
                 label: localeString('views.Wallet.Invoices.unpaid'),
                 value: unpaid,
                 var: 'unpaid',
+                type: 'Toggle'
+            },
+            {
+                label: localeString('views.ActivityFilter.inTransit'),
+                value: inTransit,
+                var: 'inTransit',
                 type: 'Toggle'
             },
             {
