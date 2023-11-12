@@ -24,6 +24,7 @@ export interface Filter {
     sent: boolean;
     received: boolean;
     unpaid: boolean;
+    inTransit: boolean;
     minimumAmount: number;
     startDate?: Date;
     endDate?: Date;
@@ -35,6 +36,7 @@ export const DEFAULT_FILTERS = {
     sent: true,
     received: true,
     unpaid: true,
+    inTransit: false,
     minimumAmount: 0,
     startDate: undefined,
     endDate: undefined
@@ -83,6 +85,7 @@ export default class ActivityStore {
             sent: false,
             received: true,
             unpaid: false,
+            inTransit: false,
             minimumAmount: 0,
             startDate: undefined,
             endDate: undefined
