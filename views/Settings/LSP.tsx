@@ -7,11 +7,15 @@ import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import TextInput from '../../components/TextInput';
 
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_LSP_MAINNET,
+    DEFAULT_LSP_TESTNET
+} from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Switch from '../../components/Switch';
+import Button from '../../components/Button';
 
 interface LSPProps {
     navigation: any;
@@ -54,6 +58,13 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
         const { navigation, SettingsStore } = this.props;
         const { enableLSP, lsp, accessKey, requestSimpleTaproot } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
+
+        const showReset: boolean =
+            !enableLSP ||
+            accessKey !== '' ||
+            requestSimpleTaproot ||
+            (embeddedLndNetwork === 'Mainnet' && lsp !== DEFAULT_LSP_MAINNET) ||
+            (embeddedLndNetwork === 'Testnet' && lsp !== DEFAULT_LSP_TESTNET);
 
         return (
             <Screen>
@@ -222,6 +233,35 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                             />
                         </View>
                     </ListItem>
+
+                    {showReset && (
+                        <View style={{ marginTop: 20 }}>
+                            <Button
+                                title={localeString('general.reset')}
+                                accessibilityLabel={localeString(
+                                    'general.reset'
+                                )}
+                                onPress={async () => {
+                                    this.setState({
+                                        enableLSP: true,
+                                        lsp:
+                                            embeddedLndNetwork === 'Mainnet'
+                                                ? DEFAULT_LSP_MAINNET
+                                                : DEFAULT_LSP_TESTNET,
+                                        accessKey: '',
+                                        requestSimpleTaproot: false
+                                    });
+                                    await updateSettings({
+                                        enableLSP: true,
+                                        lspMainnet: DEFAULT_LSP_MAINNET,
+                                        lspTestnet: DEFAULT_LSP_TESTNET,
+                                        lspAccessKey: '',
+                                        requestSimpleTaproot: false
+                                    });
+                                }}
+                            />
+                        </View>
+                    )}
                 </View>
             </Screen>
         );

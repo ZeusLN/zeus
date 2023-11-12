@@ -666,8 +666,8 @@ export const LNDHUB_AUTH_MODES = [
     { key: 'Alby', value: 'Alby' }
 ];
 
-const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
-const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
+export const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
+export const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://nostr.mutinywallet.com',
