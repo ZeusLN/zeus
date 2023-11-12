@@ -1966,26 +1966,29 @@ export default class Receive extends React.Component<
                     )}
                 </View>
                 <View style={{ bottom: 0 }}>
-                    {!belowDustLimit && haveUnifiedInvoice && !lnOnly && (
-                        <ButtonGroup
-                            onPress={this.updateIndex}
-                            selectedIndex={selectedIndex}
-                            buttons={buttons}
-                            selectedButtonStyle={{
-                                backgroundColor: themeColor('highlight'),
-                                borderRadius: 12
-                            }}
-                            containerStyle={{
-                                backgroundColor: themeColor('secondary'),
-                                borderRadius: 12,
-                                borderColor: themeColor('secondary'),
-                                height: 80
-                            }}
-                            innerBorderStyle={{
-                                color: themeColor('secondary')
-                            }}
-                        />
-                    )}
+                    {!belowDustLimit &&
+                        haveUnifiedInvoice &&
+                        !lnOnly &&
+                        !watchedInvoicePaid && (
+                            <ButtonGroup
+                                onPress={this.updateIndex}
+                                selectedIndex={selectedIndex}
+                                buttons={buttons}
+                                selectedButtonStyle={{
+                                    backgroundColor: themeColor('highlight'),
+                                    borderRadius: 12
+                                }}
+                                containerStyle={{
+                                    backgroundColor: themeColor('secondary'),
+                                    borderRadius: 12,
+                                    borderColor: themeColor('secondary'),
+                                    height: 80
+                                }}
+                                innerBorderStyle={{
+                                    color: themeColor('secondary')
+                                }}
+                            />
+                        )}
                 </View>
                 <ModalBox
                     style={{
