@@ -13,7 +13,7 @@ export function themeColor(themeString: string): any {
         highlight: '#FFA900',
         error: '#992600',
         separator: '#31363F',
-        outbound: '#FFD93F',
+        outbound: '#FFA900',
         inbound: '#FFF0CA',
         success: '#46BE43',
         warning: '#E14C4C',

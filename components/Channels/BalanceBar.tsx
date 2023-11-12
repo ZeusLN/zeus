@@ -32,7 +32,6 @@ export function BalanceBar({
                     backgroundColor: offline
                         ? '#E5E5E5'
                         : themeColor('outbound'),
-                    borderRadius: 8,
                     marginRight: 1
                 }}
             />
@@ -40,10 +39,7 @@ export function BalanceBar({
                 style={{
                     height: 8,
                     flex: right / total,
-                    backgroundColor: offline
-                        ? '#A7A9AC'
-                        : themeColor('inbound'),
-                    borderRadius: 8
+                    backgroundColor: offline ? '#A7A9AC' : themeColor('inbound')
                 }}
             />
         </Row>
