@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, View, Text } from 'react-native';
+import { FlatList, View, Text, TouchableOpacity } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -15,6 +15,8 @@ import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
+
+import Add from '../../assets/images/SVG/Add.svg';
 
 interface NodesProps {
     nodes: any[];
@@ -112,8 +114,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         });
 
         const AddButton = () => (
-            <Icon
-                name="add"
+            <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('NodeConfiguration', {
                         newEntry: true,
@@ -121,11 +122,15 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                             (nodes && nodes.length && Number(nodes.length)) || 0
                     })
                 }
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={30}
                 accessibilityLabel={localeString('general.add')}
-            />
+            >
+                <Add
+                    fill={themeColor('text')}
+                    width="30"
+                    height="30"
+                    style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
         );
 
         return (
