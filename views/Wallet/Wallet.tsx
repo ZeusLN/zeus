@@ -303,8 +303,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             updateSettings
         } = SettingsStore;
         const { isSyncing } = SyncStore;
-        const { fiatEnabled, pos, rescan, recovery, lightningAddress } =
-            settings;
+        const {
+            fiatEnabled,
+            pos,
+            rescan,
+            recovery,
+            lightningAddress,
+            initialLoad
+        } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
 
         if (connecting) {
@@ -329,7 +335,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (implementation === 'embedded-lnd') {
             if (connecting) {
                 await initializeLnd(embeddedLndNetwork === 'Testnet', rescan);
-                if (expressGraphSyncEnabled) await expressGraphSync();
+
+                // on initial load, do not run EGS
+                if (initialLoad) {
+                    await updateSettings({
+                        initialLoad: false
+                    });
+                } else {
+                    if (expressGraphSyncEnabled) await expressGraphSync();
+                }
+
                 await startLnd(walletPassword);
             }
             if (BackendUtils.supportsLSPs()) {
