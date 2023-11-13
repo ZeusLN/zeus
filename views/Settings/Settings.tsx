@@ -16,7 +16,7 @@ import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
 import SecurityIcon from '../../assets/images/SVG/Lock.svg';
 import SignIcon from '../../assets/images/SVG/Pen.svg';
-import CurrencyIcon from '../../assets/images/SVG/Currency.svg';
+import CurrencyIcon from '../../assets/images/SVG/Bitcoin.svg';
 import BrushIcon from '../../assets/images/SVG/Brush.svg';
 import LanguageIcon from '../../assets/images/SVG/Globe.svg';
 import NodeOn from '../../assets/images/SVG/Node On.svg';
@@ -709,7 +709,13 @@ export default class Settings extends React.Component<
                                 }
                             >
                                 <View>
-                                    <SignIcon stroke={themeColor('text')} />
+                                    <SignIcon
+                                        fill={themeColor('text')}
+                                        width={18}
+                                        height={18}
+                                        marginLeft={6}
+                                        marginTop={6}
+                                    />
                                 </View>
                                 <Text
                                     style={{
@@ -835,8 +841,8 @@ export default class Settings extends React.Component<
                             >
                                 <View>
                                     <CurrencyIcon
-                                        stroke={themeColor('text')}
-                                        style={{ marginLeft: 2 }}
+                                        fill={themeColor('text')}
+                                        style={{ marginLeft: 8, marginTop: 6 }}
                                     />
                                 </View>
                                 <Text

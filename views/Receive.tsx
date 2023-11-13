@@ -79,6 +79,7 @@ import UnifiedSvg from '../assets/images/SVG/DynamicSVG/UnifiedSvg';
 import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
+import Gear from '../assets/images/SVG/Gear.svg';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -951,13 +952,12 @@ export default class Receive extends React.Component<
         );
 
         const SettingsButton = () => (
-            <Icon
-                name="settings"
-                onPress={() => this.refs.modal.open()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={30}
-            />
+            <TouchableOpacity onPress={() => this.refs.modal.open()}>
+                <Gear
+                    style={{ alignSelf: 'center' }}
+                    fill={themeColor('text')}
+                />
+            </TouchableOpacity>
         );
 
         const ADDRESS_TYPES = BackendUtils.supportsTaproot()

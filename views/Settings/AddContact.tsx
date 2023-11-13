@@ -29,6 +29,8 @@ import { localeString } from '../../utils/LocaleUtils';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 
+import Star from '../../assets/images/SVG/Star.svg';
+
 interface AddContactProps {
     navigation: any;
 }
@@ -367,13 +369,14 @@ export default class AddContact extends React.Component<
         );
 
         const StarButton = ({ isFavourite, onPress }) => (
-            <Icon
-                name={isFavourite ? 'star' : 'star-outline'}
-                onPress={onPress}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
+            <TouchableOpacity onPress={onPress}>
+                <Star
+                    fill={isFavourite ? themeColor('text') : 'none'}
+                    stroke={isFavourite ? 'none' : themeColor('text')}
+                    strokeWidth={2}
+                    style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
         );
         const isEdit = !!this.props.navigation.getParam('isEdit', false);
         const prefillContact = this.props.navigation.getParam(

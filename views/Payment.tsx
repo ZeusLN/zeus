@@ -93,7 +93,10 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     navigation.navigate('AddNotes', { payment_hash: noteKey })
                 }
             >
-                <EditNotes />
+                <EditNotes
+                    style={{ alignSelf: 'center' }}
+                    fill={themeColor('text')}
+                />
             </TouchableOpacity>
         );
 
