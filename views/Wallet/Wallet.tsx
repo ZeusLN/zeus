@@ -688,7 +688,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             >
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book',
                                         alignSelf: 'center',
                                         fontSize: 15,
