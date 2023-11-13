@@ -138,7 +138,7 @@ export default class CollapsedQR extends React.Component<
                             value={value}
                             size={height > width ? width * 0.8 : height * 0.6}
                             logo={logo || defaultLogo}
-                            backgroundColor={themeColor('qr')}
+                            backgroundColor={themeColor('qr') || 'white'}
                             logoBackgroundColor={themeColor('qr') || 'white'}
                             logoMargin={10}
                             quietZone={0}
