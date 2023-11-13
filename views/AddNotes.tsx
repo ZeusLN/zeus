@@ -83,7 +83,9 @@ export default class AddNotes extends React.Component<
             <TouchableOpacity onPress={() => saveNote()}>
                 <SaveIcon
                     stroke={themeColor('text')}
-                    fill={themeColor('secondary')}
+                    fill={themeColor('text')}
+                    height={40}
+                    width={40}
                 />
             </TouchableOpacity>
         );
