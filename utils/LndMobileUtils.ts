@@ -166,11 +166,7 @@ export async function expressGraphSync() {
         }
 
         try {
-            // check connection type and whether user has allowed EGS on mobile
-            const connectionState = stores.settingsStore?.settings
-                ?.expressGraphSyncMobile
-                ? { type: 'wifi' }
-                : await NetInfo.fetch();
+            const connectionState = await NetInfo.fetch();
             const gossipStatus = await gossipSync(connectionState.type);
             const completionTime =
                 (new Date().getTime() - start.getTime()) / 1000 + 's';
