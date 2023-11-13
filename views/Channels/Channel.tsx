@@ -529,6 +529,7 @@ export default class ChannelView extends React.Component<
                             <View
                                 style={{
                                     ...styles.button,
+                                    marginTop: 20,
                                     marginBottom: confirmCloseChannel ? 0 : 50
                                 }}
                             >
@@ -548,8 +549,13 @@ export default class ChannelView extends React.Component<
                                                 !confirmCloseChannel
                                         })
                                     }
-                                    quinary
                                     warning={!confirmCloseChannel}
+                                    titleStyle={{
+                                        color: 'white'
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: themeColor('delete')
+                                    }}
                                 />
                             </View>
                         )}
