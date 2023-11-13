@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
 
@@ -15,6 +14,8 @@ import SettingsStore from '../../stores/SettingsStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+
+import Gear from '../../assets/images/SVG/Gear.svg';
 
 interface InvoicesSettingsProps {
     navigation: any;
@@ -122,13 +123,12 @@ export default class InvoicesSettings extends React.Component<
               ];
 
         const SettingsButton = () => (
-            <Icon
-                name="settings"
-                onPress={() => this.refs.modal.open()}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={30}
-            />
+            <TouchableOpacity onPress={() => this.refs.modal.open()}>
+                <Gear
+                    style={{ alignSelf: 'center' }}
+                    fill={themeColor('text')}
+                />
+            </TouchableOpacity>
         );
 
         return (

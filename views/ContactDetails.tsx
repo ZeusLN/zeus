@@ -8,7 +8,6 @@ import {
     ScrollView
 } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { Icon } from 'react-native-elements';
 import Screen from '../components/Screen';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
@@ -18,6 +17,7 @@ import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../assets/images/SVG/Key Security.svg';
 import VerifiedAccount from '../assets/images/SVG/Verified Account.svg';
 import EditContact from '../assets/images/SVG/Pen.svg';
+import Star from '../assets/images/SVG/Star.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
 import LinkingUtils from '../utils/LinkingUtils';
@@ -165,13 +165,14 @@ export default class ContactDetails extends React.Component<
         const { navigation } = this.props;
 
         const StarButton = () => (
-            <Icon
-                name={contact.isFavourite ? 'star' : 'star-outline'}
-                onPress={this.toggleFavorite}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={32}
-            />
+            <TouchableOpacity onPress={this.toggleFavorite}>
+                <Star
+                    fill={contact.isFavourite ? themeColor('text') : 'none'}
+                    stroke={contact.isFavourite ? 'none' : themeColor('text')}
+                    strokeWidth={2}
+                    style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
         );
         const EditContactButton = () => (
             <TouchableOpacity
@@ -182,7 +183,10 @@ export default class ContactDetails extends React.Component<
                     })
                 }
             >
-                <EditContact height={40} width={40} />
+                <EditContact
+                    fill={themeColor('text')}
+                    style={{ alignSelf: 'center' }}
+                />
             </TouchableOpacity>
         );
         return (

@@ -172,9 +172,11 @@ export default class ChannelView extends React.Component<
         const EditFees = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('SetFees', { channel })}
-                style={{ top: -5 }}
             >
-                <Edit fill={themeColor('text')} height={38} width={38} />
+                <Edit
+                    fill={themeColor('text')}
+                    style={{ alignSelf: 'center' }}
+                />
             </TouchableOpacity>
         );
 
@@ -188,7 +190,10 @@ export default class ChannelView extends React.Component<
                     })
                 }
             >
-                <Share fill={themeColor('text')} height={30} width={30} />
+                <Share
+                    fill={themeColor('text')}
+                    style={{ alignSelf: 'center' }}
+                />
             </TouchableOpacity>
         );
 

@@ -124,9 +124,11 @@ export default class TransactionView extends React.Component<TransactionProps> {
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('AddNotes', { txid: tx })}
-                style={{ marginTop: -6 }}
             >
-                <EditNotes height={40} width={40} />
+                <EditNotes
+                    style={{ alignSelf: 'center' }}
+                    fill={themeColor('text')}
+                />
             </TouchableOpacity>
         );
 

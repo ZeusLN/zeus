@@ -2,7 +2,6 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg version="1.1" id="Ebene_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 width="30px" height="30px" viewBox="0 0 30 30" enable-background="new 0 0 30 30" xml:space="preserve">
-<path d="M-0.005,24.624v4.413c0,0.532,0.431,0.963,0.962,0.963h4.423c0.254,0,0.5-0.102,0.68-0.282l18.185-18.185
-	l-5.775-5.775L0.277,23.943C0.097,24.124-0.005,24.368-0.005,24.624z M20.854,3.374l5.775,5.775l2.813-2.811
-	c0.752-0.752,0.752-1.97,0-2.722l-3.053-3.053c-0.752-0.752-1.971-0.752-2.723,0L20.854,3.374z"/>
+<polygon stroke-linejoin="round" stroke-miterlimit="10" points="15,1.684 
+	18.306,11.857 29,11.857 20.348,18.145 23.652,28.315 15,22.028 6.347,28.315 9.653,18.145 1,11.857 11.695,11.857 "/>
 </svg>
