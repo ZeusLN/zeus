@@ -35,6 +35,9 @@ import SettingsStore, {
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
+import QR from '../../../assets/images/SVG/QR.svg';
+import Gear from '../../../assets/images/SVG/Gear.svg';
+
 interface LightningAddressProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
@@ -189,17 +192,16 @@ export default class LightningAddress extends React.Component<
         );
 
         const SettingsButton = () => (
-            <View>
-                <Icon
-                    name="settings"
-                    onPress={() => {
-                        navigation.navigate('LightningAddressSettings');
-                    }}
-                    color={themeColor('text')}
-                    underlayColor="transparent"
-                    size={35}
+            <TouchableOpacity
+                onPress={() => {
+                    navigation.navigate('LightningAddressSettings');
+                }}
+            >
+                <Gear
+                    style={{ alignSelf: 'center' }}
+                    fill={themeColor('text')}
                 />
-            </View>
+            </TouchableOpacity>
         );
 
         const QRButton = () => (
@@ -212,14 +214,9 @@ export default class LightningAddress extends React.Component<
                         logo: require('../../../assets/images/pay-z-black.png')
                     })
                 }
-                style={{ marginTop: 5 }}
+                style={{ marginTop: 10 }}
             >
-                <Icon
-                    name="qr-code"
-                    color={themeColor('text')}
-                    underlayColor="transparent"
-                    size={30}
-                />
+                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
             </TouchableOpacity>
         );
 

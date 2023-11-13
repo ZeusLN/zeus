@@ -9,7 +9,6 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Icon } from 'react-native-elements';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
@@ -43,6 +42,7 @@ import { Row } from '../components/layout/Row';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
+import QR from '../assets/images/SVG/QR.svg';
 import Conversion from '../components/Conversion';
 
 interface InvoiceProps {
@@ -355,15 +355,13 @@ export default class PaymentRequest extends React.Component<
         const noBalance = this.props.BalanceStore.lightningBalance === 0;
 
         const QRButton = () => (
-            <Icon
-                name="qr-code"
-                onPress={() => {
-                    navigation.navigate('QR', { value: paymentRequest });
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
+            <TouchableOpacity
+                onPress={() =>
+                    navigation.navigate('QR', { value: paymentRequest })
+                }
+            >
+                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
+            </TouchableOpacity>
         );
 
         return (

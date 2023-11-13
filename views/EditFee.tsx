@@ -21,7 +21,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 import MempoolSpace from '../assets/images/affiliates/Mempool.svg';
-import Refresh from '../assets/images/SVG/Refresh.svg';
+import Refresh from '../assets/images/SVG/Sync.svg';
 import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 
 import FeeStore from './../stores/FeeStore';
@@ -80,7 +80,12 @@ export default class EditFee extends React.Component<
 
         const ReloadButton = () => (
             <TouchableOpacity onPress={() => getOnchainFeesviaMempool()}>
-                <Refresh stroke={themeColor('text')} />
+                <Refresh
+                    fill={themeColor('text')}
+                    height={30}
+                    width={41}
+                    style={{ alignSelf: 'center' }}
+                />
             </TouchableOpacity>
         );
 
