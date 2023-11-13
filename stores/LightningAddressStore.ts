@@ -766,7 +766,8 @@ export default class LightningAddressStore {
     };
 
     calculateFeeMsat = (amountMsat: string | number) => {
-        for (let i = this.fees.length - 1; i >= 0; i--) {
+        let feeMsat;
+        for (let i = 0; i < this.fees.length; i++) {
             const feeItem = this.fees[i];
             const { limitAmount, limitQualifier, fee, feeQualifier } = feeItem;
 
@@ -783,17 +784,21 @@ export default class LightningAddressStore {
 
             if (match) {
                 if (feeQualifier === 'fixedSats') {
-                    return fee * 1000;
+                    feeMsat = fee * 1000;
                 } else if (feeQualifier === 'percentage') {
-                    return Number(
+                    feeMsat = Number(
                         new BigNumber(amountMsat).times(fee).div(100)
                     );
                 }
             }
         }
 
-        // return 100 sat fee in case of error
-        return 100000;
+        if (feeMsat) {
+            return feeMsat;
+        } else {
+            // return 250 sat fee in case of error
+            return 250000;
+        }
     };
 
     analyzeAttestation = (
