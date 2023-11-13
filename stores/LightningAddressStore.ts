@@ -766,7 +766,7 @@ export default class LightningAddressStore {
     };
 
     calculateFeeMsat = (amountMsat: string | number) => {
-        for (let i = 0; i < this.fees.length; i++) {
+        for (let i = this.fees.length - 1; i >= 0; i--) {
             const feeItem = this.fees[i];
             const { limitAmount, limitQualifier, fee, feeQualifier } = feeItem;
 
