@@ -2,7 +2,6 @@ import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
-import { Icon } from 'react-native-elements';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
@@ -17,6 +16,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
+import QR from '../assets/images/SVG/QR.svg';
 
 interface InvoiceProps {
     navigation: any;
@@ -64,24 +64,25 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const noteKey = getRPreimage || payment_hash;
 
         const QRButton = () => (
-            <Icon
-                name="qr-code"
-                onPress={() => {
-                    navigation.navigate('QR', { value: getPaymentRequest });
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
+            <TouchableOpacity
+                onPress={() =>
+                    navigation.navigate('QR', { value: getPaymentRequest })
+                }
+            >
+                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
+            </TouchableOpacity>
         );
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('AddNotes', { getRPreimage: noteKey })
                 }
-                style={{ marginTop: -6, alignSelf: 'center', marginRight: 14 }}
+                style={{ marginRight: 15 }}
             >
-                <EditNotes height={40} width={40} />
+                <EditNotes
+                    fill={themeColor('text')}
+                    style={{ alignSelf: 'center' }}
+                />
             </TouchableOpacity>
         );
 
