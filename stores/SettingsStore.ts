@@ -972,11 +972,11 @@ export default class SettingsStore {
                 }
 
                 // TODO PEGASUS
-                // temporarily toggle all alpha users settings for now
-                const MOD_KEY_1 = 'neutrino-mod-1';
+                // temporarily toggle all beta users settings for now
+                const MOD_KEY_1 = 'egs-mod-1';
                 const mod1 = await EncryptedStorage.getItem(MOD_KEY_1);
                 if (!mod1) {
-                    this.settings.dontAllowOtherPeers = true;
+                    this.settings.expressGraphSync = true;
                     await EncryptedStorage.setItem(MOD_KEY_1, 'true');
                 }
 
