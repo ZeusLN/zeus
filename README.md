@@ -1,5 +1,5 @@
 # ZEUS
-<p align="center"><img src="https://user-images.githubusercontent.com/1878621/208786339-ac5f64e3-d419-404c-9293-dd2301795891.png"></p>
+<p align="center"><img src="https://github-production-user-asset-6210df.s3.amazonaws.com/1878621/282360800-579c1156-1fc6-45b6-86f2-7b3424502160.png"></p>
 
 ZEUS is a mobile Bitcoin/Lightning node manager and wallet application for LND, Core Lightning, and Eclair. ⚡️
 
