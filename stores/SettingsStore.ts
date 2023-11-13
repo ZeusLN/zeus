@@ -106,7 +106,6 @@ export interface Settings {
     // Embedded node
     automaticDisasterRecoveryBackup: boolean;
     expressGraphSync: boolean;
-    expressGraphSyncMobile: boolean;
     resetExpressGraphSyncOnStartup: boolean;
     bimodalPathfinding: boolean;
     dontAllowOtherPeers: boolean;
@@ -758,7 +757,6 @@ export default class SettingsStore {
         // embedded node
         automaticDisasterRecoveryBackup: true,
         expressGraphSync: true,
-        expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: true,
         dontAllowOtherPeers: true,

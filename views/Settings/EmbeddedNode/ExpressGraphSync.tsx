@@ -19,7 +19,6 @@ interface ExpressGraphSyncProps {
 
 interface ExpressGraphSyncState {
     expressGraphSync: boolean | undefined;
-    expressGraphSyncMobile: boolean | undefined;
     resetExpressGraphSyncOnStartup: boolean | undefined;
 }
 
@@ -31,7 +30,6 @@ export default class ExpressGraphSync extends React.Component<
 > {
     state = {
         expressGraphSync: false,
-        expressGraphSyncMobile: false,
         resetExpressGraphSyncOnStartup: false
     };
 
@@ -41,7 +39,6 @@ export default class ExpressGraphSync extends React.Component<
 
         this.setState({
             expressGraphSync: settings.expressGraphSync,
-            expressGraphSyncMobile: settings.expressGraphSyncMobile,
             resetExpressGraphSyncOnStartup:
                 settings.resetExpressGraphSyncOnStartup
         });
@@ -49,11 +46,7 @@ export default class ExpressGraphSync extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const {
-            expressGraphSync,
-            expressGraphSyncMobile,
-            resetExpressGraphSyncOnStartup
-        } = this.state;
+        const { expressGraphSync, resetExpressGraphSyncOnStartup } = this.state;
         const { updateSettings }: any = SettingsStore;
 
         return (
@@ -124,62 +117,6 @@ export default class ExpressGraphSync extends React.Component<
                                 >
                                     {localeString(
                                         'views.Settings.EmbeddedNode.expressGraphSync.subtitle'
-                                    )}
-                                </Text>
-                            </View>
-                        </>
-                        <>
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                            >
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.expressGraphSyncMobile'
-                                    )}
-                                </ListItem.Title>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        flexDirection: 'row',
-                                        justifyContent: 'flex-end'
-                                    }}
-                                >
-                                    <Switch
-                                        value={expressGraphSyncMobile}
-                                        onValueChange={async () => {
-                                            this.setState({
-                                                expressGraphSyncMobile:
-                                                    !expressGraphSyncMobile
-                                            });
-                                            await updateSettings({
-                                                expressGraphSyncMobile:
-                                                    !expressGraphSyncMobile
-                                            });
-                                        }}
-                                        disabled={!expressGraphSync}
-                                    />
-                                </View>
-                            </ListItem>
-                            <View
-                                style={{
-                                    margin: 10
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.expressGraphSyncMobile.subtitle'
                                     )}
                                 </Text>
                             </View>

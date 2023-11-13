@@ -51,8 +51,7 @@ export default class EmbeddedNode extends React.Component<
         const {
             automaticDisasterRecoveryBackup,
             bimodalPathfinding,
-            expressGraphSync,
-            expressGraphSyncMobile
+            expressGraphSync
         } = settings;
 
         return (
@@ -145,16 +144,7 @@ export default class EmbeddedNode extends React.Component<
                                               )
                                             : localeString(
                                                   'views.Settings.disabled'
-                                              )}{' '}
-                                        {expressGraphSync
-                                            ? expressGraphSyncMobile
-                                                ? `(${localeString(
-                                                      'views.Settings.EmbeddedNode.expressGraphSync.mobileAndWifi'
-                                                  )})`
-                                                : `(${localeString(
-                                                      'views.Settings.EmbeddedNode.expressGraphSync.wifiOnly'
-                                                  )})`
-                                            : ''}
+                                              )}
                                     </ListItem.Title>
                                 </ListItem.Content>
                                 <Icon
