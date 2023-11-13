@@ -73,21 +73,30 @@ export default class OnchainSwipeableRow extends Component<
                     >
                         {text === localeString('general.coins') && (
                             <Coins
-                                fill={themeColor('highlight')}
+                                fill={
+                                    themeColor('action') ||
+                                    themeColor('highlight')
+                                }
                                 width={30}
                                 height={30}
                             />
                         )}
                         {text === localeString('general.receive') && (
                             <Receive
-                                fill={themeColor('highlight')}
+                                fill={
+                                    themeColor('action') ||
+                                    themeColor('highlight')
+                                }
                                 width={30}
                                 height={30}
                             />
                         )}
                         {text === localeString('general.send') && (
                             <Send
-                                fill={themeColor('highlight')}
+                                fill={
+                                    themeColor('action') ||
+                                    themeColor('highlight')
+                                }
                                 width={30}
                                 height={30}
                             />
