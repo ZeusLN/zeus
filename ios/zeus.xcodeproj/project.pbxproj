@@ -146,7 +146,6 @@
 		ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED297162215061F000B7C4FE /* JavaScriptCore.framework */; };
 		EE7264005C294AE58E30C834 /* Error.svg in Resources */ = {isa = PBXBuildFile; fileRef = DD470243A7FC45D882EF1B0D /* Error.svg */; };
 		F15BCD255F194C84973AB51D /* Skull.svg in Resources */ = {isa = PBXBuildFile; fileRef = B813A99762CC4756A18E0C20 /* Skull.svg */; };
-		F64C923F939245A284E8D5E2 /* Refresh.svg in Resources */ = {isa = PBXBuildFile; fileRef = 58468A869AB24054A313D38E /* Refresh.svg */; };
 		F6BA97FE98FB4D8890855BEC /* Wallet.svg in Resources */ = {isa = PBXBuildFile; fileRef = CCFEAC399BB842A091ADB042 /* Wallet.svg */; };
 		F9767258AD2F4256A0668218 /* Save.svg in Resources */ = {isa = PBXBuildFile; fileRef = 6934A0BCDAD94002BA8F840A /* Save.svg */; };
 /* End PBXBuildFile section */
@@ -386,7 +385,6 @@
 		4D6C56355DAE4697AB55E762 /* Feather.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Feather.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Feather.ttf"; sourceTree = "<group>"; };
 		565C3A5DD94B417EB83A30FE /* Hidden.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Hidden.svg; path = ../assets/images/SVG/Hidden.svg; sourceTree = "<group>"; };
 		571E23F345EB49B99F8150D2 /* Caret Left.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Left.svg"; path = "../assets/images/SVG/Caret Left.svg"; sourceTree = "<group>"; };
-		58468A869AB24054A313D38E /* Refresh.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Refresh.svg; path = ../assets/images/SVG/Refresh.svg; sourceTree = "<group>"; };
 		5BF5971FD22D4660A5240C68 /* Untitled.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Untitled.png; path = ../assets/images/Untitled.png; sourceTree = "<group>"; };
 		5CC0E65B8E6447A38BD1EE91 /* Brush.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Brush.svg; path = ../assets/images/SVG/Brush.svg; sourceTree = "<group>"; };
 		5E91572D1DD0AC6500FF2AA8 /* RCTAnimation.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTAnimation.xcodeproj; path = "../node_modules/react-native/Libraries/NativeAnimation/RCTAnimation.xcodeproj"; sourceTree = "<group>"; };
@@ -900,7 +898,6 @@
 				80E6686C049240CE9887FA2C /* QR.svg */,
 				19F1DF8577E64E24B856F202 /* Question.svg */,
 				EF00F35A868F4C26B9288D74 /* Receive.svg */,
-				58468A869AB24054A313D38E /* Refresh.svg */,
 				B36D434AE9B14EE7AD5E6BCE /* Routing.svg */,
 				29E002EDCBDC4FB59A29BA2E /* Scan.svg */,
 				095808991E764378BE2D3052 /* Send.svg */,
@@ -1359,7 +1356,6 @@
 				40ABC332E9C74327B118D50A /* QR.svg in Resources */,
 				D2619D32728445B6A89A8E90 /* Question.svg in Resources */,
 				A09AF727D5F84779808B2B53 /* Receive.svg in Resources */,
-				F64C923F939245A284E8D5E2 /* Refresh.svg in Resources */,
 				824E335CCF474E769966E342 /* Routing.svg in Resources */,
 				74668A592AE3CBB90023695A /* Marlide-Display.ttf in Resources */,
 				BFEB12685B664218922995B1 /* Scan.svg in Resources */,
