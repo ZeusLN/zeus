@@ -38,7 +38,6 @@
     "@react-navigation/bottom-tabs": "5.11.11",
     "@react-navigation/native": "6.0.16",
     "@remobile/react-native-qrcode-local-image": "github:BlueWallet/react-native-qrcode-local-image#31b0113",
-    "@shopify/react-native-skia": "^0.1.213",
     "@tradle/react-native-http": "2.0.1",
     "@types/dateformat": "5.0.0",
     "@types/react-native-snap-carousel": "3.8.5",
