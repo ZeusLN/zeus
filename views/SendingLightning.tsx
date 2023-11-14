@@ -360,7 +360,11 @@ export default class SendingLightning extends React.Component<
                                         buttonStyle={{ height: 40 }}
                                     />
                                 )}
-                                {payment_error == `FAILURE_REASON_NO_ROUTE` && (
+                                {(payment_error == 'FAILURE_REASON_NO_ROUTE' ||
+                                    payment_error ==
+                                        localeString(
+                                            'error.failureReasonNoRoute'
+                                        )) && (
                                     <>
                                         <Text
                                             style={{
@@ -396,6 +400,31 @@ export default class SendingLightning extends React.Component<
                                             }}
                                         />
                                     </>
+                                )}
+                                {(payment_error == 'FAILURE_REASON_TIMEOUT' ||
+                                    payment_error ==
+                                        localeString(
+                                            'error.failureReasonTimeout'
+                                        )) && (
+                                    <Button
+                                        title={localeString(
+                                            'views.SendingLightning.tryAgain'
+                                        )}
+                                        icon={{
+                                            name: 'return-up-back',
+                                            type: 'ionicon',
+                                            size: 25
+                                        }}
+                                        onPress={() => navigation.goBack()}
+                                        buttonStyle={{
+                                            backgroundColor: 'white',
+                                            height: 40
+                                        }}
+                                        containerStyle={{
+                                            width: '100%',
+                                            margin: 10
+                                        }}
+                                    />
                                 )}
 
                                 {(!!error ||
