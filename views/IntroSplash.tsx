@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     BackHandler,
     Dimensions,
+    ImageBackground,
     NativeEventSubscription,
     View,
     SafeAreaView,
@@ -22,8 +23,6 @@ import SettingsStore, { LOCALE_KEYS } from '../stores/SettingsStore';
 import { createLndWallet } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-
-import SplashView from '../components/Splash';
 
 import TresArrows from '../assets/images/SVG/TresArrows.svg';
 
@@ -143,7 +142,14 @@ export default class IntroSplash extends React.Component<
                         flex: 1
                     }}
                 >
-                    <SplashView>
+                    <ImageBackground
+                        source={require('../assets/images/hyper.jpg')}
+                        resizeMode="cover"
+                        style={{
+                            flex: 1,
+                            justifyContent: 'center'
+                        }}
+                    >
                         <View style={{ flex: 1, flexDirection: 'column' }}>
                             <View
                                 style={{
@@ -296,7 +302,7 @@ export default class IntroSplash extends React.Component<
                                 />
                             </View>
                         </View>
-                    </SplashView>
+                    </ImageBackground>
                 </SafeAreaView>
             </Screen>
         );
