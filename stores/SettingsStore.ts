@@ -212,7 +212,8 @@ export const LOCALE_KEYS = [
     { key: 'vi', value: 'Tiếng Việt' },
     { key: 'jp', value: '日本語' },
     { key: 'he', value: 'עִבְרִית' },
-    { key: 'hr', value: 'Hrvatski' }
+    { key: 'hr', value: 'Hrvatski' },
+    { key: 'ko', value: '한국어' }
 ];
 
 // this mapping is only for migration and does not need to be updated when new languages are added
