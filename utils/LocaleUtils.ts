@@ -3,11 +3,11 @@ import * as EN from './../locales/en.json';
 import * as CS from './../locales/cs.json';
 import * as DE from './../locales/de.json';
 import * as ES from './../locales/es.json';
-import * as PTBR from './../locales/pt_BR.json';
+import * as PTBR from './../locales/pt_br.json';
 import * as SK from './../locales/sk.json';
 import * as TR from './../locales/tr.json';
 import * as HU from './../locales/hu.json';
-import * as ZHCN from './../locales/zh_CN.json';
+import * as ZHCN from './../locales/zh_cn.json';
 import * as FR from './../locales/fr.json';
 import * as NL from './../locales/nl.json';
 
@@ -30,6 +30,7 @@ import * as FI from './../locales/fi.json';
 import * as IT from './../locales/it.json';
 import * as VI from './../locales/vi.json';
 import * as JA from './../locales/ja.json';
+import * as KO from './../locales/ko.json';
 
 const English: any = EN;
 const Czech: any = CS;
@@ -59,6 +60,7 @@ const Vietnamese: any = VI;
 const Japanese: any = JA;
 const Hebrew: any = HE;
 const Croatian: any = HR;
+const Korean: any = KO;
 
 export function localeString(localeString: string): any {
     const { settings } = stores.settingsStore;
@@ -117,6 +119,8 @@ export function localeString(localeString: string): any {
             return Hebrew[localeString] || English[localeString];
         case 'hr':
             return Croatian[localeString] || English[localeString];
+        case 'ko':
+            return Korean[localeString] || English[localeString];
         default:
             return English[localeString];
     }
