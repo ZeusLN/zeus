@@ -842,7 +842,7 @@ export default class Settings extends React.Component<
                                 <View>
                                     <CurrencyIcon
                                         fill={themeColor('text')}
-                                        style={{ marginLeft: 8, marginTop: 6 }}
+                                        style={{ marginLeft: 4, marginTop: 6 }}
                                     />
                                 </View>
                                 <Text
