@@ -628,7 +628,11 @@ export default class Settings extends React.Component<
                                 >
                                     <View>
                                         <ReceiveIcon
-                                            stroke={themeColor('text')}
+                                            fill={themeColor('text')}
+                                            style={{
+                                                marginLeft: 3,
+                                                marginTop: 3
+                                            }}
                                         />
                                     </View>
                                     <Text
@@ -842,7 +846,7 @@ export default class Settings extends React.Component<
                                 <View>
                                     <CurrencyIcon
                                         fill={themeColor('text')}
-                                        style={{ marginLeft: 4, marginTop: 6 }}
+                                        style={{ marginLeft: 3, marginTop: 6 }}
                                     />
                                 </View>
                                 <Text
