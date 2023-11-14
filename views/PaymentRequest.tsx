@@ -45,6 +45,12 @@ import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import QR from '../assets/images/SVG/QR.svg';
 import Conversion from '../components/Conversion';
 
+const zaplockerDestinations = [
+    // OLYMPUS
+    '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581'
+    // TODO add Zaplocker.com
+];
+
 interface InvoiceProps {
     exitSetup: any;
     navigation: any;
@@ -354,6 +360,13 @@ export default class PaymentRequest extends React.Component<
 
         const noBalance = this.props.BalanceStore.lightningBalance === 0;
 
+        const showZaplockerWarning =
+            isZaplocker ||
+            (destination &&
+                zaplockerDestinations.includes(destination) &&
+                cltv_expiry &&
+                Number(cltv_expiry) > 200);
+
         const QRButton = () => (
             <TouchableOpacity
                 onPress={() =>
@@ -406,7 +419,7 @@ export default class PaymentRequest extends React.Component<
                     {!loading && !loadingFeeEstimate && !!pay_req && (
                         <View style={styles.content}>
                             <>
-                                {isZaplocker &&
+                                {showZaplockerWarning &&
                                     implementation === 'embedded-lnd' && (
                                         <View
                                             style={{
