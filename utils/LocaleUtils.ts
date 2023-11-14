@@ -3,11 +3,11 @@ import * as EN from './../locales/en.json';
 import * as CS from './../locales/cs.json';
 import * as DE from './../locales/de.json';
 import * as ES from './../locales/es.json';
-import * as PTBR from './../locales/pt_br.json';
+import * as PTBR from './../locales/pt_BR.json';
 import * as SK from './../locales/sk.json';
 import * as TR from './../locales/tr.json';
 import * as HU from './../locales/hu.json';
-import * as ZHCN from './../locales/zh_cn.json';
+import * as ZHCN from './../locales/zh_CN.json';
 import * as FR from './../locales/fr.json';
 import * as NL from './../locales/nl.json';
 
