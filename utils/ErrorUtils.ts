@@ -18,7 +18,7 @@ const errorToUserFriendly = (error: string, localize = true) => {
     if (localize) {
         const localeString = require('./LocaleUtils').localeString;
         return (
-            localeString(userFriendlyErrors[error]).replace('Zeus', 'ZEUS') ||
+            localeString(userFriendlyErrors[error])?.replace('Zeus', 'ZEUS') ||
             error
         );
     } else {
