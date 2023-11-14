@@ -348,10 +348,6 @@ PODS:
     - React-Core
   - react-native-safe-area-context (0.6.4):
     - React
-  - react-native-skia (0.1.213):
-    - React
-    - React-callinvoker
-    - React-Core
   - react-native-tor (0.1.8):
     - React
   - react-native-udp (4.1.7):
@@ -568,7 +564,6 @@ DEPENDENCIES:
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-restart (from `../node_modules/react-native-restart`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
-  - "react-native-skia (from `../node_modules/@shopify/react-native-skia`)"
   - react-native-tor (from `../node_modules/react-native-tor`)
   - react-native-udp (from `../node_modules/react-native-udp`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -689,8 +684,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-restart"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
-  react-native-skia:
-    :path: "../node_modules/@shopify/react-native-skia"
   react-native-tor:
     :path: "../node_modules/react-native-tor"
   react-native-udp:
@@ -803,7 +796,6 @@ SPEC CHECKSUMS:
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-restart: 7595693413fe3ca15893702f2c8306c62a708162
   react-native-safe-area-context: 52342d2d80ea8faadd0ffa76d83b6051f20c5329
-  react-native-skia: 4327dd69d3272313b91ea753a2d6dd5d9bebba42
   react-native-tor: 3b14e9160b2eb7fa3f310921b2dee71a5171e5b7
   react-native-udp: df79c3cb72c4e71240cd3ce4687bfb8a137140d5
   React-NativeModulesApple: 797bc6078d566eef3fb3f74127e6e1d2e945a15f
