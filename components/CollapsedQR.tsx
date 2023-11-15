@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Platform, StyleSheet, Text } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
@@ -9,6 +9,7 @@ import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 
 const defaultLogo = require('../assets/images/icon-black.png');
 
@@ -57,6 +58,7 @@ interface CollapsedQRProps {
 interface CollapsedQRState {
     collapsed: boolean;
     nfcBroadcast: boolean;
+    displayWhiteBackground: boolean;
 }
 
 export default class CollapsedQR extends React.Component<
@@ -65,7 +67,8 @@ export default class CollapsedQR extends React.Component<
 > {
     state = {
         collapsed: this.props.expanded ? false : true,
-        nfcBroadcast: false
+        nfcBroadcast: false,
+        displayWhiteBackground: false
     };
 
     componentWillUnmount() {
@@ -108,7 +111,7 @@ export default class CollapsedQR extends React.Component<
     };
 
     render() {
-        const { collapsed, nfcBroadcast } = this.state;
+        const { collapsed, nfcBroadcast, displayWhiteBackground } = this.state;
         const {
             value,
             showText,
@@ -133,17 +136,37 @@ export default class CollapsedQR extends React.Component<
                     />
                 )}
                 {!collapsed && value && (
-                    <View style={styles.qrPadding}>
+                    <TouchableOpacity
+                        style={{
+                            ...styles.qrPadding,
+                            backgroundColor: displayWhiteBackground
+                                ? 'white'
+                                : themeColor('qr') || 'white'
+                        }}
+                        onPress={() =>
+                            this.setState({
+                                displayWhiteBackground: true
+                            })
+                        }
+                    >
                         <QRCode
                             value={value}
                             size={height > width ? width * 0.8 : height * 0.6}
                             logo={logo || defaultLogo}
-                            backgroundColor={themeColor('qr') || 'white'}
-                            logoBackgroundColor={themeColor('qr') || 'white'}
+                            backgroundColor={
+                                displayWhiteBackground
+                                    ? 'white'
+                                    : themeColor('qr') || 'white'
+                            }
+                            logoBackgroundColor={
+                                displayWhiteBackground
+                                    ? 'white'
+                                    : themeColor('qr') || 'white'
+                            }
                             logoMargin={10}
-                            quietZone={0}
+                            quietZone={4}
                         />
-                    </View>
+                    </TouchableOpacity>
                 )}
                 {!hideText && textBottom && (
                     <ValueText
@@ -205,7 +228,6 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     },
     qrPadding: {
-        backgroundColor: themeColor('qr') || 'white',
         alignItems: 'center',
         alignSelf: 'center',
         padding: 5,
