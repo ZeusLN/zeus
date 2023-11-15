@@ -530,7 +530,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             value={!contactName && destination}
                             onChangeText={(text: string) => {
                                 this.setState({
-                                    destination: text,
+                                    destination: text.trim(),
                                     error_msg: !text && ''
                                 });
                             }}
