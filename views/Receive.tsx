@@ -1524,7 +1524,7 @@ export default class Receive extends React.Component<
                                                         lnInvoiceCopyValue
                                                     }
                                                     copyText={localeString(
-                                                        'views.Receive.copyAddress'
+                                                        'views.Receive.copyInvoice'
                                                     )}
                                                     expanded
                                                     textBottom
