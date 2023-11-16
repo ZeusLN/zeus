@@ -124,7 +124,7 @@ export default class LSPStore {
                         this.zeroConfFee = Number.parseInt(
                             (Number(data.fee_amount_msat) / 1000).toString()
                         );
-                        this.feeId = data.fee_id;
+                        this.feeId = data.id;
                         resolve(this.zeroConfFee);
                     } else {
                         this.error = true;
