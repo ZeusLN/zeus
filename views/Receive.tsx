@@ -1001,7 +1001,10 @@ export default class Receive extends React.Component<
 
         const unifiedButton = () => (
             <React.Fragment>
-                <UnifiedSvg />
+                <UnifiedSvg
+                    circle={false}
+                    selected={selectedIndex === 0 ? true : false}
+                />
                 <Text
                     style={{
                         color:
@@ -1018,7 +1021,12 @@ export default class Receive extends React.Component<
 
         const lightningButton = () => (
             <React.Fragment>
-                <LightningSvg width={50} height={50} />
+                <LightningSvg
+                    width={50}
+                    height={50}
+                    circle={false}
+                    selected={selectedIndex === 1 ? true : false}
+                />
                 <Text
                     style={{
                         color:
@@ -1035,7 +1043,12 @@ export default class Receive extends React.Component<
 
         const onChainButton = () => (
             <React.Fragment>
-                <OnChainSvg width={50} height={50} />
+                <OnChainSvg
+                    width={50}
+                    height={50}
+                    circle={false}
+                    selected={selectedIndex === 2 ? true : false}
+                />
                 <Text
                     style={{
                         color:
@@ -1052,7 +1065,10 @@ export default class Receive extends React.Component<
 
         const lightningAddressButton = () => (
             <React.Fragment>
-                <AddressSvg />
+                <AddressSvg
+                    circle={false}
+                    selected={selectedIndex === 3 ? true : false}
+                />
                 <Text
                     style={{
                         color:
@@ -1981,7 +1997,7 @@ export default class Receive extends React.Component<
                                 containerStyle={{
                                     backgroundColor: themeColor('secondary'),
                                     borderRadius: 12,
-                                    borderColor: themeColor('secondary'),
+                                    borderWidth: 0,
                                     height: 80
                                 }}
                                 innerBorderStyle={{
