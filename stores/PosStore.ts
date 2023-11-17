@@ -131,7 +131,10 @@ export default class PosStore {
                                         .includes('bitcoin') ||
                                     order.tenders[0].note
                                         .toLowerCase()
-                                        .includes('btc'))
+                                        .includes('btc') ||
+                                    order.tenders[0].note
+                                        .toLowerCase()
+                                        .includes('bit coin'))
                             );
                         });
 
@@ -244,7 +247,10 @@ export default class PosStore {
                                         .includes('bitcoin') ||
                                     order.tenders[0].note
                                         .toLowerCase()
-                                        .includes('btc'))
+                                        .includes('btc') ||
+                                    order.tenders[0].note
+                                        .toLowerCase()
+                                        .includes('bit coin'))
                             );
                         });
 
