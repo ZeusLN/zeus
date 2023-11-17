@@ -34,147 +34,147 @@ function PaidIndicator() {
                 colorFilters={[
                     {
                         keypath: '81 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '79 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '77 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '75 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '72 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '70 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '68 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '66 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '64 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '46 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '44 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '43 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '42 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '41 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '40 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '39 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '38 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '37 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '36 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '35 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '34 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '33 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '32 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '25 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '23 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '21 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '19 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '16 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '14 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '12 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '10 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '08 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '06 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '33 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '04 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     },
                     {
                         keypath: '02 Outlines 2',
-                        color: themeColor('highlight')
+                        color: themeColor('text')
                     }
                 ]}
             />
