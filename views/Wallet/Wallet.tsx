@@ -706,6 +706,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 : localeString(
                                                       'views.Wallet.Wallet.startingNode'
                                                   ).replace('Zeus', 'ZEUS')
+                                            : implementation === 'lndhub'
+                                            ? localeString(
+                                                  'views.Wallet.Wallet.loadingAccount'
+                                              ).replace('Zeus', 'ZEUS')
                                             : localeString(
                                                   'views.Wallet.Wallet.connecting'
                                               ).replace('Zeus', 'ZEUS')
