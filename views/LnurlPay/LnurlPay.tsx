@@ -192,87 +192,105 @@ export default class LnurlPay extends React.Component<
                     navigation={navigation}
                 />
                 <ScrollView keyboardShouldPersistTaps="handled">
-                    <View style={styles.content}>
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: themeColor('secondaryText'),
-                                padding: 20,
-                                fontWeight: 'bold',
-                                fontSize: 22
-                            }}
-                        >
-                            {domain}
-                        </Text>
-                    </View>
-                    <View style={styles.content}>
-                        <Row align="flex-end">
+                    {domain && (
+                        <View style={styles.content}>
                             <Text
                                 style={{
                                     ...styles.text,
-                                    color: themeColor('secondaryText')
+                                    color: themeColor('secondaryText'),
+                                    padding: 20,
+                                    fontWeight: 'bold',
+                                    fontSize: 22
                                 }}
                             >
-                                {localeString('views.LnurlPay.LnurlPay.amount')}
+                                {domain}
                             </Text>
-                            {lnurl && lnurl.minSendable !== lnurl.maxSendable && (
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {' ('}
-                                    </Text>
-                                    <Amount
-                                        color="secondaryText"
-                                        sats={Math.ceil(
-                                            lnurl.minSendable / 1000
-                                        )}
-                                    />
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {' - '}
-                                    </Text>
-                                    <Amount
-                                        color="secondaryText"
-                                        sats={Math.floor(
-                                            lnurl.maxSendable / 1000
-                                        )}
-                                    />
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {'):'}
-                                    </Text>
-                                </>
-                            )}
-                        </Row>
-                        <AmountInput
-                            amount={amount}
-                            locked={
-                                lnurl && lnurl.minSendable === lnurl.maxSendable
-                                    ? true
-                                    : false
-                            }
-                            onAmountChange={(
-                                amount: string,
-                                satAmount: string | number
-                            ) => {
-                                this.setState({
-                                    amount,
-                                    satAmount
-                                });
-                            }}
-                        />
+                        </View>
+                    )}
+
+                    <View style={styles.content}>
+                        <View style={{ marginTop: 4 }}>
+                            <Row align="flex-end">
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.LnurlPay.LnurlPay.amount'
+                                    )}
+                                </Text>
+                                {lnurl &&
+                                    lnurl.minSendable !== lnurl.maxSendable && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {' ('}
+                                            </Text>
+                                            <Amount
+                                                color="secondaryText"
+                                                sats={Math.ceil(
+                                                    lnurl.minSendable / 1000
+                                                )}
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {' - '}
+                                            </Text>
+                                            <Amount
+                                                color="secondaryText"
+                                                sats={Math.floor(
+                                                    lnurl.maxSendable / 1000
+                                                )}
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {'):'}
+                                            </Text>
+                                        </>
+                                    )}
+                            </Row>
+                        </View>
+                        <View style={{ marginTop: -20 }}>
+                            <AmountInput
+                                amount={amount}
+                                locked={
+                                    lnurl &&
+                                    lnurl.minSendable === lnurl.maxSendable
+                                        ? true
+                                        : false
+                                }
+                                onAmountChange={(
+                                    amount: string,
+                                    satAmount: string | number
+                                ) => {
+                                    this.setState({
+                                        amount,
+                                        satAmount
+                                    });
+                                }}
+                            />
+                        </View>
+
                         {lnurl.commentAllowed > 0 ? (
                             <>
                                 <Text
