@@ -364,7 +364,10 @@ export default class LightningAddress extends React.Component<
                         {!loading && lightningAddressHandle && !hasChannels && (
                             <WarningMessage
                                 message={
-                                    automaticallyRequestOlympusChannels
+                                    // TODO add new dynamic fee logic here for chan opens
+                                    automaticallyRequestOlympusChannels &&
+                                    SettingsStore.implementation ===
+                                        'embedded-lnd'
                                         ? `${localeString(
                                               'views.Settings.LightningAddress.receiveExplainer1'
                                           )} ${localeString(
