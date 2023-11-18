@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import {
+    Alert,
     Animated,
     StyleSheet,
     Text,
@@ -7,6 +8,7 @@ import {
     I18nManager,
     TouchableOpacity
 } from 'react-native';
+import { getParams as getlnurlParams } from 'js-lnurl';
 
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -156,8 +158,56 @@ export default class LightningSwipeableRow extends Component<
     };
 
     private fetchLnInvoice = () => {
-        invoicesStore.getPayReq(this.props.lightning);
-        this.props.navigation.navigate('PaymentRequest', {});
+        const { lightning } = this.props;
+        if (lightning?.toLowerCase().startsWith('lnurl')) {
+            return getlnurlParams(lightning)
+                .then((params: any) => {
+                    if (
+                        params.status === 'ERROR' &&
+                        params.domain.endsWith('.onion')
+                    ) {
+                        // TODO handle fetching of params with internal Tor
+                        throw new Error(
+                            `${params.domain} says: ${params.reason}`
+                        );
+                    }
+
+                    switch (params.tag) {
+                        case 'payRequest':
+                            params.lnurlText = lightning;
+                            return [
+                                'LnurlPay',
+                                {
+                                    lnurlParams: params
+                                }
+                            ];
+                        default:
+                            Alert.alert(
+                                localeString('general.error'),
+                                params.status === 'ERROR'
+                                    ? `${params.domain} says: ${params.reason}`
+                                    : `${localeString(
+                                          'utils.handleAnything.unsupportedLnurlType'
+                                      )}: ${params.tag}`,
+                                [
+                                    {
+                                        text: localeString('general.ok'),
+                                        onPress: () => void 0
+                                    }
+                                ],
+                                { cancelable: false }
+                            );
+                    }
+                })
+                .catch(() => {
+                    throw new Error(
+                        localeString('utils.handleAnything.invalidLnurlParams')
+                    );
+                });
+        } else {
+            invoicesStore.getPayReq(this.props.lightning);
+            this.props.navigation.navigate('PaymentRequest', {});
+        }
     };
 
     render() {
