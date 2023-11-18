@@ -267,7 +267,6 @@ export default class BalancePane extends React.PureComponent<
                                             borderRadius: 10,
                                             borderColor:
                                                 themeColor('highlight'),
-                                            width: '90%',
                                             top: 10,
                                             margin: 20,
                                             padding: 15,
