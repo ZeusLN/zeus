@@ -38,8 +38,8 @@ export default class PaymentsSettings extends React.Component<
 > {
     state = {
         feeLimitMethod: 'fixed',
-        feeLimit: '100',
-        feePercentage: '0.5',
+        feeLimit: '1000',
+        feePercentage: '5.0',
         timeoutSeconds: '60',
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee'
@@ -52,8 +52,8 @@ export default class PaymentsSettings extends React.Component<
 
         this.setState({
             feeLimitMethod: settings?.payments?.defaultFeeMethod || 'fixed',
-            feeLimit: settings?.payments?.defaultFeeFixed || '100',
-            feePercentage: settings?.payments?.defaultFeePercentage || '0.5',
+            feeLimit: settings?.payments?.defaultFeeFixed || '1000',
+            feePercentage: settings?.payments?.defaultFeePercentage || '5.0',
             enableMempoolRates: settings?.privacy?.enableMempoolRates || false,
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
             preferredMempoolRate:
@@ -103,7 +103,7 @@ export default class PaymentsSettings extends React.Component<
                     }}
                 >
                     {BackendUtils.isLNDBased() && (
-                        <>
+                        <View style={{ marginBottom: 20 }}>
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
@@ -121,9 +121,7 @@ export default class PaymentsSettings extends React.Component<
                                     flex: 1,
                                     flexWrap: 'wrap',
                                     flexDirection: 'row',
-                                    justifyContent: 'flex-end',
-                                    opacity:
-                                        feeLimitMethod == 'percent' ? 1 : 0.25
+                                    justifyContent: 'flex-end'
                                 }}
                             ></View>
                             <View
@@ -134,9 +132,7 @@ export default class PaymentsSettings extends React.Component<
                             >
                                 <TextInput
                                     style={{
-                                        width: '50%',
-                                        opacity:
-                                            feeLimitMethod == 'fixed' ? 1 : 0.25
+                                        width: '50%'
                                     }}
                                     keyboardType="numeric"
                                     value={feeLimit}
@@ -167,9 +163,7 @@ export default class PaymentsSettings extends React.Component<
                                         paddingTop: 5,
                                         color: themeColor('text'),
                                         top: 28,
-                                        right: 30,
-                                        opacity:
-                                            feeLimitMethod == 'fixed' ? 1 : 0.25
+                                        right: 30
                                     }}
                                 >
                                     {localeString('general.sats')}
@@ -177,10 +171,6 @@ export default class PaymentsSettings extends React.Component<
                                 <TextInput
                                     style={{
                                         width: '50%',
-                                        opacity:
-                                            feeLimitMethod == 'percent'
-                                                ? 1
-                                                : 0.25,
                                         right: 5
                                     }}
                                     keyboardType="numeric"
@@ -211,17 +201,18 @@ export default class PaymentsSettings extends React.Component<
                                         paddingTop: 5,
                                         color: themeColor('text'),
                                         top: 28,
-                                        right: 25,
-                                        opacity:
-                                            feeLimitMethod == 'percent'
-                                                ? 1
-                                                : 0.25
+                                        right: 25
                                     }}
                                 >
                                     {'%'}
                                 </Text>
                             </View>
-                        </>
+                            <Text style={{ color: themeColor('text') }}>
+                                {localeString(
+                                    'views.Settings.Payments.feeLimitMethodExplainer'
+                                )}
+                            </Text>
+                        </View>
                     )}
                     {BackendUtils.isLNDBased() && (
                         <>
