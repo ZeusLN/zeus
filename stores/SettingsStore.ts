@@ -53,7 +53,7 @@ interface PosSettings {
 }
 
 interface PaymentsSettings {
-    defaultFeeMethod?: string;
+    defaultFeeMethod?: string; // deprecated
     defaultFeePercentage?: string;
     defaultFeeFixed?: string;
     timeoutSeconds?: string;
@@ -734,9 +734,9 @@ export default class SettingsStore {
             squareDevMode: false
         },
         payments: {
-            defaultFeeMethod: 'fixed',
-            defaultFeePercentage: '0.5',
-            defaultFeeFixed: '100',
+            defaultFeeMethod: 'fixed', // deprecated
+            defaultFeePercentage: '5.0',
+            defaultFeeFixed: '1000',
             timeoutSeconds: '60',
             preferredMempoolRate: 'fastestFee'
         },

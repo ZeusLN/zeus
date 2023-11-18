@@ -106,9 +106,9 @@ export default class PaymentRequest extends React.Component<
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
         maxShardAmt: '',
-        feeLimitSat: '100',
+        feeLimitSat: '1000',
         feeOption: 'fixed',
-        maxFeePercent: '0.5',
+        maxFeePercent: '5.0',
         timeoutSeconds: '60',
         outgoingChanId: null,
         lastHopPubkey: null,
@@ -119,14 +119,24 @@ export default class PaymentRequest extends React.Component<
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
-        const { SettingsStore } = this.props;
+        const { SettingsStore, InvoicesStore } = this.props;
         const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
 
+        let feeOption = 'fixed';
+        const { pay_req } = InvoicesStore;
+        const requestAmount = pay_req && pay_req.getRequestAmount;
+
+        if (requestAmount && requestAmount != 0) {
+            if (requestAmount > 1000) {
+                feeOption = 'percent';
+            }
+        }
+
         this.setState({
-            feeOption: settings?.payments?.defaultFeeMethod || 'fixed',
+            feeOption,
             feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
-            maxFeePercent: settings?.payments?.defaultFeePercentage || '0.5',
+            maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
         });
 
@@ -870,7 +880,7 @@ export default class PaymentRequest extends React.Component<
                                             </Text>
                                             <TextInput
                                                 keyboardType="numeric"
-                                                placeholder={'0.5'}
+                                                placeholder={'5.0'}
                                                 value={maxFeePercent}
                                                 onChangeText={(text: string) =>
                                                     this.setState({
