@@ -1,34 +1,44 @@
-import * as React from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Dimensions,
     StyleSheet,
     Text,
     View,
     Platform,
     TouchableOpacity,
-    PermissionsAndroid
+    PermissionsAndroid,
+    BackHandler,
+    AppState,
+    Alert
 } from 'react-native';
-import { Camera } from 'react-native-camera-kit';
+import {
+    Camera,
+    Point,
+    useCameraDevice,
+    useCodeScanner
+} from 'react-native-vision-camera';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 const LocalQRCode = require('@remobile/react-native-qrcode-local-image');
 
+import Header from './Header';
 import Button from '../components/Button';
 
 import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
 import FlashOffIcon from '../assets/images/SVG/Flash Off.svg';
 import FlashOnIcon from '../assets/images/SVG/Flash On.svg';
 import GalleryIcon from '../assets/images/SVG/Gallery.svg';
-import ScanFrameSvg from '../assets/images/SVG/DynamicSVG/ScanFrameSvg';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 
 const createHash = require('create-hash');
 
 interface QRProps {
     text?: string;
-    handleQRScanned: any;
+    handleQRScanned: (data: string) => void;
     goBack: any;
     navigation: StackNavigationProp<any, any>;
     parts?: number;
@@ -51,22 +61,34 @@ export default function QRCodeScanner({
     totalParts,
     mode
 }: QRProps) {
-    const [cameraStatus, setCameraStatus] = React.useState<string>(
+    const [cameraStatus, setCameraStatus] = useState<string>(
         CameraAuthStatus.UNKNOWN
     );
-    const [isTorchOn, setIsTorchOn] = React.useState(false);
+    const [isTorchOn, setIsTorchOn] = useState(false);
+    const [scannedCache, setScannedCache] = useState(new Set<string>());
+    const [cameraIsActive, setCameraIsActive] = useState(true);
 
-    let scannedCache: { [name: string]: number } = {};
-    const maskLength = (Dimensions.get('window').width * 80) / 100;
+    useEffect(() => {
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            () => {
+                goBack();
+                return true;
+            }
+        );
+
+        return () => backHandler.remove();
+    }, []);
+
+    const device = useCameraDevice('back');
 
     const handleRead = (data: any) => {
         const hash = createHash('sha256').update(data).digest().toString('hex');
-        if (scannedCache[hash]) {
-            // this QR was already scanned let's prevent firing duplicate
-            // callbacks
+        if (scannedCache.has(hash)) {
+            // this QR was already scanned, let's prevent firing duplicate callbacks
             return;
         }
-        scannedCache[hash] = +new Date();
+        scannedCache.add(hash);
         handleQRScanned(data);
     };
 
@@ -75,34 +97,58 @@ export default function QRCodeScanner({
             if (!response.didCancel) {
                 const asset = response.assets?.[0];
                 if (asset?.uri) {
-                    const uri = asset.uri.toString().replace('file://', '');
+                    const uri = asset.uri?.replace('file://', '');
                     LocalQRCode.decode(uri, (error: any, result: any) => {
                         if (!error) {
                             handleRead(result);
+                        } else {
+                            console.error('Error decoding QR code:', error);
+                            Alert.alert(
+                                localeString('general.error'),
+                                localeString(
+                                    'components.QRCodeScanner.notRecognized'
+                                ),
+                                undefined,
+                                { cancelable: true }
+                            );
                         }
                     });
                 }
             }
         });
     };
-    const onQRCodeScan = (event: { nativeEvent: { codeStringValue: any } }) => {
-        handleRead(event.nativeEvent.codeStringValue);
-    };
+
+    const codeScanner = useCodeScanner({
+        codeTypes: ['qr'],
+        onCodeScanned: (codes) => {
+            const code = codes.find((c) => c.value != null)?.value;
+            if (code != null) {
+                handleRead(code);
+            }
+        }
+    });
 
     const toggleTorch = async () => {
         try {
             setIsTorchOn(!isTorchOn);
         } catch (error) {
-            console.log('Error toggling torch: ', error);
+            console.error('Error toggling torch:', error);
         }
     };
 
-    const handleFocus = () => (scannedCache = {});
+    const handleFocus = () => setScannedCache(new Set<string>());
 
-    React.useEffect(() => {
+    useEffect(() => {
         (async () => {
             // triggers when loaded from navigation or back action
             navigation.addListener('focus', handleFocus);
+            const appBlurSubscription = AppState.addEventListener('blur', () =>
+                setCameraIsActive(false)
+            );
+            const appFocusSubscription = AppState.addEventListener(
+                'focus',
+                () => setCameraIsActive(true)
+            );
 
             if (Platform.OS !== 'ios' && Platform.OS !== 'macos') {
                 // For android
@@ -133,7 +179,7 @@ export default function QRCodeScanner({
                             setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
                         }
                     } catch (err) {
-                        console.warn(err);
+                        console.error(err);
                     }
 
                 return;
@@ -158,110 +204,159 @@ export default function QRCodeScanner({
                 }
             }
 
-            return () => navigation.removeListener('focus', handleFocus);
+            return () => {
+                navigation.removeListener('focus', handleFocus);
+                appBlurSubscription.remove();
+                appFocusSubscription.remove();
+            };
         })();
     }, []);
+
+    const camera = useRef<Camera>(null);
+
+    const focusCamera = useCallback(
+        (point: Point) => camera.current?.focus(point),
+        []
+    );
+
+    const gesture = Gesture.Tap().onEnd(({ x, y }) =>
+        runOnJS(focusCamera)({ x, y })
+    );
 
     const hasPartsCount = parts && totalParts;
 
     return (
         <>
-            {cameraStatus === CameraAuthStatus.AUTHORIZED && (
+            {device && cameraStatus === CameraAuthStatus.AUTHORIZED && (
                 <View
-                    style={{
-                        flex: 1
-                    }}
+                    style={{ flex: 1 }}
                     accessibilityLabel={localeString('general.scan')}
                 >
-                    <Camera
-                        style={styles.preview}
-                        scanBarcode={true}
-                        torchMode={isTorchOn ? 'on' : 'off'}
-                        onReadCode={onQRCodeScan}
-                        focusMode="off"
-                    />
-                    <View style={styles.actionOverlay}>
-                        <TouchableOpacity
-                            style={styles.flashButton}
-                            onPress={toggleTorch}
-                        >
-                            {isTorchOn ? (
-                                <View
-                                    accessibilityLabel={localeString(
-                                        'components.QRCodeScanner.flashOn'
-                                    )}
-                                >
-                                    <FlashOnIcon width={35} height={35} />
-                                </View>
-                            ) : (
-                                <View
-                                    accessibilityLabel={localeString(
-                                        'components.QRCodeScanner.flashOff'
-                                    )}
-                                >
-                                    <FlashOffIcon width={35} height={35} />
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={handleOpenGallery}
-                            accessibilityLabel={localeString(
-                                'components.QRCodeScanner.chooseFromGallery'
-                            )}
-                        >
-                            <GalleryIcon width={50} height={50} />
-                        </TouchableOpacity>
-                    </View>
-                    {text !== undefined && (
-                        <Text style={styles.textOverlay}>{text}</Text>
-                    )}
-                    <View
-                        style={{
-                            position: 'absolute',
-                            top:
-                                (Dimensions.get('window').height - maskLength) /
-                                2,
-                            alignSelf: 'center',
-                            height: maskLength
-                        }}
-                    >
-                        <View style={styles.scan}>
-                            <ScanFrameSvg height="100%" />
-                            <Text style={{ color: 'white' }}>
+                    <GestureDetector gesture={gesture}>
+                        <Camera
+                            ref={camera}
+                            style={StyleSheet.absoluteFill}
+                            device={device}
+                            codeScanner={codeScanner}
+                            torch={isTorchOn ? 'on' : 'off'}
+                            isActive={cameraIsActive}
+                            enableZoomGesture={true}
+                            onError={(error) =>
+                                console.error('Camera error:', error)
+                            }
+                        />
+                    </GestureDetector>
+                    <Header
+                        leftComponent="Back"
+                        onBack={() => goBack()}
+                        navigateBackOnBackPress={false}
+                        centerComponent={
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 16
+                                }}
+                            >
                                 {mode === 'default'
                                     ? ''
                                     : hasPartsCount
                                     ? `${mode}: ${parts} / ${totalParts}`
                                     : mode}
                             </Text>
-                        </View>
-                    </View>
-                    <View style={styles.cancelOverlay}>
-                        <Button
-                            title={localeString('general.cancel')}
-                            onPress={() => goBack()}
-                            iconOnly
-                            noUppercase
-                            titleStyle={{
-                                color: 'white'
-                            }}
-                        />
-                    </View>
+                        }
+                        rightComponent={
+                            <View style={styles.actionOverlay}>
+                                {device.hasFlash && (
+                                    <TouchableOpacity
+                                        style={styles.flashButton}
+                                        onPress={toggleTorch}
+                                    >
+                                        {isTorchOn ? (
+                                            <View
+                                                accessibilityLabel={localeString(
+                                                    'components.QRCodeScanner.flashOn'
+                                                )}
+                                            >
+                                                <FlashOnIcon
+                                                    width={30}
+                                                    height={30}
+                                                    fill={themeColor('text')}
+                                                />
+                                            </View>
+                                        ) : (
+                                            <View
+                                                accessibilityLabel={localeString(
+                                                    'components.QRCodeScanner.flashOff'
+                                                )}
+                                            >
+                                                <FlashOffIcon
+                                                    width={30}
+                                                    height={30}
+                                                    fill={themeColor('text')}
+                                                />
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                )}
+                                <TouchableOpacity
+                                    onPress={handleOpenGallery}
+                                    accessibilityLabel={localeString(
+                                        'components.QRCodeScanner.chooseFromGallery'
+                                    )}
+                                >
+                                    <GalleryIcon
+                                        width={30}
+                                        height={30}
+                                        fill={themeColor('text')}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                        }
+                        containerStyle={{
+                            backgroundColor: themeColor('background')
+                        }}
+                    />
+                    {text !== undefined && (
+                        <Text style={styles.textOverlay}>{text}</Text>
+                    )}
                 </View>
             )}
 
-            {cameraStatus === CameraAuthStatus.NOT_AUTHORIZED && (
+            {device && cameraStatus === CameraAuthStatus.NOT_AUTHORIZED && (
                 <View style={styles.content}>
                     <Text
                         style={{
                             fontFamily: 'PPNeueMontreal-Book',
                             textAlign: 'center',
-                            padding: 15
+                            padding: 15,
+                            color: 'white'
                         }}
                     >
                         {localeString(
                             'components.QRCodeScanner.noCameraAccess'
                         )}
+                    </Text>
+                    <Button
+                        title={localeString('general.goBack')}
+                        onPress={() => goBack()}
+                        secondary
+                        containerStyle={{ width: 200 }}
+                        adaptiveWidth
+                    />
+                </View>
+            )}
+
+            {!device && (
+                <View style={styles.content}>
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            textAlign: 'center',
+                            padding: 15,
+                            color: 'white'
+                        }}
+                    >
+                        {localeString('components.QRCodeScanner.noCameraFound')}
                     </Text>
                     <Button
                         title={localeString('general.goBack')}
@@ -281,33 +376,21 @@ const styles = StyleSheet.create({
         flex: 1
     },
     flashButton: {
-        marginTop: 8,
-        marginRight: 5
-    },
-    scan: {
-        margin: 0
+        marginRight: 15
     },
     actionOverlay: {
-        flexDirection: 'row',
-        position: 'absolute',
-        right: 10,
-        top: 44
+        flexDirection: 'row'
     },
-
     textOverlay: {
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         color: 'white',
         textAlign: 'center',
-        fontSize: 15
+        fontSize: 15,
+        paddingVertical: 5
     },
     content: {
         flex: 1,
         justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)'
-    },
-    cancelOverlay: {
-        position: 'absolute',
-        width: '100%',
-        bottom: 60
+        backgroundColor: 'rgba(0, 0, 0, 0.5)'
     }
 });
