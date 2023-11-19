@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useEffect, useState } from 'react';
 import {
     Dimensions,
     StyleSheet,
@@ -8,7 +8,11 @@ import {
     TouchableOpacity,
     PermissionsAndroid
 } from 'react-native';
-import { Camera } from 'react-native-camera-kit';
+import {
+    Camera,
+    useCameraDevice,
+    useCodeScanner
+} from 'react-native-vision-camera';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { launchImageLibrary } from 'react-native-image-picker';
 
@@ -44,13 +48,15 @@ export default function QRCodeScanner({
     goBack,
     navigation
 }: QRProps) {
-    const [cameraStatus, setCameraStatus] = React.useState<string>(
+    const [cameraStatus, setCameraStatus] = useState<string>(
         CameraAuthStatus.UNKNOWN
     );
-    const [isTorchOn, setIsTorchOn] = React.useState(false);
+    const [isTorchOn, setIsTorchOn] = useState(false);
 
     let scannedCache: { [name: string]: number } = {};
     const maskLength = (Dimensions.get('window').width * 80) / 100;
+
+    const device = useCameraDevice('back');
 
     const handleRead = (data: any) => {
         const hash = createHash('sha256').update(data).digest().toString('hex');
@@ -64,28 +70,32 @@ export default function QRCodeScanner({
     };
 
     const handleOpenGallery = () => {
-        launchImageLibrary(
-            {
-                mediaType: 'photo'
-            },
-            (response) => {
-                if (!response.didCancel) {
-                    const asset = response.assets[0];
-                    if (asset.uri) {
-                        const uri = asset.uri.toString().replace('file://', '');
-                        LocalQRCode.decode(uri, (error: any, result: any) => {
-                            if (!error) {
-                                handleRead(result);
-                            }
-                        });
-                    }
+        launchImageLibrary({ mediaType: 'photo' }, (response) => {
+            if (!response.didCancel) {
+                const asset = response.assets?.[0];
+                if (asset?.uri) {
+                    const uri = asset.uri.toString().replace('file://', '');
+                    LocalQRCode.decode(uri, (error: any, result: any) => {
+                        if (!error) {
+                            handleRead(result);
+                        }
+                    });
                 }
             }
-        );
+        });
     };
-    const onQRCodeScan = (event: { nativeEvent: { codeStringValue: any } }) => {
-        handleRead(event.nativeEvent.codeStringValue);
-    };
+
+    const codeScanner = useCodeScanner({
+        codeTypes: ['qr'],
+        onCodeScanned: (codes) => {
+            const code = codes.find((c) => c.value != null)?.value;
+            if (code != null) {
+                // todo: remove
+                console.log(`Scanned code`, code);
+                handleRead(code);
+            }
+        }
+    });
 
     const toggleTorch = async () => {
         try {
@@ -95,7 +105,7 @@ export default function QRCodeScanner({
         }
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         (async () => {
             // triggers when loaded from navigation or back action
             navigation.addListener('didFocus', () => {
@@ -166,19 +176,27 @@ export default function QRCodeScanner({
 
     return (
         <>
-            {cameraStatus === CameraAuthStatus.AUTHORIZED && (
+            {!device && (
+                <View>
+                    {/* todo: proper message */}
+                    <Text>No camera found</Text>
+                </View>
+            )}
+            {cameraStatus === CameraAuthStatus.AUTHORIZED && device && (
                 <View
-                    style={{
-                        flex: 1
-                    }}
+                    style={{ flex: 1 }}
                     accessibilityLabel={localeString('general.scan')}
                 >
                     <Camera
-                        style={styles.preview}
-                        scanBarcode={true}
-                        torchMode={isTorchOn ? 'on' : 'off'}
-                        onReadCode={onQRCodeScan}
-                        focusMode="off"
+                        style={StyleSheet.absoluteFill}
+                        device={device}
+                        codeScanner={codeScanner}
+                        isActive={true}
+                        enableZoomGesture={true}
+                        onError={(error) =>
+                            console.error('camera intialization failed', error)
+                        }
+                        torch={isTorchOn ? 'on' : 'off'}
                     />
                     <View style={styles.actionOverlay}>
                         <TouchableOpacity
@@ -204,7 +222,7 @@ export default function QRCodeScanner({
                             )}
                         </TouchableOpacity>
                         <TouchableOpacity
-                            onPress={this.handleOpenGallery}
+                            onPress={handleOpenGallery}
                             accessibilityLabel={localeString(
                                 'components.QRCodeScanner.chooseFromGallery'
                             )}
