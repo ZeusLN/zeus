@@ -74,6 +74,7 @@ export default class ActivityFilter extends React.Component<
             received,
             unpaid,
             inTransit,
+            unconfirmed,
             minimumAmount,
             startDate,
             endDate
@@ -190,6 +191,12 @@ export default class ActivityFilter extends React.Component<
                 label: localeString('views.ActivityFilter.inTransit'),
                 value: inTransit,
                 var: 'inTransit',
+                type: 'Toggle'
+            },
+            {
+                label: localeString('general.unconfirmed'),
+                value: unconfirmed,
+                var: 'unconfirmed',
                 type: 'Toggle'
             },
             {
