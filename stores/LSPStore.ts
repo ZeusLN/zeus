@@ -125,6 +125,7 @@ export default class LSPStore {
                             (Number(data.fee_amount_msat) / 1000).toString()
                         );
                         this.feeId = data.id;
+                        this.error = false;
                         resolve(this.zeroConfFee);
                     } else {
                         this.error = true;
