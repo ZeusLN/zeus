@@ -68,8 +68,7 @@ class ActivityFilterUtils {
         if (filter.unconfirmed == false) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
-                    !(activity instanceof Transaction) ||
-                    activity.num_confirmations > 0
+                    !(activity instanceof Transaction) || activity.isConfirmed
             );
         }
 
