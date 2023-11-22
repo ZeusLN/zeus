@@ -247,6 +247,7 @@ export default class Security extends React.Component<
                             `${item.translateKey}-${index}`
                         }
                         ItemSeparatorComponent={this.renderSeparator}
+                        scrollEnabled={false}
                     />
                     {settings.supportedBiometryType !== undefined && (
                         <ListItem

@@ -70,12 +70,13 @@ const ActivityButton = ({ navigation }: { navigation: any }) => (
         <Button
             icon={{
                 name: 'list',
-                size: 40
+                size: 40,
+                color: themeColor('text')
             }}
             containerStyle={{ top: -7 }}
             iconOnly
             onPress={() => navigation.navigate('Activity')}
-        ></Button>
+        />
     </View>
 );
 
