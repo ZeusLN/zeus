@@ -143,7 +143,7 @@ export default class SendingOnChain extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'Lato-Regular',
+                                            fontFamily: 'PPNeueMontreal-Book',
                                             fontSize:
                                                 windowSize.width *
                                                 windowSize.scale *

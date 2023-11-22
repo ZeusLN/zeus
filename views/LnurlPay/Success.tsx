@@ -80,7 +80,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                             </Text>
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     color: color || themeColor('text')
                                 }}
                             >
