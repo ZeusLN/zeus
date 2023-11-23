@@ -870,7 +870,7 @@ export default class SettingsStore {
 
     @action
     public fetchSponsors = () => {
-        const olympiansRoute = 'https://zeusln.app/api/sponsors/v2/getSponsors';
+        const olympiansRoute = 'https://zeusln.com/api/sponsors/v2/getSponsors';
         this.sponsorsError = null;
         this.olympians = [];
         this.gods = [];
