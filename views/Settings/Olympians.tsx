@@ -71,7 +71,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                         }
                                         rounded
                                         source={{
-                                            uri: `https://zeusln.app/api/${
+                                            uri: `https://zeusln.com/api/${
                                                 item.type === 'Twitter'
                                                     ? 'twitter-images/'
                                                     : 'nostr-images/'
@@ -94,7 +94,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                 margin: 10
                             }}
                             onPress={() =>
-                                UrlUtils.goToUrl('https://zeusln.app/sponsor')
+                                UrlUtils.goToUrl('https://zeusln.com/sponsor')
                             }
                         />
                     </>

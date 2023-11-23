@@ -12,7 +12,7 @@ Read more on our [documentation site](https://docs.zeusln.app/).
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple App Store](https://apps.apple.com/us/app/zeus-ln/id1456038895)
-* [F-Droid](https://zeusln.app/download)
+* [F-Droid](https://zeusln.com/download)
 
 ### Get in touch with us
 * Come chat with us on
@@ -144,7 +144,7 @@ Reproducible builds are available for Android only right now. You'll need Docker
 2. Change to the zeus directory: `cd zeus`
 3. Execute the build script: `./build.sh`
 4. If everything goes well, the script will print a list of all the generated APK files and SHA256 hashes for each one of them: armv7, armv8, x86, x86_64, universal. The equivalent to the one provided in the web page is the one ending in 'universal'. You can compare SHA256 hashes with the ones provided on the [GitHub releases page](https://github.com/ZeusLN/zeus/releases)
-5. Download the oficial APK from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [ZEUS homepage](https://zeusln.app/): `wget https://zeusln.app/zeus-v0.7.0.apk`
+5. Download the oficial APK from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [ZEUS homepage](https://zeusln.com/): `wget https://zeusln.com/zeus-v0.7.0.apk`
 6. Compare both APKs with a suitable utility like `diffoscope`, `apksigcopier` or by running `diff --brief --recursive ./unpacked_oficial_apk ./unpacked_built_apk`. You should only get differences for the certificates used to sign the official APK
 
 If you want to install the APK built this way onto your own smartphone, you'll need to sign it yourself (see next section). Note that the first time you install a build made using this procedure, you'll need to uninstall your current version of ZEUS and then install the one built here because certificates will not match. You'll lose your connection details and you'll need to reconfigure ZEUS again to connect to your nodes.
@@ -162,7 +162,7 @@ Do not directly modify the files in `/locales` unless you are adding new copy to
 
 ## Release + Commit Verification
 
-All releases and all maintainer commits as of October 20, 2021 are signed by key `AAC48DE8AB8DEE84` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt).
+All releases and all maintainer commits as of October 20, 2021 are signed by key `AAC48DE8AB8DEE84` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.com/PGP.txt).
 
 
 ### Past Keys
