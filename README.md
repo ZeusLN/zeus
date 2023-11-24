@@ -162,7 +162,7 @@ Do not directly modify the files in `/locales` unless you are adding new copy to
 
 ## Release + Commit Verification
 
-All releases and all maintainer commits as of October 20, 2021 are signed by key `AAC48DE8AB8DEE84` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.com/PGP.txt).
+All releases and all maintainer commits as of October 20, 2021 are signed by key `AAC48DE8AB8DEE84` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.com website](https://zeusln.com/PGP.txt).
 
 
 ### Past Keys
