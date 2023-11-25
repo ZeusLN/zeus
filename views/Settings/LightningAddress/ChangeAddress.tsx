@@ -76,7 +76,12 @@ export default class ChangeAddress extends React.Component<
                             <>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.wrapper}>
-                                        <Text style={styles.text}>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                        >
                                             {localeString(
                                                 'views.Settings.LightningAddress.chooseHandle'
                                             )}
@@ -107,6 +112,7 @@ export default class ChangeAddress extends React.Component<
                                             <Text
                                                 style={{
                                                     ...styles.text,
+                                                    color: themeColor('text'),
                                                     fontSize: 20,
                                                     marginLeft: 5
                                                 }}
@@ -152,8 +158,7 @@ export default class ChangeAddress extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book',
-        color: themeColor('text')
+        fontFamily: 'PPNeueMontreal-Book'
     },
     wrapper: {
         paddingTop: 5,

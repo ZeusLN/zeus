@@ -461,7 +461,10 @@ export default class AddContact extends React.Component<
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
                                 )}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 autoCapitalize="none"
                             />
                         </View>
@@ -488,7 +491,10 @@ export default class AddContact extends React.Component<
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
                                 )}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 autoCapitalize="none"
                             />
                         </View>
@@ -516,7 +522,14 @@ export default class AddContact extends React.Component<
                                                     );
                                                 }}
                                             >
-                                                <Text style={styles.modalItem}>
+                                                <Text
+                                                    style={{
+                                                        ...styles.modalItem,
+                                                        color: themeColor(
+                                                            'secondary'
+                                                        )
+                                                    }}
+                                                >
                                                     {value.key}
                                                 </Text>
                                             </TouchableOpacity>
@@ -561,7 +574,10 @@ export default class AddContact extends React.Component<
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
                                 )}
-                                style={[styles.textInput]}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 autoCapitalize="none"
                             />
                         </View>
@@ -608,7 +624,10 @@ export default class AddContact extends React.Component<
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
                                             )}
-                                            style={styles.textInput}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
                                             autoCapitalize="none"
                                         />
                                     </View>
@@ -664,7 +683,10 @@ export default class AddContact extends React.Component<
                                     'secondaryText'
                                 )}
                                 numberOfLines={1}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 autoCapitalize="none"
                             />
                         </View>
@@ -710,7 +732,10 @@ export default class AddContact extends React.Component<
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
                                             )}
-                                            style={styles.textInput}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
                                             autoCapitalize="none"
                                         />
                                     </View>
@@ -769,7 +794,10 @@ export default class AddContact extends React.Component<
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
                                 )}
-                                style={[styles.textInput]}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 numberOfLines={1}
                                 autoCapitalize="none"
                             />
@@ -819,7 +847,10 @@ export default class AddContact extends React.Component<
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
                                             )}
-                                            style={styles.textInput}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
                                             autoCapitalize="none"
                                         />
                                     </View>
@@ -875,7 +906,10 @@ export default class AddContact extends React.Component<
                                     'secondaryText'
                                 )}
                                 numberOfLines={1}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 autoCapitalize="none"
                             />
                         </View>
@@ -920,7 +954,10 @@ export default class AddContact extends React.Component<
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
                                             )}
-                                            style={styles.textInput}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
                                             autoCapitalize="none"
                                         />
                                     </View>
@@ -976,7 +1013,10 @@ export default class AddContact extends React.Component<
                                     'secondaryText'
                                 )}
                                 numberOfLines={1}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 autoCapitalize="none"
                             />
                         </View>
@@ -1020,7 +1060,10 @@ export default class AddContact extends React.Component<
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
                                             )}
-                                            style={styles.textInput}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
                                             autoCapitalize="none"
                                         />
                                     </View>
@@ -1062,7 +1105,12 @@ export default class AddContact extends React.Component<
                                     marginTop: 10
                                 }}
                             >
-                                <Text style={styles.addExtraFieldText}>
+                                <Text
+                                    style={{
+                                        ...styles.addExtraFieldText,
+                                        color: themeColor('text')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.AddContact.addExtraField'
                                     )}
@@ -1164,13 +1212,11 @@ const styles = StyleSheet.create({
     },
     modalItem: {
         paddingVertical: 10,
-        fontSize: 16,
-        color: themeColor('secondary')
+        fontSize: 16
     },
     addExtraFieldText: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: themeColor('text')
+        fontWeight: 'bold'
     },
     inputContainer: {
         paddingTop: Platform.OS === 'ios' ? 9 : 0,
@@ -1200,8 +1246,7 @@ const styles = StyleSheet.create({
         fontSize: 20,
         width: '100%',
         fontFamily: 'PPNeueMontreal-Book',
-        top: 5,
-        color: themeColor('text')
+        top: 5
     },
     photo: {
         alignSelf: 'center',

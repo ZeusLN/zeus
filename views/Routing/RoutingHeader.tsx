@@ -66,8 +66,7 @@ export function RoutingHeader(props) {
                 : 120,
             padding: 16,
             borderBottomLeftRadius: 40,
-            borderBottomRightRadius: 20,
-            color: themeColor('text')
+            borderBottomRightRadius: 20
         }
     });
 
