@@ -212,7 +212,12 @@ export default class NostrKey extends React.Component<
 
                             {editMode && (
                                 <>
-                                    <Text style={styles.text}>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {`${localeString(
                                             'nostr.privkey'
                                         )} ${localeString(
@@ -382,8 +387,7 @@ export default class NostrKey extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book',
-        color: themeColor('text')
+        fontFamily: 'PPNeueMontreal-Book'
     },
     wrapper: {
         flex: 1,
