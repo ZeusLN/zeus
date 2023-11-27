@@ -551,9 +551,11 @@ export default class LightningAddressStore {
                                         } = data;
 
                                         if (status === 200 && success) {
-                                            this.error = false;
-                                            this.error_msg = '';
-                                            if (!isRedeem) this.loading = false;
+                                            if (!isRedeem) {
+                                                this.error = false;
+                                                this.error_msg = '';
+                                            }
+                                            this.loading = false;
                                             this.availableHashes = results || 0;
                                             this.paid =
                                                 this.enhanceWithFee(paid);
@@ -956,7 +958,7 @@ export default class LightningAddressStore {
                             preimageNotFound
                         ).then((success) => {
                             if (success === true) fireLocalNotification();
-                            this.status();
+                            this.status(true);
                         });
                     }
                 })
@@ -974,7 +976,7 @@ export default class LightningAddressStore {
                                 ).then((success) => {
                                     if (success === true)
                                         fireLocalNotification();
-                                    this.status();
+                                    this.status(true);
                                 });
                             }
                         });
@@ -983,7 +985,7 @@ export default class LightningAddressStore {
                         this.redeem(hash, undefined, preimageNotFound).then(
                             (success) => {
                                 if (success === true) fireLocalNotification();
-                                this.status();
+                                this.status(true);
                             }
                         );
                     }
