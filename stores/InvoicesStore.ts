@@ -178,6 +178,7 @@ export default class InvoicesStore {
         unified?: boolean,
         customPreimage?: string
     ) => {
+        this.lspStore?.resetFee();
         this.payment_request = null;
         this.payment_request_amt = null;
         if (!unified) this.creatingInvoice = true;
