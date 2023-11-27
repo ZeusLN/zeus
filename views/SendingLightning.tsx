@@ -14,7 +14,7 @@ import { inject, observer } from 'mobx-react';
 import LnurlPaySuccess from './LnurlPay/Success';
 
 import Button from '../components/Button';
-import LightningIndicator from '../components/LightningIndicator';
+import LightningLoadingPattern from '../components/LightningLoadingPattern';
 import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
 
@@ -138,7 +138,7 @@ export default class SendingLightning extends React.Component<
                             height: '100%'
                         }}
                     >
-                        <LightningIndicator size={windowSize.height / 4} />
+                        <LightningLoadingPattern />
                         <Text
                             style={{
                                 color: themeColor('text'),
