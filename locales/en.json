@@ -731,8 +731,6 @@
     "views.Settings.EmbeddedNode.bimodalPathfinding.subtitle": "Use the bimodal probability estimator, instead of the default apriori estimator, when attempting to make payments. Restart the app to take effect.",
     "views.Settings.EmbeddedNode.bimodal": "Bimodal",
     "views.Settings.EmbeddedNode.apriori": "Apriori",
-    "views.Settings.EmbeddedNode.waitForGraphSync": "Wait for graph sync before paying",
-    "views.Settings.EmbeddedNode.waitForGraphSync.subtitle": "Waiting for the lightning network graph to sync will increase your probability of payment success.",
     "views.Settings.EmbeddedNode.rescan": "Rescan wallet",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Rescan blockchain for your on-chain transactions. Restart the app to take effect. Will be unset upon completion.",
     "views.Settings.EmbeddedNode.resetMissionControl": "Reset payment routing profile",

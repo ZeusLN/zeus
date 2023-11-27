@@ -111,7 +111,6 @@ export interface Settings {
     dontAllowOtherPeers: boolean;
     neutrinoPeers: Array<string>;
     zeroConfPeers: Array<string>;
-    waitForGraphSync: boolean;
     rescan: boolean;
     recovery: boolean;
     initialLoad: boolean;
@@ -763,7 +762,6 @@ export default class SettingsStore {
         dontAllowOtherPeers: true,
         neutrinoPeers: [],
         zeroConfPeers: [],
-        waitForGraphSync: false,
         rescan: false,
         recovery: false,
         initialLoad: true,
