@@ -19,10 +19,7 @@ import Text from '../../../components/Text';
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import TextInput from '../../../components/TextInput';
-import {
-    ErrorMessage,
-    WarningMessage
-} from '../../../components/SuccessErrorMessage';
+import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import { Row } from '../../../components/layout/Row';
 import { Spacer } from '../../../components/layout/Spacer';
 
@@ -169,9 +166,6 @@ export default class LightningAddress extends React.Component<
 
         const automaticallyAccept =
             SettingsStore.settings?.lightningAddress?.automaticallyAccept;
-        const automaticallyRequestOlympusChannels =
-            SettingsStore.settings?.lightningAddress
-                ?.automaticallyRequestOlympusChannels;
         const isReady =
             SettingsStore.implementation !== 'embedded-lnd' ||
             !prepareToAutomaticallyAcceptStart ||
@@ -364,25 +358,6 @@ export default class LightningAddress extends React.Component<
                                 </Row>
                                 <QRButton />
                             </View>
-                        )}
-                        {!loading && lightningAddressHandle && !hasChannels && (
-                            <WarningMessage
-                                message={
-                                    // TODO add new dynamic fee logic here for chan opens
-                                    automaticallyRequestOlympusChannels &&
-                                    SettingsStore.implementation ===
-                                        'embedded-lnd'
-                                        ? `${localeString(
-                                              'views.Settings.LightningAddress.receiveExplainer1'
-                                          )} ${localeString(
-                                              'views.Settings.LightningAddress.receiveExplainer2'
-                                          )}`
-                                        : localeString(
-                                              'views.Settings.LightningAddress.receiveExplainer1'
-                                          )
-                                }
-                                dismissable
-                            />
                         )}
                         {!loading && !lightningAddressHandle && hasChannels && (
                             <>

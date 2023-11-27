@@ -288,9 +288,6 @@ export default class LightningAddressStore {
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
-                                const request_channels =
-                                    this.settingsStore.implementation ===
-                                    'embedded-lnd';
                                 ReactNativeBlobUtil.fetch(
                                     'POST',
                                     `${LNURL_HOST}/lnurl/create`,
@@ -307,7 +304,7 @@ export default class LightningAddressStore {
                                         nostr_pk,
                                         relays,
                                         relays_sig,
-                                        request_channels
+                                        request_channels: false // deprecated
                                     })
                                 )
                                     .then(async (response: any) => {
@@ -335,7 +332,7 @@ export default class LightningAddressStore {
                                                         automaticallyAccept:
                                                             true,
                                                         automaticallyRequestOlympusChannels:
-                                                            request_channels,
+                                                            false, // deprecated
                                                         allowComments: true,
                                                         nostrPrivateKey,
                                                         nostrRelays: relays,
@@ -917,18 +914,10 @@ export default class LightningAddressStore {
                 }
             };
 
-            const automaticallyRequestOlympusChannels =
-                this.settingsStore?.settings?.lightningAddress
-                    ?.automaticallyRequestOlympusChannels;
-
             BackendUtils.createInvoice({
                 // 24 hrs
                 expiry: '86400',
-                value:
-                    BackendUtils.supportsLSPs() &&
-                    automaticallyRequestOlympusChannels
-                        ? undefined
-                        : value,
+                value,
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
                 preimage,
                 private:
@@ -1092,16 +1081,11 @@ export default class LightningAddressStore {
 
     @action
     public prepareToAutomaticallyAccept = async () => {
-        const automaticallyRequestOlympusChannels =
-            this.settingsStore?.settings?.lightningAddress
-                ?.automaticallyRequestOlympusChannels;
-
         this.prepareToAutomaticallyAcceptStart = true;
 
         while (!this.readyToAutomaticallyAccept) {
-            const isReady = await this.nodeInfoStore.isLightningReadyToReceive(
-                automaticallyRequestOlympusChannels
-            );
+            const isReady =
+                await this.nodeInfoStore.isLightningReadyToReceive();
             if (isReady) {
                 this.readyToAutomaticallyAccept = true;
                 this.redeemAllOpenPayments();
