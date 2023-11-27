@@ -441,6 +441,8 @@
     "views.NodeQRScanner.error": "Scanned QR code was not a valid Lightning Node",
     "views.Intro.whatIsZeus": "What is Zeus?",
     "views.Intro.quickStart": "Quick start",
+    "views.Intro.lightningOnboarding": "Learn about lightning onboarding",
+    "views.Intro.lightningLiquidity": "Learn about lightning liquidity",
     "views.Intro.advancedSetUp": "Advanced set-up",
     "views.Intro.creatingWallet": "Zeus is creating your wallet.",
     "views.Intro.carousel1.title": "Payments you can trust",
