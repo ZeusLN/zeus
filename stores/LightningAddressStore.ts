@@ -22,6 +22,7 @@ import SettingsStore from './SettingsStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { sleep } from '../utils/SleepUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 const LNURL_HOST = 'https://zeuspay.com/api';
 const LNURL_SOCKET_HOST = 'https://zeuspay.com';
@@ -617,7 +618,18 @@ export default class LightningAddressStore {
     };
 
     @action
-    public redeem = async (hash: string, payReq?: string) => {
+    public redeem = async (
+        hash: string,
+        payReq?: string,
+        preimageNotFound?: boolean
+    ) => {
+        if (preimageNotFound) {
+            this.error = true;
+            this.error_msg = localeString(
+                'stores.LightningAddressStore.preimageNotFound'
+            );
+            return;
+        }
         this.error = false;
         this.error_msg = '';
         this.loading = true;
@@ -892,6 +904,7 @@ export default class LightningAddressStore {
     ) => {
         this.getPreimageMap().then((map) => {
             const preimage = map[hash];
+            const preimageNotFound = !preimage;
             const value = (amount_msat / 1000).toString();
             const value_commas = value.replace(
                 /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
@@ -937,12 +950,14 @@ export default class LightningAddressStore {
             })
                 .then((result: any) => {
                     if (result.payment_request) {
-                        this.redeem(hash, result.payment_request).then(
-                            (success) => {
-                                if (success === true) fireLocalNotification();
-                                this.status();
-                            }
-                        );
+                        this.redeem(
+                            hash,
+                            result.payment_request,
+                            preimageNotFound
+                        ).then((success) => {
+                            if (success === true) fireLocalNotification();
+                            this.status();
+                        });
                     }
                 })
                 .catch(() => {
@@ -952,21 +967,25 @@ export default class LightningAddressStore {
                             r_hash: hash
                         }).then((result: any) => {
                             if (result.payment_request) {
-                                this.redeem(hash, result.payment_request).then(
-                                    (success) => {
-                                        if (success === true)
-                                            fireLocalNotification();
-                                        this.status();
-                                    }
-                                );
+                                this.redeem(
+                                    hash,
+                                    result.payment_request,
+                                    preimageNotFound
+                                ).then((success) => {
+                                    if (success === true)
+                                        fireLocalNotification();
+                                    this.status();
+                                });
                             }
                         });
                     } catch (e) {
                         // then, try to redeem without new pay req
-                        this.redeem(hash).then((success) => {
-                            if (success === true) fireLocalNotification();
-                            this.status();
-                        });
+                        this.redeem(hash, undefined, preimageNotFound).then(
+                            (success) => {
+                                if (success === true) fireLocalNotification();
+                                this.status();
+                            }
+                        );
                     }
                 });
         });
