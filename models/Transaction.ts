@@ -119,7 +119,7 @@ export default class Transaction extends BaseModel {
 
     @computed public get getOutpoint(): string {
         let outpoint = '';
-        this.output_details.map((output: OutputDetail) => {
+        this.output_details?.map((output: OutputDetail) => {
             if (output.is_our_address)
                 outpoint = `${this.tx}:${output.output_index}`;
         });
