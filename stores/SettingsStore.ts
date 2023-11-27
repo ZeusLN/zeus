@@ -972,15 +972,6 @@ export default class SettingsStore {
                     this.settings.fiatEnabled = true;
                 }
 
-                // TODO PEGASUS
-                // temporarily toggle all beta users settings for now
-                const MOD_KEY_1 = 'egs-mod-1';
-                const mod1 = await EncryptedStorage.getItem(MOD_KEY_1);
-                if (!mod1) {
-                    this.settings.expressGraphSync = true;
-                    await EncryptedStorage.setItem(MOD_KEY_1, 'true');
-                }
-
                 // set default LSPs if not defined
                 if (this.settings.enableLSP === undefined) {
                     this.settings.enableLSP = true;
@@ -1007,11 +998,6 @@ export default class SettingsStore {
                     };
                 }
 
-                // default automatic channel backups to on
-                if (this.settings.automaticDisasterRecoveryBackup !== false) {
-                    this.settings.automaticDisasterRecoveryBackup = true;
-                }
-
                 // migrate locale to ISO 639-1
                 if (
                     this.settings.locale != null &&
@@ -1019,6 +1005,19 @@ export default class SettingsStore {
                 ) {
                     this.settings.locale =
                         localeMigrationMapping[this.settings.locale];
+                }
+
+                // TODO PEGASUS
+                // temporarily toggle all beta users settings for now
+                const MOD_KEY = 'beta5-mod';
+                const mod = await EncryptedStorage.getItem(MOD_KEY);
+                if (!mod) {
+                    this.settings.expressGraphSync = true;
+                    this.settings.payments.defaultFeePercentage = '5.0';
+                    this.settings.payments.defaultFeeFixed = '1000';
+                    this.settings.automaticDisasterRecoveryBackup = true;
+                    this.setSettings(JSON.stringify(this.settings));
+                    await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
 
                 const node: any =
