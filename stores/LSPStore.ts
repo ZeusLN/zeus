@@ -32,13 +32,18 @@ export default class LSPStore {
     @action
     public reset = () => {
         this.info = {};
-        this.zeroConfFee = undefined;
+        this.resetFee();
         this.error = false;
         this.error_msg = '';
         this.showLspSettings = false;
         // TODO Pegasus clear channel acceptor when
         // it's supported by other backends
         // this.channelAcceptor = undefined;
+    };
+
+    @action
+    public resetFee = () => {
+        this.zeroConfFee = undefined;
     };
 
     getLSPHost = () =>

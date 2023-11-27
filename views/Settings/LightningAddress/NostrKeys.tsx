@@ -122,7 +122,6 @@ export default class NostrKey extends React.Component<
         const {
             enabled,
             automaticallyAccept,
-            automaticallyRequestOlympusChannels,
             allowComments,
             nostrRelays,
             notifications
@@ -354,7 +353,8 @@ export default class NostrKey extends React.Component<
                                                             lightningAddress: {
                                                                 enabled,
                                                                 automaticallyAccept,
-                                                                automaticallyRequestOlympusChannels,
+                                                                automaticallyRequestOlympusChannels:
+                                                                    false, // deprecated
                                                                 allowComments,
                                                                 nostrPrivateKey,
                                                                 nostrRelays,
