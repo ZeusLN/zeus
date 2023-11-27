@@ -32,6 +32,7 @@ interface KeypadPaneState {
     amount: string;
     needInbound: boolean;
     belowMinAmount: boolean;
+    overrideBelowMinAmount: boolean;
 }
 
 const MAX_LENGTH = 10;
@@ -47,7 +48,8 @@ export default class KeypadPane extends React.PureComponent<
     state = {
         amount: '0',
         needInbound: false,
-        belowMinAmount: false
+        belowMinAmount: false,
+        overrideBelowMinAmount: false
     };
 
     appendValue = (value: string) => {
@@ -109,7 +111,8 @@ export default class KeypadPane extends React.PureComponent<
         this.setState({
             amount: '0',
             needInbound: false,
-            belowMinAmount: false
+            belowMinAmount: false,
+            overrideBelowMinAmount: false
         });
     };
 
@@ -210,7 +213,8 @@ export default class KeypadPane extends React.PureComponent<
 
     render() {
         const { FiatStore, UnitsStore, navigation } = this.props;
-        const { amount, needInbound, belowMinAmount } = this.state;
+        const { amount, needInbound, belowMinAmount, overrideBelowMinAmount } =
+            this.state;
         const { units } = UnitsStore!;
 
         const color = this.textAnimation.interpolate({
@@ -313,65 +317,6 @@ export default class KeypadPane extends React.PureComponent<
                     )}
                 </Animated.View>
 
-                {belowMinAmount && (
-                    <View style={{ alignItems: 'center' }}>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                position: 'absolute',
-                                bottom: 10
-                            }}
-                        >
-                            <View style={{ width: '33%' }}>
-                                <Button
-                                    title={'50k'}
-                                    quinary
-                                    noUppercase
-                                    onPress={() => {
-                                        UnitsStore.resetUnits();
-                                        this.setState({
-                                            amount: '50000',
-                                            belowMinAmount: false
-                                        });
-                                    }}
-                                    buttonStyle={{ height: 40 }}
-                                />
-                            </View>
-                            <View style={{ width: '33%' }}>
-                                <Button
-                                    title={'100k'}
-                                    quinary
-                                    noUppercase
-                                    onPress={() => {
-                                        UnitsStore.resetUnits();
-                                        this.setState({
-                                            amount: '100000',
-                                            belowMinAmount: false
-                                        });
-                                    }}
-                                    buttonStyle={{ height: 40 }}
-                                />
-                            </View>
-                            <View style={{ width: '33%' }}>
-                                <Button
-                                    title={'1m'}
-                                    quinary
-                                    noUppercase
-                                    onPress={() => {
-                                        UnitsStore.resetUnits();
-                                        this.setState({
-                                            amount: '1000000',
-                                            belowMinAmount: false
-                                        });
-                                    }}
-                                    buttonStyle={{ height: 40 }}
-                                />
-                            </View>
-                        </View>
-                    </View>
-                )}
-
                 <View>
                     <View style={{ marginTop: 30, bottom: '10%' }}>
                         <PinPad
@@ -382,63 +327,137 @@ export default class KeypadPane extends React.PureComponent<
                             amount
                         />
                     </View>
-                    <View
-                        style={{
-                            flex: 1,
-                            flexDirection: 'row',
-                            position: 'absolute',
-                            bottom: 10
-                        }}
-                    >
-                        <View style={{ width: '40%' }}>
-                            <Button
-                                title={localeString('general.request')}
-                                quinary
-                                noUppercase
-                                onPress={() => {
-                                    navigation.navigate('Receive', {
-                                        amount,
-                                        autoGenerate: true
-                                    });
+                    {belowMinAmount && !overrideBelowMinAmount ? (
+                        <View style={{ alignItems: 'center' }}>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    position: 'absolute',
+                                    bottom: 10
                                 }}
-                                buttonStyle={{ height: 40 }}
-                            />
+                            >
+                                <View style={{ width: '25%' }}>
+                                    <Button
+                                        title={'50k'}
+                                        quinary
+                                        noUppercase
+                                        onPress={() => {
+                                            UnitsStore.resetUnits();
+                                            this.setState({
+                                                amount: '50000',
+                                                belowMinAmount: false
+                                            });
+                                        }}
+                                        buttonStyle={{ height: 40 }}
+                                    />
+                                </View>
+                                <View style={{ width: '25%' }}>
+                                    <Button
+                                        title={'100k'}
+                                        quinary
+                                        noUppercase
+                                        onPress={() => {
+                                            UnitsStore.resetUnits();
+                                            this.setState({
+                                                amount: '100000',
+                                                belowMinAmount: false
+                                            });
+                                        }}
+                                        buttonStyle={{ height: 40 }}
+                                    />
+                                </View>
+                                <View style={{ width: '25%' }}>
+                                    <Button
+                                        title={'1m'}
+                                        quinary
+                                        noUppercase
+                                        onPress={() => {
+                                            UnitsStore.resetUnits();
+                                            this.setState({
+                                                amount: '1000000',
+                                                belowMinAmount: false
+                                            });
+                                        }}
+                                        buttonStyle={{ height: 40 }}
+                                    />
+                                </View>
+                                <View style={{ width: '25%' }}>
+                                    <Button
+                                        title={localeString('general.other')}
+                                        quinary
+                                        noUppercase
+                                        onPress={() => {
+                                            UnitsStore.resetUnits();
+                                            this.setState({
+                                                belowMinAmount: false,
+                                                overrideBelowMinAmount: true
+                                            });
+                                        }}
+                                        buttonStyle={{ height: 40 }}
+                                    />
+                                </View>
+                            </View>
                         </View>
-                        <View style={{ width: '20%' }}>
-                            <Button
-                                icon={{
-                                    name: 'pencil',
-                                    type: 'font-awesome',
-                                    size: 20,
-                                    color:
-                                        themeColor('buttonText') ||
-                                        themeColor('text')
-                                }}
-                                quinary
-                                noUppercase
-                                onPress={() => {
-                                    navigation.navigate('Receive', {
-                                        amount
-                                    });
-                                }}
-                                buttonStyle={{ height: 40 }}
-                            />
+                    ) : (
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                position: 'absolute',
+                                bottom: 10
+                            }}
+                        >
+                            <View style={{ width: '40%' }}>
+                                <Button
+                                    title={localeString('general.request')}
+                                    quinary
+                                    noUppercase
+                                    onPress={() => {
+                                        navigation.navigate('Receive', {
+                                            amount,
+                                            autoGenerate: true
+                                        });
+                                    }}
+                                    buttonStyle={{ height: 40 }}
+                                />
+                            </View>
+                            <View style={{ width: '20%' }}>
+                                <Button
+                                    icon={{
+                                        name: 'pencil',
+                                        type: 'font-awesome',
+                                        size: 20,
+                                        color:
+                                            themeColor('buttonText') ||
+                                            themeColor('text')
+                                    }}
+                                    quinary
+                                    noUppercase
+                                    onPress={() => {
+                                        navigation.navigate('Receive', {
+                                            amount
+                                        });
+                                    }}
+                                    buttonStyle={{ height: 40 }}
+                                />
+                            </View>
+                            <View style={{ width: '40%' }}>
+                                <Button
+                                    title={localeString('general.send')}
+                                    quinary
+                                    noUppercase
+                                    onPress={() => {
+                                        navigation.navigate('Send', {
+                                            amount,
+                                            preventUnitReset: true
+                                        });
+                                    }}
+                                    buttonStyle={{ height: 40 }}
+                                />
+                            </View>
                         </View>
-                        <View style={{ width: '40%' }}>
-                            <Button
-                                title={localeString('general.send')}
-                                quinary
-                                noUppercase
-                                onPress={() => {
-                                    navigation.navigate('Send', {
-                                        amount,
-                                        preventUnitReset: true
-                                    });
-                                }}
-                                buttonStyle={{ height: 40 }}
-                            />
-                        </View>
-                    </View>
+                    )}
                 </View>
             </View>
         );
