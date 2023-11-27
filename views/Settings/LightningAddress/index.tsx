@@ -31,9 +31,11 @@ import LightningAddressStore from '../../../stores/LightningAddressStore';
 import SettingsStore, {
     DEFAULT_NOSTR_RELAYS
 } from '../../../stores/SettingsStore';
+import UnitsStore from '../../../stores/UnitsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+import UrlUtils from '../../../utils/UrlUtils';
 
 import QR from '../../../assets/images/SVG/QR.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
@@ -43,6 +45,7 @@ interface LightningAddressProps {
     ChannelsStore: ChannelsStore;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
 }
 
 interface LightningAddressState {
@@ -54,7 +57,7 @@ interface LightningAddressState {
     nostrRelays: Array<string>;
 }
 
-@inject('LightningAddressStore', 'ChannelsStore', 'SettingsStore')
+@inject('LightningAddressStore', 'ChannelsStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class LightningAddress extends React.Component<
     LightningAddressProps,
@@ -134,7 +137,8 @@ export default class LightningAddress extends React.Component<
             navigation,
             LightningAddressStore,
             ChannelsStore,
-            SettingsStore
+            SettingsStore,
+            UnitsStore
         } = this.props;
         const {
             newLightningAddress,
@@ -380,7 +384,7 @@ export default class LightningAddress extends React.Component<
                                 dismissable
                             />
                         )}
-                        {!loading && !lightningAddressHandle && (
+                        {!loading && !lightningAddressHandle && hasChannels && (
                             <>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.wrapper}>
@@ -545,6 +549,102 @@ export default class LightningAddress extends React.Component<
                                                 !nostrRelays ||
                                                 nostrRelays.length === 0
                                             }
+                                        />
+                                    </View>
+                                </View>
+                            </>
+                        )}
+                        {!loading && !lightningAddressHandle && !hasChannels && (
+                            <>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        marginLeft: 5,
+                                        marginRight: 5
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            ...styles.explainer,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.LightningAddress.explainer1'
+                                        )}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            ...styles.explainer,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.LightningAddress.explainer2'
+                                        )}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            ...styles.explainer,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+                                        )}
+                                    </Text>
+                                </View>
+                                <View>
+                                    <View style={{ bottom: 15, margin: 10 }}>
+                                        <Button
+                                            title={localeString(
+                                                'views.Settings.LightningAddress.get0ConfChan'
+                                            )}
+                                            onPress={() => {
+                                                UnitsStore.resetUnits();
+                                                navigation.navigate('Receive', {
+                                                    amount: '100000'
+                                                });
+                                            }}
+                                        />
+                                    </View>
+                                    <View style={{ bottom: 15, margin: 10 }}>
+                                        <Button
+                                            title={localeString(
+                                                'views.LspExplanation.buttonText2'
+                                            )}
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'LspExplanationOverview'
+                                                )
+                                            }
+                                            tertiary
+                                        />
+                                    </View>
+                                    <View style={{ bottom: 15, margin: 10 }}>
+                                        <Button
+                                            title={localeString(
+                                                'views.Intro.lightningOnboarding'
+                                            )}
+                                            onPress={() =>
+                                                UrlUtils.goToUrl(
+                                                    'https://docs.zeusln.app/for-users/embedded-node/lightning-onboarding/'
+                                                )
+                                            }
+                                            secondary
+                                        />
+                                    </View>
+                                    <View style={{ bottom: 15, margin: 10 }}>
+                                        <Button
+                                            title={localeString(
+                                                'views.Intro.lightningLiquidity'
+                                            )}
+                                            onPress={() =>
+                                                UrlUtils.goToUrl(
+                                                    'https://bitcoin.design/guide/how-it-works/liquidity/'
+                                                )
+                                            }
+                                            secondary
                                         />
                                     </View>
                                 </View>
@@ -740,6 +840,10 @@ const styles = StyleSheet.create({
     text: {
         fontFamily: 'PPNeueMontreal-Book',
         color: themeColor('text')
+    },
+    explainer: {
+        fontSize: 16.5,
+        marginBottom: 10
     },
     wrapper: {
         paddingTop: 5,
