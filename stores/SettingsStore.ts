@@ -73,7 +73,7 @@ interface LightningAddressSettings {
     enabled: boolean;
     automaticallyAccept: boolean;
     automaticallyAcceptAttestationLevel: number;
-    automaticallyRequestOlympusChannels: boolean;
+    automaticallyRequestOlympusChannels: boolean; // deprecated
     routeHints: boolean;
     allowComments: boolean;
     nostrPrivateKey: string;
@@ -778,7 +778,7 @@ export default class SettingsStore {
             enabled: false,
             automaticallyAccept: true,
             automaticallyAcceptAttestationLevel: 2,
-            automaticallyRequestOlympusChannels: true,
+            automaticallyRequestOlympusChannels: false, // deprecated
             routeHints: false,
             allowComments: true,
             nostrPrivateKey: '',
@@ -998,7 +998,7 @@ export default class SettingsStore {
                         enabled: false,
                         automaticallyAccept: true,
                         automaticallyAcceptAttestationLevel: 2,
-                        automaticallyRequestOlympusChannels: true,
+                        automaticallyRequestOlympusChannels: false, // deprecated
                         routeHints: false,
                         allowComments: true,
                         nostrPrivateKey: '',

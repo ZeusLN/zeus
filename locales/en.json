@@ -896,8 +896,6 @@
     "views.Settings.LightningAddress.generatingPreimages": "Generating preimages",
     "views.Settings.LightningAddress.ChangeAddress": "Change address",
     "views.Settings.LightningAddress.nostrKeys.changeWarning": "Warning: changing your Nostr keys will delete your pending payments. Please redeem your pending payments before submitting new keys.",
-    "views.Settings.LightningAddress.receiveExplainer1": "In order to redeem payments from ZEUS PAY, you need a channel with inbound capacity, ideally from our LSP, OLYMPUS by ZEUS.",
-    "views.Settings.LightningAddress.receiveExplainer2": "You can send yourself a payment of 50,000 sats or greater to get a channel from us.",
     "views.Settings.LightningAddress.explainer1": "To get started with a lightning address you must first have a lightning channel and inbound liquidity.",
     "views.Settings.LightningAddress.explainer2": "The easiest way to do so is to purchase a 0-conf channel from our LSP, OLYMPUS by ZEUS. Just generate an invoice and pay yourself from another lightning wallet.",
     "views.Settings.LightningAddress.get0ConfChan": "Get 0-conf channel",
