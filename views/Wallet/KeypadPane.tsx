@@ -32,6 +32,7 @@ interface KeypadPaneState {
     amount: string;
     needInbound: boolean;
     belowMinAmount: boolean;
+    overrideBelowMinAmount: boolean;
 }
 
 const MAX_LENGTH = 10;
@@ -47,7 +48,8 @@ export default class KeypadPane extends React.PureComponent<
     state = {
         amount: '0',
         needInbound: false,
-        belowMinAmount: false
+        belowMinAmount: false,
+        overrideBelowMinAmount: false
     };
 
     appendValue = (value: string) => {
@@ -109,7 +111,8 @@ export default class KeypadPane extends React.PureComponent<
         this.setState({
             amount: '0',
             needInbound: false,
-            belowMinAmount: false
+            belowMinAmount: false,
+            overrideBelowMinAmount: false
         });
     };
 
@@ -210,7 +213,8 @@ export default class KeypadPane extends React.PureComponent<
 
     render() {
         const { FiatStore, UnitsStore, navigation } = this.props;
-        const { amount, needInbound, belowMinAmount } = this.state;
+        const { amount, needInbound, belowMinAmount, overrideBelowMinAmount } =
+            this.state;
         const { units } = UnitsStore!;
 
         const color = this.textAnimation.interpolate({
@@ -323,7 +327,7 @@ export default class KeypadPane extends React.PureComponent<
                             amount
                         />
                     </View>
-                    {belowMinAmount ? (
+                    {belowMinAmount && !overrideBelowMinAmount ? (
                         <View style={{ alignItems: 'center' }}>
                             <View
                                 style={{
@@ -333,7 +337,7 @@ export default class KeypadPane extends React.PureComponent<
                                     bottom: 10
                                 }}
                             >
-                                <View style={{ width: '33%' }}>
+                                <View style={{ width: '25%' }}>
                                     <Button
                                         title={'50k'}
                                         quinary
@@ -348,7 +352,7 @@ export default class KeypadPane extends React.PureComponent<
                                         buttonStyle={{ height: 40 }}
                                     />
                                 </View>
-                                <View style={{ width: '33%' }}>
+                                <View style={{ width: '25%' }}>
                                     <Button
                                         title={'100k'}
                                         quinary
@@ -363,7 +367,7 @@ export default class KeypadPane extends React.PureComponent<
                                         buttonStyle={{ height: 40 }}
                                     />
                                 </View>
-                                <View style={{ width: '33%' }}>
+                                <View style={{ width: '25%' }}>
                                     <Button
                                         title={'1m'}
                                         quinary
@@ -373,6 +377,21 @@ export default class KeypadPane extends React.PureComponent<
                                             this.setState({
                                                 amount: '1000000',
                                                 belowMinAmount: false
+                                            });
+                                        }}
+                                        buttonStyle={{ height: 40 }}
+                                    />
+                                </View>
+                                <View style={{ width: '25%' }}>
+                                    <Button
+                                        title={localeString('general.other')}
+                                        quinary
+                                        noUppercase
+                                        onPress={() => {
+                                            UnitsStore.resetUnits();
+                                            this.setState({
+                                                belowMinAmount: false,
+                                                overrideBelowMinAmount: true
                                             });
                                         }}
                                         buttonStyle={{ height: 40 }}
@@ -401,7 +420,6 @@ export default class KeypadPane extends React.PureComponent<
                                         });
                                     }}
                                     buttonStyle={{ height: 40 }}
-                                    disabled={belowMinAmount}
                                 />
                             </View>
                             <View style={{ width: '20%' }}>
