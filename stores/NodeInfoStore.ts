@@ -98,12 +98,9 @@ export default class NodeInfoStore {
         await this.channelsStore.getChannels();
         await this.getNodeInfo();
         const syncedToChain = this.nodeInfo?.synced_to_chain;
-        const syncedToGraph = this.nodeInfo?.synced_to_graph;
-        const requireGraphSync = this.settingsStore?.settings?.waitForGraphSync;
 
         return (
             syncedToChain &&
-            (!requireGraphSync || syncedToGraph) &&
             this.channelsStore.channels.some(
                 (channel: Channel) => channel.active
             )
