@@ -113,8 +113,11 @@ export default class NodeInfoStore {
     @action
     public isLightningReadyToReceive = async () => {
         await this.channelsStore.getChannels();
-        await this.getNodeInfo();
-        const syncedToChain = this.nodeInfo?.synced_to_chain;
+        let syncedToChain = this.nodeInfo?.synced_to_chain;
+        if (!syncedToChain) {
+            await this.getNodeInfo();
+            syncedToChain = this.nodeInfo?.synced_to_chain;
+        }
 
         return (
             syncedToChain &&
