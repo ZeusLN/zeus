@@ -261,7 +261,9 @@ export default class ChannelView extends React.Component<
                         localBalance={lurkerMode ? 50 : localBalance}
                         remoteBalance={lurkerMode ? 50 : remoteBalance}
                     />
-                    <Text style={styles.status}>
+                    <Text
+                        style={{ ...styles.status, color: themeColor('text') }}
+                    >
                         {pendingOpen
                             ? localeString('views.Channel.pendingOpen')
                             : pendingClose || closing
@@ -568,7 +570,12 @@ export default class ChannelView extends React.Component<
                         <View>
                             {(BackendUtils.isLNDBased() || !implementation) && (
                                 <>
-                                    <Text style={styles.text}>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {localeString(
                                             'views.Channel.closingRate'
                                         )}
@@ -610,11 +617,6 @@ export default class ChannelView extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        color: themeColor('text'),
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    secondaryText: {
-        color: themeColor('secondaryText'),
         fontFamily: 'PPNeueMontreal-Book'
     },
     content: {
@@ -626,7 +628,6 @@ const styles = StyleSheet.create({
     },
     status: {
         fontFamily: 'PPNeueMontreal-Book',
-        color: themeColor('text'),
         alignSelf: 'center',
         marginBottom: 10
     },
@@ -639,22 +640,8 @@ const styles = StyleSheet.create({
         paddingBottom: 30,
         textAlign: 'center'
     },
-    balance: {
-        fontSize: 15,
-        fontWeight: 'bold'
-    },
     button: {
         paddingTop: 15,
         paddingBottom: 15
-    },
-    editFeeBox: {
-        paddingTop: 10,
-        paddingBottom: 10,
-        paddingLeft: 15,
-        marginTop: 15,
-        flexDirection: 'row',
-        borderRadius: 4,
-        borderColor: themeColor('secondaryText'),
-        borderWidth: 3
     }
 });

@@ -299,7 +299,14 @@ export default class EditFee extends React.Component<
 
                                 {!displayOnly && (
                                     <>
-                                        <Text style={styles.custom}>
+                                        <Text
+                                            style={{
+                                                fontSize: 18,
+                                                top: 48,
+                                                left: 15,
+                                                color: themeColor('text')
+                                            }}
+                                        >
                                             {localeString(
                                                 'views.EditFee.custom'
                                             )}
@@ -402,12 +409,6 @@ const styles = StyleSheet.create({
     },
     feeText: {
         fontSize: 18
-    },
-    custom: {
-        color: themeColor('text'),
-        fontSize: 18,
-        top: 48,
-        left: 15
     },
     confirmButton: {
         marginTop: 20,

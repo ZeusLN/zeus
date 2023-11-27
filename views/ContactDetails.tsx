@@ -281,9 +281,12 @@ export default class ContactDetails extends React.Component<
                                                     >
                                                         <LightningBolt />
                                                         <Text
-                                                            style={
-                                                                styles.contactFields
-                                                            }
+                                                            style={{
+                                                                ...styles.contactFields,
+                                                                color: themeColor(
+                                                                    'chain'
+                                                                )
+                                                            }}
                                                         >
                                                             {address.length > 23
                                                                 ? `${address.substring(
@@ -326,9 +329,12 @@ export default class ContactDetails extends React.Component<
                                                     >
                                                         <LightningBolt />
                                                         <Text
-                                                            style={
-                                                                styles.contactFields
-                                                            }
+                                                            style={{
+                                                                ...styles.contactFields,
+                                                                color: themeColor(
+                                                                    'chain'
+                                                                )
+                                                            }}
                                                         >
                                                             {address.length > 23
                                                                 ? `${address.substring(
@@ -372,9 +378,12 @@ export default class ContactDetails extends React.Component<
                                                     >
                                                         <BitcoinIcon />
                                                         <Text
-                                                            style={
-                                                                styles.contactFields
-                                                            }
+                                                            style={{
+                                                                ...styles.contactFields,
+                                                                color: themeColor(
+                                                                    'chain'
+                                                                )
+                                                            }}
                                                         >
                                                             {address.length > 23
                                                                 ? `${address.substring(
@@ -413,9 +422,12 @@ export default class ContactDetails extends React.Component<
                                                     >
                                                         <VerifiedAccount />
                                                         <Text
-                                                            style={
-                                                                styles.contactFields
-                                                            }
+                                                            style={{
+                                                                ...styles.contactFields,
+                                                                color: themeColor(
+                                                                    'chain'
+                                                                )
+                                                            }}
                                                         >
                                                             {value.length > 15
                                                                 ? `${value.substring(
@@ -454,9 +466,12 @@ export default class ContactDetails extends React.Component<
                                                             <KeySecurity />
                                                         </View>
                                                         <Text
-                                                            style={
-                                                                styles.contactFields
-                                                            }
+                                                            style={{
+                                                                ...styles.contactFields,
+                                                                color: themeColor(
+                                                                    'chain'
+                                                                )
+                                                            }}
                                                         >
                                                             {value.length > 15
                                                                 ? `${value.substring(
@@ -498,7 +513,6 @@ const styles = StyleSheet.create({
     contactFields: {
         fontSize: 24,
         marginBottom: 4,
-        marginLeft: 4,
-        color: themeColor('chain')
+        marginLeft: 4
     }
 });
