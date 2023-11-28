@@ -332,8 +332,7 @@ export default class LnurlPay extends React.Component<
                                 }}
                                 style={styles.button}
                                 buttonStyle={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 30
+                                    backgroundColor: themeColor('secondary')
                                 }}
                             />
                         </View>
