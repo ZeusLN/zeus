@@ -86,8 +86,8 @@ const TempleButton = ({ navigation }: { navigation: any }) => (
     >
         <Temple
             fill={themeColor('text')}
-            width="22"
-            height="22"
+            width={20.17}
+            height={22}
             style={{ top: -8, alignSelf: 'center' }}
         />
     </TouchableOpacity>
@@ -98,7 +98,7 @@ const ScanBadge = ({ navigation }: { navigation: any }) => (
         onPress={() => navigation.navigate('HandleAnythingQRScanner')}
         accessibilityLabel={localeString('general.scan')}
     >
-        <Scan fill={themeColor('text')} width={35} height={35} />
+        <Scan fill={themeColor('text')} width={30} height={30} />
     </TouchableOpacity>
 );
 
@@ -116,7 +116,7 @@ const ClipboardBadge = ({
             navigation.navigate(route, props);
         }}
     >
-        <ClipboardSVG fill={themeColor('text')} width="28" height="35" />
+        <ClipboardSVG fill={themeColor('text')} width="24" height="30" />
     </TouchableOpacity>
 );
 
@@ -133,7 +133,7 @@ const POSBadge = ({
             setPosStatus('active');
         }}
     >
-        <POS stroke={themeColor('text')} width="26.83" height="35" />
+        <POS stroke={themeColor('text')} width="23" height="30" />
     </TouchableOpacity>
 );
 
@@ -366,8 +366,8 @@ export default class WalletHeader extends React.Component<
                                 >
                                     <MailboxFlagUp
                                         fill={themeColor('highlight')}
-                                        width={35}
-                                        height={35}
+                                        width={34.29}
+                                        height={30}
                                     />
                                 </TouchableOpacity>
                             )}
@@ -456,7 +456,7 @@ export default class WalletHeader extends React.Component<
                                 stores.balanceStore.loadingLightningBalance ||
                                 laLoading) && (
                                 <View style={{ paddingRight: 15 }}>
-                                    <LoadingIndicator size={35} />
+                                    <LoadingIndicator size={32} />
                                 </View>
                             )}
                             {!!clipboard && (

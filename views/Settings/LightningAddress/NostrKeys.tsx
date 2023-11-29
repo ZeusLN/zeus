@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
 
@@ -24,8 +23,9 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 import DiceSVG from '../../../assets/images/SVG/Dice.svg';
-import HiddenSVG from '../../../assets/images/SVG/Hidden.svg';
-import VisibleSVG from '../../../assets/images/SVG/Visible.svg';
+import HiddenSVG from '../../../assets/images/SVG/eye_closed.svg';
+import VisibleSVG from '../../../assets/images/SVG/eye_opened.svg';
+import Edit from '../../../assets/images/SVG/Pen.svg';
 
 interface NostrKeyProps {
     navigation: any;
@@ -128,7 +128,7 @@ export default class NostrKey extends React.Component<
         } = lightningAddress;
 
         const VisibilityButton = () => (
-            <View style={{ right: 15 }}>
+            <View>
                 <TouchableOpacity
                     onPress={() => {
                         this.setState({
@@ -139,14 +139,14 @@ export default class NostrKey extends React.Component<
                     {revealSensitive ? (
                         <HiddenSVG
                             fill={themeColor('text')}
-                            width={35}
-                            height={35}
+                            width={33.34}
+                            height={30}
                         />
                     ) : (
                         <VisibleSVG
                             fill={themeColor('text')}
-                            width={35}
-                            height={35}
+                            width={33.34}
+                            height={30}
                         />
                     )}
                 </TouchableOpacity>
@@ -154,19 +154,18 @@ export default class NostrKey extends React.Component<
         );
 
         const EditButton = () => (
-            <View style={{ right: 30 }}>
-                <Icon
-                    name="edit"
-                    onPress={() => {
-                        this.setState({
-                            editMode: true
-                        });
-                    }}
-                    color={themeColor('text')}
-                    underlayColor="transparent"
-                    size={30}
+            <TouchableOpacity
+                onPress={() => {
+                    this.setState({
+                        editMode: true
+                    });
+                }}
+            >
+                <Edit
+                    fill={themeColor('text')}
+                    style={{ marginRight: 15, alignSelf: 'center' }}
                 />
-            </View>
+            </TouchableOpacity>
         );
 
         return (
