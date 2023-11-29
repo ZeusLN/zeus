@@ -39,6 +39,7 @@ export default class LightningAddressStore {
     @observable public lightningAddressDomain: string;
     @observable public lightningAddressActivated: boolean = false;
     @observable public loading: boolean = false;
+    @observable public redeeming: boolean = false;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public availableHashes: number = 0;
@@ -631,7 +632,7 @@ export default class LightningAddressStore {
         }
         this.error = false;
         this.error_msg = '';
-        this.loading = true;
+        this.redeeming = true;
         return await new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'POST',
@@ -672,13 +673,13 @@ export default class LightningAddressStore {
                                         const { success } = data;
 
                                         if (status === 200 && success) {
-                                            this.loading = false;
+                                            this.redeeming = false;
 
                                             resolve({
                                                 success
                                             });
                                         } else {
-                                            this.loading = false;
+                                            this.redeeming = false;
                                             this.error = true;
                                             this.error_msg =
                                                 data.error.toString();
@@ -686,27 +687,27 @@ export default class LightningAddressStore {
                                         }
                                     })
                                     .catch((error: any) => {
-                                        this.loading = false;
+                                        this.redeeming = false;
                                         this.error = true;
                                         this.error_msg = error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
-                                this.loading = false;
+                                this.redeeming = false;
                                 this.error = true;
                                 this.error_msg = error.toString();
                                 reject(error);
                             });
                     } else {
-                        this.loading = false;
+                        this.redeeming = false;
                         this.error = true;
                         this.error_msg = data.error.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
-                    this.loading = false;
+                    this.redeeming = false;
                     this.error = true;
                     this.error_msg = error.toString();
                     reject(error);
