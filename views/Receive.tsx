@@ -113,7 +113,6 @@ interface ReceiveState {
     rate: number;
     // LSP
     needInbound: boolean;
-    belowMinAmount: boolean;
     enableLSP: boolean;
 }
 
@@ -154,7 +153,6 @@ export default class Receive extends React.Component<
         rate: 0,
         // LSP
         needInbound: false,
-        belowMinAmount: false,
         enableLSP: true
     };
 
@@ -232,7 +230,6 @@ export default class Receive extends React.Component<
         if (lnurl) {
             this.props.UnitsStore.resetUnits();
             let needInbound = false;
-            let belowMinAmount = false;
             if (
                 BackendUtils.supportsLSPs() &&
                 settings?.enableLSP &&
@@ -241,26 +238,17 @@ export default class Receive extends React.Component<
                 )
             ) {
                 needInbound = true;
-                if (
-                    new BigNumber(
-                        getSatAmount(lnurl.maxWithdrawable / 1000)
-                    ).lt(50000)
-                ) {
-                    belowMinAmount = true;
-                }
             }
             this.setState({
                 memo: lnurl.defaultDescription,
                 value: (lnurl.maxWithdrawable / 1000).toString(),
                 satAmount: getSatAmount(lnurl.maxWithdrawable / 1000),
-                needInbound,
-                belowMinAmount
+                needInbound
             });
         }
 
         if (amount) {
             let needInbound = false;
-            let belowMinAmount = false;
             if (
                 BackendUtils.supportsLSPs() &&
                 settings?.enableLSP &&
@@ -270,15 +258,11 @@ export default class Receive extends React.Component<
                 )
             ) {
                 needInbound = true;
-                if (new BigNumber(getSatAmount(amount)).lt(50000)) {
-                    belowMinAmount = true;
-                }
             }
             this.setState({
                 value: amount,
                 satAmount: getSatAmount(amount),
-                needInbound,
-                belowMinAmount
+                needInbound
             });
         }
 
@@ -316,7 +300,6 @@ export default class Receive extends React.Component<
 
         if (amount) {
             let needInbound = false;
-            let belowMinAmount = false;
             if (
                 BackendUtils.supportsLSPs() &&
                 settings?.enableLSP &&
@@ -326,21 +309,16 @@ export default class Receive extends React.Component<
                 )
             ) {
                 needInbound = true;
-                if (new BigNumber(getSatAmount(amount)).lt(50000)) {
-                    belowMinAmount = true;
-                }
             }
             this.setState({
                 value: amount,
                 satAmount: getSatAmount(amount),
-                needInbound,
-                belowMinAmount
+                needInbound
             });
         }
 
         if (lnurl) {
             let needInbound = false;
-            let belowMinAmount = false;
             if (
                 BackendUtils.supportsLSPs() &&
                 settings?.enableLSP &&
@@ -349,20 +327,12 @@ export default class Receive extends React.Component<
                 )
             ) {
                 needInbound = true;
-                if (
-                    new BigNumber(
-                        getSatAmount(lnurl.maxWithdrawable / 1000)
-                    ).lt(50000)
-                ) {
-                    belowMinAmount = true;
-                }
             }
             this.setState({
                 memo: lnurl.defaultDescription,
                 value: (lnurl.maxWithdrawable / 1000).toString(),
                 satAmount: getSatAmount(lnurl.maxWithdrawable / 1000),
-                needInbound,
-                belowMinAmount
+                needInbound
             });
         }
     }
@@ -898,7 +868,6 @@ export default class Receive extends React.Component<
             ampInvoice,
             routeHints,
             needInbound,
-            belowMinAmount,
             enableLSP
         } = this.state;
 
@@ -1685,7 +1654,6 @@ export default class Receive extends React.Component<
                                                 satAmount: string | number
                                             ) => {
                                                 let needInbound = false;
-                                                let belowMinAmount = false;
                                                 if (
                                                     BackendUtils.supportsLSPs() &&
                                                     enableLSP &&
@@ -1696,19 +1664,11 @@ export default class Receive extends React.Component<
                                                     )
                                                 ) {
                                                     needInbound = true;
-                                                    if (
-                                                        new BigNumber(
-                                                            satAmount
-                                                        ).lt(50000)
-                                                    ) {
-                                                        belowMinAmount = true;
-                                                    }
                                                 }
                                                 this.setState({
                                                     value: amount,
                                                     satAmount,
-                                                    needInbound,
-                                                    belowMinAmount
+                                                    needInbound
                                                 });
                                             }}
                                         />
@@ -1748,16 +1708,12 @@ export default class Receive extends React.Component<
                                                             fontSize: 15
                                                         }}
                                                     >
-                                                        {belowMinAmount &&
-                                                        this.props.ChannelsStore
+                                                        {this.props
+                                                            .ChannelsStore
                                                             .channels.length ===
-                                                            0
+                                                        0
                                                             ? localeString(
                                                                   'views.Wallet.KeypadPane.lspExplainerFirstChannel'
-                                                              )
-                                                            : belowMinAmount
-                                                            ? localeString(
-                                                                  'views.Wallet.KeypadPane.lspExplainerBelowMin'
                                                               )
                                                             : localeString(
                                                                   'views.Wallet.KeypadPane.lspExplainer'
@@ -1972,7 +1928,6 @@ export default class Receive extends React.Component<
                                                         }
                                                     );
                                                 }}
-                                                disabled={belowMinAmount}
                                             />
                                         </View>
                                     </>
