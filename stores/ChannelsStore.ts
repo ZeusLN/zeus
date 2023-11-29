@@ -405,7 +405,7 @@ export default class ChannelsStore {
             );
         }
 
-        Promise.all(loadPromises)
+        return Promise.all(loadPromises)
             .then(() => {
                 this.loading = false;
                 this.error = false;
