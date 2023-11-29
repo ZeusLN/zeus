@@ -52,9 +52,9 @@ interface NodeConfigurationProps {
 
 interface NodeConfigurationState {
     nickname: string; //
-    host: string; // lnd
-    port: string | number; // lnd
-    macaroonHex: string; // lnd
+    host: string; // lnd, c-lightning-REST
+    port: string | number; // lnd, c-lightning-REST
+    macaroonHex: string; // lnd, c-lightning-REST
     url: string; // spark, eclair
     accessKey: string; // spark
     lndhubUrl: string; // lndhub
