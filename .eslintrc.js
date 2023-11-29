@@ -6,7 +6,13 @@ module.exports = {
   root: true,
   extends: ['@react-native', 'plugin:import/recommended', 'plugin:import/typescript'],
   plugins: ['import'],
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    project: true,
+    tsconfigRootDir: __dirname
+  },
   rules: {
+    '@typescript-eslint/await-thenable': 'error',
     '@typescript-eslint/ban-ts-comment': 'off',
     '@typescript-eslint/ban-types': 'off',
     '@typescript-eslint/camelcase': 'off',
