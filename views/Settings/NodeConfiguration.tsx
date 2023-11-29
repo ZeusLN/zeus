@@ -92,7 +92,7 @@ interface NodeConfigurationState {
 
 const ScanBadge = ({ onPress }: { onPress: () => void }) => (
     <TouchableOpacity onPress={onPress}>
-        <Scan fill={themeColor('text')} width={35} height={35} />
+        <Scan fill={themeColor('text')} width={30} height={30} />
     </TouchableOpacity>
 );
 
