@@ -838,7 +838,6 @@
     "stores.InvoicesStore.errorCreatingInvoice": "Error creating invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Error generating new address",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
-    "stores.InvoicesStore.lspNewChannelNeeded": "A new channel is needed to be able to receive the amount requested. A setup fee has been added to the invoice.",
     "stores.SettingsStore.btcPayImplementationSupport": "Sorry, we currently only support BTCPay instances using lnd or c-lightning",
     "stores.SettingsStore.btcPayFetchConfigError": "Error fetching BTCPay configuration",
     "stores.SettingsStore.olympianFetchError": "Error fetching Olympians",
