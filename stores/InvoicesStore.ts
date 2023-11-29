@@ -226,13 +226,6 @@ export default class InvoicesStore {
                 req.value = new BigNumber(value).minus(
                     this.lspStore.zeroConfFee || 0
                 );
-            } else if (
-                this.lspStore.zeroConfFee &&
-                new BigNumber(this.lspStore.zeroConfFee).gt(1000)
-            ) {
-                this.error_msg = localeString(
-                    'stores.InvoicesStore.lspNewChannelNeeded'
-                );
             }
         }
 

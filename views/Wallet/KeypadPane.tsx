@@ -251,14 +251,9 @@ export default class KeypadPane extends React.PureComponent<
                                     fontSize: 15
                                 }}
                             >
-                                {belowMinAmount &&
-                                this.props.ChannelsStore.channels.length === 0
+                                {this.props.ChannelsStore.channels.length === 0
                                     ? localeString(
                                           'views.Wallet.KeypadPane.lspExplainerFirstChannel'
-                                      )
-                                    : belowMinAmount
-                                    ? localeString(
-                                          'views.Wallet.KeypadPane.lspExplainerBelowMin'
                                       )
                                     : localeString(
                                           'views.Wallet.KeypadPane.lspExplainer'
