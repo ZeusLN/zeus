@@ -17,6 +17,7 @@ import KeyValue from '../../../components/KeyValue';
 import Screen from '../../../components/Screen';
 import Text from '../../../components/Text';
 import Header from '../../../components/Header';
+import LightningLoadingPattern from '../../../components/LightningLoadingPattern';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import TextInput from '../../../components/TextInput';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
@@ -158,6 +159,7 @@ export default class LightningAddress extends React.Component<
             error,
             error_msg,
             loading,
+            redeeming,
             readyToAutomaticallyAccept,
             prepareToAutomaticallyAcceptStart
         } = LightningAddressStore;
@@ -266,7 +268,7 @@ export default class LightningAddress extends React.Component<
                             }
                         }}
                         rightComponent={
-                            !loading ? (
+                            !loading && !redeeming ? (
                                 <Row>
                                     {fees && !error && <InfoButton />}
                                     {lightningAddressHandle && !error && (
@@ -277,12 +279,13 @@ export default class LightningAddress extends React.Component<
                         }
                         navigation={navigation}
                     />
+                    {redeeming && <LightningLoadingPattern />}
                     <View style={{ flex: 1, margin: 5 }}>
                         {loading && <LoadingIndicator />}
-                        {!loading && !!error_msg && (
+                        {!loading && !redeeming && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
-                        {!loading && lightningAddressHandle && (
+                        {!loading && !redeeming && lightningAddressHandle && (
                             <View
                                 style={{
                                     alignSelf: 'center',
@@ -359,281 +362,307 @@ export default class LightningAddress extends React.Component<
                                 <QRButton />
                             </View>
                         )}
-                        {!loading && !lightningAddressHandle && hasChannels && (
-                            <>
-                                <View style={{ flex: 1 }}>
-                                    <View style={styles.wrapper}>
+                        {!loading &&
+                            !redeeming &&
+                            !lightningAddressHandle &&
+                            hasChannels && (
+                                <>
+                                    <View style={{ flex: 1 }}>
+                                        <View style={styles.wrapper}>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.chooseHandle'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'row'
+                                                }}
+                                            >
+                                                <TextInput
+                                                    value={newLightningAddress}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
+                                                        this.setState({
+                                                            newLightningAddress:
+                                                                text
+                                                        });
+                                                    }}
+                                                    autoCapitalize="none"
+                                                    autoCorrect={false}
+                                                    style={{
+                                                        flex: 1,
+                                                        flexDirection: 'row'
+                                                    }}
+                                                />
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontSize: 20,
+                                                        marginLeft: 5
+                                                    }}
+                                                >
+                                                    @zeuspay.com
+                                                </Text>
+                                            </View>
+                                        </View>
+
+                                        <>
+                                            <View style={styles.wrapper}>
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book',
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        marginTop: 15,
+                                                        marginBottom: 10
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.LightningAddress.zaplockerVerification'
+                                                    )}
+                                                </Text>
+
+                                                {nostrNpub && (
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'nostr.npub'
+                                                        )}
+                                                        value={nostrNpub}
+                                                    />
+                                                )}
+                                            </View>
+                                            <ListItem
+                                                containerStyle={{
+                                                    backgroundColor:
+                                                        'transparent'
+                                                }}
+                                                onPress={() =>
+                                                    navigation.navigate(
+                                                        'NostrKeys',
+                                                        {
+                                                            setup: true,
+                                                            nostrPrivateKey
+                                                        }
+                                                    )
+                                                }
+                                            >
+                                                <ListItem.Content>
+                                                    <ListItem.Title
+                                                        style={{
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book'
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.LightningAddress.changeNostrKeys'
+                                                        )}
+                                                    </ListItem.Title>
+                                                </ListItem.Content>
+                                                <Icon
+                                                    name="keyboard-arrow-right"
+                                                    color={themeColor(
+                                                        'secondaryText'
+                                                    )}
+                                                />
+                                            </ListItem>
+                                            <ListItem
+                                                containerStyle={{
+                                                    backgroundColor:
+                                                        'transparent'
+                                                }}
+                                                onPress={() =>
+                                                    navigation.navigate(
+                                                        'NostrRelays',
+                                                        {
+                                                            setup: true,
+                                                            relays: nostrRelays
+                                                        }
+                                                    )
+                                                }
+                                            >
+                                                <ListItem.Content>
+                                                    <ListItem.Title
+                                                        style={{
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book'
+                                                        }}
+                                                    >
+                                                        {`${localeString(
+                                                            'views.Settings.Nostr.relays'
+                                                        )} (${
+                                                            nostrRelays?.length ||
+                                                            0
+                                                        })`}
+                                                    </ListItem.Title>
+                                                </ListItem.Content>
+                                                <Icon
+                                                    name="keyboard-arrow-right"
+                                                    color={themeColor(
+                                                        'secondaryText'
+                                                    )}
+                                                />
+                                            </ListItem>
+                                        </>
+                                    </View>
+                                    <View>
+                                        <View
+                                            style={{ bottom: 15, margin: 10 }}
+                                        >
+                                            <Button
+                                                title={localeString(
+                                                    'views.Settings.LightningAddress.create'
+                                                )}
+                                                onPress={() =>
+                                                    create(
+                                                        newLightningAddress,
+                                                        nostrPublicKey,
+                                                        nostrPrivateKey,
+                                                        nostrRelays
+                                                    ).then(() => status())
+                                                }
+                                                disabled={
+                                                    !nostrPublicKey ||
+                                                    !nostrNpub ||
+                                                    !nostrRelays ||
+                                                    nostrRelays.length === 0
+                                                }
+                                            />
+                                        </View>
+                                    </View>
+                                </>
+                            )}
+                        {!loading &&
+                            !redeeming &&
+                            !lightningAddressHandle &&
+                            !hasChannels && (
+                                <>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            marginLeft: 5,
+                                            marginRight: 5
+                                        }}
+                                    >
                                         <Text
                                             style={{
-                                                ...styles.text,
+                                                ...styles.explainer,
                                                 color: themeColor('text')
                                             }}
                                         >
                                             {localeString(
-                                                'views.Settings.LightningAddress.chooseHandle'
+                                                'views.Settings.LightningAddress.explainer1'
                                             )}
                                         </Text>
-                                        <View
+                                        <Text
                                             style={{
-                                                display: 'flex',
-                                                flexDirection: 'row'
+                                                ...styles.explainer,
+                                                color: themeColor('text')
                                             }}
                                         >
-                                            <TextInput
-                                                value={newLightningAddress}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        newLightningAddress:
-                                                            text
-                                                    });
-                                                }}
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row'
+                                            {localeString(
+                                                'views.Settings.LightningAddress.explainer2'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                ...styles.explainer,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <View>
+                                        <View
+                                            style={{ bottom: 15, margin: 10 }}
+                                        >
+                                            <Button
+                                                title={localeString(
+                                                    'views.Settings.LightningAddress.get0ConfChan'
+                                                )}
+                                                onPress={() => {
+                                                    UnitsStore.resetUnits();
+                                                    navigation.navigate(
+                                                        'Receive',
+                                                        {
+                                                            amount: '100000'
+                                                        }
+                                                    );
                                                 }}
                                             />
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text'),
-                                                    fontSize: 20,
-                                                    marginLeft: 5
-                                                }}
-                                            >
-                                                @zeuspay.com
-                                            </Text>
+                                        </View>
+                                        <View
+                                            style={{ bottom: 15, margin: 10 }}
+                                        >
+                                            <Button
+                                                title={localeString(
+                                                    'views.LspExplanation.buttonText2'
+                                                )}
+                                                onPress={() =>
+                                                    navigation.navigate(
+                                                        'LspExplanationOverview'
+                                                    )
+                                                }
+                                                tertiary
+                                            />
+                                        </View>
+                                        <View
+                                            style={{ bottom: 15, margin: 10 }}
+                                        >
+                                            <Button
+                                                title={localeString(
+                                                    'views.Intro.lightningOnboarding'
+                                                )}
+                                                onPress={() =>
+                                                    UrlUtils.goToUrl(
+                                                        'https://docs.zeusln.app/for-users/embedded-node/lightning-onboarding/'
+                                                    )
+                                                }
+                                                secondary
+                                            />
+                                        </View>
+                                        <View
+                                            style={{ bottom: 15, margin: 10 }}
+                                        >
+                                            <Button
+                                                title={localeString(
+                                                    'views.Intro.lightningLiquidity'
+                                                )}
+                                                onPress={() =>
+                                                    UrlUtils.goToUrl(
+                                                        'https://bitcoin.design/guide/how-it-works/liquidity/'
+                                                    )
+                                                }
+                                                secondary
+                                            />
                                         </View>
                                     </View>
-
-                                    <>
-                                        <View style={styles.wrapper}>
-                                            <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-                                                    color: themeColor('text'),
-                                                    marginTop: 15,
-                                                    marginBottom: 10
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LightningAddress.zaplockerVerification'
-                                                )}
-                                            </Text>
-
-                                            {nostrNpub && (
-                                                <KeyValue
-                                                    keyValue={localeString(
-                                                        'nostr.npub'
-                                                    )}
-                                                    value={nostrNpub}
-                                                />
-                                            )}
-                                        </View>
-                                        <ListItem
-                                            containerStyle={{
-                                                backgroundColor: 'transparent'
-                                            }}
-                                            onPress={() =>
-                                                navigation.navigate(
-                                                    'NostrKeys',
-                                                    {
-                                                        setup: true,
-                                                        nostrPrivateKey
-                                                    }
-                                                )
-                                            }
-                                        >
-                                            <ListItem.Content>
-                                                <ListItem.Title
-                                                    style={{
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.LightningAddress.changeNostrKeys'
-                                                    )}
-                                                </ListItem.Title>
-                                            </ListItem.Content>
-                                            <Icon
-                                                name="keyboard-arrow-right"
-                                                color={themeColor(
-                                                    'secondaryText'
-                                                )}
-                                            />
-                                        </ListItem>
-                                        <ListItem
-                                            containerStyle={{
-                                                backgroundColor: 'transparent'
-                                            }}
-                                            onPress={() =>
-                                                navigation.navigate(
-                                                    'NostrRelays',
-                                                    {
-                                                        setup: true,
-                                                        relays: nostrRelays
-                                                    }
-                                                )
-                                            }
-                                        >
-                                            <ListItem.Content>
-                                                <ListItem.Title
-                                                    style={{
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {`${localeString(
-                                                        'views.Settings.Nostr.relays'
-                                                    )} (${
-                                                        nostrRelays?.length || 0
-                                                    })`}
-                                                </ListItem.Title>
-                                            </ListItem.Content>
-                                            <Icon
-                                                name="keyboard-arrow-right"
-                                                color={themeColor(
-                                                    'secondaryText'
-                                                )}
-                                            />
-                                        </ListItem>
-                                    </>
-                                </View>
-                                <View>
-                                    <View style={{ bottom: 15, margin: 10 }}>
-                                        <Button
-                                            title={localeString(
-                                                'views.Settings.LightningAddress.create'
-                                            )}
-                                            onPress={() =>
-                                                create(
-                                                    newLightningAddress,
-                                                    nostrPublicKey,
-                                                    nostrPrivateKey,
-                                                    nostrRelays
-                                                ).then(() => status())
-                                            }
-                                            disabled={
-                                                !nostrPublicKey ||
-                                                !nostrNpub ||
-                                                !nostrRelays ||
-                                                nostrRelays.length === 0
-                                            }
-                                        />
-                                    </View>
-                                </View>
-                            </>
-                        )}
-                        {!loading && !lightningAddressHandle && !hasChannels && (
-                            <>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        marginLeft: 5,
-                                        marginRight: 5
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            ...styles.explainer,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.LightningAddress.explainer1'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.explainer,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.LightningAddress.explainer2'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.explainer,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.KeypadPane.lspExplainerFirstChannel'
-                                        )}
-                                    </Text>
-                                </View>
-                                <View>
-                                    <View style={{ bottom: 15, margin: 10 }}>
-                                        <Button
-                                            title={localeString(
-                                                'views.Settings.LightningAddress.get0ConfChan'
-                                            )}
-                                            onPress={() => {
-                                                UnitsStore.resetUnits();
-                                                navigation.navigate('Receive', {
-                                                    amount: '100000'
-                                                });
-                                            }}
-                                        />
-                                    </View>
-                                    <View style={{ bottom: 15, margin: 10 }}>
-                                        <Button
-                                            title={localeString(
-                                                'views.LspExplanation.buttonText2'
-                                            )}
-                                            onPress={() =>
-                                                navigation.navigate(
-                                                    'LspExplanationOverview'
-                                                )
-                                            }
-                                            tertiary
-                                        />
-                                    </View>
-                                    <View style={{ bottom: 15, margin: 10 }}>
-                                        <Button
-                                            title={localeString(
-                                                'views.Intro.lightningOnboarding'
-                                            )}
-                                            onPress={() =>
-                                                UrlUtils.goToUrl(
-                                                    'https://docs.zeusln.app/for-users/embedded-node/lightning-onboarding/'
-                                                )
-                                            }
-                                            secondary
-                                        />
-                                    </View>
-                                    <View style={{ bottom: 15, margin: 10 }}>
-                                        <Button
-                                            title={localeString(
-                                                'views.Intro.lightningLiquidity'
-                                            )}
-                                            onPress={() =>
-                                                UrlUtils.goToUrl(
-                                                    'https://bitcoin.design/guide/how-it-works/liquidity/'
-                                                )
-                                            }
-                                            secondary
-                                        />
-                                    </View>
-                                </View>
-                            </>
-                        )}
+                                </>
+                            )}
                         {lightningAddressHandle && (
                             <>
-                                {!loading && (
+                                {!loading && !redeeming && (
                                     <ButtonGroup
                                         onPress={(selectedIndex: number) => {
                                             this.setState({ selectedIndex });
@@ -658,6 +687,7 @@ export default class LightningAddress extends React.Component<
                                 )}
                                 {!isReady &&
                                     !loading &&
+                                    !redeeming &&
                                     selectedIndex === 0 &&
                                     paid &&
                                     paid.length > 0 && (
@@ -689,6 +719,7 @@ export default class LightningAddress extends React.Component<
                                         </>
                                     )}
                                 {!loading &&
+                                    !redeeming &&
                                     selectedIndex === 0 &&
                                     paid.length === 0 && (
                                         <TouchableOpacity
@@ -712,6 +743,7 @@ export default class LightningAddress extends React.Component<
                                         </TouchableOpacity>
                                     )}
                                 {!loading &&
+                                    !redeeming &&
                                     selectedIndex === 1 &&
                                     settled.length === 0 && (
                                         <TouchableOpacity
@@ -734,7 +766,7 @@ export default class LightningAddress extends React.Component<
                                             </Text>
                                         </TouchableOpacity>
                                     )}
-                                {!loading && selectedIndex === 0 && (
+                                {!loading && !redeeming && selectedIndex === 0 && (
                                     <>
                                         <FlatList
                                             data={paid}
@@ -779,7 +811,7 @@ export default class LightningAddress extends React.Component<
                                         )}
                                     </>
                                 )}
-                                {!loading && selectedIndex === 1 && (
+                                {!loading && !redeeming && selectedIndex === 1 && (
                                     <FlatList
                                         data={settled}
                                         renderItem={({
