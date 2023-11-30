@@ -74,6 +74,7 @@ export default class ActivityFilter extends React.Component<
             received,
             unpaid,
             inTransit,
+            zeusPay,
             minimumAmount,
             startDate,
             endDate
@@ -160,50 +161,66 @@ export default class ActivityFilter extends React.Component<
                 label: localeString('views.ActivityFilter.lightningPayments'),
                 value: lightning,
                 var: 'lightning',
-                type: 'Toggle'
+                type: 'Toggle',
+                condition: true
             },
             {
                 label: localeString('views.ActivityFilter.onChainPayments'),
                 value: onChain,
                 var: 'onChain',
-                type: 'Toggle'
+                type: 'Toggle',
+                condition: true
             },
             {
                 label: localeString('general.sent'),
                 value: sent,
                 var: 'sent',
-                type: 'Toggle'
+                type: 'Toggle',
+                condition: true
             },
             {
                 label: localeString('general.received'),
                 value: received,
                 var: 'received',
-                type: 'Toggle'
+                type: 'Toggle',
+                condition: true
             },
             {
                 label: localeString('views.Wallet.Invoices.unpaid'),
                 value: unpaid,
                 var: 'unpaid',
-                type: 'Toggle'
+                type: 'Toggle',
+                condition: true
             },
             {
                 label: localeString('views.ActivityFilter.inTransit'),
                 value: inTransit,
                 var: 'inTransit',
-                type: 'Toggle'
+                type: 'Toggle',
+                condition: true
+            },
+            {
+                label: 'ZEUS PAY',
+                value: zeusPay,
+                var: 'zeusPay',
+                type: 'Toggle',
+                condition: SettingsStore.settings.lightningAddress.enabled
             },
             {
                 label: localeString('views.ActivityFilter.minimumAmount'),
                 value: minimumAmount,
-                type: 'Amount'
+                type: 'Amount',
+                condition: true
             },
             {
                 label: localeString('views.ActivityFilter.startDate'),
-                type: 'StartDate'
+                type: 'StartDate',
+                condition: true
             },
             {
                 label: localeString('views.ActivityFilter.endDate'),
-                type: 'EndDate'
+                type: 'EndDate',
+                condition: true
             }
         ];
 
@@ -238,77 +255,90 @@ export default class ActivityFilter extends React.Component<
                 />
                 <FlatList
                     data={FILTERS}
-                    renderItem={({ item }) => (
-                        <>
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                            >
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                    renderItem={({ item }) => {
+                        if (!item.condition) return;
+                        return (
+                            <>
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
                                     }}
                                 >
-                                    {item.label}
-                                </ListItem.Title>
-                                {item.type === 'Toggle' && (
-                                    <View
+                                    <ListItem.Title
                                         style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
                                         }}
                                     >
-                                        <Switch
-                                            value={item.value}
-                                            onValueChange={async () => {
-                                                const newFilters: any = filters;
-                                                const index = `${item.var}`;
-                                                newFilters[index] =
-                                                    !filters[index];
-                                                await setFilters(newFilters);
+                                        {item.label}
+                                    </ListItem.Title>
+                                    {item.type === 'Toggle' && (
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
                                             }}
-                                        />
-                                    </View>
-                                )}
-                                {item.type === 'Amount' && (
-                                    <View style={{ flex: 1 }}>
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            placeholder="0"
-                                            value={
-                                                item.value === 0
-                                                    ? ''
-                                                    : String(item.value)
-                                            }
-                                            onChangeText={(text: string) => {
-                                                const newMinAmount = !isNaN(
-                                                    Number(text)
-                                                )
-                                                    ? Number(text)
-                                                    : 0;
-                                                setAmountFilter(newMinAmount);
-                                            }}
-                                            style={{ marginBottom: 0, top: 0 }}
-                                        />
-                                    </View>
-                                )}
-                                {item.type === 'StartDate' && (
-                                    <View style={{ flex: 1 }}>
-                                        <DateFilter type="startDate" />
-                                    </View>
-                                )}
-                                {item.type === 'EndDate' && (
-                                    <View style={{ flex: 1 }}>
-                                        <DateFilter type="endDate" />
-                                    </View>
-                                )}
-                            </ListItem>
-                        </>
-                    )}
+                                        >
+                                            <Switch
+                                                value={item.value}
+                                                onValueChange={async () => {
+                                                    const newFilters: any =
+                                                        filters;
+                                                    const index = `${item.var}`;
+                                                    newFilters[index] =
+                                                        !filters[index];
+                                                    await setFilters(
+                                                        newFilters
+                                                    );
+                                                }}
+                                            />
+                                        </View>
+                                    )}
+                                    {item.type === 'Amount' && (
+                                        <View style={{ flex: 1 }}>
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                placeholder="0"
+                                                value={
+                                                    item.value === 0
+                                                        ? ''
+                                                        : String(item.value)
+                                                }
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    const newMinAmount = !isNaN(
+                                                        Number(text)
+                                                    )
+                                                        ? Number(text)
+                                                        : 0;
+                                                    setAmountFilter(
+                                                        newMinAmount
+                                                    );
+                                                }}
+                                                style={{
+                                                    marginBottom: 0,
+                                                    top: 0
+                                                }}
+                                            />
+                                        </View>
+                                    )}
+                                    {item.type === 'StartDate' && (
+                                        <View style={{ flex: 1 }}>
+                                            <DateFilter type="startDate" />
+                                        </View>
+                                    )}
+                                    {item.type === 'EndDate' && (
+                                        <View style={{ flex: 1 }}>
+                                            <DateFilter type="endDate" />
+                                        </View>
+                                    )}
+                                </ListItem>
+                            </>
+                        );
+                    }}
                     keyExtractor={(item: any, index: any) =>
                         `${item.model}-${index}`
                     }

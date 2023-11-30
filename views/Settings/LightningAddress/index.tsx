@@ -6,7 +6,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { ButtonGroup, Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
 
@@ -47,7 +47,6 @@ interface LightningAddressProps {
 }
 
 interface LightningAddressState {
-    selectedIndex: number;
     newLightningAddress: string;
     nostrPrivateKey: string;
     nostrPublicKey: string;
@@ -64,7 +63,6 @@ export default class LightningAddress extends React.Component<
     isInitialFocus = true;
 
     state = {
-        selectedIndex: 0,
         newLightningAddress: '',
         nostrPrivateKey: '',
         nostrPublicKey: '',
@@ -143,7 +141,6 @@ export default class LightningAddress extends React.Component<
             nostrPrivateKey,
             nostrPublicKey,
             nostrNpub,
-            selectedIndex,
             nostrRelays
         } = this.state;
         const {
@@ -154,7 +151,6 @@ export default class LightningAddress extends React.Component<
             lightningAddressDomain,
             availableHashes,
             paid,
-            settled,
             fees,
             error,
             error_msg,
@@ -221,39 +217,6 @@ export default class LightningAddress extends React.Component<
         );
 
         const statusGood = availableHashes > 50;
-
-        const openOrdersButton = () => (
-            <Text
-                style={{
-                    fontFamily: 'PPNeueMontreal-Book',
-                    color:
-                        selectedIndex === 0
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                {`${localeString('general.open')} (${paid.length})`}
-            </Text>
-        );
-
-        const paidOrdersButton = () => (
-            <Text
-                style={{
-                    fontFamily: 'PPNeueMontreal-Book',
-                    color:
-                        selectedIndex === 1
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                {`${localeString('general.settled')} (${settled.length})`}
-            </Text>
-        );
-
-        const buttons = [
-            { element: openOrdersButton },
-            { element: paidOrdersButton }
-        ];
 
         return (
             <Screen>
@@ -662,33 +625,9 @@ export default class LightningAddress extends React.Component<
                             )}
                         {lightningAddressHandle && (
                             <>
-                                {!loading && !redeeming && (
-                                    <ButtonGroup
-                                        onPress={(selectedIndex: number) => {
-                                            this.setState({ selectedIndex });
-                                        }}
-                                        selectedIndex={selectedIndex}
-                                        buttons={buttons}
-                                        selectedButtonStyle={{
-                                            backgroundColor:
-                                                themeColor('highlight'),
-                                            borderRadius: 12
-                                        }}
-                                        containerStyle={{
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderRadius: 12,
-                                            borderColor: themeColor('secondary')
-                                        }}
-                                        innerBorderStyle={{
-                                            color: themeColor('secondary')
-                                        }}
-                                    />
-                                )}
                                 {!isReady &&
                                     !loading &&
                                     !redeeming &&
-                                    selectedIndex === 0 &&
                                     paid &&
                                     paid.length > 0 && (
                                         <>
@@ -718,55 +657,29 @@ export default class LightningAddress extends React.Component<
                                             </View>
                                         </>
                                     )}
-                                {!loading &&
-                                    !redeeming &&
-                                    selectedIndex === 0 &&
-                                    paid.length === 0 && (
-                                        <TouchableOpacity
+                                {!loading && !redeeming && paid.length === 0 && (
+                                    <TouchableOpacity
+                                        style={{
+                                            marginTop: 15,
+                                            alignItems: 'center'
+                                        }}
+                                        onPress={() => status()}
+                                    >
+                                        <Text
                                             style={{
-                                                marginTop: 15,
-                                                alignItems: 'center'
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
-                                            onPress={() => status()}
                                         >
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LightningAddress.noOpenPayments'
-                                                )}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    )}
-                                {!loading &&
-                                    !redeeming &&
-                                    selectedIndex === 1 &&
-                                    settled.length === 0 && (
-                                        <TouchableOpacity
-                                            style={{
-                                                marginTop: 15,
-                                                alignItems: 'center'
-                                            }}
-                                            onPress={() => status()}
-                                        >
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LightningAddress.noSettledPayments'
-                                                )}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    )}
-                                {!loading && !redeeming && selectedIndex === 0 && (
+                                            {localeString(
+                                                'views.Settings.LightningAddress.noPaymentsToRedeem'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {!loading && !redeeming && (
                                     <>
                                         <FlatList
                                             data={paid}
@@ -781,9 +694,6 @@ export default class LightningAddress extends React.Component<
                                                     <LightningAddressPayment
                                                         index={index}
                                                         item={item}
-                                                        selectedIndex={
-                                                            selectedIndex
-                                                        }
                                                         navigation={navigation}
                                                         isReady={isReady}
                                                     />
@@ -810,35 +720,6 @@ export default class LightningAddress extends React.Component<
                                             />
                                         )}
                                     </>
-                                )}
-                                {!loading && !redeeming && selectedIndex === 1 && (
-                                    <FlatList
-                                        data={settled}
-                                        renderItem={({
-                                            item,
-                                            index
-                                        }: {
-                                            item: any;
-                                            index: number;
-                                        }) => {
-                                            return (
-                                                <LightningAddressPayment
-                                                    index={index}
-                                                    item={item}
-                                                    selectedIndex={
-                                                        selectedIndex
-                                                    }
-                                                    navigation={navigation}
-                                                />
-                                            );
-                                        }}
-                                        ListFooterComponent={
-                                            <Spacer height={100} />
-                                        }
-                                        onRefresh={() => status()}
-                                        refreshing={loading}
-                                        keyExtractor={(_, index) => `${index}`}
-                                    />
                                 )}
                             </>
                         )}

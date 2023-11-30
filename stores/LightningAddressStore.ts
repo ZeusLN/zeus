@@ -44,7 +44,6 @@ export default class LightningAddressStore {
     @observable public error_msg: string = '';
     @observable public availableHashes: number = 0;
     @observable public paid: any = [];
-    @observable public settled: any = [];
     @observable public preimageMap: any = {};
     @observable public fees: any = {};
     @observable public minimumSats: number;
@@ -98,6 +97,20 @@ export default class LightningAddressStore {
         this.lightningAddressHandle = handle;
         this.lightningAddressDomain = domain;
         this.lightningAddress = `${handle}@${domain}`;
+    };
+
+    deleteHash = async (hash: string) => {
+        const hashesString =
+            (await EncryptedStorage.getItem(HASHES_STORAGE_STRING)) || '{}';
+
+        const oldHashes = JSON.parse(hashesString);
+        delete oldHashes[hash];
+        const newHashes = oldHashes;
+
+        return await EncryptedStorage.setItem(
+            HASHES_STORAGE_STRING,
+            JSON.stringify(newHashes)
+        );
     };
 
     @action
@@ -541,7 +554,6 @@ export default class LightningAddressStore {
                                             results,
                                             success,
                                             paid,
-                                            settled,
                                             fees,
                                             minimumSats,
                                             handle,
@@ -557,8 +569,6 @@ export default class LightningAddressStore {
                                             this.availableHashes = results || 0;
                                             this.paid =
                                                 this.enhanceWithFee(paid);
-                                            this.settled =
-                                                this.enhanceWithFee(settled);
                                             this.fees = fees;
                                             this.minimumSats = minimumSats;
                                             this.lightningAddressHandle =
@@ -674,7 +684,7 @@ export default class LightningAddressStore {
 
                                         if (status === 200 && success) {
                                             this.redeeming = false;
-
+                                            await this.deleteHash(hash);
                                             resolve({
                                                 success
                                             });
@@ -933,7 +943,7 @@ export default class LightningAddressStore {
             BackendUtils.createInvoice({
                 // 24 hrs
                 expiry: '86400',
-                value,
+                value_msat: amount_msat,
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
                 preimage,
                 private:
@@ -1053,11 +1063,7 @@ export default class LightningAddressStore {
                     });
 
                     this.socket.on('paid', (data: any) => {
-                        const { hash, req, amount_msat, comment } = data;
-
-                        console.log('hash', hash);
-                        console.log('req', req);
-                        console.log('amount_msat', amount_msat);
+                        const { hash, amount_msat, comment } = data;
 
                         const attestationLevel = this.settingsStore?.settings
                             ?.lightningAddress
@@ -1124,7 +1130,6 @@ export default class LightningAddressStore {
         this.error_msg = '';
         this.availableHashes = 0;
         this.paid = [];
-        this.settled = [];
         this.preimageMap = {};
         this.socket = undefined;
         this.lightningAddress = '';
