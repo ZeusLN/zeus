@@ -6,7 +6,6 @@ import { themeColor } from '../utils/ThemeUtils';
 const loader = require('../assets/images/Lottie/lightning-pattern-full-random-loop.json');
 
 function LightningLoadingPattern() {
-    console.log('hello');
     return (
         <View
             style={{
