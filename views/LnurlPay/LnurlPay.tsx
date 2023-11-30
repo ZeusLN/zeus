@@ -69,7 +69,10 @@ export default class LnurlPay extends React.Component<
         const amount = navigation.getParam('amount');
 
         return {
-            amount: amount || Math.floor(lnurl.minSendable / 1000).toString(),
+            amount:
+                amount && amount != 0
+                    ? amount
+                    : Math.floor(lnurl.minSendable / 1000).toString(),
             domain: lnurl.domain,
             comment: ''
         };
