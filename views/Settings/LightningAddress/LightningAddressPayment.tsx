@@ -17,7 +17,7 @@ import Channel from '../../../assets/images/SVG/Channel.svg';
 import Receive from '../../../assets/images/SVG/Receive.svg';
 
 export default function LightningAddressPayment(props) {
-    const { item, index, selectedIndex, navigation, isReady } = props;
+    const { item, index, navigation, isReady } = props;
     const { lightningAddressStore } = stores;
     const { lookupPreimageAndRedeem } = lightningAddressStore;
 
@@ -85,40 +85,33 @@ export default function LightningAddressPayment(props) {
                         amount_msat={item.amount_msat}
                         navigation={navigation}
                     />
-                    {selectedIndex === 0 && (
-                        <TouchableOpacity
-                            onPress={() => {
-                                if (selectedIndex === 1) return;
-                                if (!isReady) return;
+                    <TouchableOpacity
+                        onPress={() => {
+                            if (!isReady) return;
 
-                                const {
-                                    hash,
-                                    amount_msat,
-                                    comment
-                                }: {
-                                    hash: string;
-                                    amount_msat: number;
-                                    comment: string;
-                                } = item;
+                            const {
+                                hash,
+                                amount_msat,
+                                comment
+                            }: {
+                                hash: string;
+                                amount_msat: number;
+                                comment: string;
+                            } = item;
 
-                                lookupPreimageAndRedeem(
-                                    hash,
-                                    amount_msat,
-                                    comment
-                                );
-                            }}
-                        >
-                            <Receive
-                                fill={
-                                    isReady
-                                        ? themeColor('text')
-                                        : themeColor('secondaryText')
-                                }
-                                width={45}
-                                height={45}
-                            />
-                        </TouchableOpacity>
-                    )}
+                            lookupPreimageAndRedeem(hash, amount_msat, comment);
+                        }}
+                    >
+                        <Receive
+                            fill={
+                                isReady
+                                    ? themeColor('text')
+                                    : themeColor('secondaryText')
+                            }
+                            width={45}
+                            height={45}
+                        />
+                    </TouchableOpacity>
                 </Row>
             </ListItem.Content>
         </ListItem>

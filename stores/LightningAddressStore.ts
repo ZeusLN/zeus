@@ -44,7 +44,6 @@ export default class LightningAddressStore {
     @observable public error_msg: string = '';
     @observable public availableHashes: number = 0;
     @observable public paid: any = [];
-    @observable public settled: any = [];
     @observable public preimageMap: any = {};
     @observable public fees: any = {};
     @observable public minimumSats: number;
@@ -555,7 +554,6 @@ export default class LightningAddressStore {
                                             results,
                                             success,
                                             paid,
-                                            settled,
                                             fees,
                                             minimumSats,
                                             handle,
@@ -571,8 +569,6 @@ export default class LightningAddressStore {
                                             this.availableHashes = results || 0;
                                             this.paid =
                                                 this.enhanceWithFee(paid);
-                                            this.settled =
-                                                this.enhanceWithFee(settled);
                                             this.fees = fees;
                                             this.minimumSats = minimumSats;
                                             this.lightningAddressHandle =
@@ -1134,7 +1130,6 @@ export default class LightningAddressStore {
         this.error_msg = '';
         this.availableHashes = 0;
         this.paid = [];
-        this.settled = [];
         this.preimageMap = {};
         this.socket = undefined;
         this.lightningAddress = '';
