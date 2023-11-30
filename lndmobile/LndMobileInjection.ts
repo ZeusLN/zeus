@@ -104,14 +104,23 @@ export interface ILndMobileInjections {
         TEMP_moveLndToApplicationSupport: () => Promise<boolean>;
         excludeLndICloudBackup: () => Promise<boolean>;
 
-        addInvoice: (
-            amount: number,
-            memo: string,
-            expiry?: number,
-            is_amp?: boolean,
-            is_private?: boolean,
-            r_preimage?: string
-        ) => Promise<lnrpc.AddInvoiceResponse>;
+        addInvoice: ({
+            amount,
+            amount_msat,
+            memo,
+            expiry,
+            is_amp,
+            is_private,
+            preimage
+        }: {
+            amount?: number;
+            amount_msat?: number;
+            memo: string;
+            expiry?: number;
+            is_amp?: boolean;
+            is_private?: boolean;
+            preimage?: string;
+        }) => Promise<lnrpc.AddInvoiceResponse>;
         cancelInvoice: (
             paymentHash: string
         ) => Promise<invoicesrpc.CancelInvoiceResp>;

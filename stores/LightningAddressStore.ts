@@ -947,7 +947,7 @@ export default class LightningAddressStore {
             BackendUtils.createInvoice({
                 // 24 hrs
                 expiry: '86400',
-                value,
+                value_msat: amount_msat,
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
                 preimage,
                 private:
