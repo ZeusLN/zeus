@@ -100,6 +100,20 @@ export default class LightningAddressStore {
         this.lightningAddress = `${handle}@${domain}`;
     };
 
+    deleteHash = async (hash: string) => {
+        const hashesString =
+            (await EncryptedStorage.getItem(HASHES_STORAGE_STRING)) || '{}';
+
+        const oldHashes = JSON.parse(hashesString);
+        delete oldHashes[hash];
+        const newHashes = oldHashes;
+
+        return await EncryptedStorage.setItem(
+            HASHES_STORAGE_STRING,
+            JSON.stringify(newHashes)
+        );
+    };
+
     @action
     public generatePreimages = async () => {
         this.error = false;
@@ -674,7 +688,7 @@ export default class LightningAddressStore {
 
                                         if (status === 200 && success) {
                                             this.redeeming = false;
-
+                                            await this.deleteHash(hash);
                                             resolve({
                                                 success
                                             });
@@ -1053,11 +1067,7 @@ export default class LightningAddressStore {
                     });
 
                     this.socket.on('paid', (data: any) => {
-                        const { hash, req, amount_msat, comment } = data;
-
-                        console.log('hash', hash);
-                        console.log('req', req);
-                        console.log('amount_msat', amount_msat);
+                        const { hash, amount_msat, comment } = data;
 
                         const attestationLevel = this.settingsStore?.settings
                             ?.lightningAddress
