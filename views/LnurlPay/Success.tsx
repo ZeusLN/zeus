@@ -128,7 +128,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                 contentContainerStyle={{ gap: 5, padding: 15 }}
             >
                 {body}
-                {servicedBy}
+                {domain && servicedBy}
             </ScrollView>
         ) : (
             <View
