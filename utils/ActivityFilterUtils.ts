@@ -81,6 +81,17 @@ class ActivityFilterUtils {
             );
         }
 
+        if (filter.zeusPay == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(
+                        activity.model ===
+                            localeString('views.Invoice.title') &&
+                        activity.isZeusPay
+                    )
+            );
+        }
+
         if (filter.minimumAmount > 0) {
             filteredActivity = filteredActivity.filter(
                 (activity: any) =>
