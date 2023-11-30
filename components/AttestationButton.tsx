@@ -13,8 +13,6 @@ import NostrichNotFound from '../assets/images/SVG/Nostrich_not-found.svg';
 
 export default function AttestationButton(props: any) {
     const { navigation, hash, amount_msat } = props;
-    console.log('hash', hash);
-    console.log('amount_msat', amount_msat);
     const [attestationStatus, setAttestationStatus] = useState('neutral');
     const [loading, setLoading] = useState(false);
     const [attestations, setAttestations] = useState([]);
