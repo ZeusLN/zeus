@@ -117,6 +117,8 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
             </Text>
         );
 
+        if (!body && !domain) return;
+
         return scrollable ? (
             <ScrollView
                 style={{
@@ -141,7 +143,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                 }}
             >
                 {body}
-                {servicedBy}
+                {domain && servicedBy}
             </View>
         );
     }
