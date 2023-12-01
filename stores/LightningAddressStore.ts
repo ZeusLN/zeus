@@ -231,34 +231,35 @@ export default class LightningAddressStore {
                                             this.loading = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
                                         this.loading = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
                                 this.loading = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
                         this.loading = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
                     this.loading = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
@@ -368,34 +369,35 @@ export default class LightningAddressStore {
                                             this.loading = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
                                         this.loading = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
                                 this.loading = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
                         this.loading = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
                     this.loading = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
@@ -465,34 +467,35 @@ export default class LightningAddressStore {
                                             this.loading = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
                                         this.loading = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
                                 this.loading = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
                         this.loading = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
                     this.loading = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
@@ -594,34 +597,35 @@ export default class LightningAddressStore {
                                             this.loading = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
                                         this.loading = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
                                 this.loading = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
                         this.loading = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
                     this.loading = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
@@ -692,34 +696,35 @@ export default class LightningAddressStore {
                                             this.redeeming = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
                                         this.redeeming = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
                                 this.redeeming = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
                         this.redeeming = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
                     this.redeeming = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
@@ -727,59 +732,63 @@ export default class LightningAddressStore {
 
     @action
     public lookupAttestations = async (hash: string, amountMsat: number) => {
-        const attestationEvents: any = {};
-
-        const hashpk = getPublicKey(hash);
-
-        await Promise.all(
-            RELAYS.map(async (relayItem) => {
-                const relay = relayInit(relayItem);
-                relay.on('connect', () => {
-                    console.log(`connected to ${relay.url}`);
-                });
-                relay.on('error', () => {
-                    console.log(`failed to connect to ${relay.url}`);
-                });
-
-                await relay.connect();
-
-                const events = await relay.list([
-                    {
-                        kinds: [55869],
-                        '#p': [hashpk]
-                    }
-                ]);
-
-                events.map((event) => {
-                    attestationEvents[event.id] = event;
-                });
-
-                relay.close();
-                return;
-            })
-        );
-
         const attestations: any = [];
-        Object.keys(attestationEvents).map((key) => {
-            const attestation = this.analyzeAttestation(
-                attestationEvents[key],
-                hash,
-                amountMsat
-            );
-            attestations.push(attestation);
-        });
+        let status = 'warning';
 
-        let status;
-        if (attestations.length === 0) status = 'warning';
-        if (attestations.length === 1) {
-            const attestation = attestations[0];
-            if (attestation.isValid) {
-                status = 'success';
-            } else {
-                status = 'error';
+        try {
+            const attestationEvents: any = {};
+
+            const hashpk = getPublicKey(hash);
+
+            await Promise.all(
+                RELAYS.map(async (relayItem) => {
+                    const relay = relayInit(relayItem);
+                    relay.on('connect', () => {
+                        console.log(`connected to ${relay.url}`);
+                    });
+                    relay.on('error', () => {
+                        console.log(`failed to connect to ${relay.url}`);
+                    });
+
+                    await relay.connect();
+
+                    const events = await relay.list([
+                        {
+                            kinds: [55869],
+                            '#p': [hashpk]
+                        }
+                    ]);
+
+                    events.map((event) => {
+                        attestationEvents[event.id] = event;
+                    });
+
+                    relay.close();
+                    return;
+                })
+            );
+
+            Object.keys(attestationEvents).map((key) => {
+                const attestation = this.analyzeAttestation(
+                    attestationEvents[key],
+                    hash,
+                    amountMsat
+                );
+                attestations.push(attestation);
+            });
+
+            if (attestations.length === 1) {
+                const attestation = attestations[0];
+                if (attestation.isValid) {
+                    status = 'success';
+                } else {
+                    status = 'error';
+                }
             }
+            if (attestations.length > 1) status = 'error';
+        } catch (e) {
+            console.log('attestation lookup error', e);
         }
-        if (attestations.length > 1) status = 'error';
 
         return {
             attestations,
@@ -907,12 +916,13 @@ export default class LightningAddressStore {
     };
 
     @action
-    public lookupPreimageAndRedeem = (
+    public lookupPreimageAndRedeem = async (
         hash: string,
         amount_msat: number,
-        comment?: string
+        comment?: string,
+        skipStatus?: boolean
     ) => {
-        this.getPreimageMap().then((map) => {
+        return await this.getPreimageMap().then(async (map) => {
             const preimage = map[hash];
             const preimageNotFound = !preimage;
             const value = (amount_msat / 1000).toString();
@@ -940,7 +950,7 @@ export default class LightningAddressStore {
                 }
             };
 
-            BackendUtils.createInvoice({
+            return await BackendUtils.createInvoice({
                 // 24 hrs
                 expiry: '86400',
                 value_msat: amount_msat,
@@ -952,49 +962,54 @@ export default class LightningAddressStore {
             })
                 .then((result: any) => {
                     if (result.payment_request) {
-                        this.redeem(
+                        return this.redeem(
                             hash,
                             result.payment_request,
                             preimageNotFound
                         ).then((success) => {
                             if (success === true) fireLocalNotification();
-                            this.status(true);
+                            if (!skipStatus) this.status(true);
+                            return;
                         });
                     }
                 })
                 .catch(() => {
                     // first, try looking up invoice for redeem
                     try {
-                        BackendUtils.lookupInvoice({
+                        return BackendUtils.lookupInvoice({
                             r_hash: hash
                         }).then((result: any) => {
                             if (result.payment_request) {
-                                this.redeem(
+                                return this.redeem(
                                     hash,
                                     result.payment_request,
                                     preimageNotFound
                                 ).then((success) => {
                                     if (success === true)
                                         fireLocalNotification();
-                                    this.status(true);
+                                    if (!skipStatus) this.status(true);
+                                    return;
                                 });
                             }
                         });
                     } catch (e) {
                         // then, try to redeem without new pay req
-                        this.redeem(hash, undefined, preimageNotFound).then(
-                            (success) => {
-                                if (success === true) fireLocalNotification();
-                                this.status(true);
-                            }
-                        );
+                        return this.redeem(
+                            hash,
+                            undefined,
+                            preimageNotFound
+                        ).then((success) => {
+                            if (success === true) fireLocalNotification();
+                            if (!skipStatus) this.status(true);
+                            return;
+                        });
                     }
                 });
         });
     };
 
     @action
-    public redeemAllOpenPayments = () => {
+    public redeemAllOpenPayments = async () => {
         const attestationLevel = this.settingsStore?.settings?.lightningAddress
             ?.automaticallyAcceptAttestationLevel
             ? this.settingsStore.settings.lightningAddress
@@ -1003,31 +1018,36 @@ export default class LightningAddressStore {
 
         // disabled
         if (attestationLevel === 0) {
-            this.paid.map((item: any) => {
-                this.lookupPreimageAndRedeem(
+            for (const item of this.paid) {
+                await this.lookupPreimageAndRedeem(
                     item.hash,
                     item.amount_msat,
-                    item.comment
+                    item.comment,
+                    true
                 );
-            });
+                return;
+            }
+            this.status();
         } else {
-            this.paid.map((item: any) => {
-                this.lookupAttestations(item.hash, item.amount_msat)
-                    .then(({ status }: { status: string }) => {
+            for (const item of this.paid) {
+                await this.lookupAttestations(item.hash, item.amount_msat)
+                    .then(async ({ status }: { status?: string }) => {
                         if (status === 'error') return;
                         // success only
                         if (status === 'warning' && attestationLevel === 1)
                             return;
-                        this.lookupPreimageAndRedeem(
+                        return await this.lookupPreimageAndRedeem(
                             item.hash,
                             item.amount_msat,
-                            item.comment
+                            item.comment,
+                            true
                         );
                     })
                     .catch((e) => {
                         console.log('Error looking up attestation', e);
                     });
-            });
+            }
+            this.status();
         }
     };
 
@@ -1079,7 +1099,7 @@ export default class LightningAddressStore {
                             );
                         } else {
                             this.lookupAttestations(hash, amount_msat)
-                                .then(({ status }: { status: string }) => {
+                                .then(({ status }: { status?: string }) => {
                                     if (status === 'error') return;
                                     // success only
                                     if (
