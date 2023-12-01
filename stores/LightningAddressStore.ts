@@ -1000,36 +1000,35 @@ export default class LightningAddressStore {
             ? this.settingsStore.settings.lightningAddress
                   .automaticallyAcceptAttestationLevel
             : 2;
-        this.status(true).then(() => {
-            // disabled
-            if (attestationLevel === 0) {
-                this.paid.map((item: any) => {
-                    this.lookupPreimageAndRedeem(
-                        item.hash,
-                        item.amount_msat,
-                        item.comment
-                    );
-                });
-            } else {
-                this.paid.map((item: any) => {
-                    this.lookupAttestations(item.hash, item.amount_msat)
-                        .then(({ status }: { status: string }) => {
-                            if (status === 'error') return;
-                            // success only
-                            if (status === 'warning' && attestationLevel === 1)
-                                return;
-                            this.lookupPreimageAndRedeem(
-                                item.hash,
-                                item.amount_msat,
-                                item.comment
-                            );
-                        })
-                        .catch((e) => {
-                            console.log('Error looking up attestation', e);
-                        });
-                });
-            }
-        });
+
+        // disabled
+        if (attestationLevel === 0) {
+            this.paid.map((item: any) => {
+                this.lookupPreimageAndRedeem(
+                    item.hash,
+                    item.amount_msat,
+                    item.comment
+                );
+            });
+        } else {
+            this.paid.map((item: any) => {
+                this.lookupAttestations(item.hash, item.amount_msat)
+                    .then(({ status }: { status: string }) => {
+                        if (status === 'error') return;
+                        // success only
+                        if (status === 'warning' && attestationLevel === 1)
+                            return;
+                        this.lookupPreimageAndRedeem(
+                            item.hash,
+                            item.amount_msat,
+                            item.comment
+                        );
+                    })
+                    .catch((e) => {
+                        console.log('Error looking up attestation', e);
+                    });
+            });
+        }
     };
 
     @action
