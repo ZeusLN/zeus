@@ -360,7 +360,10 @@ export default class WalletHeader extends React.Component<
                             {paid && paid.length > 0 && (
                                 <TouchableOpacity
                                     onPress={() =>
-                                        navigation.navigate('LightningAddress')
+                                        navigation.navigate(
+                                            'LightningAddress',
+                                            { skipStatus: true }
+                                        )
                                     }
                                     style={{ left: 18 }}
                                 >

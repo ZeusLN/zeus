@@ -131,6 +131,8 @@ export default class Settings extends React.Component<
             }
         }
 
+        const youveGotSats = paid && paid.length > 0;
+
         return (
             <Screen>
                 <Header
@@ -276,7 +278,10 @@ export default class Settings extends React.Component<
                                 <TouchableOpacity
                                     style={styles.columnField}
                                     onPress={() =>
-                                        navigation.navigate('LightningAddress')
+                                        navigation.navigate(
+                                            'LightningAddress',
+                                            { skipStatus: youveGotSats }
+                                        )
                                     }
                                 >
                                     <View
@@ -285,7 +290,7 @@ export default class Settings extends React.Component<
                                             paddingTop: 3
                                         }}
                                     >
-                                        {paid && paid.length > 0 ? (
+                                        {youveGotSats ? (
                                             <MailboxFlagUp
                                                 height={19.25}
                                                 width={22}
