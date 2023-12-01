@@ -86,13 +86,15 @@ export default class LightningAddress extends React.Component<
         const { LightningAddressStore, navigation } = this.props;
         const { status } = LightningAddressStore;
 
+        const skipStatus: boolean = navigation.getParam('skipStatus', false);
+
         this.generateNostrKeys();
 
         this.setState({
             newLightningAddress: ''
         });
 
-        status();
+        if (!skipStatus) status();
 
         // triggers when loaded from navigation or back action
         navigation.addListener('didFocus', this.handleFocus);
