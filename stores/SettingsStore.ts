@@ -1011,8 +1011,18 @@ export default class SettingsStore {
                 const mod = await EncryptedStorage.getItem(MOD_KEY);
                 if (!mod) {
                     this.settings.expressGraphSync = true;
-                    this.settings.payments.defaultFeePercentage = '5.0';
-                    this.settings.payments.defaultFeeFixed = '1000';
+                    if (this.settings.payments) {
+                        this.settings.payments.defaultFeePercentage = '5.0';
+                        this.settings.payments.defaultFeeFixed = '1000';
+                    } else {
+                        this.settings.payments = {
+                            defaultFeeMethod: 'fixed', // deprecated
+                            defaultFeePercentage: '5.0',
+                            defaultFeeFixed: '1000',
+                            timeoutSeconds: '60',
+                            preferredMempoolRate: 'fastestFee'
+                        };
+                    }
                     this.settings.automaticDisasterRecoveryBackup = true;
                     this.setSettings(JSON.stringify(this.settings));
                     await EncryptedStorage.setItem(MOD_KEY, 'true');
