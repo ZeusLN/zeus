@@ -953,7 +953,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {destination && (
+                    {destination && transactionType !== 'On-chain' && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('general.proceed')}
