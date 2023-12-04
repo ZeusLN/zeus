@@ -646,6 +646,7 @@ export default class OpenChannel extends React.Component<
                                                             !privateChannel
                                                     })
                                                 }
+                                                disabled={simpleTaprootChannel}
                                             />
                                         </>
 
@@ -691,12 +692,21 @@ export default class OpenChannel extends React.Component<
                                                 </Text>
                                                 <Switch
                                                     value={simpleTaprootChannel}
-                                                    onValueChange={() =>
+                                                    onValueChange={() => {
                                                         this.setState({
                                                             simpleTaprootChannel:
                                                                 !simpleTaprootChannel
-                                                        })
-                                                    }
+                                                        });
+
+                                                        if (
+                                                            !simpleTaprootChannel
+                                                        ) {
+                                                            this.setState({
+                                                                privateChannel:
+                                                                    true
+                                                            });
+                                                        }
+                                                    }}
                                                 />
                                             </>
                                         )}
