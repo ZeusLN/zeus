@@ -81,6 +81,7 @@ You must provide ZEUS with your node's hostname, port number, and the macaroon y
 
 ZEUS has support for connecting to you node entirely over the Tor network. You can refer to these guides to set up a Tor hidden service on your lnd node. The instructions are generally interchangeable and typically only require you to change your Tor path.
 
+* [ZEUS over Tor guides for StartOS](https://docs.start9.com/0.3.5.x/service-guides/lightning/index)
 * [ZEUS over Tor guide for RaspiBolt](https://raspibolt.org/guide/lightning/mobile-app.html)
 * [ZEUS over Tor guide for FreeNAS by Seth586](https://github.com/seth586/guides/blob/master/FreeNAS/wallets/zeusln.md)
 * [ZEUS over Tor guide for RaspiBlitz by openoms](https://github.com/openoms/bitcoin-tutorials/blob/master/Zeus_to_RaspiBlitz_through_Tor.md)
@@ -91,6 +92,7 @@ ZEUS has support for connecting to you node entirely over the Tor network. You c
 ZEUS is proud to be integrated on the following platforms:
 
 ### Full node solutions
+* [StartOS](https://www.start9.com/), [Guides](https://docs.start9.com/0.3.5.x/service-guides/lightning/index)
 * [nodl](https://www.nodl.it/)
 * [myNode](https://mynodebtc.com/) ([Standard guide](https://mynodebtc.com/guide/zeus), [Tor guide](https://mynodebtc.com/guide/zeus_tor))
 * [RaspiBlitz](https://github.com/rootzoll/raspiblitz)
