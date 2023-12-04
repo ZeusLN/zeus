@@ -548,7 +548,6 @@ export default class OpenChannel extends React.Component<
                                     <OnchainFeeInput
                                         fee={sat_per_vbyte}
                                         onChangeFee={(text: string) => {
-                                            console.log('text', text);
                                             this.setState({
                                                 sat_per_vbyte: text
                                             });
