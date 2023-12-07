@@ -59,7 +59,7 @@ export default class Gods extends React.Component<GodsProps, {}> {
                                             `https://${
                                                 item.type === 'Twitter'
                                                     ? 'twitter.com/'
-                                                    : 'iris.to/#/profile/'
+                                                    : 'iris.to/'
                                             }${item.handle}`
                                         )
                                     }
