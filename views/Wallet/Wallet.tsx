@@ -49,7 +49,6 @@ import SettingsStore, {
     PosEnabled,
     Settings
 } from '../../stores/SettingsStore';
-import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import ModalStore from '../../stores/ModalStore';
 import SyncStore from '../../stores/SyncStore';
@@ -69,8 +68,7 @@ import {
     startLnd,
     expressGraphSync
 } from '../../utils/LndMobileUtils';
-import Order from '../../models/Order';
-import BigNumber from 'bignumber.js';
+import UnitsStore from '../../stores/UnitsStore';
 
 interface WalletProps {
     enterSetup: any;
