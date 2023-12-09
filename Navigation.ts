@@ -55,6 +55,7 @@ import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
+import Bolt12Address from './views/Settings/Bolt12Address';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -96,7 +97,6 @@ import AddNotes from './views/AddNotes';
 import Contacts from './views/Settings/Contacts';
 import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
-import Bolt12Address from './views/Settings/Bolt12Address';
 // POS
 import Order from './views/Order';
 

@@ -81,6 +81,10 @@ interface LightningAddressSettings {
     notifications: number;
 }
 
+interface Bolt12AddressSettings {
+    localPart: string;
+}
+
 export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -122,6 +126,7 @@ export interface Settings {
     requestSimpleTaproot: boolean;
     // Lightning Address
     lightningAddress: LightningAddressSettings;
+    bolt12Address: Bolt12AddressSettings;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -782,6 +787,9 @@ export default class SettingsStore {
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
             notifications: 0
+        },
+        bolt12Address: {
+            localPart: ''
         }
     };
     @observable public posStatus: string = 'unselected';

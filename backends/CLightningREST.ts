@@ -6,15 +6,6 @@ import VersionUtils from './../utils/VersionUtils';
 import Base64Utils from './../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
 
-// type CreateOfferResponse = {
-//     active: boolean;
-//     bolt12: string;
-//     created: boolean;
-//     offerId: string;
-//     singleUse: boolean;
-//     used: boolean;
-// };
-
 export default class CLightningREST extends LND {
     getHeaders = (macaroonHex: string): any => {
         return {
