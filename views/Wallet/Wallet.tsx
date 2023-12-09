@@ -714,20 +714,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 style={{
                                     flex: 1,
                                     justifyContent: 'center',
-                                    alignItems: 'center',
-                                    top: 10
+                                    alignItems: 'center'
                                 }}
                             >
-                                <WordLogo
-                                    height={100}
-                                    style={{
-                                        alignSelf: 'center'
-                                    }}
-                                />
+                                <LoadingColumns />
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular',
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book',
                                         alignSelf: 'center',
                                         fontSize: 15,
                                         padding: 8
@@ -740,16 +734,20 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             ? isInExpressGraphSync
                                                 ? localeString(
                                                       'views.Wallet.Wallet.expressGraphSync'
-                                                  )
+                                                  ).replace('Zeus', 'ZEUS')
                                                 : localeString(
                                                       'views.Wallet.Wallet.startingNode'
-                                                  )
+                                                  ).replace('Zeus', 'ZEUS')
+                                            : implementation === 'lndhub'
+                                            ? localeString(
+                                                  'views.Wallet.Wallet.loadingAccount'
+                                              ).replace('Zeus', 'ZEUS')
                                             : localeString(
                                                   'views.Wallet.Wallet.connecting'
-                                              )
+                                              ).replace('Zeus', 'ZEUS')
                                         : localeString(
                                               'views.Wallet.Wallet.startingUp'
-                                          )}
+                                          ).replace('Zeus', 'ZEUS')}
                                 </Text>
                                 <View style={{ marginTop: 40 }}>
                                     <LoadingIndicator />

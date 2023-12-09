@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    FlatList,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -421,8 +415,7 @@ export default class PointOfSale extends React.Component<
                                 <ListItem
                                     containerStyle={{
                                         borderBottomWidth: 0,
-                                        backgroundColor:
-                                            themeColor('background')
+                                        backgroundColor: 'none'
                                     }}
                                     onPress={() =>
                                         navigation.navigate(item.path)
@@ -433,7 +426,8 @@ export default class PointOfSale extends React.Component<
                                         <ListItem.Title
                                             style={{
                                                 color: themeColor('text'),
-                                                fontFamily: 'Lato-Regular'
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {item.label}
