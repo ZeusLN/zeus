@@ -142,6 +142,8 @@ class BackendUtils {
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsSweep = () => this.call('supportsSweep');
     isLNDBased = () => this.call('isLNDBased');
+    supportsOffers = () => this.call('supportsOffers');
+    getNewOffer = () => this.call('getNewOffer');
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);

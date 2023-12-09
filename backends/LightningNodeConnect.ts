@@ -389,4 +389,5 @@ export default class LightningNodeConnect {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     isLNDBased = () => true;
+    supportsOffers = () => false;
 }

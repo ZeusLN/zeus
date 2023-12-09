@@ -459,4 +459,5 @@ export default class LND {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     isLNDBased = () => true;
+    supportsOffers = () => false;
 }

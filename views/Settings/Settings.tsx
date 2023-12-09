@@ -13,6 +13,7 @@ import { inject, observer } from 'mobx-react';
 import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
+import Bolt12Icon from '../../assets/images/SVG/Lightning Bolt.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
 import SecurityIcon from '../../assets/images/SVG/Lock.svg';
 import SignIcon from '../../assets/images/SVG/Pen.svg';
@@ -349,6 +350,50 @@ export default class Settings extends React.Component<
                                     >
                                         {localeString(
                                             'views.Settings.Contacts.contacts'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {selectedNode && BackendUtils.supportsOffers() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginTop: 5,
+                                marginBottom: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('Bolt12Address')
+                                }
+                            >
+                                <View style={styles.columnField}>
+                                    <View>
+                                        <Bolt12Icon
+                                            fill={themeColor('text')}
+                                            style={{
+                                                marginLeft: 4,
+                                                marginTop: 2
+                                            }}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Bolt12Address.bolt12Address'
                                         )}
                                     </Text>
                                     <View style={styles.ForwardArrow}>

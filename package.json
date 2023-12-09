@@ -10,7 +10,9 @@
     "transformIgnorePatterns": [
       "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes)/)"
     ],
-    "testPathIgnorePatterns": ["check-styles.test.ts"]
+    "testPathIgnorePatterns": [
+      "check-styles.test.ts"
+    ]
   },
   "scripts": {
     "start": "react-native start",

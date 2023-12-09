@@ -196,4 +196,5 @@ export default class EmbeddedLND extends LND {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     isLNDBased = () => true;
+    supportsOffers = () => false;
 }

@@ -96,6 +96,7 @@ import AddNotes from './views/AddNotes';
 import Contacts from './views/Settings/Contacts';
 import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
+import Bolt12Address from './views/Settings/Bolt12Address';
 // POS
 import Order from './views/Order';
 
@@ -379,6 +380,9 @@ const AppScenes = {
     },
     ContactDetails: {
         screen: ContactDetails
+    },
+    Bolt12Address: {
+        screen: Bolt12Address
     },
     NostrKeys: {
         screen: NostrKeys

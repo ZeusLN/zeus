@@ -779,6 +779,7 @@
     "views.Settings.Contacts.favorites": "Favorites",
     "views.Settings.Contacts.contacts": "Contacts",
     "views.Settings.Contacts.noContacts": "No Contacts",
+    "views.Settings.Bolt12Address.bolt12Address": "Bolt12 Address",
     "views.Transaction.title": "Transaction",
     "views.Transaction.totalFees": "Total Fees",
     "views.Transaction.transactionHash": "Transaction Hash",

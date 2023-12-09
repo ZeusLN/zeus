@@ -378,4 +378,5 @@ export default class Spark {
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
     isLNDBased = () => false;
+    supportsOffers = () => false;
 }

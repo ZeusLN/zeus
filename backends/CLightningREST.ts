@@ -6,6 +6,15 @@ import VersionUtils from './../utils/VersionUtils';
 import Base64Utils from './../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
 
+// type CreateOfferResponse = {
+//     active: boolean;
+//     bolt12: string;
+//     created: boolean;
+//     offerId: string;
+//     singleUse: boolean;
+//     used: boolean;
+// };
+
 export default class CLightningREST extends LND {
     getHeaders = (macaroonHex: string): any => {
         return {
@@ -167,6 +176,19 @@ export default class CLightningREST extends LND {
             payments: data.pays
         }));
     getNewAddress = () => this.getRequest('/v1/newaddr?addrType=bech32');
+    // returns
+    // offer_id (hash): the id of this offer (merkle hash of non-signature fields)
+    // active (boolean): whether this can still be used (always true)
+    // single_use (boolean): whether this expires as soon as it's paid (reflects the single_use parameter)
+    // bolt12 (string): the bolt12 encoding of the offer
+    // used (boolean): True if an associated invoice has been paid
+    // created (boolean): false if the offer already existed
+    // label (string, optional): the (optional) user-specified label
+    getNewOffer = () =>
+        this.postRequest('/v1/offers/offer', {
+            amount: 'any',
+            description: 'Bolt12 Payment Address'
+        });
     openChannel = (data: OpenChannelRequest) => {
         let request: any;
         if (data.utxos && data.utxos.length > 0) {
@@ -267,4 +289,6 @@ export default class CLightningREST extends LND {
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
     isLNDBased = () => false;
+    // TODO: Check if experimental option set to enable offers
+    supportsOffers = () => true;
 }

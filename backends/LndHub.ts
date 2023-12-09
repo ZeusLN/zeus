@@ -147,4 +147,5 @@ export default class LndHub extends LND {
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
     isLNDBased = () => false;
+    supportsOffers = () => false;
 }
