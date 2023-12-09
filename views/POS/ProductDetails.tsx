@@ -500,7 +500,6 @@ const styles = StyleSheet.create({
         fontSize: 20,
         width: '100%',
         fontFamily: 'PPNeueMontreal-Book',
-        top: 5,
-        color: themeColor('text')
+        top: 5
     }
 });
