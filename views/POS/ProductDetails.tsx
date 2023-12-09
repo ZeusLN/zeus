@@ -173,6 +173,8 @@ export default class ProductDetails extends React.Component<
 
         try {
             if (product) {
+                if (product.status === ProductStatus.Inactive)
+                    this.props.PosStore.clearCurrentOrder();
                 await updateProducts([product]);
                 this.props.navigation.goBack();
             }
@@ -407,7 +409,8 @@ export default class ProductDetails extends React.Component<
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily: 'Lato-Regular',
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
                                                 left: -10
                                             }}
                                         >
@@ -496,7 +499,7 @@ const styles = StyleSheet.create({
     textInput: {
         fontSize: 20,
         width: '100%',
-        fontFamily: 'Lato-Regular',
+        fontFamily: 'PPNeueMontreal-Book',
         top: 5,
         color: themeColor('text')
     }

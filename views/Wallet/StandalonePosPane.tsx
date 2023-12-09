@@ -478,7 +478,7 @@ export default class StandalonePosPane extends React.PureComponent<
         const newOrderButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 0
                             ? themeColor('background')
@@ -492,7 +492,7 @@ export default class StandalonePosPane extends React.PureComponent<
         const openOrdersButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 1
                             ? themeColor('background')
@@ -506,7 +506,7 @@ export default class StandalonePosPane extends React.PureComponent<
         const paidOrdersButton = () => (
             <Text
                 style={{
-                    fontFamily: 'Lato-Regular',
+                    fontFamily: 'PPNeueMontreal-Book',
                     color:
                         selectedIndex === 2
                             ? themeColor('background')
@@ -535,7 +535,7 @@ export default class StandalonePosPane extends React.PureComponent<
                 >
                     <Text
                         style={{
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             color: '#fff',
                             fontSize: 20,
                             marginTop: 20,
@@ -584,7 +584,7 @@ export default class StandalonePosPane extends React.PureComponent<
                     />
                     <Text
                         style={{
-                            fontFamily: 'Lato-Regular',
+                            fontFamily: 'PPNeueMontreal-Book',
                             color: '#fff',
                             fontSize: 12,
                             marginTop: 20,
@@ -670,36 +670,42 @@ export default class StandalonePosPane extends React.PureComponent<
                     </View>
                 )}
 
-                {!loading && (
-                    <SearchBar
-                        placeholder={localeString('general.search')}
-                        onChangeText={(value: string) => {
-                            if (selectedIndex === 0) {
-                                this.updateProductSearch(value);
-                                return;
-                            }
+                {!loading &&
+                    ((selectedIndex === 0 &&
+                        this.state.productsList &&
+                        this.state.productsList.length > 0) ||
+                        (orders &&
+                            orders.length > 0 &&
+                            selectedIndex !== 0)) && (
+                        <SearchBar
+                            placeholder={localeString('general.search')}
+                            onChangeText={(value: string) => {
+                                if (selectedIndex === 0) {
+                                    this.updateProductSearch(value);
+                                    return;
+                                }
 
-                            updateSearch(value);
-                            this.setState({
-                                search: value
-                            });
-                        }}
-                        value={search}
-                        inputStyle={{
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor={themeColor('secondaryText')}
-                        containerStyle={{
-                            backgroundColor: 'transparent',
-                            borderTopWidth: 0,
-                            borderBottomWidth: 0
-                        }}
-                        inputContainerStyle={{
-                            borderRadius: 15,
-                            backgroundColor: themeColor('secondary')
-                        }}
-                    />
-                )}
+                                updateSearch(value);
+                                this.setState({
+                                    search: value
+                                });
+                            }}
+                            value={search}
+                            inputStyle={{
+                                color: themeColor('text')
+                            }}
+                            placeholderTextColor={themeColor('secondaryText')}
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                borderTopWidth: 0,
+                                borderBottomWidth: 0
+                            }}
+                            inputContainerStyle={{
+                                borderRadius: 15,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                        />
+                    )}
 
                 {!loading &&
                     selectedIndex === 0 &&
@@ -764,8 +770,11 @@ export default class StandalonePosPane extends React.PureComponent<
                                             {
                                                 amount:
                                                     units === 'sats'
-                                                        ? currentOrder
-                                                              .total_money.sats
+                                                        ? String(
+                                                              currentOrder
+                                                                  .total_money
+                                                                  .sats
+                                                          )
                                                         : units === 'BTC'
                                                         ? new BigNumber(
                                                               currentOrder
