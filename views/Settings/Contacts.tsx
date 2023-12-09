@@ -24,6 +24,7 @@ interface ContactsSettingsProps {
 
 interface ContactItem {
     lnAddress: string;
+    bolt12Address: string;
     onchainAddress: string;
     pubkey: string;
     nip05: string;
@@ -87,6 +88,10 @@ export default class Contacts extends React.Component<
             item.lnAddress &&
             item.lnAddress.length === 1 &&
             item.lnAddress[0] !== '';
+        const hasBolt12Address =
+            item.bolt12Address &&
+            item.bolt12Address.length === 1 &&
+            item.bolt12Address[0] !== '';
         const hasOnchainAddress =
             item.onchainAddress &&
             item.onchainAddress.length === 1 &&
@@ -94,7 +99,10 @@ export default class Contacts extends React.Component<
         const hasPubkey =
             item.pubkey && item.pubkey.length === 1 && item.pubkey[0] !== '';
 
-        if (hasLnAddress + hasOnchainAddress + hasPubkey >= 2) {
+        if (
+            hasLnAddress + hasBolt12Address + hasOnchainAddress + hasPubkey >=
+            2
+        ) {
             return localeString('views.Settings.Contacts.multipleAddresses');
         }
 
@@ -105,6 +113,15 @@ export default class Contacts extends React.Component<
                       10
                   )}...${item.lnAddress[0].slice(-10)}`
                 : item.lnAddress[0];
+        }
+
+        if (hasBolt12Address) {
+            return item.bolt12Address[0].length > 23
+                ? `${item.bolt12Address[0].slice(
+                      0,
+                      10
+                  )}...${item.bolt12Address[0].slice(-10)}`
+                : item.bolt12Address[0];
         }
 
         if (hasOnchainAddress) {
@@ -138,6 +155,16 @@ export default class Contacts extends React.Component<
                         destination: item.lnAddress[0],
                         contactName: item.name
                     })) ||
+                    (item.bolt12Address &&
+                        item.bolt12Address.length === 1 &&
+                        item.bolt12Address[0] !== '' &&
+                        item.onchainAddress[0] === '' &&
+                        item.pubkey[0] === '' &&
+                        this.state.SendScreen &&
+                        this.props.navigation.navigate('Send', {
+                            destination: item.bolt12Address[0],
+                            contactName: item.name
+                        })) ||
                     (item.onchainAddress &&
                         item.onchainAddress.length === 1 &&
                         item.onchainAddress[0] !== '' &&
@@ -220,6 +247,7 @@ export default class Contacts extends React.Component<
                 hasMatch('name') ||
                 hasMatch('description') ||
                 hasMatch('lnAddress') ||
+                hasMatch('bolt12Address') ||
                 hasMatch('nip05') ||
                 hasMatch('onchainAddress') ||
                 hasMatch('nostrNpub') ||
