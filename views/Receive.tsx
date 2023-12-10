@@ -1481,7 +1481,7 @@ export default class Receive extends React.Component<
                                             !lightningAddressLoading &&
                                             lightningAddress && (
                                                 <CollapsedQR
-                                                    value={lightningAddress}
+                                                    value={`lightning:${lightningAddress}`}
                                                     copyText={localeString(
                                                         'views.Receive.copyAddress'
                                                     )}
