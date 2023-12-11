@@ -273,30 +273,34 @@ export default class BumpFee extends React.PureComponent<
                         </>
                     )}
 
-                    <Text
-                        style={{
-                            ...styles.text,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('general.force')}
-                    </Text>
-                    <View
-                        style={{
-                            flex: 1,
-                            flexDirection: 'row',
-                            justifyContent: 'flex-end'
-                        }}
-                    >
-                        <Switch
-                            value={force}
-                            onValueChange={() => {
-                                this.setState({
-                                    force: !force
-                                });
-                            }}
-                        />
-                    </View>
+                    {false && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('general.force')}
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Switch
+                                    value={force}
+                                    onValueChange={() => {
+                                        this.setState({
+                                            force: !force
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </>
+                    )}
 
                     <View style={{ marginTop: 20 }}>
                         <Button

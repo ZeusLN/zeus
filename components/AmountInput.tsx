@@ -99,6 +99,13 @@ export default class AmountInput extends React.Component<
         };
     }
 
+    componentDidMount() {
+        const { amount, onAmountChange }: any = this.props;
+        const satAmount = getSatAmount(amount);
+        onAmountChange(amount, satAmount);
+        this.setState({ satAmount });
+    }
+
     UNSAFE_componentWillReceiveProps(
         nextProps: Readonly<AmountInputProps>
     ): void {

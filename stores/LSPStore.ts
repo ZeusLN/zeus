@@ -15,6 +15,7 @@ import { localeString } from '../utils/LocaleUtils';
 export default class LSPStore {
     @observable public info: any = {};
     @observable public zeroConfFee: number | undefined;
+    @observable public feeId: string | undefined;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public showLspSettings: boolean = false;
@@ -31,13 +32,18 @@ export default class LSPStore {
     @action
     public reset = () => {
         this.info = {};
-        this.zeroConfFee = undefined;
+        this.resetFee();
         this.error = false;
         this.error_msg = '';
         this.showLspSettings = false;
         // TODO Pegasus clear channel acceptor when
         // it's supported by other backends
         // this.channelAcceptor = undefined;
+    };
+
+    @action
+    public resetFee = () => {
+        this.zeroConfFee = undefined;
     };
 
     getLSPHost = () =>
@@ -123,6 +129,8 @@ export default class LSPStore {
                         this.zeroConfFee = Number.parseInt(
                             (Number(data.fee_amount_msat) / 1000).toString()
                         );
+                        this.feeId = data.id;
+                        this.error = false;
                         resolve(this.zeroConfFee);
                     } else {
                         this.error = true;
@@ -202,6 +210,7 @@ export default class LSPStore {
                       },
                 JSON.stringify({
                     bolt11,
+                    fee_id: this.feeId,
                     simpleTaproot: settings.requestSimpleTaproot
                 })
             )

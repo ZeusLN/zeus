@@ -12,7 +12,7 @@ Read more on our [documentation site](https://docs.zeusln.app/).
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple App Store](https://apps.apple.com/us/app/zeus-ln/id1456038895)
-* [F-Droid](https://zeusln.app/download)
+* [F-Droid](https://zeusln.com/download)
 
 ### Get in touch with us
 * Come chat with us on
@@ -81,6 +81,7 @@ You must provide ZEUS with your node's hostname, port number, and the macaroon y
 
 ZEUS has support for connecting to you node entirely over the Tor network. You can refer to these guides to set up a Tor hidden service on your lnd node. The instructions are generally interchangeable and typically only require you to change your Tor path.
 
+* [ZEUS over Tor guides for StartOS](https://docs.start9.com/0.3.5.x/service-guides/lightning/index)
 * [ZEUS over Tor guide for RaspiBolt](https://raspibolt.org/guide/lightning/mobile-app.html)
 * [ZEUS over Tor guide for FreeNAS by Seth586](https://github.com/seth586/guides/blob/master/FreeNAS/wallets/zeusln.md)
 * [ZEUS over Tor guide for RaspiBlitz by openoms](https://github.com/openoms/bitcoin-tutorials/blob/master/Zeus_to_RaspiBlitz_through_Tor.md)
@@ -91,6 +92,7 @@ ZEUS has support for connecting to you node entirely over the Tor network. You c
 ZEUS is proud to be integrated on the following platforms:
 
 ### Full node solutions
+* [StartOS](https://www.start9.com/), [Guides](https://docs.start9.com/0.3.5.x/service-guides/lightning/index)
 * [nodl](https://www.nodl.it/)
 * [myNode](https://mynodebtc.com/) ([Standard guide](https://mynodebtc.com/guide/zeus), [Tor guide](https://mynodebtc.com/guide/zeus_tor))
 * [RaspiBlitz](https://github.com/rootzoll/raspiblitz)
@@ -107,6 +109,9 @@ ZEUS is proud to be integrated on the following platforms:
 ## Starting development
 
 **Don't trust, verify** the code with your own two eyes. Then when ready proceed to the steps below based on your platform.
+
+### Prerequisites
+- Node.js (minimum version: 18.17)
 
 ### Android
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
@@ -139,12 +144,12 @@ NOTE: When configuring a new node on Android in dev, the `Host` field must be `1
 
 Reproducible builds are available for Android only right now. You'll need Docker installed to be able to build the app this way:
 
-1. Clone ZEUS git for the branch/tag that you want to build. For example: `git clone --depth 1 --branch v0.7.0 https://github.com/ZeusLN/zeus.git`
-    You can also remove the `--branch v0.7.0` parameter to build APKs for `master`.
+1. Clone ZEUS git for the branch/tag that you want to build. For example: `git clone --depth 1 --branch v0.8.0 https://github.com/ZeusLN/zeus.git`
+    You can also remove the `--branch v0.8.0` parameter to build APKs for `master`.
 2. Change to the zeus directory: `cd zeus`
 3. Execute the build script: `./build.sh`
 4. If everything goes well, the script will print a list of all the generated APK files and SHA256 hashes for each one of them: armv7, armv8, x86, x86_64, universal. The equivalent to the one provided in the web page is the one ending in 'universal'. You can compare SHA256 hashes with the ones provided on the [GitHub releases page](https://github.com/ZeusLN/zeus/releases)
-5. Download the oficial APK from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [ZEUS homepage](https://zeusln.app/): `wget https://zeusln.app/zeus-v0.7.0.apk`
+5. Download the oficial APK from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [ZEUS homepage](https://zeusln.com/): `wget https://zeusln.com/zeus-v0.8.0-universal.apk`
 6. Compare both APKs with a suitable utility like `diffoscope`, `apksigcopier` or by running `diff --brief --recursive ./unpacked_oficial_apk ./unpacked_built_apk`. You should only get differences for the certificates used to sign the official APK
 
 If you want to install the APK built this way onto your own smartphone, you'll need to sign it yourself (see next section). Note that the first time you install a build made using this procedure, you'll need to uninstall your current version of ZEUS and then install the one built here because certificates will not match. You'll lose your connection details and you'll need to reconfigure ZEUS again to connect to your nodes.
@@ -162,7 +167,7 @@ Do not directly modify the files in `/locales` unless you are adding new copy to
 
 ## Release + Commit Verification
 
-All releases and all maintainer commits as of October 20, 2021 are signed by key `AAC48DE8AB8DEE84` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt).
+All releases and all maintainer commits as of October 20, 2021 are signed by key `AAC48DE8AB8DEE84` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.com website](https://zeusln.com/PGP.txt).
 
 
 ### Past Keys

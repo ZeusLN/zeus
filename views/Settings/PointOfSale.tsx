@@ -451,6 +451,7 @@ export default class PointOfSale extends React.Component<
                                 keyExtractor={(item, index) =>
                                     `${item.label}-${index}`
                                 }
+                                scrollEnabled={false}
                             />
                         )}
                     </ScrollView>

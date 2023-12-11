@@ -178,6 +178,7 @@ export default class InvoicesStore {
         unified?: boolean,
         customPreimage?: string
     ) => {
+        this.lspStore?.resetFee();
         this.payment_request = null;
         this.payment_request_amt = null;
         if (!unified) this.creatingInvoice = true;
@@ -224,13 +225,6 @@ export default class InvoicesStore {
             if (new BigNumber(value).gt(this.lspStore.zeroConfFee || 0)) {
                 req.value = new BigNumber(value).minus(
                     this.lspStore.zeroConfFee || 0
-                );
-            } else if (
-                this.lspStore.zeroConfFee &&
-                new BigNumber(this.lspStore.zeroConfFee).gt(1000)
-            ) {
-                this.error_msg = localeString(
-                    'stores.InvoicesStore.lspNewChannelNeeded'
                 );
             }
         }

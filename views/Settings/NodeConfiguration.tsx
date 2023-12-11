@@ -52,9 +52,9 @@ interface NodeConfigurationProps {
 
 interface NodeConfigurationState {
     nickname: string; //
-    host: string; // lnd
-    port: string | number; // lnd
-    macaroonHex: string; // lnd
+    host: string; // lnd, c-lightning-REST
+    port: string | number; // lnd, c-lightning-REST
+    macaroonHex: string; // lnd, c-lightning-REST
     url: string; // spark, eclair
     accessKey: string; // spark
     lndhubUrl: string; // lndhub
@@ -92,7 +92,7 @@ interface NodeConfigurationState {
 
 const ScanBadge = ({ onPress }: { onPress: () => void }) => (
     <TouchableOpacity onPress={onPress}>
-        <Scan fill={themeColor('text')} width={35} height={35} />
+        <Scan fill={themeColor('text')} width={30} height={30} />
     </TouchableOpacity>
 );
 

@@ -41,12 +41,17 @@ function ValueText({ value, truncateLongValue }: ValueTextProps) {
             }
             highlight={false}
         >
-            <Text style={styles.value} numberOfLines={state.numberOfValueLines}>
+            <Text
+                style={{ ...styles.value, color: themeColor('secondaryText') }}
+                numberOfLines={state.numberOfValueLines}
+            >
                 {value}
             </Text>
         </Touchable>
     ) : (
-        <Text style={styles.value}>{value}</Text>
+        <Text style={{ ...styles.value, color: themeColor('secondaryText') }}>
+            {value}
+        </Text>
     );
 }
 
@@ -259,7 +264,6 @@ const styles = StyleSheet.create({
     value: {
         marginBottom: 15,
         paddingLeft: 20,
-        color: themeColor('secondaryText'),
         fontFamily: 'PPNeueMontreal-Book'
     },
     qrPadding: {

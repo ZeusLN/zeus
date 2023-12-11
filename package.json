@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "0.8.0-beta4",
+  "version": "0.8.0",
   "private": true,
   "jest": {
     "preset": "react-native",
@@ -9,7 +9,8 @@
     ],
     "transformIgnorePatterns": [
       "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes)/)"
-    ]
+    ],
+    "testPathIgnorePatterns": ["check-styles.test.ts"]
   },
   "scripts": {
     "start": "react-native start",
@@ -18,7 +19,7 @@
     "postinstall": "rn-nodeify --install --hack & npx jetify & yarn run patch & react-native setup-ios-permissions & yarn run fetch-libraries & pod-install",
     "test": "jest",
     "tsc": "tsc",
-    "lint": "eslint --ext .js,.ts,.tsx \"*.@(js|ts|tsx)\" .",
+    "lint": "eslint --ext .js,.ts,.tsx \"*.@(js|ts|tsx)\" . && yarn run test check-styles.test.ts --testPathIgnorePatterns=",
     "prettier": "prettier --check \"**/*.ts*\"",
     "prettier-write": "prettier --check --write \"**/*.ts*\"",
     "patch": "git apply patches/react-native-camera-kit.patch && git apply patches/rnqli-build.gradle.patch",

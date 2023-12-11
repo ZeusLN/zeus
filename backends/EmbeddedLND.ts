@@ -53,14 +53,15 @@ export default class EmbeddedLND extends LND {
     getNetworkInfo = async () => await getNetworkInfo();
     getInvoices = async () => await listInvoices();
     createInvoice = async (data: any) =>
-        await addInvoice(
-            Number(data.value),
-            data.memo,
-            data.expiry,
-            data.is_amp,
-            data.private,
-            data.preimage
-        );
+        await addInvoice({
+            amount: data.value ? Number(data.value) : undefined,
+            amount_msat: data.value_msat ? Number(data.value_msat) : undefined,
+            memo: data.memo,
+            expiry: data.expiry,
+            is_amp: data.is_amp,
+            is_private: data.private,
+            preimage: data.preimage
+        });
     getPayments = async () => await listPayments();
     getNewAddress = async (data: any) => await newAddress(data.type);
     openChannel = async (data: OpenChannelRequest) =>

@@ -14,13 +14,10 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <imageView autoresizesSubviews="NO" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="ioslauncher.png" id="zLd-eY-Rpv">
-                    <rect key="frame" x="-9" y="-48" width="474" height="790"/>
+                    <rect key="frame" x="11" y="-48" width="474" height="790"/>
                     <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES" heightSizable="YES" flexibleMaxY="YES"/>
                     <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     <color key="tintColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                    <constraints>
-                        <constraint firstAttribute="width" secondItem="zLd-eY-Rpv" secondAttribute="height" multiplier="1:1" id="3sF-X0-bSJ"/>
-                    </constraints>
                 </imageView>
             </subviews>
             <color key="backgroundColor" red="0.12156862745098039" green="0.14117647058823529" blue="0.1764705882352941" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
@@ -28,8 +25,6 @@
             <constraints>
                 <constraint firstItem="zLd-eY-Rpv" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="Dck-Rb-6sE"/>
                 <constraint firstItem="zLd-eY-Rpv" firstAttribute="centerY" secondItem="iN0-l3-epB" secondAttribute="centerY" id="GSz-pP-Mic"/>
-                <constraint firstItem="zLd-eY-Rpv" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" constant="15" id="esF-ln-cvF"/>
-                <constraint firstAttribute="trailing" secondItem="zLd-eY-Rpv" secondAttribute="trailing" constant="15" id="hH6-t3-qYA"/>
             </constraints>
             <nil key="simulatedStatusBarMetrics"/>
             <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>

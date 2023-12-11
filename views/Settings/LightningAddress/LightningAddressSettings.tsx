@@ -18,7 +18,6 @@ import SettingsStore, {
 } from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 
-import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
@@ -31,7 +30,6 @@ interface LightningAddressSettingsProps {
 interface LightningAddressSettingsState {
     automaticallyAccept: boolean | undefined;
     automaticallyAcceptAttestationLevel: number;
-    automaticallyRequestOlympusChannels: boolean | undefined;
     routeHints: boolean | undefined;
     allowComments: boolean | undefined;
     nostrPrivateKey: string;
@@ -48,7 +46,6 @@ export default class LightningAddressSettings extends React.Component<
     state = {
         automaticallyAccept: true,
         automaticallyAcceptAttestationLevel: 2,
-        automaticallyRequestOlympusChannels: true,
         routeHints: false,
         allowComments: true,
         nostrPrivateKey: '',
@@ -68,10 +65,6 @@ export default class LightningAddressSettings extends React.Component<
                 ?.automaticallyAcceptAttestationLevel
                 ? settings.lightningAddress.automaticallyAcceptAttestationLevel
                 : 2,
-            automaticallyRequestOlympusChannels: settings.lightningAddress
-                ?.automaticallyRequestOlympusChannels
-                ? true
-                : false,
             routeHints: settings.lightningAddress?.routeHints ? true : false,
             allowComments: settings.lightningAddress?.allowComments
                 ? true
@@ -87,7 +80,6 @@ export default class LightningAddressSettings extends React.Component<
         const {
             automaticallyAccept,
             automaticallyAcceptAttestationLevel,
-            automaticallyRequestOlympusChannels,
             routeHints,
             allowComments,
             nostrPrivateKey,
@@ -113,7 +105,7 @@ export default class LightningAddressSettings extends React.Component<
                             }
                         }}
                         rightComponent={
-                            loading && <LoadingIndicator size={35} />
+                            loading && <LoadingIndicator size={32} />
                         }
                         navigation={navigation}
                     />
@@ -153,7 +145,8 @@ export default class LightningAddressSettings extends React.Component<
                                                 automaticallyAccept:
                                                     !automaticallyAccept,
                                                 automaticallyAcceptAttestationLevel,
-                                                automaticallyRequestOlympusChannels,
+                                                automaticallyRequestOlympusChannels:
+                                                    false, // deprecated
                                                 routeHints,
                                                 allowComments,
                                                 nostrPrivateKey,
@@ -190,7 +183,8 @@ export default class LightningAddressSettings extends React.Component<
                                             automaticallyAccept,
                                             automaticallyAcceptAttestationLevel:
                                                 value,
-                                            automaticallyRequestOlympusChannels,
+                                            automaticallyRequestOlympusChannels:
+                                                false, // deprecated
                                             routeHints,
                                             allowComments,
                                             nostrPrivateKey,
@@ -203,72 +197,6 @@ export default class LightningAddressSettings extends React.Component<
                                 disabled={!automaticallyAccept}
                             />
                         </View>
-                        {BackendUtils.supportsLSPs() && (
-                            <ListItem containerStyle={styles.listItem}>
-                                <Row align="flex-end">
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 17,
-                                            maxWidth: '80%'
-                                        }}
-                                        infoText={[
-                                            localeString(
-                                                'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannelsExplainer1'
-                                            ),
-                                            localeString(
-                                                'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannelsExplainer2'
-                                            )
-                                        ]}
-                                    >
-                                        {localeString(
-                                            'views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannels'
-                                        )}
-                                    </Text>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
-                                        }}
-                                    >
-                                        <Switch
-                                            value={
-                                                automaticallyRequestOlympusChannels
-                                            }
-                                            onValueChange={async () => {
-                                                try {
-                                                    await update({
-                                                        request_channels:
-                                                            !automaticallyRequestOlympusChannels
-                                                    }).then(async () => {
-                                                        this.setState({
-                                                            automaticallyRequestOlympusChannels:
-                                                                !automaticallyRequestOlympusChannels
-                                                        });
-                                                        await updateSettings({
-                                                            lightningAddress: {
-                                                                enabled,
-                                                                automaticallyAccept,
-                                                                automaticallyAcceptAttestationLevel,
-                                                                automaticallyRequestOlympusChannels:
-                                                                    !automaticallyRequestOlympusChannels,
-                                                                routeHints,
-                                                                allowComments,
-                                                                nostrPrivateKey,
-                                                                nostrRelays,
-                                                                notifications
-                                                            }
-                                                        });
-                                                    });
-                                                } catch (e) {}
-                                            }}
-                                        />
-                                    </View>
-                                </Row>
-                            </ListItem>
-                        )}
                         <ListItem containerStyle={styles.listItem}>
                             <Row align="flex-end">
                                 <Text
@@ -300,7 +228,8 @@ export default class LightningAddressSettings extends React.Component<
                                                     enabled,
                                                     automaticallyAccept,
                                                     automaticallyAcceptAttestationLevel,
-                                                    automaticallyRequestOlympusChannels,
+                                                    automaticallyRequestOlympusChannels:
+                                                        false, // deprecated
                                                     routeHints: !routeHints,
                                                     allowComments,
                                                     nostrPrivateKey,
@@ -348,7 +277,8 @@ export default class LightningAddressSettings extends React.Component<
                                                         enabled,
                                                         automaticallyAccept,
                                                         automaticallyAcceptAttestationLevel,
-                                                        automaticallyRequestOlympusChannels,
+                                                        automaticallyRequestOlympusChannels:
+                                                            false, // deprecated
                                                         routeHints,
                                                         allowComments:
                                                             !allowComments,
@@ -388,7 +318,8 @@ export default class LightningAddressSettings extends React.Component<
                                                     enabled,
                                                     automaticallyAccept,
                                                     automaticallyAcceptAttestationLevel,
-                                                    automaticallyRequestOlympusChannels,
+                                                    automaticallyRequestOlympusChannels:
+                                                        false, // deprecated
                                                     routeHints,
                                                     allowComments,
                                                     nostrPrivateKey,
