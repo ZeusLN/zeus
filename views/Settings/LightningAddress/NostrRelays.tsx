@@ -77,7 +77,6 @@ export default class NostrRelays extends React.Component<
         const {
             enabled,
             automaticallyAccept,
-            automaticallyRequestOlympusChannels,
             allowComments,
             nostrPrivateKey,
             notifications
@@ -114,7 +113,7 @@ export default class NostrRelays extends React.Component<
                             }
                         }}
                         rightComponent={
-                            loading && <LoadingIndicator size={35} />
+                            loading && <LoadingIndicator size={32} />
                         }
                         navigation={navigation}
                     />
@@ -202,7 +201,8 @@ export default class NostrRelays extends React.Component<
                                                             lightningAddress: {
                                                                 enabled,
                                                                 automaticallyAccept,
-                                                                automaticallyRequestOlympusChannels,
+                                                                automaticallyRequestOlympusChannels:
+                                                                    false, // deprecated
                                                                 allowComments,
                                                                 nostrPrivateKey,
                                                                 nostrRelays:
@@ -290,7 +290,8 @@ export default class NostrRelays extends React.Component<
                                                                                     {
                                                                                         enabled,
                                                                                         automaticallyAccept,
-                                                                                        automaticallyRequestOlympusChannels,
+                                                                                        automaticallyRequestOlympusChannels:
+                                                                                            false, // deprecated
                                                                                         allowComments,
                                                                                         nostrPrivateKey,
                                                                                         nostrRelays:

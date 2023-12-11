@@ -476,8 +476,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 >
                                     <Scan
                                         fill={themeColor('text')}
-                                        width={35}
-                                        height={35}
+                                        width={30}
+                                        height={30}
                                     />
                                 </TouchableOpacity>
                             </View>
@@ -953,7 +953,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {destination && (
+                    {destination && transactionType !== 'On-chain' && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('general.proceed')}

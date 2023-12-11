@@ -128,7 +128,7 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .addInvoice({
                 memo: data.memo,
-                value_msat: Number(data.value) * 1000,
+                value_msat: data.value_msat || Number(data.value) * 1000,
                 expiry: data.expiry,
                 is_amp: data.is_amp,
                 private: data.private,

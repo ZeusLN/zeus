@@ -18,7 +18,6 @@ interface EmbeddedNodeProps {
 }
 
 interface EmbeddedNodeState {
-    waitForGraphSync: boolean | undefined;
     rescan: boolean | undefined;
 }
 
@@ -29,7 +28,6 @@ export default class EmbeddedNode extends React.Component<
     EmbeddedNodeState
 > {
     state = {
-        waitForGraphSync: false,
         rescan: false
     };
 
@@ -38,14 +36,13 @@ export default class EmbeddedNode extends React.Component<
         const { settings } = SettingsStore;
 
         this.setState({
-            waitForGraphSync: settings.waitForGraphSync,
             rescan: settings.rescan
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { waitForGraphSync, rescan } = this.state;
+        const { rescan } = this.state;
         const { updateSettings, embeddedLndNetwork, settings }: any =
             SettingsStore;
         const {
@@ -237,61 +234,6 @@ export default class EmbeddedNode extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
-                        <>
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                            >
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.waitForGraphSync'
-                                    )}
-                                </ListItem.Title>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        flexDirection: 'row',
-                                        justifyContent: 'flex-end'
-                                    }}
-                                >
-                                    <Switch
-                                        value={waitForGraphSync}
-                                        onValueChange={async () => {
-                                            this.setState({
-                                                waitForGraphSync:
-                                                    !waitForGraphSync
-                                            });
-                                            await updateSettings({
-                                                waitForGraphSync:
-                                                    !waitForGraphSync
-                                            });
-                                        }}
-                                    />
-                                </View>
-                            </ListItem>
-                            <View
-                                style={{
-                                    margin: 10
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.waitForGraphSync.subtitle'
-                                    )}
-                                </Text>
-                            </View>
-                        </>
                         <>
                             <ListItem
                                 containerStyle={{

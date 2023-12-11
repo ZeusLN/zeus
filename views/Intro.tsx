@@ -20,6 +20,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import { createLndWallet } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import UrlUtils from '../utils/UrlUtils';
 
 const One = require('../assets/images/intro/1.png');
 const Two = require('../assets/images/intro/2.png');
@@ -79,8 +80,7 @@ const Intro: React.FC<IntroProps> = (props) => {
                 source={item.illustration}
                 style={{
                     width: screenWidth,
-                    minHeight: '60%',
-                    maxHeight: '80%'
+                    height: '60%'
                 }}
             />
             <View
@@ -115,6 +115,44 @@ const Intro: React.FC<IntroProps> = (props) => {
                 >
                     {item.text}
                 </Text>
+                {item.text === localeString('views.Intro.carousel3.text') && (
+                    <>
+                        <View
+                            style={{
+                                padding: 10
+                            }}
+                        >
+                            <Button
+                                title={localeString(
+                                    'views.Intro.lightningOnboarding'
+                                )}
+                                onPress={() =>
+                                    UrlUtils.goToUrl(
+                                        'https://docs.zeusln.app/for-users/embedded-node/lightning-onboarding/'
+                                    )
+                                }
+                                secondary
+                            />
+                        </View>
+                        <View
+                            style={{
+                                padding: 10
+                            }}
+                        >
+                            <Button
+                                title={localeString(
+                                    'views.Intro.lightningLiquidity'
+                                )}
+                                onPress={() =>
+                                    UrlUtils.goToUrl(
+                                        'https://bitcoin.design/guide/how-it-works/liquidity/'
+                                    )
+                                }
+                                secondary
+                            />
+                        </View>
+                    </>
+                )}
                 {item.text === localeString('views.Intro.carousel4.text') && (
                     <>
                         {error && (

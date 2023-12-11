@@ -29,7 +29,7 @@ function Support(props: SupportProps) {
         { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         {
             label: localeString('views.Settings.Support.store'),
-            url: 'https://store.zeusln.app'
+            url: 'https://store.zeusln.com'
         },
         {
             label: localeString('views.Settings.SocialMedia.title'),

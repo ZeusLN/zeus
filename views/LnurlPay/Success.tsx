@@ -80,7 +80,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                             </Text>
                             <Text
                                 style={{
-                                    fontFamily: 'Lato-Regular',
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     color: color || themeColor('text')
                                 }}
                             >
@@ -117,18 +117,33 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
             </Text>
         );
 
+        if (!body && !domain) return;
+
         return scrollable ? (
             <ScrollView
-                style={{ ...styles.container, maxHeight }}
+                style={{
+                    ...styles.container,
+                    borderColor: themeColor('text'),
+                    backgroundColor: themeColor('secondary'),
+                    maxHeight
+                }}
                 contentContainerStyle={{ gap: 5, padding: 15 }}
             >
                 {body}
-                {servicedBy}
+                {domain && servicedBy}
             </ScrollView>
         ) : (
-            <View style={{ ...styles.container, maxHeight, padding: 15 }}>
+            <View
+                style={{
+                    ...styles.container,
+                    borderColor: themeColor('text'),
+                    backgroundColor: themeColor('secondary'),
+                    maxHeight,
+                    padding: 15
+                }}
+            >
                 {body}
-                {servicedBy}
+                {domain && servicedBy}
             </View>
         );
     }
@@ -138,8 +153,6 @@ const styles = StyleSheet.create({
     container: {
         borderWidth: 1,
         borderRadius: 5,
-        borderColor: themeColor('text'),
-        backgroundColor: themeColor('secondary'),
         gap: 5
     }
 });

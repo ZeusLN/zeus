@@ -73,7 +73,7 @@ interface LightningAddressSettings {
     enabled: boolean;
     automaticallyAccept: boolean;
     automaticallyAcceptAttestationLevel: number;
-    automaticallyRequestOlympusChannels: boolean;
+    automaticallyRequestOlympusChannels: boolean; // deprecated
     routeHints: boolean;
     allowComments: boolean;
     nostrPrivateKey: string;
@@ -111,7 +111,6 @@ export interface Settings {
     dontAllowOtherPeers: boolean;
     neutrinoPeers: Array<string>;
     zeroConfPeers: Array<string>;
-    waitForGraphSync: boolean;
     rescan: boolean;
     recovery: boolean;
     initialLoad: boolean;
@@ -763,7 +762,6 @@ export default class SettingsStore {
         dontAllowOtherPeers: true,
         neutrinoPeers: [],
         zeroConfPeers: [],
-        waitForGraphSync: false,
         rescan: false,
         recovery: false,
         initialLoad: true,
@@ -778,7 +776,7 @@ export default class SettingsStore {
             enabled: false,
             automaticallyAccept: true,
             automaticallyAcceptAttestationLevel: 2,
-            automaticallyRequestOlympusChannels: true,
+            automaticallyRequestOlympusChannels: false, // deprecated
             routeHints: false,
             allowComments: true,
             nostrPrivateKey: '',
@@ -870,7 +868,7 @@ export default class SettingsStore {
 
     @action
     public fetchSponsors = () => {
-        const olympiansRoute = 'https://zeusln.app/api/sponsors/v2/getSponsors';
+        const olympiansRoute = 'https://zeusln.com/api/sponsors/v2/getSponsors';
         this.sponsorsError = null;
         this.olympians = [];
         this.gods = [];
@@ -972,15 +970,6 @@ export default class SettingsStore {
                     this.settings.fiatEnabled = true;
                 }
 
-                // TODO PEGASUS
-                // temporarily toggle all beta users settings for now
-                const MOD_KEY_1 = 'egs-mod-1';
-                const mod1 = await EncryptedStorage.getItem(MOD_KEY_1);
-                if (!mod1) {
-                    this.settings.expressGraphSync = true;
-                    await EncryptedStorage.setItem(MOD_KEY_1, 'true');
-                }
-
                 // set default LSPs if not defined
                 if (this.settings.enableLSP === undefined) {
                     this.settings.enableLSP = true;
@@ -998,18 +987,13 @@ export default class SettingsStore {
                         enabled: false,
                         automaticallyAccept: true,
                         automaticallyAcceptAttestationLevel: 2,
-                        automaticallyRequestOlympusChannels: true,
+                        automaticallyRequestOlympusChannels: false, // deprecated
                         routeHints: false,
                         allowComments: true,
                         nostrPrivateKey: '',
                         nostrRelays: DEFAULT_NOSTR_RELAYS,
                         notifications: 0
                     };
-                }
-
-                // default automatic channel backups to on
-                if (this.settings.automaticDisasterRecoveryBackup !== false) {
-                    this.settings.automaticDisasterRecoveryBackup = true;
                 }
 
                 // migrate locale to ISO 639-1
@@ -1019,6 +1003,29 @@ export default class SettingsStore {
                 ) {
                     this.settings.locale =
                         localeMigrationMapping[this.settings.locale];
+                }
+
+                // TODO PEGASUS
+                // temporarily toggle all beta users settings for now
+                const MOD_KEY = 'beta5-mod';
+                const mod = await EncryptedStorage.getItem(MOD_KEY);
+                if (!mod) {
+                    this.settings.expressGraphSync = true;
+                    if (this.settings.payments) {
+                        this.settings.payments.defaultFeePercentage = '5.0';
+                        this.settings.payments.defaultFeeFixed = '1000';
+                    } else {
+                        this.settings.payments = {
+                            defaultFeeMethod: 'fixed', // deprecated
+                            defaultFeePercentage: '5.0',
+                            defaultFeeFixed: '1000',
+                            timeoutSeconds: '60',
+                            preferredMempoolRate: 'fastestFee'
+                        };
+                    }
+                    this.settings.automaticDisasterRecoveryBackup = true;
+                    this.setSettings(JSON.stringify(this.settings));
+                    await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
 
                 const node: any =

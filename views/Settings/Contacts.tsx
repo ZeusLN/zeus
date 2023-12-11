@@ -257,10 +257,8 @@ export default class Contacts extends React.Component<
             >
                 <Header
                     leftComponent="Back"
-                    containerStyle={{
-                        borderBottomWidth: 0
-                    }}
-                    rightComponent={!SendScreen && <AddButton />}
+                    containerStyle={{ borderBottomWidth: 0 }}
+                    rightComponent={SendScreen ? undefined : <AddButton />}
                     navigation={navigation}
                 />
                 {contacts.length > 0 && (
@@ -355,6 +353,7 @@ export default class Contacts extends React.Component<
                         data={favoriteContacts}
                         renderItem={this.renderContactItem}
                         keyExtractor={(item, index) => index.toString()}
+                        scrollEnabled={false}
                     />
 
                     {/* Render non-favorite contacts */}
@@ -384,6 +383,7 @@ export default class Contacts extends React.Component<
                         data={nonFavoriteContacts}
                         renderItem={this.renderContactItem}
                         keyExtractor={(item, index) => index.toString()}
+                        scrollEnabled={false}
                     />
                     {loading ? (
                         <LoadingIndicator />

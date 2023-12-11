@@ -22,6 +22,7 @@ import SettingsStore from './SettingsStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { sleep } from '../utils/SleepUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 const LNURL_HOST = 'https://zeuspay.com/api';
 const LNURL_SOCKET_HOST = 'https://zeuspay.com';
@@ -38,11 +39,11 @@ export default class LightningAddressStore {
     @observable public lightningAddressDomain: string;
     @observable public lightningAddressActivated: boolean = false;
     @observable public loading: boolean = false;
+    @observable public redeeming: boolean = false;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public availableHashes: number = 0;
     @observable public paid: any = [];
-    @observable public settled: any = [];
     @observable public preimageMap: any = {};
     @observable public fees: any = {};
     @observable public minimumSats: number;
@@ -96,6 +97,20 @@ export default class LightningAddressStore {
         this.lightningAddressHandle = handle;
         this.lightningAddressDomain = domain;
         this.lightningAddress = `${handle}@${domain}`;
+    };
+
+    deleteHash = async (hash: string) => {
+        const hashesString =
+            (await EncryptedStorage.getItem(HASHES_STORAGE_STRING)) || '{}';
+
+        const oldHashes = JSON.parse(hashesString);
+        delete oldHashes[hash];
+        const newHashes = oldHashes;
+
+        return await EncryptedStorage.setItem(
+            HASHES_STORAGE_STRING,
+            JSON.stringify(newHashes)
+        );
     };
 
     @action
@@ -216,34 +231,35 @@ export default class LightningAddressStore {
                                             this.loading = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
                                         this.loading = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
                                 this.loading = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
                         this.loading = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
                     this.loading = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
@@ -288,9 +304,6 @@ export default class LightningAddressStore {
                         BackendUtils.signMessage(verification)
                             .then((data: any) => {
                                 const signature = data.zbase || data.signature;
-                                const request_channels =
-                                    this.settingsStore.implementation ===
-                                    'embedded-lnd';
                                 ReactNativeBlobUtil.fetch(
                                     'POST',
                                     `${LNURL_HOST}/lnurl/create`,
@@ -307,7 +320,7 @@ export default class LightningAddressStore {
                                         nostr_pk,
                                         relays,
                                         relays_sig,
-                                        request_channels
+                                        request_channels: false // deprecated
                                     })
                                 )
                                     .then(async (response: any) => {
@@ -335,7 +348,7 @@ export default class LightningAddressStore {
                                                         automaticallyAccept:
                                                             true,
                                                         automaticallyRequestOlympusChannels:
-                                                            request_channels,
+                                                            false, // deprecated
                                                         allowComments: true,
                                                         nostrPrivateKey,
                                                         nostrRelays: relays,
@@ -356,34 +369,35 @@ export default class LightningAddressStore {
                                             this.loading = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
                                         this.loading = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
                                 this.loading = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
                         this.loading = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
                     this.loading = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
@@ -453,34 +467,35 @@ export default class LightningAddressStore {
                                             this.loading = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
                                         this.loading = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
                                 this.loading = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
                         this.loading = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
                     this.loading = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
@@ -542,7 +557,6 @@ export default class LightningAddressStore {
                                             results,
                                             success,
                                             paid,
-                                            settled,
                                             fees,
                                             minimumSats,
                                             handle,
@@ -550,14 +564,14 @@ export default class LightningAddressStore {
                                         } = data;
 
                                         if (status === 200 && success) {
-                                            this.error = false;
-                                            this.error_msg = '';
-                                            if (!isRedeem) this.loading = false;
+                                            if (!isRedeem) {
+                                                this.error = false;
+                                                this.error_msg = '';
+                                            }
+                                            this.loading = false;
                                             this.availableHashes = results || 0;
                                             this.paid =
                                                 this.enhanceWithFee(paid);
-                                            this.settled =
-                                                this.enhanceWithFee(settled);
                                             this.fees = fees;
                                             this.minimumSats = minimumSats;
                                             this.lightningAddressHandle =
@@ -583,44 +597,56 @@ export default class LightningAddressStore {
                                             this.loading = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
                                         this.loading = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
                                 this.loading = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
                         this.loading = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
                     this.loading = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
     };
 
     @action
-    public redeem = async (hash: string, payReq?: string) => {
+    public redeem = async (
+        hash: string,
+        payReq?: string,
+        preimageNotFound?: boolean
+    ) => {
+        if (preimageNotFound) {
+            this.error = true;
+            this.error_msg = localeString(
+                'stores.LightningAddressStore.preimageNotFound'
+            );
+            return;
+        }
         this.error = false;
         this.error_msg = '';
-        this.loading = true;
+        this.redeeming = true;
         return await new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'POST',
@@ -661,43 +687,44 @@ export default class LightningAddressStore {
                                         const { success } = data;
 
                                         if (status === 200 && success) {
-                                            this.loading = false;
-
+                                            this.redeeming = false;
+                                            await this.deleteHash(hash);
                                             resolve({
                                                 success
                                             });
                                         } else {
-                                            this.loading = false;
+                                            this.redeeming = false;
                                             this.error = true;
                                             this.error_msg =
-                                                data.error.toString();
+                                                data?.error?.toString();
                                             reject(data.error);
                                         }
                                     })
                                     .catch((error: any) => {
-                                        this.loading = false;
+                                        this.redeeming = false;
                                         this.error = true;
-                                        this.error_msg = error.toString();
+                                        this.error_msg =
+                                            error && error.toString();
                                         reject(error);
                                     });
                             })
                             .catch((error: any) => {
-                                this.loading = false;
+                                this.redeeming = false;
                                 this.error = true;
-                                this.error_msg = error.toString();
+                                this.error_msg = error && error.toString();
                                 reject(error);
                             });
                     } else {
-                        this.loading = false;
+                        this.redeeming = false;
                         this.error = true;
-                        this.error_msg = data.error.toString();
+                        this.error_msg = data?.error?.toString();
                         reject(data.error);
                     }
                 })
                 .catch((error: any) => {
-                    this.loading = false;
+                    this.redeeming = false;
                     this.error = true;
-                    this.error_msg = error.toString();
+                    this.error_msg = error && error.toString();
                     reject(error);
                 });
         });
@@ -705,59 +732,63 @@ export default class LightningAddressStore {
 
     @action
     public lookupAttestations = async (hash: string, amountMsat: number) => {
-        const attestationEvents: any = {};
-
-        const hashpk = getPublicKey(hash);
-
-        await Promise.all(
-            RELAYS.map(async (relayItem) => {
-                const relay = relayInit(relayItem);
-                relay.on('connect', () => {
-                    console.log(`connected to ${relay.url}`);
-                });
-                relay.on('error', () => {
-                    console.log(`failed to connect to ${relay.url}`);
-                });
-
-                await relay.connect();
-
-                const events = await relay.list([
-                    {
-                        kinds: [55869],
-                        '#p': [hashpk]
-                    }
-                ]);
-
-                events.map((event) => {
-                    attestationEvents[event.id] = event;
-                });
-
-                relay.close();
-                return;
-            })
-        );
-
         const attestations: any = [];
-        Object.keys(attestationEvents).map((key) => {
-            const attestation = this.analyzeAttestation(
-                attestationEvents[key],
-                hash,
-                amountMsat
-            );
-            attestations.push(attestation);
-        });
+        let status = 'warning';
 
-        let status;
-        if (attestations.length === 0) status = 'warning';
-        if (attestations.length === 1) {
-            const attestation = attestations[0];
-            if (attestation.isValid) {
-                status = 'success';
-            } else {
-                status = 'error';
+        try {
+            const attestationEvents: any = {};
+
+            const hashpk = getPublicKey(hash);
+
+            await Promise.all(
+                RELAYS.map(async (relayItem) => {
+                    const relay = relayInit(relayItem);
+                    relay.on('connect', () => {
+                        console.log(`connected to ${relay.url}`);
+                    });
+                    relay.on('error', () => {
+                        console.log(`failed to connect to ${relay.url}`);
+                    });
+
+                    await relay.connect();
+
+                    const events = await relay.list([
+                        {
+                            kinds: [55869],
+                            '#p': [hashpk]
+                        }
+                    ]);
+
+                    events.map((event) => {
+                        attestationEvents[event.id] = event;
+                    });
+
+                    relay.close();
+                    return;
+                })
+            );
+
+            Object.keys(attestationEvents).map((key) => {
+                const attestation = this.analyzeAttestation(
+                    attestationEvents[key],
+                    hash,
+                    amountMsat
+                );
+                attestations.push(attestation);
+            });
+
+            if (attestations.length === 1) {
+                const attestation = attestations[0];
+                if (attestation.isValid) {
+                    status = 'success';
+                } else {
+                    status = 'error';
+                }
             }
+            if (attestations.length > 1) status = 'error';
+        } catch (e) {
+            console.log('attestation lookup error', e);
         }
-        if (attestations.length > 1) status = 'error';
 
         return {
             attestations,
@@ -885,13 +916,15 @@ export default class LightningAddressStore {
     };
 
     @action
-    public lookupPreimageAndRedeem = (
+    public lookupPreimageAndRedeem = async (
         hash: string,
         amount_msat: number,
-        comment?: string
+        comment?: string,
+        skipStatus?: boolean
     ) => {
-        this.getPreimageMap().then((map) => {
+        return await this.getPreimageMap().then(async (map) => {
             const preimage = map[hash];
+            const preimageNotFound = !preimage;
             const value = (amount_msat / 1000).toString();
             const value_commas = value.replace(
                 /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
@@ -917,18 +950,10 @@ export default class LightningAddressStore {
                 }
             };
 
-            const automaticallyRequestOlympusChannels =
-                this.settingsStore?.settings?.lightningAddress
-                    ?.automaticallyRequestOlympusChannels;
-
-            BackendUtils.createInvoice({
+            return await BackendUtils.createInvoice({
                 // 24 hrs
                 expiry: '86400',
-                value:
-                    BackendUtils.supportsLSPs() &&
-                    automaticallyRequestOlympusChannels
-                        ? undefined
-                        : value,
+                value_msat: amount_msat,
                 memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
                 preimage,
                 private:
@@ -937,35 +962,46 @@ export default class LightningAddressStore {
             })
                 .then((result: any) => {
                     if (result.payment_request) {
-                        this.redeem(hash, result.payment_request).then(
-                            (success) => {
-                                if (success === true) fireLocalNotification();
-                                this.status();
-                            }
-                        );
+                        return this.redeem(
+                            hash,
+                            result.payment_request,
+                            preimageNotFound
+                        ).then((success) => {
+                            if (success === true) fireLocalNotification();
+                            if (!skipStatus) this.status(true);
+                            return;
+                        });
                     }
                 })
                 .catch(() => {
                     // first, try looking up invoice for redeem
                     try {
-                        BackendUtils.lookupInvoice({
+                        return BackendUtils.lookupInvoice({
                             r_hash: hash
                         }).then((result: any) => {
                             if (result.payment_request) {
-                                this.redeem(hash, result.payment_request).then(
-                                    (success) => {
-                                        if (success === true)
-                                            fireLocalNotification();
-                                        this.status();
-                                    }
-                                );
+                                return this.redeem(
+                                    hash,
+                                    result.payment_request,
+                                    preimageNotFound
+                                ).then((success) => {
+                                    if (success === true)
+                                        fireLocalNotification();
+                                    if (!skipStatus) this.status(true);
+                                    return;
+                                });
                             }
                         });
                     } catch (e) {
                         // then, try to redeem without new pay req
-                        this.redeem(hash).then((success) => {
+                        return this.redeem(
+                            hash,
+                            undefined,
+                            preimageNotFound
+                        ).then((success) => {
                             if (success === true) fireLocalNotification();
-                            this.status();
+                            if (!skipStatus) this.status(true);
+                            return;
                         });
                     }
                 });
@@ -973,42 +1009,46 @@ export default class LightningAddressStore {
     };
 
     @action
-    public redeemAllOpenPayments = () => {
+    public redeemAllOpenPayments = async () => {
         const attestationLevel = this.settingsStore?.settings?.lightningAddress
             ?.automaticallyAcceptAttestationLevel
             ? this.settingsStore.settings.lightningAddress
                   .automaticallyAcceptAttestationLevel
             : 2;
-        this.status(true).then(() => {
-            // disabled
-            if (attestationLevel === 0) {
-                this.paid.map((item: any) => {
-                    this.lookupPreimageAndRedeem(
-                        item.hash,
-                        item.amount_msat,
-                        item.comment
-                    );
-                });
-            } else {
-                this.paid.map((item: any) => {
-                    this.lookupAttestations(item.hash, item.amount_msat)
-                        .then(({ status }: { status: string }) => {
-                            if (status === 'error') return;
-                            // success only
-                            if (status === 'warning' && attestationLevel === 1)
-                                return;
-                            this.lookupPreimageAndRedeem(
-                                item.hash,
-                                item.amount_msat,
-                                item.comment
-                            );
-                        })
-                        .catch((e) => {
-                            console.log('Error looking up attestation', e);
-                        });
-                });
+
+        // disabled
+        if (attestationLevel === 0) {
+            for (const item of this.paid) {
+                await this.lookupPreimageAndRedeem(
+                    item.hash,
+                    item.amount_msat,
+                    item.comment,
+                    true
+                );
+                return;
             }
-        });
+            this.status();
+        } else {
+            for (const item of this.paid) {
+                await this.lookupAttestations(item.hash, item.amount_msat)
+                    .then(async ({ status }: { status?: string }) => {
+                        if (status === 'error') return;
+                        // success only
+                        if (status === 'warning' && attestationLevel === 1)
+                            return;
+                        return await this.lookupPreimageAndRedeem(
+                            item.hash,
+                            item.amount_msat,
+                            item.comment,
+                            true
+                        );
+                    })
+                    .catch((e) => {
+                        console.log('Error looking up attestation', e);
+                    });
+            }
+            this.status();
+        }
     };
 
     @action
@@ -1042,11 +1082,7 @@ export default class LightningAddressStore {
                     });
 
                     this.socket.on('paid', (data: any) => {
-                        const { hash, req, amount_msat, comment } = data;
-
-                        console.log('hash', hash);
-                        console.log('req', req);
-                        console.log('amount_msat', amount_msat);
+                        const { hash, amount_msat, comment } = data;
 
                         const attestationLevel = this.settingsStore?.settings
                             ?.lightningAddress
@@ -1063,7 +1099,7 @@ export default class LightningAddressStore {
                             );
                         } else {
                             this.lookupAttestations(hash, amount_msat)
-                                .then(({ status }: { status: string }) => {
+                                .then(({ status }: { status?: string }) => {
                                     if (status === 'error') return;
                                     // success only
                                     if (
@@ -1092,16 +1128,11 @@ export default class LightningAddressStore {
 
     @action
     public prepareToAutomaticallyAccept = async () => {
-        const automaticallyRequestOlympusChannels =
-            this.settingsStore?.settings?.lightningAddress
-                ?.automaticallyRequestOlympusChannels;
-
         this.prepareToAutomaticallyAcceptStart = true;
 
         while (!this.readyToAutomaticallyAccept) {
-            const isReady = await this.nodeInfoStore.isLightningReadyToReceive(
-                automaticallyRequestOlympusChannels
-            );
+            const isReady =
+                await this.nodeInfoStore.isLightningReadyToReceive();
             if (isReady) {
                 this.readyToAutomaticallyAccept = true;
                 this.redeemAllOpenPayments();
@@ -1118,7 +1149,6 @@ export default class LightningAddressStore {
         this.error_msg = '';
         this.availableHashes = 0;
         this.paid = [];
-        this.settled = [];
         this.preimageMap = {};
         this.socket = undefined;
         this.lightningAddress = '';

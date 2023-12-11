@@ -498,14 +498,23 @@ export const decodePaymentStatus = (data: string): routerrpc.PaymentStatus => {
 /**
  * @throws
  */
-export const addInvoice = async (
-    amount: number,
-    memo: string,
-    expiry: number = 3600,
-    is_amp?: boolean,
-    is_private?: boolean,
-    preimage?: string
-): Promise<lnrpc.AddInvoiceResponse> => {
+export const addInvoice = async ({
+    amount,
+    amount_msat,
+    memo,
+    expiry = 3600,
+    is_amp,
+    is_private,
+    preimage
+}: {
+    amount?: number;
+    amount_msat?: number;
+    memo: string;
+    expiry: number;
+    is_amp?: boolean;
+    is_private?: boolean;
+    preimage?: string;
+}): Promise<lnrpc.AddInvoiceResponse> => {
     const response = await sendCommand<
         lnrpc.IInvoice,
         lnrpc.Invoice,
@@ -515,7 +524,8 @@ export const addInvoice = async (
         response: lnrpc.AddInvoiceResponse,
         method: 'AddInvoice',
         options: {
-            value: Long.fromValue(amount),
+            value: amount ? Long.fromValue(amount) : undefined,
+            value_msat: amount_msat ? Long.fromValue(amount_msat) : undefined,
             memo,
             expiry: Long.fromValue(expiry),
             private: is_private,

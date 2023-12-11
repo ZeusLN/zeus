@@ -9,6 +9,7 @@ import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
 import Button from '../components/Button';
 import { Row } from '../components/layout/Row';
+import AttestationButton from '../components/AttestationButton';
 
 import Invoice from '../models/Invoice';
 
@@ -99,6 +100,16 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     }}
                     rightComponent={
                         <Row>
+                            {invoice.isZeusPay && (
+                                <AttestationButton
+                                    hash={invoice.payment_hash || getRHash}
+                                    amount_msat={
+                                        invoice.amt_paid_msat ||
+                                        invoice.getAmount * 1000
+                                    }
+                                    navigation={navigation}
+                                />
+                            )}
                             <EditNotesButton />
                             {!!getPaymentRequest && <QRButton />}
                         </Row>

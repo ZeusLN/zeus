@@ -69,7 +69,10 @@ export default class LnurlPay extends React.Component<
         const amount = navigation.getParam('amount');
 
         return {
-            amount: amount || Math.floor(lnurl.minSendable / 1000).toString(),
+            amount:
+                amount && amount != 0
+                    ? amount
+                    : Math.floor(lnurl.minSendable / 1000).toString(),
             domain: lnurl.domain,
             comment: ''
         };
@@ -273,6 +276,7 @@ export default class LnurlPay extends React.Component<
                         <View style={{ marginTop: -20 }}>
                             <AmountInput
                                 amount={amount}
+                                preventUnitReset={true}
                                 locked={
                                     lnurl &&
                                     lnurl.minSendable === lnurl.maxSendable
@@ -332,8 +336,7 @@ export default class LnurlPay extends React.Component<
                                 }}
                                 style={styles.button}
                                 buttonStyle={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 30
+                                    backgroundColor: themeColor('secondary')
                                 }}
                             />
                         </View>

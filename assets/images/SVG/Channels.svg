@@ -1,16 +1,15 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   width="24"
-   height="16"
-   viewBox="0 0 24 16"
-   fill="none"
-   version="1.1"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <rect x="0" y="0" width="8" height="2" rx="1" id="rect1" />
-  <rect x="10" y="0" width="14" height="2" rx="1" id="rect2" />
-  <rect x="10" y="14" width="14" height="2" rx="1" id="rect3" />
-  <rect x="0" y="7" width="14" height="2" rx="1" id="rect4" />
-  <rect x="16" y="7" width="8" height="2" rx="1" id="rect5" />
-  <rect x="0" y="14" width="8" height="2" rx="1" id="rect6" />
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_507_700)">
+<path d="M8 5H4V7H8V5Z" fill="#000"/>
+<path d="M20 5H10V7H20V5Z" fill="#000"/>
+<path d="M8 17H4V19H8V17Z" fill="#000"/>
+<path d="M20 17H10V19H20V17Z" fill="#000"/>
+<path d="M20 11H16V13H20V11Z" fill="#000"/>
+<path d="M14 11H4V13H14V11Z" fill="#000"/>
+</g>
+<defs>
+<clipPath id="clip0_507_700">
+<rect width="16" height="14" fill="white" transform="translate(4 5)"/>
+</clipPath>
+</defs>
 </svg>

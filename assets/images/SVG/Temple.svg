@@ -1,36 +1,12 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   width="16"
-   height="16"
-   viewBox="0 0 16 16"
-   fill="none"
-   version="1.1"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <path
-     d="M 15.99,3.99952 H 0.01 C 0.00448,3.99952 0,3.99502 0,3.98952 V 2.50687 C 0,2.5025 0.00284,2.49863 0.00702,2.49733 L 7.997,4.5e-4 c 0.002,-6e-4 0.004,-6e-4 0.006,0 l 7.99,2.49688 C 15.9972,2.49863 16,2.5025 16,2.50687 v 1.48265 c 0,0.0055 -0.0045,0.01 -0.01,0.01 z" />
-  <rect
-     width="16"
-     height="2"
-     transform="scale(1,-1)"
-     x="0"
-     y="-15.99952" />
-  <rect
-     width="2"
-     height="8"
-     transform="scale(1,-1)"
-     x="2"
-     y="-12.99952" />
-  <rect
-     width="2"
-     height="8"
-     transform="scale(1,-1)"
-     x="12"
-     y="-12.99952" />
-  <rect
-     width="2"
-     height="8"
-     transform="scale(1,-1)"
-     x="7"
-     y="-12.99952" />
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Ebene_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="17.42px" height="19px" viewBox="0 0 17.42 19" enable-background="new 0 0 17.42 19" xml:space="preserve">
+<g>
+	<path d="M8.71,2.24L14.729,5H2.701L8.71,2.24z M8.71,0L0.002,4v3h17.416V4L8.71,0z"/>
+	<path d="M3.268,8H1.091v8h2.177V8z"/>
+	<path d="M9.799,8H7.622v8h2.177V8z"/>
+	<path d="M16.33,8h-2.178v8h2.178V8z"/>
+	<path d="M17.418,17.001H0.002V19h17.416V17.001z"/>
+</g>
 </svg>
