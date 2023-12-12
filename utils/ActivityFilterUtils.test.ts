@@ -120,6 +120,65 @@ describe('ActivityFilterUtils', () => {
         ]);
     });
 
+    it('supports filtering unconfirmed transactions', () => {
+        const activities: any[] = [
+            new Transaction({
+                amount: 1,
+                time_stamp: (
+                    new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+                ).toString(),
+                num_confirmations: 1
+            }),
+            new Transaction({
+                amount: 2,
+                time_stamp: (
+                    new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+                ).toString(),
+                num_confirmations: 0
+            }),
+            new Transaction({
+                amount: 3,
+                time_stamp: (
+                    new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+                ).toString(),
+                status: 'confirmed'
+            }),
+            new Transaction({
+                amount: 4,
+                time_stamp: (
+                    new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+                ).toString(),
+                status: 'unconfirmed'
+            }),
+            new Invoice({
+                value: '5',
+                creation_date: (
+                    new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+                ).toString()
+            }),
+            new Payment({
+                value: '6',
+                creation_date: (
+                    new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+                ).toString()
+            })
+        ];
+        const filter = getDefaultFilter();
+        filter.unconfirmed = false;
+
+        const filteredActivities = ActivityFilterUtils.filterActivities(
+            activities,
+            filter
+        );
+
+        expect(filteredActivities.map((a) => a.getAmount)).toEqual([
+            '1',
+            '3',
+            5,
+            '6'
+        ]);
+    });
+
     const getDefaultFilter = () =>
         ({
             lightning: true,
@@ -127,6 +186,7 @@ describe('ActivityFilterUtils', () => {
             sent: true,
             received: true,
             unpaid: true,
+            unconfirmed: true,
             minimumAmount: 0
         } as Filter);
 });

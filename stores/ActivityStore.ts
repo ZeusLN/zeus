@@ -25,6 +25,7 @@ export interface Filter {
     received: boolean;
     unpaid: boolean;
     inTransit: boolean;
+    unconfirmed: boolean;
     zeusPay: boolean;
     minimumAmount: number;
     startDate?: Date;
@@ -38,6 +39,7 @@ export const DEFAULT_FILTERS = {
     received: true,
     unpaid: true,
     inTransit: false,
+    unconfirmed: true,
     zeusPay: true,
     minimumAmount: 0,
     startDate: undefined,
@@ -88,6 +90,7 @@ export default class ActivityStore {
             received: true,
             unpaid: false,
             inTransit: false,
+            unconfirmed: true,
             zeusPay: true,
             minimumAmount: 0,
             startDate: undefined,
