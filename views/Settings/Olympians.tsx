@@ -59,7 +59,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                             `https://${
                                                 item.type === 'Twitter'
                                                     ? 'twitter.com/'
-                                                    : 'iris.to/#/profile/'
+                                                    : 'iris.to/'
                                             }${item.handle}`
                                         )
                                     }
