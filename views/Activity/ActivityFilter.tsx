@@ -6,6 +6,7 @@ import { isEqual } from 'lodash';
 
 import DatePicker from 'react-native-date-picker';
 
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -74,6 +75,7 @@ export default class ActivityFilter extends React.Component<
             received,
             unpaid,
             inTransit,
+            unconfirmed,
             zeusPay,
             minimumAmount,
             startDate,
@@ -205,6 +207,13 @@ export default class ActivityFilter extends React.Component<
                 var: 'zeusPay',
                 type: 'Toggle',
                 condition: SettingsStore.settings.lightningAddress.enabled
+            },
+            {
+                label: localeString('general.unconfirmed'),
+                value: unconfirmed,
+                var: 'unconfirmed',
+                type: 'Toggle',
+                condition: BackendUtils.supportsOnchainReceiving()
             },
             {
                 label: localeString('views.ActivityFilter.minimumAmount'),

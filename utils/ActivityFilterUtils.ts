@@ -13,71 +13,63 @@ class ActivityFilterUtils {
         let filteredActivity = activities;
         if (filter.lightning == false) {
             filteredActivity = filteredActivity.filter(
-                (activity: any) =>
+                (activity) =>
                     !(
-                        activity.model ===
-                            localeString('views.Invoice.title') ||
-                        activity.model === localeString('views.Payment.title')
+                        activity instanceof Invoice ||
+                        activity instanceof Payment
                     )
             );
         }
 
         if (filter.onChain == false) {
             filteredActivity = filteredActivity.filter(
-                (activity: any) =>
+                (activity) =>
                     !(
-                        activity.model ===
-                            localeString('general.transaction') &&
-                        activity.getAmount != 0
+                        activity instanceof Transaction &&
+                        Number(activity.getAmount) != 0
                     )
             );
         }
 
         if (filter.sent == false) {
             filteredActivity = filteredActivity.filter(
-                (activity: any) =>
+                (activity) =>
                     !(
-                        (activity.model ===
-                            localeString('general.transaction') &&
-                            activity.getAmount < 0) ||
-                        activity.model === localeString('views.Payment.title')
+                        (activity instanceof Transaction &&
+                            Number(activity.getAmount) < 0) ||
+                        activity instanceof Payment
                     )
             );
         }
 
         if (filter.received == false) {
             filteredActivity = filteredActivity.filter(
-                (activity: any) =>
+                (activity) =>
                     !(
-                        (activity.model ===
-                            localeString('general.transaction') &&
-                            activity.getAmount > 0) ||
-                        (activity.model ===
-                            localeString('views.Invoice.title') &&
-                            activity.isPaid)
+                        (activity instanceof Transaction &&
+                            Number(activity.getAmount) > 0) ||
+                        (activity instanceof Invoice && activity.isPaid)
                     )
             );
         }
 
         if (filter.unpaid == false) {
             filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(
-                        activity.model ===
-                            localeString('views.Invoice.title') &&
-                        !activity.isPaid
-                    )
+                (activity) => !(activity instanceof Invoice && !activity.isPaid)
             );
         }
 
         if (filter.inTransit == false) {
             filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(
-                        activity.model ===
-                            localeString('views.Payment.title') &&
-                        activity.isInTransit
-                    )
+                (activity) =>
+                    !(activity instanceof Payment && activity.isInTransit)
+            );
+        }
+
+        if (filter.unconfirmed == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) =>
+                    !(activity instanceof Transaction) || activity.isConfirmed
             );
         }
 
@@ -94,8 +86,8 @@ class ActivityFilterUtils {
 
         if (filter.minimumAmount > 0) {
             filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    Math.abs(activity.getAmount) >= filter.minimumAmount
+                (activity) =>
+                    Math.abs(Number(activity.getAmount)) >= filter.minimumAmount
             );
         }
 

@@ -91,7 +91,7 @@ export default class Transaction extends BaseModel {
         return this.num_confirmations > 0 || this.status === 'confirmed';
     }
 
-    @computed public get getAmount(): number | string {
+    @computed public get getAmount(): string {
         const amount = this.value || this.amount || 0;
         const fee = this.getFee;
 
