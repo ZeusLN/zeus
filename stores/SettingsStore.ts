@@ -115,7 +115,6 @@ export interface Settings {
     recovery: boolean;
     initialLoad: boolean;
     embeddedTor: boolean;
-    persistentMode: boolean;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -768,7 +767,6 @@ export default class SettingsStore {
         recovery: false,
         initialLoad: true,
         embeddedTor: false,
-        persistentMode: false,
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
