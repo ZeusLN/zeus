@@ -6,6 +6,7 @@ import { isEqual } from 'lodash';
 
 import DatePicker from 'react-native-date-picker';
 
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -211,7 +212,8 @@ export default class ActivityFilter extends React.Component<
                 label: localeString('general.unconfirmed'),
                 value: unconfirmed,
                 var: 'unconfirmed',
-                type: 'Toggle'
+                type: 'Toggle',
+                condition: BackendUtils.supportsOnchainReceiving()
             },
             {
                 label: localeString('views.ActivityFilter.minimumAmount'),
