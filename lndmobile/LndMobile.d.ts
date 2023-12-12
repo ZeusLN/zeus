@@ -7,7 +7,11 @@ export enum ELndMobileStatusCodes {
 export interface ILndMobile {
     // General
     initialize(): Promise<{ data: string }>;
-    startLnd(args: string): Promise<{ data: string }>;
+    startLnd(
+        args: string,
+        isTorEnabled?: boolean,
+        isTestnet?: boolean
+    ): Promise<{ data: string }>;
     stopLnd(): Promise<{ data: string }>;
     initWallet(
         seed: string[],

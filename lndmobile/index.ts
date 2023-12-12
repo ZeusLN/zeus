@@ -69,8 +69,12 @@ export const decodeState = (data: string): lnrpc.SubscribeStateResponse => {
 /**
  * @throws
  */
-export const startLnd = async (args?: string): Promise<{ data: string }> => {
-    return await LndMobile.startLnd(args || '');
+export const startLnd = async (
+    args?: string,
+    isTorEnabled?: boolean,
+    isTestnet?: boolean
+): Promise<{ data: string }> => {
+    return await LndMobile.startLnd(args || '', isTorEnabled, isTestnet);
 };
 
 /**
