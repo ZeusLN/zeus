@@ -77,8 +77,8 @@ export const stopLnd = async (): Promise<{ data: string }> => {
  */
 export const startLnd = async (
     args?: string,
-    isTorEnabled?: boolean,
-    isTestnet?: boolean
+    isTorEnabled: boolean = false,
+    isTestnet: boolean = false
 ): Promise<{ data: string }> => {
     return await LndMobile.startLnd(args || '', isTorEnabled, isTestnet);
 };
