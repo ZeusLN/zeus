@@ -19,6 +19,8 @@ import android.os.Process;
 import android.os.RemoteException;
 import android.util.Base64;
 import android.util.Log;
+import android.content.pm.ServiceInfo;
+import static android.app.Notification.FOREGROUND_SERVICE_IMMEDIATE;
 
 import lndmobile.Callback;
 import lndmobile.Lndmobile;
@@ -489,28 +491,43 @@ public class LndMobileService extends Service {
       boolean persistentServicesEnabled = getPersistentServicesEnabled(this);
       // persistent services on, start service as foreground-svc
       if (persistentServicesEnabled) {
+        Notification.Builder notificationBuilder = null;
         Intent notificationIntent = new Intent (this, MainActivity.class);
         PendingIntent pendingIntent =
           PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          NotificationChannel chan = new NotificationChannel(BuildConfig.APPLICATION_ID, "zeus", NotificationManager.IMPORTANCE_NONE);
+          NotificationChannel chan = new NotificationChannel(BuildConfig.APPLICATION_ID, "ZEUS", NotificationManager.IMPORTANCE_NONE);
           chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
           notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
           assert notificationManager != null;
           notificationManager.createNotificationChannel(chan);
+
+          notificationBuilder = new Notification.Builder(this, BuildConfig.APPLICATION_ID);
+        } else {
+          notificationBuilder = new Notification.Builder(this);
+      }
+
+        notificationBuilder
+          .setContentTitle("ZEUS")
+          .setContentText("LND is running in the background")
+          .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
+          .setContentIntent(pendingIntent)
+          .setOngoing(true);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+          notificationBuilder.setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE);
         }
-        Notification notification = new Notification.Builder(this, BuildConfig.APPLICATION_ID)
-            .setContentTitle("LND")
-            .setContentText("LND is running in the background")
-            .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
-            .setContentIntent(pendingIntent)
-            .setTicker("ZEUS")
-            .setOngoing(true)
-            .build();
-        startForeground(ONGOING_NOTIFICATION_ID, notification);
+
+        Notification notification = notificationBuilder.build();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          startForeground(ONGOING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+          startForeground(ONGOING_NOTIFICATION_ID, notification);
+        }
       }
     }
-    
+
     // else noop, instead of calling startService, start will be handled by binding
     return startid;
   }
