@@ -187,6 +187,11 @@ export async function initializeLnd(isTestnet?: boolean, rescan?: boolean) {
     await initialize();
 }
 
+export async function stopLnd() {
+    const { stopLnd } = lndMobile.index;
+    return await stopLnd();
+}
+
 export async function startLnd(
     walletPassword: string,
     isTorEnabled: boolean = false,

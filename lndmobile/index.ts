@@ -65,6 +65,12 @@ export const decodeState = (data: string): lnrpc.SubscribeStateResponse => {
         base64Result: data
     });
 };
+/**
+ * @throws
+ */
+export const stopLnd = async (): Promise<{ data: string }> => {
+    return await LndMobile.stopLnd();
+};
 
 /**
  * @throws
