@@ -24,6 +24,7 @@ interface AmountDisplayProps {
     rtl?: boolean;
     space?: boolean;
     jumboText?: boolean;
+    defaultTextSize?: boolean;
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
     pending?: boolean;
     fee?: boolean;
@@ -41,6 +42,7 @@ function AmountDisplay({
     rtl = false,
     space = false,
     jumboText = false,
+    defaultTextSize = false,
     color = undefined,
     pending = false,
     fee = false,
@@ -100,6 +102,7 @@ function AmountDisplay({
                     <View style={styles.textContainer}>
                         <Body
                             jumbo={jumboText}
+                            defaultSize={defaultTextSize}
                             color={color}
                             accessible={accessible}
                         >
@@ -111,12 +114,14 @@ function AmountDisplay({
                             <Body
                                 secondary
                                 small={!jumboText}
+                                defaultSize={defaultTextSize}
                                 color={color}
                                 accessible={accessible}
                             >
-                                {plural ? 'sats' : 'sat'}{' '}
+                                {plural ? 'sats' : 'sat'}
                                 {fee
-                                    ? localeString(
+                                    ? ' ' +
+                                      localeString(
                                           'views.Payment.fee'
                                       ).toLowerCase()
                                     : ''}
@@ -140,6 +145,7 @@ function AmountDisplay({
                                     <Body
                                         secondary
                                         small={!jumboText}
+                                        defaultSize={defaultTextSize}
                                         color={color}
                                     >
                                         {localeString(
@@ -151,6 +157,7 @@ function AmountDisplay({
                             )}
                             <Body
                                 jumbo={jumboText}
+                                defaultSize={defaultTextSize}
                                 color={color}
                                 accessible={accessible}
                             >
@@ -180,6 +187,7 @@ function AmountDisplay({
                             {space ? <TextSpace /> : <Spacer width={1} />}
                             <Body
                                 jumbo={jumboText}
+                                defaultSize={defaultTextSize}
                                 color={color}
                                 accessible={accessible}
                             >
@@ -197,6 +205,7 @@ function AmountDisplay({
                                         <Body
                                             secondary
                                             small={!jumboText}
+                                            defaultSize={defaultTextSize}
                                             color={color}
                                         >
                                             {localeString(
@@ -222,6 +231,7 @@ interface AmountProps {
     sensitive?: boolean;
     sensitiveLength?: number;
     jumboText?: boolean;
+    defaultTextSize?: boolean;
     credit?: boolean;
     debit?: boolean;
     // If credit or debit doesn't cover the use case
@@ -244,6 +254,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
             sensitive = false,
             sensitiveLength = 4,
             jumboText = false,
+            defaultTextSize = false,
             credit = false,
             debit = false,
             toggleable = false,
@@ -289,6 +300,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                             symbol={symbol}
                             negative={negative}
                             jumboText={jumboText}
+                            defaultTextSize={defaultTextSize}
                             pending={pending}
                             fee={fee}
                             fiatRatesLoading={FiatStore.loading}
@@ -306,6 +318,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     symbol={symbol}
                     negative={negative}
                     jumboText={jumboText}
+                    defaultTextSize={defaultTextSize}
                     pending={pending}
                     fee={fee}
                     fiatRatesLoading={FiatStore.loading}
@@ -349,6 +362,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         {...unformattedAmount}
                         negative={negative}
                         jumboText={jumboText}
+                        defaultTextSize={defaultTextSize}
                         color={textColor}
                         pending={pending}
                         fee={fee}
@@ -365,6 +379,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 {...unformattedAmount}
                 negative={negative}
                 jumboText={jumboText}
+                defaultTextSize={defaultTextSize}
                 color={textColor}
                 pending={pending}
                 fee={fee}
