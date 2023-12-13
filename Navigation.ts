@@ -25,6 +25,7 @@ import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
 import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
+import NostrContacts from './views/NostrContacts';
 
 // Settings views
 import Settings from './views/Settings/Settings';
@@ -391,6 +392,9 @@ const AppScenes = {
     },
     SocialMedia: {
         screen: SocialMedia
+    },
+    NostrContacts: {
+        screen: NostrContacts
     }
 };
 

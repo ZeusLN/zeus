@@ -37,6 +37,7 @@ interface ContactItem {
     photo: string | null;
     isFavourite: boolean;
     id: string;
+    banner: string;
 }
 interface ContactDetailsState {
     contact: ContactItem;
@@ -227,6 +228,16 @@ export default class ContactDetails extends React.Component<
                                 paddingBottom: 10
                             }}
                         >
+                            {contact.banner && (
+                                <Image
+                                    source={{ uri: contact.banner }}
+                                    style={{
+                                        width: '100%',
+                                        height: 150,
+                                        marginBottom: 20
+                                    }}
+                                />
+                            )}
                             {contact.photo && (
                                 <Image
                                     source={{ uri: contact.photo }}
@@ -234,7 +245,8 @@ export default class ContactDetails extends React.Component<
                                         width: 150,
                                         height: 150,
                                         borderRadius: 75,
-                                        marginBottom: 20
+                                        marginBottom: 20,
+                                        marginTop: -100
                                     }}
                                 />
                             )}
@@ -252,10 +264,13 @@ export default class ContactDetails extends React.Component<
                                 style={{
                                     fontSize: 20,
                                     marginBottom: 6,
+                                    marginHorizontal: 20,
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {contact.description}
+                                {contact.description
+                                    .trim()
+                                    .replace(/\s+/g, ' ')}
                             </Text>
                             {contact.lnAddress &&
                                 contact.lnAddress.length >= 1 &&
