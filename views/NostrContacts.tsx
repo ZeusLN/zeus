@@ -18,6 +18,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import { relayInit, nip19 } from 'nostr-tools';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { localeString } from '../utils/LocaleUtils';
+import Edit from '../assets/images/SVG/Pen.svg';
 
 interface NostrContactsProps {
     navigation: any;
@@ -27,6 +28,8 @@ interface NostrContactsState {
     npub: string;
     ContactsData: any[];
     loading: boolean;
+    isSelectionMode: boolean;
+    SelectedContacts: any[];
 }
 
 export default class NostrContacts extends React.Component<
@@ -38,9 +41,18 @@ export default class NostrContacts extends React.Component<
         this.state = {
             npub: '',
             ContactsData: [],
-            loading: false
+            loading: false,
+            isSelectionMode: false,
+            SelectedContacts: []
         };
     }
+
+    toggleSelectionMode = () => {
+        this.setState((prevState) => ({
+            isSelectionMode: !prevState.isSelectionMode,
+            SelectedContacts: []
+        }));
+    };
 
     async fetchNostrContacts() {
         this.setState({ loading: true });
@@ -148,6 +160,26 @@ export default class NostrContacts extends React.Component<
         };
     };
 
+    toggleContactSelection = (contact: any) => {
+        this.setState((prevState) => {
+            const SelectedContacts = [...prevState.SelectedContacts];
+            const index = SelectedContacts.findIndex(
+                (c) => c.id === contact.id
+            );
+            console.log(index);
+
+            if (index === -1) {
+                // Contact not selected, add it to the selection
+                SelectedContacts.push(contact);
+            } else {
+                // Contact already selected, remove it from the selection
+                SelectedContacts.splice(index, 1);
+            }
+
+            return { SelectedContacts };
+        });
+    };
+
     renderContactItem = ({
         item
     }: {
@@ -159,6 +191,8 @@ export default class NostrContacts extends React.Component<
             lud16: string;
         };
     }) => {
+        const { isSelectionMode } = this.state;
+
         const truncateString = (str: string, maxLength: number) => {
             if (str.length <= maxLength) {
                 return str;
@@ -176,12 +210,18 @@ export default class NostrContacts extends React.Component<
 
         return (
             <TouchableOpacity
-                onPress={() =>
-                    this.props.navigation.navigate('ContactDetails', {
-                        nostrContact: this.transformContactData(item),
-                        isNostrContact: true
-                    })
-                }
+                onPress={() => {
+                    if (isSelectionMode) {
+                        this.toggleContactSelection(
+                            this.transformContactData(item)
+                        );
+                    } else {
+                        this.props.navigation.navigate('ContactDetails', {
+                            nostrContact: this.transformContactData(item),
+                            isNostrContact: true
+                        });
+                    }
+                }}
             >
                 <View
                     style={{
@@ -237,6 +277,40 @@ export default class NostrContacts extends React.Component<
         );
     };
 
+    importSelectedContacts = async () => {
+        try {
+            const { SelectedContacts } = this.state;
+
+            // Retrieve existing contacts from Encrypted storage
+            const contactsString = await EncryptedStorage.getItem(
+                'zeus-contacts'
+            );
+            const existingContacts: any = contactsString
+                ? JSON.parse(contactsString)
+                : [];
+
+            // Merge existing contacts with the selected contacts
+            const updatedContacts = [
+                ...existingContacts,
+                ...SelectedContacts
+            ].sort((a, b) => a.name.localeCompare(b.name));
+
+            // Save the updated contacts to encrypted storage
+            await EncryptedStorage.setItem(
+                'zeus-contacts',
+                JSON.stringify(updatedContacts)
+            );
+
+            console.log('Contacts imported successfully!');
+        } catch (error) {
+            console.log('Error importing contacts:', error);
+            Alert.alert(
+                'Error',
+                'Failed to import contacts. Please try again.'
+            );
+        }
+    };
+
     importAllContacts = async () => {
         try {
             const contactsToImport = this.state.ContactsData;
@@ -280,6 +354,19 @@ export default class NostrContacts extends React.Component<
         const { navigation } = this.props;
         const { loading } = this.state;
 
+        const SelectButton = () => (
+            <TouchableOpacity
+                onPress={() => {
+                    this.toggleSelectionMode();
+                }}
+            >
+                <Edit
+                    fill={themeColor('text')}
+                    style={{ marginRight: 15, alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen
                 style={{
@@ -296,6 +383,9 @@ export default class NostrContacts extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        this.state.ContactsData.length > 0 && <SelectButton />
+                    }
                     navigation={navigation}
                 />
                 <Text
@@ -334,13 +424,28 @@ export default class NostrContacts extends React.Component<
                         keyExtractor={(item, index) => index.toString()}
                     />
                 )}
-                {this.state.ContactsData.length > 0 && (
+                {this.state.ContactsData.length > 0 &&
+                    this.state.SelectedContacts.length === 0 && (
+                        <Button
+                            title={localeString(
+                                'views.NostrContacts.ImportAllContacts'
+                            )}
+                            onPress={() => {
+                                this.importAllContacts();
+                                this.props.navigation.navigate('Contacts');
+                            }}
+                            containerStyle={{
+                                paddingBottom: 12,
+                                paddingTop: 8
+                            }}
+                            secondary
+                        />
+                    )}
+                {this.state.SelectedContacts.length > 0 && (
                     <Button
-                        title={localeString(
-                            'views.NostrContacts.ImportAllContacts'
-                        )}
+                        title={`Import ${this.state.SelectedContacts.length} Contacts`}
                         onPress={() => {
-                            this.importAllContacts();
+                            this.importSelectedContacts();
                             this.props.navigation.navigate('Contacts');
                         }}
                         containerStyle={{ paddingBottom: 12, paddingTop: 8 }}
