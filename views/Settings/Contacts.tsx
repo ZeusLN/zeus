@@ -160,7 +160,8 @@ export default class Contacts extends React.Component<
                             contactName: item.name
                         })) ||
                     this.props.navigation.navigate('ContactDetails', {
-                        contactId: item.id
+                        contactId: item.id,
+                        isNostrContact: false
                     });
             }}
         >

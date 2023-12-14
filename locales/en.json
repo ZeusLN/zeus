@@ -586,6 +586,7 @@
     "views.NostrContacts.NostrContacts": "Nostr Contacts",
     "views.NostrContacts.LookUpContacts": "Look up Contacts",
     "views.NostrContacts.ImportAllContacts": "Import all Contacts",
+    "views.ContactDetails.AddToTheContacts": "Add to the Contacts",
     "views.Settings.title": "Settings",
     "views.Settings.enabled": "Enabled",
     "views.Settings.disabled": "Disabled",

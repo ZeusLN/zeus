@@ -178,7 +178,8 @@ export default class NostrContacts extends React.Component<
             <TouchableOpacity
                 onPress={() =>
                     this.props.navigation.navigate('ContactDetails', {
-                        nostrContact: this.transformContactData(item)
+                        nostrContact: this.transformContactData(item),
+                        isNostrContact: true
                     })
                 }
             >
