@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Screen from '../components/Screen';
+import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
 
@@ -21,6 +22,7 @@ import Star from '../assets/images/SVG/Star.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
 import LinkingUtils from '../utils/LinkingUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 interface ContactDetailsProps {
     navigation: any;
@@ -42,6 +44,7 @@ interface ContactItem {
 interface ContactDetailsState {
     contact: ContactItem;
     isLoading: boolean;
+    isNostrContact: boolean;
 }
 export default class ContactDetails extends React.Component<
     ContactDetailsProps,
@@ -61,14 +64,27 @@ export default class ContactDetails extends React.Component<
                 description: '',
                 photo: null,
                 isFavourite: false,
-                id: ''
+                id: '',
+                banner: ''
             },
-            isLoading: true
+            isLoading: true,
+            isNostrContact: false
         };
     }
 
-    componentDidMount() {
-        this.fetchContact();
+    async componentDidMount() {
+        try {
+            await this.fetchContact();
+
+            const isNostrContact = this.props.navigation.getParam(
+                'isNostrContact',
+                null
+            );
+
+            this.setState({ isNostrContact });
+        } catch (error) {
+            console.error(error);
+        }
     }
 
     fetchContact = async () => {
@@ -78,11 +94,15 @@ export default class ContactDetails extends React.Component<
                     'contactId',
                     null
                 );
+                const nostrContact = this.props.navigation.getParam(
+                    'nostrContact',
+                    null
+                );
                 const contactsString = await EncryptedStorage.getItem(
                     'zeus-contacts'
                 );
 
-                if (contactsString) {
+                if (contactsString && contactId) {
                     const existingContact = JSON.parse(contactsString);
                     const contact = existingContact.find(
                         (contact: ContactItem) => contact.id === contactId
@@ -90,6 +110,8 @@ export default class ContactDetails extends React.Component<
 
                     // Store the found contact in the component's state
                     this.setState({ contact, isLoading: false });
+                } else {
+                    this.setState({ contact: nostrContact, isLoading: false });
                 }
             } catch (error) {
                 console.log('Error fetching contact:', error);
@@ -138,6 +160,28 @@ export default class ContactDetails extends React.Component<
         } catch (error) {
             console.log('Error updating contact:', error);
         }
+    };
+
+    importToContacts = async () => {
+        const { contact } = this.state;
+
+        const contactsString = await EncryptedStorage.getItem('zeus-contacts');
+
+        const existingContacts: ContactItem[] = contactsString
+            ? JSON.parse(contactsString)
+            : [];
+
+        const updatedContacts = [...existingContacts, contact].sort((a, b) =>
+            a.name.localeCompare(b.name)
+        );
+
+        await EncryptedStorage.setItem(
+            'zeus-contacts',
+            JSON.stringify(updatedContacts)
+        );
+
+        console.log('Contact imported successfully!');
+        this.props.navigation.goBack();
     };
 
     toggleFavorite = () => {
@@ -246,7 +290,7 @@ export default class ContactDetails extends React.Component<
                                         height: 150,
                                         borderRadius: 75,
                                         marginBottom: 20,
-                                        marginTop: -100
+                                        marginTop: contact.banner ? -100 : 0
                                     }}
                                 />
                             )}
@@ -505,6 +549,15 @@ export default class ContactDetails extends React.Component<
                                     </View>
                                 )}
                         </ScrollView>
+                        {this.state.isNostrContact && (
+                            <Button
+                                onPress={() => this.importToContacts()}
+                                title={localeString(
+                                    'views.ContactDetails.AddToTheContacts'
+                                )}
+                                containerStyle={{ paddingBottom: 12 }}
+                            />
+                        )}
                     </Screen>
                 )}
             </>
