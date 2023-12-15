@@ -955,45 +955,43 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {(showHiddenSettings || posEnabled) && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
-                            }}
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginTop: 5,
+                            marginBottom: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() =>
+                                navigation.navigate('PointOfSaleSettings')
+                            }
                         >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('PointOfSaleSettings')
-                                }
+                            <View style={styles.icon}>
+                                <POS
+                                    stroke={themeColor('text')}
+                                    fill={themeColor('secondary')}
+                                    width={23}
+                                    height={23}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <POS
-                                        stroke={themeColor('text')}
-                                        fill={themeColor('secondary')}
-                                        width={23}
-                                        height={23}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('general.pos')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                {localeString('general.pos')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
 
                     <View
                         style={{
