@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Product, { PricedIn, ProductStatus } from '../../models/Product';
 import InventoryStore from '../../stores/InventoryStore';
+import UnitsStore from '../../stores/UnitsStore';
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Divider, Icon, ListItem } from 'react-native-elements';
@@ -18,6 +19,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import TextInput from '../../components/TextInput';
+import AmountInput from '../../components/AmountInput';
 import Switch from '../../components/Switch';
 
 import { themeColor } from '../../utils/ThemeUtils';
@@ -31,6 +33,7 @@ interface ProductProps {
     navigation: any;
     InventoryStore: InventoryStore;
     PosStore: PosStore;
+    UnitsStore: UnitsStore;
 }
 
 interface ProductState {
@@ -54,7 +57,7 @@ const PRICED_IN_KEYS = [
     }
 ];
 
-@inject('InventoryStore', 'PosStore')
+@inject('InventoryStore', 'PosStore', 'UnitsStore')
 @observer
 export default class ProductDetails extends React.Component<
     ProductProps,
@@ -125,6 +128,16 @@ export default class ProductDetails extends React.Component<
                         ) || null;
 
                     if (product) {
+                        if (this.props.UnitsStore.units !== product.pricedIn) {
+                            // change unit to match product
+                            while (
+                                this.props.UnitsStore.changeUnits() !==
+                                product.pricedIn
+                            ) {
+                                continue;
+                            }
+                        }
+
                         this.setState({
                             categories: categoryOptions,
                             product,
@@ -336,56 +349,34 @@ export default class ProductDetails extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <View
-                                        style={{
-                                            flexDirection: 'row',
-                                            width: '95%'
+                                    <AmountInput
+                                        amount={String(
+                                            product?.price === 0
+                                                ? ''
+                                                : product?.price
+                                        )}
+                                        title={localeString(
+                                            'views.Settings.POS.Product.price'
+                                        )}
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            const { UnitsStore } = this.props;
+                                            let price: string | number;
+                                            let pricedIn: PricedIn;
+                                            if (UnitsStore.units === 'sats') {
+                                                price = satAmount;
+                                                pricedIn = PricedIn.Sats;
+                                            } else {
+                                                price = amount;
+                                                pricedIn = PricedIn.Fiat;
+                                            }
+                                            this.setValue('pricedIn', pricedIn);
+                                            this.setValue('price', price);
                                         }}
-                                    >
-                                        <View style={{ width: '40%' }}>
-                                            <DropdownSetting
-                                                title={localeString(
-                                                    'views.Settings.POS.Product.pricedIn'
-                                                )}
-                                                selectedValue={
-                                                    product?.pricedIn! ??
-                                                    PricedIn.Fiat
-                                                }
-                                                onValueChange={async (
-                                                    value: string
-                                                ) => {
-                                                    this.setValue(
-                                                        'pricedIn',
-                                                        value
-                                                    );
-                                                }}
-                                                values={PRICED_IN_KEYS}
-                                            />
-                                        </View>
-                                        <TextInput
-                                            onChangeText={(text: string) => {
-                                                this.setValue('price', text);
-                                            }}
-                                            value={String(
-                                                product?.price === 0
-                                                    ? ''
-                                                    : product?.price
-                                            )}
-                                            placeholder={localeString(
-                                                'views.Settings.POS.Product.price'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={{
-                                                width: '60%',
-                                                right: '-5%',
-                                                marginTop: 12
-                                            }}
-                                            autoCapitalize="none"
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
+                                        preventUnitReset={true}
+                                    />
                                     <DropdownSetting
                                         title={localeString(
                                             'views.Settings.POS.Category.name'
