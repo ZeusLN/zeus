@@ -44,19 +44,6 @@ interface ProductState {
     confirmDelete: boolean;
 }
 
-const PRICED_IN_KEYS = [
-    {
-        key: PricedIn.Fiat,
-        value: PricedIn.Fiat,
-        translateKey: 'views.Settings.POS.Product.fiat'
-    },
-    {
-        key: PricedIn.Sats,
-        value: PricedIn.Sats,
-        translateKey: 'views.Settings.POS.Product.sats'
-    }
-];
-
 @inject('InventoryStore', 'PosStore', 'UnitsStore')
 @observer
 export default class ProductDetails extends React.Component<
