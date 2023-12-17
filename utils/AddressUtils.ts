@@ -146,6 +146,7 @@ class AddressUtils {
         lndHubAddress.test(input) || blueWalletAddress.test(input);
 
     isValidLightningAddress = (input: string) => lightningAddress.test(input);
+    isValidBolt12Address = (input: string) => lightningAddress.test(input);
 
     isValidNpub = (input: string) => npubFormat.test(input);
 }

@@ -144,6 +144,8 @@ class BackendUtils {
     isLNDBased = () => this.call('isLNDBased');
     supportsOffers = () => this.call('supportsOffers');
     getNewOffer = () => this.call('getNewOffer');
+    fetchInvoiceFromOffer = (...args: any[]) =>
+        this.call('fetchInvoiceFromOffer', args);
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);

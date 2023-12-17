@@ -180,6 +180,13 @@ export default class CLightningREST extends LND {
             amount: 'any',
             description: 'Bolt12 Payment Address'
         });
+    fetchInvoiceFromOffer = async (bolt12: string, amountSatoshis: string) => {
+        return await this.postRequest('/v1/offers/fetchInvoice', {
+            offer: bolt12,
+            msatoshi: Number(amountSatoshis) * 1000,
+            timeout: 60
+        });
+    };
     openChannel = (data: OpenChannelRequest) => {
         let request: any;
         if (data.utxos && data.utxos.length > 0) {

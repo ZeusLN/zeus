@@ -69,6 +69,7 @@ interface SendProps {
 interface SendState {
     isValid: boolean;
     transactionType: string | null;
+    bolt12: string | null;
     destination: string;
     amount: string;
     satAmount: string | number;
@@ -109,7 +110,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const isValid = navigation.getParam('isValid', false);
         const preventUnitReset = navigation.getParam('preventUnitReset', false);
         const contactName = navigation.getParam('contactName', null);
-
+        const bolt12 = navigation.getParam('bolt12', null);
         if (transactionType === 'Lightning') {
             this.props.InvoicesStore.getPayReq(destination);
         }
@@ -117,6 +118,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.state = {
             isValid: isValid || false,
             transactionType,
+            bolt12: bolt12,
             destination: destination || '',
             amount: amount || '',
             satAmount: '',
@@ -158,6 +160,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
+        const bolt12 = navigation.getParam('bolt12', null);
         const contactName = navigation.getParam('contactName', null);
 
         if (transactionType === 'Lightning') {
@@ -166,6 +169,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         this.setState({
             transactionType,
+            bolt12,
             destination,
             isValid: true,
             contactName
@@ -294,6 +298,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                     });
                     if (response) {
                         const [route, props] = response;
+                        console.debug(
+                            'handle anything, route',
+                            route,
+                            'props',
+                            props
+                        );
                         navigation.navigate(route, props);
                     }
                 } catch {
@@ -312,6 +322,36 @@ export default class Send extends React.Component<SendProps, SendState> {
                     error_msg: err.message
                 });
             });
+    };
+
+    payBolt12 = async () => {
+        console.debug('bolt12', this.state.bolt12);
+        console.debug('amount', this.state.amount);
+        if (this.state.amount === '0') {
+            // TODO: Set min amount error
+            // disable button until valid amount (balance check too)
+            return;
+        }
+        if (!this.state.bolt12) {
+            // show error, make sure we can't get to this point
+            return;
+        }
+        try {
+            const res = await BackendUtils.fetchInvoiceFromOffer(
+                this.state.bolt12,
+                this.state.amount
+            );
+            if (!res.invoice) {
+                return;
+            }
+            console.debug('res.invoice', res.invoice);
+            this.props.InvoicesStore.getPayReq(res.invoice);
+            this.props.navigation.navigate('PaymentRequest');
+        } catch (e) {
+            // show error
+            console.error(e);
+            return;
+        }
     };
 
     sendCoins = (satAmount: string | number) => {
@@ -719,6 +759,25 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 </View>
                             </React.Fragment>
                         )}
+                    {transactionType === 'Bolt12' &&
+                        BackendUtils.supportsOffers() && (
+                            <React.Fragment>
+                                <AmountInput
+                                    amount={amount}
+                                    preventUnitReset={preventUnitReset}
+                                    title={localeString('views.Send.amount')}
+                                    onAmountChange={(
+                                        amount: string,
+                                        satAmount: string | number
+                                    ) => {
+                                        this.setState({
+                                            amount,
+                                            satAmount
+                                        });
+                                    }}
+                                />
+                            </React.Fragment>
+                        )}
                     {transactionType === 'Keysend' &&
                         BackendUtils.supportsKeysend() && (
                             <React.Fragment>
@@ -953,16 +1012,27 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {destination && transactionType !== 'On-chain' && (
+                    {destination && transactionType === 'Bolt12' && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('general.proceed')}
-                                onPress={() =>
-                                    this.validateAddress(destination)
-                                }
+                                onPress={async () => await this.payBolt12()}
                             />
                         </View>
                     )}
+
+                    {destination &&
+                        transactionType !== 'On-chain' &&
+                        transactionType !== 'Bolt12' && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString('general.proceed')}
+                                    onPress={() =>
+                                        this.validateAddress(destination)
+                                    }
+                                />
+                            </View>
+                        )}
 
                     <View style={{ ...styles.button, paddingTop: 20 }}>
                         <Button
