@@ -215,7 +215,7 @@ export default class CLightningREST extends LND {
             id: `${data.addr.pubkey}@${data.addr.host}`
         });
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/pay/decodePay/${urlParams && urlParams[0]}`);
+        this.getRequest(`/v1/utility/decode/${urlParams && urlParams[0]}`);
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/pay', {
             invoice: data.payment_request,

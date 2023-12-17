@@ -168,6 +168,10 @@ export default class Invoice extends BaseModel {
             const msatoshi = this.millisatoshis;
             return Number(msatoshi) / 1000;
         }
+        if (this.invoice_amount_msat) {
+            const msatoshi = this.invoice_amount_msat;
+            return Number(msatoshi) / 1000;
+        }
         return Number(this.num_satoshis || 0);
     }
 
