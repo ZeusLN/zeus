@@ -215,6 +215,7 @@ const handleAnything = async (
             return [
                 'Send',
                 {
+                    destination: value,
                     bolt12: bolt12,
                     transactionType: 'Bolt12',
                     isValid: true
