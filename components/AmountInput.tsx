@@ -143,14 +143,16 @@ export default class AmountInput extends React.Component<
 
         return (
             <React.Fragment>
-                <Text
-                    style={{
-                        fontFamily: 'PPNeueMontreal-Book',
-                        color: themeColor('secondaryText')
-                    }}
-                >
-                    {title}
-                </Text>
+                {title && (
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {title}
+                    </Text>
+                )}
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                     <TextInput
                         keyboardType="numeric"
