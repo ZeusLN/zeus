@@ -444,7 +444,7 @@ export default class PaymentRequest extends React.Component<
                                             />
                                         </View>
                                     )}
-                                {noBalance && (
+                                {!BackendUtils.supportsLightningSends() && (
                                     <View
                                         style={{
                                             paddingTop: 10,
@@ -453,11 +453,26 @@ export default class PaymentRequest extends React.Component<
                                     >
                                         <WarningMessage
                                             message={localeString(
-                                                'views.Send.noLightningBalance'
+                                                'views.PaymentRequest.notAllowedToSend'
                                             )}
                                         />
                                     </View>
                                 )}
+                                {noBalance &&
+                                    BackendUtils.supportsLightningSends() && (
+                                        <View
+                                            style={{
+                                                paddingTop: 10,
+                                                paddingBottom: 10
+                                            }}
+                                        >
+                                            <WarningMessage
+                                                message={localeString(
+                                                    'views.Send.noLightningBalance'
+                                                )}
+                                            />
+                                        </View>
+                                    )}
                                 {isNoAmountInvoice ? (
                                     <AmountInput
                                         amount={customAmount}
@@ -1136,61 +1151,62 @@ export default class PaymentRequest extends React.Component<
                                 </>
                             )}
 
-                            {!!pay_req && (
-                                <View style={styles.button}>
-                                    <Button
-                                        title={localeString(
-                                            'views.PaymentRequest.payInvoice'
-                                        )}
-                                        icon={
-                                            lightningReadyToSend
-                                                ? {
-                                                      name: 'send',
-                                                      size: 25
-                                                  }
-                                                : undefined
-                                        }
-                                        onPress={() => {
-                                            if (isZaplocker)
-                                                LnurlPayStore.broadcastAttestation();
-                                            this.sendPayment(
-                                                feeOption,
-                                                String(percentAmount),
-                                                {
-                                                    payment_request:
-                                                        paymentRequest,
-                                                    amount: satAmount
-                                                        ? satAmount.toString()
-                                                        : undefined,
-                                                    max_parts:
-                                                        enableMultiPathPayment
-                                                            ? maxParts
+                            {!!pay_req &&
+                                BackendUtils.supportsLightningSends() && (
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={localeString(
+                                                'views.PaymentRequest.payInvoice'
+                                            )}
+                                            icon={
+                                                lightningReadyToSend
+                                                    ? {
+                                                          name: 'send',
+                                                          size: 25
+                                                      }
+                                                    : undefined
+                                            }
+                                            onPress={() => {
+                                                if (isZaplocker)
+                                                    LnurlPayStore.broadcastAttestation();
+                                                this.sendPayment(
+                                                    feeOption,
+                                                    String(percentAmount),
+                                                    {
+                                                        payment_request:
+                                                            paymentRequest,
+                                                        amount: satAmount
+                                                            ? satAmount.toString()
+                                                            : undefined,
+                                                        max_parts:
+                                                            enableMultiPathPayment
+                                                                ? maxParts
+                                                                : null,
+                                                        max_shard_amt:
+                                                            enableMultiPathPayment
+                                                                ? maxShardAmt
+                                                                : null,
+                                                        fee_limit_sat: isLnd
+                                                            ? feeLimitSat
                                                             : null,
-                                                    max_shard_amt:
-                                                        enableMultiPathPayment
-                                                            ? maxShardAmt
-                                                            : null,
-                                                    fee_limit_sat: isLnd
-                                                        ? feeLimitSat
-                                                        : null,
-                                                    max_fee_percent:
-                                                        isCLightning
-                                                            ? maxFeePercentFormatted
-                                                            : null,
-                                                    outgoing_chan_id:
-                                                        outgoingChanId,
-                                                    last_hop_pubkey:
-                                                        lastHopPubkey,
-                                                    amp: enableAmp,
-                                                    timeout_seconds:
-                                                        timeoutSeconds
-                                                }
-                                            );
-                                        }}
-                                        disabled={!lightningReadyToSend}
-                                    />
-                                </View>
-                            )}
+                                                        max_fee_percent:
+                                                            isCLightning
+                                                                ? maxFeePercentFormatted
+                                                                : null,
+                                                        outgoing_chan_id:
+                                                            outgoingChanId,
+                                                        last_hop_pubkey:
+                                                            lastHopPubkey,
+                                                        amp: enableAmp,
+                                                        timeout_seconds:
+                                                            timeoutSeconds
+                                                    }
+                                                );
+                                            }}
+                                            disabled={!lightningReadyToSend}
+                                        />
+                                    </View>
+                                )}
                         </View>
                     )}
                 </ScrollView>
