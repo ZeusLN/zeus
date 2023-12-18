@@ -9,6 +9,7 @@ export function Body({
     small = false,
     big = false,
     jumbo = false,
+    defaultSize = false,
     color = undefined,
     colorOverride = undefined,
     children,
@@ -20,6 +21,7 @@ export function Body({
     small?: boolean;
     big?: boolean;
     jumbo?: boolean;
+    defaultSize?: boolean;
     // These should only be keys available on the theme
     // TODO: enforce this with some global ThemeKey enum?
     colorOverride?: string;
@@ -40,7 +42,15 @@ export function Body({
                     : secondary
                     ? themeColor('secondaryText')
                     : themeColor('text'),
-                fontSize: small ? 12 : big ? 20 : jumbo ? 40 : 16,
+                fontSize: small
+                    ? 12
+                    : big
+                    ? 20
+                    : jumbo
+                    ? 40
+                    : defaultSize
+                    ? undefined
+                    : 16,
                 fontFamily:
                     bold || jumbo
                         ? 'PPNeueMontreal-Medium'
