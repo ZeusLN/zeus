@@ -438,6 +438,7 @@ export default class LND {
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
+    supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => true;

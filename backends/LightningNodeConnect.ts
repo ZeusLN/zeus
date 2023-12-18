@@ -367,6 +367,7 @@ export default class LightningNodeConnect {
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => this.permSendCoins;
     supportsOnchainReceiving = () => this.permNewAddress;
+    supportsLightningSends = () => this.permSendCoins;
     supportsKeysend = () => true;
     supportsChannelManagement = () => this.permOpenChannel;
     supportsPendingChannels = () => true;
