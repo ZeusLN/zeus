@@ -202,21 +202,28 @@ export default class LightningAddress extends React.Component<
             </TouchableOpacity>
         );
 
-        const QRButton = () => (
-            <TouchableOpacity
-                onPress={() =>
-                    navigation.navigate('QR', {
-                        value: `${lightningAddressHandle}@${lightningAddressDomain}`,
-                        hideText: true,
-                        jumboLabel: true,
-                        logo: require('../../../assets/images/pay-z-black.png')
-                    })
-                }
-                style={{ marginTop: 10 }}
-            >
-                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
-            </TouchableOpacity>
-        );
+        const QRButton = () => {
+            const address = `${lightningAddressHandle}@${lightningAddressDomain}`;
+            return (
+                <TouchableOpacity
+                    onPress={() =>
+                        navigation.navigate('QR', {
+                            value: `lightning:${address}`,
+                            label: address,
+                            hideText: true,
+                            jumboLabel: true,
+                            logo: require('../../../assets/images/pay-z-black.png')
+                        })
+                    }
+                    style={{ marginTop: 10 }}
+                >
+                    <QR
+                        fill={themeColor('text')}
+                        style={{ alignSelf: 'center' }}
+                    />
+                </TouchableOpacity>
+            );
+        };
 
         const statusGood = availableHashes > 50;
 
