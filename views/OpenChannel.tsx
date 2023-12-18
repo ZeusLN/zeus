@@ -548,7 +548,6 @@ export default class OpenChannel extends React.Component<
                                     <OnchainFeeInput
                                         fee={sat_per_vbyte}
                                         onChangeFee={(text: string) => {
-                                            console.log('text', text);
                                             this.setState({
                                                 sat_per_vbyte: text
                                             });
@@ -646,6 +645,7 @@ export default class OpenChannel extends React.Component<
                                                             !privateChannel
                                                     })
                                                 }
+                                                disabled={simpleTaprootChannel}
                                             />
                                         </>
 
@@ -691,12 +691,21 @@ export default class OpenChannel extends React.Component<
                                                 </Text>
                                                 <Switch
                                                     value={simpleTaprootChannel}
-                                                    onValueChange={() =>
+                                                    onValueChange={() => {
                                                         this.setState({
                                                             simpleTaprootChannel:
                                                                 !simpleTaprootChannel
-                                                        })
-                                                    }
+                                                        });
+
+                                                        if (
+                                                            !simpleTaprootChannel
+                                                        ) {
+                                                            this.setState({
+                                                                privateChannel:
+                                                                    true
+                                                            });
+                                                        }
+                                                    }}
                                                 />
                                             </>
                                         )}
