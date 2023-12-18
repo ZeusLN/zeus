@@ -5,7 +5,9 @@ import {
     Image,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Animated,
+    Easing
 } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import Screen from '../components/Screen';
@@ -14,11 +16,13 @@ import { themeColor } from '../utils/ThemeUtils';
 import Header from '../components/Header';
 import TextInput from '../components/TextInput';
 import LoadingIndicator from '../components/LoadingIndicator';
+import { Row } from '../components/layout/Row';
 
 import { relayInit, nip19 } from 'nostr-tools';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { localeString } from '../utils/LocaleUtils';
-import Edit from '../assets/images/SVG/Pen.svg';
+import { CheckBox, Icon } from 'react-native-elements';
+import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 
 interface NostrContactsProps {
     navigation: any;
@@ -26,10 +30,11 @@ interface NostrContactsProps {
 
 interface NostrContactsState {
     npub: string;
-    ContactsData: any[];
+    contactsData: any[];
     loading: boolean;
     isSelectionMode: boolean;
-    SelectedContacts: any[];
+    selectedContacts: any[];
+    fadeAnim: any;
 }
 
 export default class NostrContacts extends React.Component<
@@ -40,101 +45,121 @@ export default class NostrContacts extends React.Component<
         super(props);
         this.state = {
             npub: '',
-            ContactsData: [],
+            contactsData: [],
             loading: false,
             isSelectionMode: false,
-            SelectedContacts: []
+            selectedContacts: [],
+            fadeAnim: new Animated.Value(0)
         };
     }
 
     toggleSelectionMode = () => {
         this.setState((prevState) => ({
             isSelectionMode: !prevState.isSelectionMode,
-            SelectedContacts: []
+            selectedContacts: []
         }));
+        Animated.timing(this.state.fadeAnim, {
+            toValue: this.state.isSelectionMode ? 0 : 1,
+            duration: 100,
+            easing: Easing.ease,
+            useNativeDriver: false
+        }).start(() => {
+            if (!this.state.isSelectionMode) {
+                this.setState({ selectedContacts: [] });
+            }
+        });
     };
 
     async fetchNostrContacts() {
         this.setState({ loading: true });
-
-        const relay = relayInit('wss://relay.damus.io');
-        await relay.connect();
         let { data } = nip19.decode(this.state.npub);
-        let pubkey: any = data;
 
-        let eventReceived = await relay.list([
-            {
-                authors: [pubkey],
-                kinds: [3]
-            }
-        ]);
-
-        let latestContactEvent: any;
-
-        eventReceived.forEach((content) => {
-            if (
-                !latestContactEvent ||
-                content.created_at > latestContactEvent.created_at
-            ) {
-                latestContactEvent = content;
-            }
-        });
-
-        const tags: any = [];
-        latestContactEvent.tags.forEach((tag: any) => {
-            if (tag[0] === 'p') {
-                tags.push(tag[1]);
-            }
-        });
-
-        const profilesEvents = await relay.list([
-            {
-                authors: tags,
-                kinds: [0]
-            }
-        ]);
-
-        const newContactDataIndexByName: any = {};
-        const newContactDataIndexByPubkey: any = {};
-        const newContactsData: any[] = [];
-
-        profilesEvents.forEach((item) => {
-            try {
-                const content = JSON.parse(item.content);
-                if (
-                    !newContactDataIndexByPubkey[item.pubkey] ||
-                    item.created_at >
-                        newContactDataIndexByPubkey[item.pubkey].timestamp
-                ) {
-                    newContactDataIndexByPubkey[item.pubkey] = {
-                        content,
-                        timestamp: item.created_at
-                    };
-                }
-            } catch (error: any) {
-                // Handle the error, e.g., log it or skip this item
-                this.setState({ loading: false });
-                console.error(
-                    `Error parsing JSON for item with ID ${item.id}: ${error.message}`
-                );
-            }
-        });
-        Object.keys(newContactDataIndexByPubkey).forEach((pubkey) => {
-            const content = newContactDataIndexByPubkey[pubkey].content;
-            newContactDataIndexByName[
-                content?.display_name?.toLowerCase() ||
-                    content?.name?.toLowerCase()
-            ] = content;
-        });
-
-        Object.keys(newContactDataIndexByName)
-            .sort()
-            .forEach((name) => {
-                newContactsData.push(newContactDataIndexByName[name]);
+        DEFAULT_NOSTR_RELAYS.map(async (relayItem) => {
+            const relay = relayInit(relayItem);
+            relay.on('connect', () => {
+                console.log(`connected to ${relay.url}`);
             });
-        this.setState({
-            ContactsData: newContactsData,
-            loading: false
+            relay.on('error', () => {
+                console.log(`failed to connect to ${relay.url}`);
+            });
+
+            await relay.connect();
+
+            let pubkey: any = data;
+            let eventReceived = await relay.list([
+                {
+                    authors: [pubkey],
+                    kinds: [3]
+                }
+            ]);
+
+            let latestContactEvent: any;
+
+            eventReceived.forEach((content) => {
+                if (
+                    !latestContactEvent ||
+                    content.created_at > latestContactEvent.created_at
+                ) {
+                    latestContactEvent = content;
+                }
+            });
+
+            const tags: any = [];
+            latestContactEvent.tags.forEach((tag: any) => {
+                if (tag[0] === 'p') {
+                    tags.push(tag[1]);
+                }
+            });
+
+            const profilesEvents = await relay.list([
+                {
+                    authors: tags,
+                    kinds: [0]
+                }
+            ]);
+
+            const newContactDataIndexByName: any = {};
+            const newContactDataIndexByPubkey: any = {};
+            const newContactsData: any[] = [];
+
+            profilesEvents.forEach((item) => {
+                try {
+                    const content = JSON.parse(item.content);
+                    if (
+                        !newContactDataIndexByPubkey[item.pubkey] ||
+                        item.created_at >
+                            newContactDataIndexByPubkey[item.pubkey].timestamp
+                    ) {
+                        newContactDataIndexByPubkey[item.pubkey] = {
+                            content,
+                            timestamp: item.created_at
+                        };
+                    }
+                } catch (error: any) {
+                    // Handle the error, e.g., log it or skip this item
+                    this.setState({ loading: false });
+                    console.error(
+                        `Error parsing JSON for item with ID ${item.id}: ${error.message}`
+                    );
+                }
+            });
+            Object.keys(newContactDataIndexByPubkey).forEach((pubkey) => {
+                const content = newContactDataIndexByPubkey[pubkey].content;
+                newContactDataIndexByName[
+                    content?.display_name?.toLowerCase() ||
+                        content?.name?.toLowerCase()
+                ] = content;
+            });
+
+            Object.keys(newContactDataIndexByName)
+                .sort()
+                .forEach((name) => {
+                    newContactsData.push(newContactDataIndexByName[name]);
+                });
+            this.setState({
+                contactsData: newContactsData,
+                loading: false
+            });
         });
     }
 
@@ -156,27 +181,28 @@ export default class NostrContacts extends React.Component<
             nostrNpub: contact?.npub ? [contact?.npub] : [],
             id: uuidv4(),
             isFavourite: false,
-            banner: contact?.banner
+            banner: contact?.banner,
+            isSelected: false
         };
     };
 
     toggleContactSelection = (contact: any) => {
         this.setState((prevState) => {
-            const SelectedContacts = [...prevState.SelectedContacts];
-            const index = SelectedContacts.findIndex(
-                (c) => c.id === contact.id
+            const selectedContacts = [...prevState.selectedContacts];
+            const index = selectedContacts.findIndex(
+                (c) => c.banner === contact.banner
             );
             console.log(index);
 
             if (index === -1) {
                 // Contact not selected, add it to the selection
-                SelectedContacts.push(contact);
+                selectedContacts.push({ ...contact, isSelected: true });
             } else {
                 // Contact already selected, remove it from the selection
-                SelectedContacts.splice(index, 1);
+                selectedContacts.splice(index, 1);
             }
 
-            return { SelectedContacts };
+            return { selectedContacts };
         });
     };
 
@@ -189,9 +215,13 @@ export default class NostrContacts extends React.Component<
             picture: string;
             lud06: string;
             lud16: string;
+            banner: string;
         };
     }) => {
         const { isSelectionMode } = this.state;
+        const isSelected = this.state.selectedContacts.some(
+            (c) => c.banner === item.banner && c.isSelected
+        );
 
         const truncateString = (str: string, maxLength: number) => {
             if (str.length <= maxLength) {
@@ -208,6 +238,15 @@ export default class NostrContacts extends React.Component<
             return null;
         }
 
+        const slideInRight = this.state.fadeAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [10, 0]
+        });
+        const slideInLeft = this.state.fadeAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 10]
+        });
+
         return (
             <TouchableOpacity
                 onPress={() => {
@@ -222,13 +261,30 @@ export default class NostrContacts extends React.Component<
                         });
                     }
                 }}
+                style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start'
+                }}
             >
-                <View
+                {isSelectionMode && (
+                    // Use Animated.View for the container
+                    <Animated.View
+                        style={{
+                            marginRight: -30,
+                            transform: [{ translateX: slideInRight }]
+                        }}
+                    >
+                        <CheckBox checked={isSelected} />
+                    </Animated.View>
+                )}
+
+                <Animated.View
                     style={{
                         marginHorizontal: 24,
                         paddingBottom: 20,
                         flexDirection: 'row',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        transform: [{ translateX: slideInLeft }]
                     }}
                 >
                     {item.picture && (
@@ -272,14 +328,14 @@ export default class NostrContacts extends React.Component<
                             </Text>
                         )}
                     </View>
-                </View>
+                </Animated.View>
             </TouchableOpacity>
         );
     };
 
     importSelectedContacts = async () => {
         try {
-            const { SelectedContacts } = this.state;
+            const { selectedContacts } = this.state;
 
             // Retrieve existing contacts from Encrypted storage
             const contactsString = await EncryptedStorage.getItem(
@@ -292,7 +348,7 @@ export default class NostrContacts extends React.Component<
             // Merge existing contacts with the selected contacts
             const updatedContacts = [
                 ...existingContacts,
-                ...SelectedContacts
+                ...selectedContacts
             ].sort((a, b) => a.name.localeCompare(b.name));
 
             // Save the updated contacts to encrypted storage
@@ -313,7 +369,7 @@ export default class NostrContacts extends React.Component<
 
     importAllContacts = async () => {
         try {
-            const contactsToImport = this.state.ContactsData;
+            const contactsToImport = this.state.contactsData;
 
             // Transform Nostr contacts data to match the format in AddContact
             const transformedContacts = contactsToImport.map((contact) =>
@@ -360,9 +416,16 @@ export default class NostrContacts extends React.Component<
                     this.toggleSelectionMode();
                 }}
             >
-                <Edit
-                    fill={themeColor('text')}
-                    style={{ marginRight: 15, alignSelf: 'center' }}
+                <Icon
+                    name="check-square"
+                    type="font-awesome"
+                    size={30}
+                    color={themeColor('text')}
+                    containerStyle={{
+                        marginRight: 6,
+                        alignSelf: 'center',
+                        marginTop: -6
+                    }}
                 />
             </TouchableOpacity>
         );
@@ -384,48 +447,81 @@ export default class NostrContacts extends React.Component<
                         }
                     }}
                     rightComponent={
-                        this.state.ContactsData.length > 0 && <SelectButton />
+                        <Row>
+                            {this.state.contactsData.length > 0 && (
+                                <>
+                                    <SelectButton />
+                                    <Icon
+                                        onPress={() => {
+                                            this.setState({
+                                                contactsData: [],
+                                                selectedContacts: [],
+                                                npub: '',
+                                                isSelectionMode: false
+                                            });
+                                        }}
+                                        name="close"
+                                        type="material"
+                                        size={38}
+                                        color={themeColor('text')}
+                                        containerStyle={{ marginTop: -6 }}
+                                    />
+                                </>
+                            )}
+                        </Row>
                     }
                     navigation={navigation}
                 />
-                <Text
-                    style={{
-                        marginLeft: 22,
-                        color: themeColor('secondaryText'),
-                        fontSize: 16
-                    }}
-                >
-                    Enter npub
-                </Text>
-                <TextInput
-                    placeholder={'npub...'}
-                    value={this.state.npub}
-                    style={{
-                        marginHorizontal: 22
-                    }}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            npub: text
-                        })
-                    }
-                />
-                <Button
-                    onPress={() => this.fetchNostrContacts()}
-                    title={localeString('views.NostrContacts.LookUpContacts')}
-                    containerStyle={{ marginTop: 20, marginBottom: 8 }}
-                    disabled={!this.state.npub}
-                />
+
+                {this.state.contactsData.length === 0 && !loading && (
+                    <>
+                        <Text
+                            style={{
+                                marginLeft: 22,
+                                color: themeColor('secondaryText'),
+                                fontSize: 16
+                            }}
+                        >
+                            Enter npub
+                        </Text>
+                        <TextInput
+                            placeholder={'npub...'}
+                            value={this.state.npub}
+                            style={{
+                                marginHorizontal: 22
+                            }}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    npub: text
+                                })
+                            }
+                        />
+                        <Button
+                            onPress={() => this.fetchNostrContacts()}
+                            title={localeString(
+                                'views.NostrContacts.LookUpContacts'
+                            )}
+                            containerStyle={{
+                                marginTop: 20,
+                                marginBottom: 8
+                            }}
+                            disabled={!this.state.npub}
+                        />
+                    </>
+                )}
+
                 {loading ? (
                     <LoadingIndicator />
                 ) : (
                     <FlatList
-                        data={this.state.ContactsData}
+                        data={this.state.contactsData}
+                        style={{ marginTop: 10 }}
                         renderItem={this.renderContactItem}
                         keyExtractor={(item, index) => index.toString()}
                     />
                 )}
-                {this.state.ContactsData.length > 0 &&
-                    this.state.SelectedContacts.length === 0 && (
+                {this.state.contactsData.length > 0 &&
+                    this.state.selectedContacts.length === 0 && (
                         <Button
                             title={localeString(
                                 'views.NostrContacts.ImportAllContacts'
@@ -441,9 +537,9 @@ export default class NostrContacts extends React.Component<
                             secondary
                         />
                     )}
-                {this.state.SelectedContacts.length > 0 && (
+                {this.state.selectedContacts.length > 0 && (
                     <Button
-                        title={`Import ${this.state.SelectedContacts.length} Contacts`}
+                        title={`Import ${this.state.selectedContacts.length} Contacts`}
                         onPress={() => {
                             this.importSelectedContacts();
                             this.props.navigation.navigate('Contacts');

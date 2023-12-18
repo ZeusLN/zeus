@@ -253,8 +253,14 @@ export default class ContactDetails extends React.Component<
                     <Screen>
                         <Header
                             leftComponent="Back"
-                            centerComponent={<EditContactButton />}
-                            rightComponent={<StarButton />}
+                            centerComponent={
+                                !this.state.isNostrContact && (
+                                    <EditContactButton />
+                                )
+                            }
+                            rightComponent={
+                                !this.state.isNostrContact && <StarButton />
+                            }
                             centerContainerStyle={{
                                 paddingRight: 6,
                                 marginTop: -3
@@ -553,7 +559,7 @@ export default class ContactDetails extends React.Component<
                             <Button
                                 onPress={() => this.importToContacts()}
                                 title={localeString(
-                                    'views.ContactDetails.AddToTheContacts'
+                                    'views.ContactDetails.SaveToContacts'
                                 )}
                                 containerStyle={{ paddingBottom: 12 }}
                             />
