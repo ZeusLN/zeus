@@ -158,37 +158,31 @@ export default class Settings extends React.Component<
                     >
                         <View
                             style={{
+                                flexDirection: 'row',
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: selectedNode ? 70 : 50,
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginBottom: 5,
+                                paddingVertical: 10,
+                                alignItems: 'center',
+                                gap: 12
                             }}
                         >
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    margin: selectedNode ? 10 : 13,
-                                    marginLeft: selectedNode ? 14 : 0
-                                }}
-                            >
-                                {selectedNode && (
-                                    <View style={{ padding: 0 }}>
-                                        <NodeIdenticon
-                                            selectedNode={selectedNode}
-                                            width={50}
-                                            rounded
-                                        />
-                                    </View>
-                                )}
+                            {selectedNode && (
+                                <View style={{ marginLeft: 12 }}>
+                                    <NodeIdenticon
+                                        selectedNode={selectedNode}
+                                        width={50}
+                                        rounded
+                                    />
+                                </View>
+                            )}
+                            <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
                                         fontSize: 20,
                                         color: themeColor('text'),
-                                        paddingLeft: 20,
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -198,30 +192,22 @@ export default class Settings extends React.Component<
                                               'views.Settings.connectNode'
                                           )}
                                 </Text>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        alignItems: 'flex-end',
-                                        marginTop: selectedNode ? 15 : 5
-                                    }}
-                                >
-                                    <ForwardIcon />
-                                </View>
+                                {selectedNode && (
+                                    <Text
+                                        style={{
+                                            fontSize: 16,
+                                            color: themeColor('text'),
+                                            opacity: 0.6,
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {nodeSubtitle}
+                                    </Text>
+                                )}
                             </View>
-                            {selectedNode && (
-                                <Text
-                                    style={{
-                                        fontSize: 16,
-                                        color: themeColor('text'),
-                                        opacity: 0.6,
-                                        top: -10,
-                                        paddingLeft: 85,
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {nodeSubtitle}
-                                </Text>
-                            )}
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
                         </View>
                     </TouchableOpacity>
 
@@ -230,7 +216,6 @@ export default class Settings extends React.Component<
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: 45,
                                 borderRadius: 10,
                                 alignSelf: 'center',
                                 marginTop: 5,
@@ -243,8 +228,12 @@ export default class Settings extends React.Component<
                                     navigation.navigate('LSPSettings')
                                 }
                             >
-                                <View style={{ paddingLeft: 5, paddingTop: 3 }}>
-                                    <CloudIcon fill={themeColor('text')} />
+                                <View style={styles.icon}>
+                                    <CloudIcon
+                                        fill={themeColor('text')}
+                                        width={25}
+                                        height={25}
+                                    />
                                 </View>
                                 <Text
                                     style={{
@@ -268,7 +257,6 @@ export default class Settings extends React.Component<
                                 style={{
                                     backgroundColor: themeColor('secondary'),
                                     width: '90%',
-                                    height: 45,
                                     borderRadius: 10,
                                     alignSelf: 'center',
                                     marginTop: 5,
@@ -284,12 +272,7 @@ export default class Settings extends React.Component<
                                         )
                                     }
                                 >
-                                    <View
-                                        style={{
-                                            paddingLeft: 5,
-                                            paddingTop: 3
-                                        }}
-                                    >
+                                    <View style={styles.icon}>
                                         {youveGotSats ? (
                                             <MailboxFlagUp
                                                 height={19.25}
@@ -336,9 +319,11 @@ export default class Settings extends React.Component<
                                 onPress={() => navigation.navigate('Contacts')}
                             >
                                 <View style={styles.columnField}>
-                                    <View>
+                                    <View style={styles.icon}>
                                         <ContactIcon
                                             stroke={themeColor('text')}
+                                            width={27}
+                                            height={27}
                                         />
                                     </View>
                                     <Text
@@ -380,14 +365,15 @@ export default class Settings extends React.Component<
                                                     navigation.navigate('Seed')
                                                 }
                                             >
-                                                <KeyIcon
-                                                    fill={themeColor('text')}
-                                                    style={{
-                                                        marginLeft: 4,
-                                                        marginTop: 2
-                                                    }}
-                                                    width={130}
-                                                />
+                                                <View style={styles.icon}>
+                                                    <KeyIcon
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width={27}
+                                                        height={27}
+                                                    />
+                                                </View>
                                                 <Text
                                                     style={{
                                                         ...styles.columnText,
@@ -421,11 +407,13 @@ export default class Settings extends React.Component<
                                             )
                                         }
                                     >
-                                        <BlockIcon
-                                            color={themeColor('text')}
-                                            width={28}
-                                            style={{ marginLeft: 2 }}
-                                        />
+                                        <View style={styles.icon}>
+                                            <BlockIcon
+                                                color={themeColor('text')}
+                                                width={27}
+                                                height={27}
+                                            />
+                                        </View>
                                         <Text
                                             style={{
                                                 ...styles.columnText,
@@ -453,7 +441,11 @@ export default class Settings extends React.Component<
                                             navigation.navigate('NodeInfo')
                                         }
                                     >
-                                        <NodeOn color={themeColor('text')} />
+                                        <View style={styles.icon}>
+                                            <NodeOn
+                                                color={themeColor('text')}
+                                            />
+                                        </View>
                                         <Text
                                             style={{
                                                 ...styles.columnText,
@@ -481,16 +473,11 @@ export default class Settings extends React.Component<
                                             navigation.navigate('NetworkInfo')
                                         }
                                     >
-                                        <View
-                                            style={{
-                                                alignContent: 'center',
-                                                margin: 3
-                                            }}
-                                        >
+                                        <View style={styles.icon}>
                                             <NetworkIcon
                                                 fill={themeColor('text')}
-                                                width={25}
-                                                height={25}
+                                                width={24}
+                                                height={24}
                                             />
                                         </View>
                                         <Text
@@ -518,13 +505,12 @@ export default class Settings extends React.Component<
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: 45,
                                 // borderRadius: 10,
                                 alignSelf: 'center'
                             }}
                         >
                             {/* <View style={styles.columnField}>
-                                <View>
+                                <View style={styles.icon}>
                                     <AccountIcon stroke={themeColor('text')} />
                                 </View>
                                 <Text
@@ -558,10 +544,11 @@ export default class Settings extends React.Component<
                                     navigation.navigate('PaymentsSettings')
                                 }
                             >
-                                <View>
+                                <View style={styles.icon}>
                                     <SendIcon
                                         fill={themeColor('text')}
-                                        style={{ marginLeft: 3, marginTop: 3 }}
+                                        width={27}
+                                        height={27}
                                     />
                                 </View>
                                 <Text
@@ -588,13 +575,11 @@ export default class Settings extends React.Component<
                                             )
                                         }
                                     >
-                                        <View>
+                                        <View style={styles.icon}>
                                             <ReceiveIcon
                                                 fill={themeColor('text')}
-                                                style={{
-                                                    marginLeft: 3,
-                                                    marginTop: 3
-                                                }}
+                                                width={27}
+                                                height={27}
                                             />
                                         </View>
                                         <Text
@@ -622,7 +607,6 @@ export default class Settings extends React.Component<
                                 style={{
                                     backgroundColor: themeColor('secondary'),
                                     width: '90%',
-                                    height: 45,
                                     borderRadius: 10,
                                     alignSelf: 'center',
                                     marginTop: 5,
@@ -635,13 +619,11 @@ export default class Settings extends React.Component<
                                         navigation.navigate('InvoicesSettings')
                                     }
                                 >
-                                    <View>
+                                    <View style={styles.icon}>
                                         <ReceiveIcon
                                             fill={themeColor('text')}
-                                            style={{
-                                                marginLeft: 3,
-                                                marginTop: 3
-                                            }}
+                                            width={27}
+                                            height={27}
                                         />
                                     </View>
                                     <Text
@@ -665,7 +647,6 @@ export default class Settings extends React.Component<
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: 138,
                                 borderRadius: 10,
                                 alignSelf: 'center',
                                 marginTop: 5,
@@ -676,7 +657,7 @@ export default class Settings extends React.Component<
                                 style={styles.columnField}
                                 onPress={() => navigation.navigate('Privacy')}
                             >
-                                <View>
+                                <View style={styles.icon}>
                                     <PrivacyIcon stroke={themeColor('text')} />
                                 </View>
                                 <Text
@@ -698,8 +679,12 @@ export default class Settings extends React.Component<
                                 style={styles.columnField}
                                 onPress={() => navigation.navigate('Security')}
                             >
-                                <View>
-                                    <SecurityIcon stroke={themeColor('text')} />
+                                <View style={styles.icon}>
+                                    <SecurityIcon
+                                        stroke={themeColor('text')}
+                                        width={26}
+                                        height={26}
+                                    />
                                 </View>
                                 <Text
                                     style={{
@@ -721,13 +706,11 @@ export default class Settings extends React.Component<
                                     navigation.navigate('SignVerifyMessage')
                                 }
                             >
-                                <View>
+                                <View style={styles.icon}>
                                     <SignIcon
                                         fill={themeColor('text')}
                                         width={18}
                                         height={18}
-                                        marginLeft={6}
-                                        marginTop={6}
                                     />
                                 </View>
                                 <Text
@@ -750,7 +733,6 @@ export default class Settings extends React.Component<
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: 90,
                                 borderRadius: 10,
                                 alignSelf: 'center',
                                 marginTop: 5,
@@ -761,7 +743,7 @@ export default class Settings extends React.Component<
                                 style={styles.columnField}
                                 onPress={() => navigation.navigate('Privacy')}
                             >
-                                <View>
+                                <View style={styles.icon}>
                                     <PrivacyIcon stroke={themeColor('text')} />
                                 </View>
                                 <Text
@@ -783,8 +765,12 @@ export default class Settings extends React.Component<
                                 style={styles.columnField}
                                 onPress={() => navigation.navigate('Security')}
                             >
-                                <View>
-                                    <SecurityIcon stroke={themeColor('text')} />
+                                <View style={styles.icon}>
+                                    <SecurityIcon
+                                        stroke={themeColor('text')}
+                                        width={26}
+                                        height={26}
+                                    />
                                 </View>
                                 <Text
                                     style={{
@@ -816,7 +802,7 @@ export default class Settings extends React.Component<
                                 style={styles.columnField}
                                 onPress={() => navigation.navigate('Language')}
                             >
-                                <View style={{ padding: 4 }}>
+                                <View style={styles.icon}>
                                     <LanguageIcon fill={themeColor('text')} />
                                 </View>
                                 <Text
@@ -849,11 +835,8 @@ export default class Settings extends React.Component<
                                 style={styles.columnField}
                                 onPress={() => navigation.navigate('Currency')}
                             >
-                                <View>
-                                    <CurrencyIcon
-                                        fill={themeColor('text')}
-                                        style={{ marginLeft: 3, marginTop: 6 }}
-                                    />
+                                <View style={styles.icon}>
+                                    <CurrencyIcon fill={themeColor('text')} />
                                 </View>
                                 <Text
                                     style={{
@@ -875,7 +858,7 @@ export default class Settings extends React.Component<
                                 style={styles.columnField}
                                 onPress={() => navigation.navigate('Language')}
                             >
-                                <View style={{ padding: 4 }}>
+                                <View style={styles.icon}>
                                     <LanguageIcon fill={themeColor('text')} />
                                 </View>
                                 <Text
@@ -908,8 +891,12 @@ export default class Settings extends React.Component<
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Display')}
                         >
-                            <View style={{ paddingLeft: 5, paddingTop: 3 }}>
-                                <BrushIcon fill={themeColor('text')} />
+                            <View style={styles.icon}>
+                                <BrushIcon
+                                    fill={themeColor('text')}
+                                    width={28}
+                                    height={28}
+                                />
                             </View>
                             <Text
                                 style={{
@@ -940,7 +927,7 @@ export default class Settings extends React.Component<
                                 style={styles.columnField}
                                 onPress={() => navigation.navigate('Nostr')}
                             >
-                                <View style={{ paddingLeft: 5, paddingTop: 2 }}>
+                                <View style={styles.icon}>
                                     <NostrichIcon
                                         fill={themeColor('text')}
                                         width={23}
@@ -979,12 +966,12 @@ export default class Settings extends React.Component<
                                     navigation.navigate('PointOfSaleSettings')
                                 }
                             >
-                                <View style={{ paddingLeft: 5, paddingTop: 2 }}>
+                                <View style={styles.icon}>
                                     <POS
                                         stroke={themeColor('text')}
                                         fill={themeColor('secondary')}
-                                        width={25}
-                                        height={25}
+                                        width={23}
+                                        height={23}
                                     />
                                 </View>
                                 <Text
@@ -1016,12 +1003,12 @@ export default class Settings extends React.Component<
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Support')}
                         >
-                            <View style={{ paddingLeft: 5, paddingTop: 4 }}>
+                            <View style={styles.icon}>
                                 <Icon
                                     name="favorite"
                                     color={themeColor('text')}
                                     underlayColor="transparent"
-                                    size={25}
+                                    size={23}
                                 />
                             </View>
                             <Text
@@ -1054,12 +1041,12 @@ export default class Settings extends React.Component<
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Help')}
                         >
-                            <View style={{ paddingLeft: 5, paddingTop: 4 }}>
+                            <View style={styles.icon}>
                                 <Icon
                                     name="support"
                                     color={themeColor('text')}
                                     underlayColor="transparent"
-                                    size={25}
+                                    size={23}
                                 />
                             </View>
                             <Text
@@ -1108,29 +1095,29 @@ const styles = StyleSheet.create({
     columnField: {
         flex: 1,
         flexDirection: 'row',
-        margin: 8
+        marginVertical: 8,
+        alignItems: 'center'
+    },
+    icon: {
+        width: 50,
+        alignItems: 'center'
     },
     columnText: {
         fontSize: 16,
-        left: 100,
-        position: 'absolute',
-        marginLeft: -55,
-        paddingTop: 5,
         flex: 1,
         fontFamily: 'PPNeueMontreal-Book'
     },
     separationLine: {
-        left: 100,
-        width: '70%',
         borderColor: '#A7A9AC',
         opacity: 0.2,
         borderWidth: 0.5,
-        marginLeft: -50
+        marginLeft: 50,
+        marginRight: 40
     },
     ForwardArrow: {
-        flex: 1,
         alignItems: 'flex-end',
-        padding: 6
+        padding: 6,
+        marginRight: 6
     },
     form: {
         paddingTop: 20,
@@ -1138,11 +1125,9 @@ const styles = StyleSheet.create({
         paddingRight: 5
     },
     picker: {
-        height: 50,
         width: 100
     },
     pickerDark: {
-        height: 50,
         width: 100,
         color: 'white'
     },
