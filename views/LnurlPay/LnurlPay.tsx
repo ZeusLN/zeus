@@ -242,6 +242,7 @@ export default class LnurlPay extends React.Component<
                                                 sats={Math.ceil(
                                                     lnurl.minSendable / 1000
                                                 )}
+                                                defaultTextSize={true}
                                             />
                                             <Text
                                                 style={{
@@ -258,6 +259,7 @@ export default class LnurlPay extends React.Component<
                                                 sats={Math.floor(
                                                     lnurl.maxSendable / 1000
                                                 )}
+                                                defaultTextSize={true}
                                             />
                                             <Text
                                                 style={{
