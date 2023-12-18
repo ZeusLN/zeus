@@ -536,7 +536,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                             style={{
                                 flex: 1,
-                                paddingVertical: 10,
                                 paddingHorizontal: 15,
                                 paddingRight: 40
                             }}
