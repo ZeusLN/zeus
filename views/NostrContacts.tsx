@@ -13,6 +13,8 @@ import { v4 as uuidv4 } from 'uuid';
 import Screen from '../components/Screen';
 import Button from '../components/Button';
 import { themeColor } from '../utils/ThemeUtils';
+import AddressUtils from '../utils/AddressUtils';
+
 import Header from '../components/Header';
 import TextInput from '../components/TextInput';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -23,6 +25,8 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import { localeString } from '../utils/LocaleUtils';
 import { CheckBox, Icon } from 'react-native-elements';
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
+
+import CheckBoxIcon from '../assets/images/SVG/checkbox.svg';
 
 interface NostrContactsProps {
     navigation: any;
@@ -35,6 +39,7 @@ interface NostrContactsState {
     isSelectionMode: boolean;
     selectedContacts: any[];
     fadeAnim: any;
+    isValidNpub: boolean;
 }
 
 export default class NostrContacts extends React.Component<
@@ -49,7 +54,8 @@ export default class NostrContacts extends React.Component<
             loading: false,
             isSelectionMode: false,
             selectedContacts: [],
-            fadeAnim: new Animated.Value(0)
+            fadeAnim: new Animated.Value(0),
+            isValidNpub: false
         };
     }
 
@@ -192,7 +198,6 @@ export default class NostrContacts extends React.Component<
             const index = selectedContacts.findIndex(
                 (c) => c.banner === contact.banner
             );
-            console.log(index);
 
             if (index === -1) {
                 // Contact not selected, add it to the selection
@@ -406,6 +411,11 @@ export default class NostrContacts extends React.Component<
         }
     };
 
+    handleNostrValidation = (text: string) => {
+        const isValidNpub = AddressUtils.isValidNpub(text);
+        this.setState({ isValidNpub });
+    };
+
     render() {
         const { navigation } = this.props;
         const { loading } = this.state;
@@ -416,13 +426,21 @@ export default class NostrContacts extends React.Component<
                     this.toggleSelectionMode();
                 }}
             >
-                <Icon
-                    name="check-square"
-                    type="font-awesome"
-                    size={30}
-                    color={themeColor('text')}
-                    containerStyle={{
-                        marginRight: 6,
+                <CheckBoxIcon
+                    height={28}
+                    width={28}
+                    fill={
+                        this.state.isSelectionMode
+                            ? themeColor('background')
+                            : themeColor('text')
+                    }
+                    stroke={themeColor('background')}
+                    style={{
+                        backgroundColor: this.state.isSelectionMode
+                            ? 'white'
+                            : themeColor('background'),
+                        borderRadius: 2,
+                        marginRight: 2,
                         alignSelf: 'center',
                         marginTop: -6
                     }}
@@ -488,14 +506,23 @@ export default class NostrContacts extends React.Component<
                             placeholder={'npub...'}
                             value={this.state.npub}
                             style={{
-                                marginHorizontal: 22
+                                marginHorizontal: 22,
+                                borderColor:
+                                    !this.state.isValidNpub &&
+                                    this.state.npub.length > 0
+                                        ? themeColor('delete')
+                                        : 'transparent',
+                                borderWidth: 1
                             }}
-                            onChangeText={(text: string) =>
-                                this.setState({
-                                    npub: text
-                                })
-                            }
+                            onChangeText={(text: string) => {
+                                if (!text) {
+                                    this.setState({ isValidNpub: true });
+                                }
+                                this.setState({ npub: text });
+                                this.handleNostrValidation(text);
+                            }}
                         />
+
                         <Button
                             onPress={() => this.fetchNostrContacts()}
                             title={localeString(
@@ -505,13 +532,15 @@ export default class NostrContacts extends React.Component<
                                 marginTop: 20,
                                 marginBottom: 8
                             }}
-                            disabled={!this.state.npub}
+                            disabled={!this.state.isValidNpub}
                         />
                     </>
                 )}
 
                 {loading ? (
-                    <LoadingIndicator />
+                    <View style={{ marginTop: 60 }}>
+                        <LoadingIndicator />
+                    </View>
                 ) : (
                     <FlatList
                         data={this.state.contactsData}
