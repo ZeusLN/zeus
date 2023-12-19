@@ -72,10 +72,12 @@ export default class ProductDetails extends React.Component<
                 const { getInventory } = InventoryStore;
                 const { products, categories } = await getInventory();
 
-                const mappedCategories = categories.map((category: any) => ({
-                    key: category.name,
-                    value: category.name
-                }));
+                const mappedCategories = categories
+                    ? categories.map((category: any) => ({
+                          key: category.name,
+                          value: category.name
+                      }))
+                    : [];
                 let categoryOptions: any[] = [
                     {
                         key: 'Uncategorized',
