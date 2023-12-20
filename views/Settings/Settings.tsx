@@ -30,6 +30,7 @@ import CloudIcon from '../../assets/images/SVG/Cloud.svg';
 import MailboxFlagUp from '../../assets/images/SVG/MailboxFlagUp.svg';
 import MailboxFlagDown from '../../assets/images/SVG/MailboxFlagDown.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
+import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
@@ -596,10 +597,39 @@ export default class Settings extends React.Component<
                                             <ForwardIcon />
                                         </View>
                                     </TouchableOpacity>
+                                    <View style={styles.separationLine} />
+                                    <TouchableOpacity
+                                        style={styles.columnField}
+                                        onPress={() =>
+                                            navigation.navigate('BumpFee')
+                                        }
+                                    >
+                                        <View style={styles.icon}>
+                                            <SpeedometerIcon
+                                                fill={themeColor('text')}
+                                                width={27}
+                                                height={27}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.BumpFee.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </TouchableOpacity>
                                 </>
                             )}
                         </View>
                     )}
+
                     {selectedNode &&
                         !BackendUtils.isLNDBased() &&
                         implementation !== 'lndhub' && (
