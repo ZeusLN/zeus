@@ -220,7 +220,7 @@ export default class ChannelsStore {
             }
         });
 
-        return this.sort.dir === 'DESC' ? sorted : sorted.reverse();
+        return this.sort.dir === 'DESC' ? sorted : sorted?.reverse();
     };
 
     @action
