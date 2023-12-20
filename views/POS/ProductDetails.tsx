@@ -340,7 +340,7 @@ export default class ProductDetails extends React.Component<
                                     </View>
                                     <AmountInput
                                         amount={String(
-                                            product?.price === 0
+                                            product?.price == 0
                                                 ? ''
                                                 : product?.price
                                         )}
