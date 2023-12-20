@@ -26,7 +26,8 @@ import { localeString } from '../utils/LocaleUtils';
 import { CheckBox, Icon } from 'react-native-elements';
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 
-import CheckBoxIcon from '../assets/images/SVG/checkbox.svg';
+import SelectOff from '../assets/images/SVG/SelectOff.svg';
+import SelectOn from '../assets/images/SVG/SelectON.svg';
 
 interface NostrContactsProps {
     navigation: any;
@@ -151,6 +152,9 @@ export default class NostrContacts extends React.Component<
             });
             Object.keys(newContactDataIndexByPubkey).forEach((pubkey) => {
                 const content = newContactDataIndexByPubkey[pubkey].content;
+                if (!content?.npub) {
+                    content.npub = nip19.npubEncode(pubkey);
+                }
                 newContactDataIndexByName[
                     content?.display_name?.toLowerCase() ||
                         content?.name?.toLowerCase()
@@ -426,25 +430,31 @@ export default class NostrContacts extends React.Component<
                     this.toggleSelectionMode();
                 }}
             >
-                <CheckBoxIcon
-                    height={28}
-                    width={28}
-                    fill={
-                        this.state.isSelectionMode
-                            ? themeColor('background')
-                            : themeColor('text')
-                    }
-                    stroke={themeColor('background')}
-                    style={{
-                        backgroundColor: this.state.isSelectionMode
-                            ? 'white'
-                            : themeColor('background'),
-                        borderRadius: 2,
-                        marginRight: 2,
-                        alignSelf: 'center',
-                        marginTop: -6
-                    }}
-                />
+                {this.state.isSelectionMode ? (
+                    <SelectOn
+                        height={32}
+                        width={32}
+                        fill="white"
+                        style={{
+                            borderRadius: 2,
+                            marginRight: 2,
+                            alignSelf: 'center',
+                            marginTop: -6
+                        }}
+                    />
+                ) : (
+                    <SelectOff
+                        height={36}
+                        width={36}
+                        fill="white"
+                        style={{
+                            borderRadius: 2,
+                            marginRight: 2,
+                            alignSelf: 'center',
+                            marginTop: -6
+                        }}
+                    />
+                )}
             </TouchableOpacity>
         );
 
@@ -482,7 +492,7 @@ export default class NostrContacts extends React.Component<
                                         type="material"
                                         size={38}
                                         color={themeColor('text')}
-                                        containerStyle={{ marginTop: -6 }}
+                                        containerStyle={{ marginTop: -12 }}
                                     />
                                 </>
                             )}
