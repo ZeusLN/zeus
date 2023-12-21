@@ -1,4 +1,6 @@
 import { action, observable } from 'mobx';
+import EncryptedStorage from 'react-native-encrypted-storage';
+
 import SettingsStore from './SettingsStore';
 import FiatStore from './FiatStore';
 import FeeUtils from './../utils/FeeUtils';
@@ -7,6 +9,8 @@ type Units = 'sats' | 'BTC' | 'fiat';
 
 // 100_000_000
 export const SATS_PER_BTC = 100000000;
+
+const UNIT_KEY = 'zeus-units';
 
 interface ValueDisplayProps {
     amount: string;
@@ -19,17 +23,26 @@ interface ValueDisplayProps {
 }
 
 export default class UnitsStore {
-    @observable public units: Units = 'sats';
+    @observable public units: Units | string = 'sats';
     settingsStore: SettingsStore;
     fiatStore: FiatStore;
 
     constructor(settingsStore: SettingsStore, fiatStore: FiatStore) {
         this.settingsStore = settingsStore;
         this.fiatStore = fiatStore;
+        this.getUnits();
     }
 
+    getUnits = async () => {
+        const units = await EncryptedStorage.getItem(UNIT_KEY);
+        if (units) this.units = units;
+    };
+
     @action
-    public changeUnits = () => (this.units = this.getNextUnit());
+    public changeUnits = async () => {
+        this.units = this.getNextUnit();
+        await EncryptedStorage.setItem(UNIT_KEY, this.units);
+    };
 
     public getNextUnit = () => {
         const { settings } = this.settingsStore;

@@ -278,7 +278,6 @@ export default class LnurlPay extends React.Component<
                         <View style={{ marginTop: 0 }}>
                             <AmountInput
                                 amount={amount}
-                                preventUnitReset={true}
                                 locked={
                                     lnurl &&
                                     lnurl.minSendable === lnurl.maxSendable

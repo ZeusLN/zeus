@@ -10,7 +10,7 @@ import NodeUriUtils from './NodeUriUtils';
 import { localeString } from './LocaleUtils';
 import BackendUtils from './BackendUtils';
 
-const { nodeInfoStore, invoicesStore, settingsStore } = stores;
+const { nodeInfoStore, invoicesStore, unitsStore, settingsStore } = stores;
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
@@ -56,6 +56,7 @@ const handleAnything = async (
         AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
     ) {
         if (isClipboardValue) return true;
+        if (amount) unitsStore?.resetUnits();
         return [
             'Send',
             {
