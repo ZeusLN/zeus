@@ -66,6 +66,13 @@ class ActivityFilterUtils {
             );
         }
 
+        if (filter.isFailed == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) =>
+                    !(activity instanceof Payment && activity.isFailed)
+            );
+        }
+
         if (filter.unconfirmed == false) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
