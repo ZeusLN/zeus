@@ -471,6 +471,7 @@
     "views.OpenChannel.private": "Private",
     "views.Payment.title": "Payment",
     "views.Payment.inTransitPayment": "In Transit Payment",
+    "views.Payment.failedPayment": "Failed Payment",
     "views.Payment.fee": "Fee",
     "views.Payment.paymentHash": "Payment Hash",
     "views.Payment.paymentPreimage": "Payment Preimage",
