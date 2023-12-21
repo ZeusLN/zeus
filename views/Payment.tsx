@@ -78,7 +78,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getPreimage,
             enhancedPath,
             getMemo,
-            isInTransit
+            isIncomplete,
+            isInTransit,
+            isFailed
         } = payment;
         const date = getDisplayTime;
         const noteKey =
@@ -105,7 +107,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: isInTransit
+                        text: isFailed
+                            ? localeString('views.Payment.failedPayment')
+                            : isInTransit
                             ? localeString('views.Payment.inTransitPayment')
                             : localeString('views.Payment.title'),
                         style: {
@@ -185,7 +189,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             />
                         )}
 
-                        {getPreimage && !isInTransit && (
+                        {getPreimage && !isIncomplete && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Payment.paymentPreimage'

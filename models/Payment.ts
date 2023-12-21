@@ -63,11 +63,37 @@ export default class Payment extends BaseModel {
         return this.preimage || this.payment_preimage;
     }
 
-    @computed public get isInTransit(): boolean {
+    @computed public get isIncomplete(): boolean {
         return (
             this.getPreimage ===
             '0000000000000000000000000000000000000000000000000000000000000000'
         );
+    }
+
+    @computed public get isInTransit(): boolean {
+        if (!this.isIncomplete) return false;
+        if (!this.htlcs) return false;
+        let inTransit = false;
+        for (const htlc of this.htlcs) {
+            if (htlc.status === 'IN_FLIGHT' || htlc.status === 0) {
+                inTransit = true;
+                break;
+            }
+        }
+        return inTransit;
+    }
+
+    @computed public get isFailed(): boolean {
+        if (!this.isIncomplete) return false;
+        if (!this.htlcs) return false;
+        let isFailed = false;
+        for (const htlc of this.htlcs) {
+            if (htlc.status === 'FAILED' || htlc.status === 2) {
+                isFailed = true;
+                break;
+            }
+        }
+        return isFailed;
     }
 
     @computed public get getTimestamp(): string | number {
