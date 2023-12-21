@@ -75,7 +75,10 @@ export default class Payment extends BaseModel {
         if (!this.htlcs) return false;
         let inTransit = false;
         for (const htlc of this.htlcs) {
-            if (htlc.status === 'IN_FLIGHT' || htlc.status === 0) {
+            if (
+                htlc.status === 'IN_FLIGHT' ||
+                htlc.status === lnrpc.HTLCAttempt.HTLCStatus.IN_FLIGHT
+            ) {
                 inTransit = true;
                 break;
             }
@@ -88,7 +91,10 @@ export default class Payment extends BaseModel {
         if (!this.htlcs) return false;
         let isFailed = false;
         for (const htlc of this.htlcs) {
-            if (htlc.status === 'FAILED' || htlc.status === 2) {
+            if (
+                htlc.status === 'FAILED' ||
+                htlc.status === lnrpc.HTLCAttempt.HTLCStatus.FAILED
+            ) {
                 isFailed = true;
                 break;
             }
@@ -168,7 +174,7 @@ export default class Payment extends BaseModel {
                 const route: any[] = [];
                 if (
                     htlc.status === 'SUCCEEDED' ||
-                    htlc.status === lnrpc.HTLCAttempt.HTLCStatus['SUCCEEDED']
+                    htlc.status === lnrpc.HTLCAttempt.HTLCStatus.SUCCEEDED
                 ) {
                     htlc.route.hops &&
                         htlc.route.hops.forEach((hop: any) => {
