@@ -26,12 +26,13 @@ import FlashOffIcon from './../assets/images/SVG/Flash Off.svg';
 import FlashOnIcon from './../assets/images/SVG/Flash On.svg';
 import GalleryIcon from './../assets/images/SVG/Gallery.svg';
 import ScanFrameSvg from './../assets/images/SVG/DynamicSVG/ScanFrameSvg';
+import { useIsFocused } from './useIsFocused';
 
 const createHash = require('create-hash');
 
 interface QRProps {
     text?: string;
-    handleQRScanned: any;
+    handleQRScanned: (data: string) => void;
     goBack: any;
     navigation: any;
 }
@@ -52,21 +53,24 @@ export default function QRCodeScanner({
         CameraAuthStatus.UNKNOWN
     );
     const [isTorchOn, setIsTorchOn] = useState(false);
+    const [scannedQrCode, setScannedQrCode] = useState<string | null>(null);
+    const [scannedCache, setScannedCache] = useState(new Set<string>());
 
-    let scannedCache: { [name: string]: number } = {};
+    console.log('QRCodeScanner render');
     const maskLength = (Dimensions.get('window').width * 80) / 100;
 
     const device = useCameraDevice('back');
 
     const handleRead = (data: any) => {
         const hash = createHash('sha256').update(data).digest().toString('hex');
-        if (scannedCache[hash]) {
+        if (scannedCache.has(hash)) {
             // this QR was already scanned let's prevent firing duplicate
             // callbacks
             return;
         }
-        scannedCache[hash] = +new Date();
-        handleQRScanned(data);
+        scannedCache.add(hash);
+        console.log('scanned qr', data);
+        setScannedQrCode(data);
     };
 
     const handleOpenGallery = () => {
@@ -90,8 +94,6 @@ export default function QRCodeScanner({
         onCodeScanned: (codes) => {
             const code = codes.find((c) => c.value != null)?.value;
             if (code != null) {
-                // todo: remove
-                console.log(`Scanned code`, code);
                 handleRead(code);
             }
         }
@@ -109,7 +111,7 @@ export default function QRCodeScanner({
         (async () => {
             // triggers when loaded from navigation or back action
             navigation.addListener('didFocus', () => {
-                scannedCache = {};
+                setScannedCache(new Set<string>());
             });
 
             if (Platform.OS !== 'ios' && Platform.OS !== 'macos') {
@@ -174,8 +176,12 @@ export default function QRCodeScanner({
         })();
     }, []);
 
+    console.log('render');
+
     return (
         <>
+            <Text>device position: {device?.position}</Text>
+            <Text>isActive: {(!scannedQrCode).toString()}</Text>
             {!device && (
                 <View>
                     {/* todo: proper message */}
@@ -191,12 +197,19 @@ export default function QRCodeScanner({
                         style={StyleSheet.absoluteFill}
                         device={device}
                         codeScanner={codeScanner}
-                        isActive={true}
-                        enableZoomGesture={true}
-                        onError={(error) =>
-                            console.error('camera intialization failed', error)
-                        }
                         torch={isTorchOn ? 'on' : 'off'}
+                        isActive={!scannedQrCode}
+                        enableZoomGesture={true}
+                        onInitialized={() => {
+                            console.log('onInitialized');
+                        }}
+                        onError={(error) => console.error('onError', error)}
+                        onStopped={() => {
+                            console.log('onStopped');
+                            if (scannedQrCode) {
+                                handleQRScanned(scannedQrCode);
+                            }
+                        }}
                     />
                     <View style={styles.actionOverlay}>
                         <TouchableOpacity
