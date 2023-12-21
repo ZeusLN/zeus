@@ -31,6 +31,7 @@ import SettingsStore, {
 } from '../../../stores/SettingsStore';
 import UnitsStore from '../../../stores/UnitsStore';
 
+import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import UrlUtils from '../../../utils/UrlUtils';
@@ -544,26 +545,42 @@ export default class LightningAddress extends React.Component<
                                                 'views.Settings.LightningAddress.explainer1'
                                             )}
                                         </Text>
-                                        <Text
-                                            style={{
-                                                ...styles.explainer,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.LightningAddress.explainer2'
-                                            )}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                ...styles.explainer,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Wallet.KeypadPane.lspExplainerFirstChannel'
-                                            )}
-                                        </Text>
+                                        {BackendUtils.supportsLSPs() && (
+                                            <Text
+                                                style={{
+                                                    ...styles.explainer,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.explainer2'
+                                                )}
+                                            </Text>
+                                        )}
+                                        {BackendUtils.supportsLSPs() && (
+                                            <Text
+                                                style={{
+                                                    ...styles.explainer,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+                                                )}
+                                            </Text>
+                                        )}
+                                        {!BackendUtils.supportsLSPs() && (
+                                            <Text
+                                                style={{
+                                                    ...styles.explainer,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.explainer3'
+                                                )}
+                                            </Text>
+                                        )}
                                     </View>
                                     <View>
                                         <View
@@ -571,34 +588,49 @@ export default class LightningAddress extends React.Component<
                                         >
                                             <Button
                                                 title={localeString(
-                                                    'views.Settings.LightningAddress.get0ConfChan'
+                                                    BackendUtils.supportsLSPs()
+                                                        ? 'views.Settings.LightningAddress.get0ConfChan'
+                                                        : 'views.Wallet.Channels.open'
                                                 )}
                                                 onPress={() => {
-                                                    UnitsStore.resetUnits();
-                                                    navigation.navigate(
-                                                        'Receive',
-                                                        {
-                                                            amount: '100000'
-                                                        }
-                                                    );
+                                                    if (
+                                                        BackendUtils.supportsLSPs()
+                                                    ) {
+                                                        UnitsStore.resetUnits();
+                                                        navigation.navigate(
+                                                            'Receive',
+                                                            {
+                                                                amount: '100000'
+                                                            }
+                                                        );
+                                                    } else {
+                                                        navigation.navigate(
+                                                            'OpenChannel'
+                                                        );
+                                                    }
                                                 }}
                                             />
                                         </View>
-                                        <View
-                                            style={{ bottom: 15, margin: 10 }}
-                                        >
-                                            <Button
-                                                title={localeString(
-                                                    'views.LspExplanation.buttonText2'
-                                                )}
-                                                onPress={() =>
-                                                    navigation.navigate(
-                                                        'LspExplanationOverview'
-                                                    )
-                                                }
-                                                tertiary
-                                            />
-                                        </View>
+                                        {BackendUtils.supportsLSPs() && (
+                                            <View
+                                                style={{
+                                                    bottom: 15,
+                                                    margin: 10
+                                                }}
+                                            >
+                                                <Button
+                                                    title={localeString(
+                                                        'views.LspExplanation.buttonText2'
+                                                    )}
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'LspExplanationOverview'
+                                                        )
+                                                    }
+                                                    tertiary
+                                                />
+                                            </View>
+                                        )}
                                         <View
                                             style={{ bottom: 15, margin: 10 }}
                                         >
