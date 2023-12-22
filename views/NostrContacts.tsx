@@ -26,8 +26,8 @@ import { localeString } from '../utils/LocaleUtils';
 import { CheckBox, Icon } from 'react-native-elements';
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 
-import SelectOff from '../assets/images/SVG/SelectOff.svg';
-import SelectOn from '../assets/images/SVG/SelectON.svg';
+import SelectOff from '../assets/images/SVG/Select Off.svg';
+import SelectOn from '../assets/images/SVG/Select On.svg';
 
 interface NostrContactsProps {
     navigation: any;
@@ -92,7 +92,7 @@ export default class NostrContacts extends React.Component<
 
             await relay.connect();
 
-            let pubkey: any = data;
+            let pubkey: string = data;
             let eventReceived = await relay.list([
                 {
                     authors: [pubkey],
@@ -111,8 +111,8 @@ export default class NostrContacts extends React.Component<
                 }
             });
 
-            const tags: any = [];
-            latestContactEvent.tags.forEach((tag: any) => {
+            const tags: string = [];
+            latestContactEvent.tags.forEach((tag: string) => {
                 if (tag[0] === 'p') {
                     tags.push(tag[1]);
                 }
@@ -228,6 +228,7 @@ export default class NostrContacts extends React.Component<
         };
     }) => {
         const { isSelectionMode } = this.state;
+        const { navigation } = this.props;
         const isSelected = this.state.selectedContacts.some(
             (c) => c.banner === item.banner && c.isSelected
         );
@@ -264,7 +265,7 @@ export default class NostrContacts extends React.Component<
                             this.transformContactData(item)
                         );
                     } else {
-                        this.props.navigation.navigate('ContactDetails', {
+                        navigation.navigate('ContactDetails', {
                             nostrContact: this.transformContactData(item),
                             isNostrContact: true
                         });
@@ -283,7 +284,14 @@ export default class NostrContacts extends React.Component<
                             transform: [{ translateX: slideInRight }]
                         }}
                     >
-                        <CheckBox checked={isSelected} />
+                        <CheckBox
+                            checked={isSelected}
+                            onPress={() => {
+                                this.toggleContactSelection(
+                                    this.transformContactData(item)
+                                );
+                            }}
+                        />
                     </Animated.View>
                 )}
 
@@ -370,8 +378,8 @@ export default class NostrContacts extends React.Component<
         } catch (error) {
             console.log('Error importing contacts:', error);
             Alert.alert(
-                'Error',
-                'Failed to import contacts. Please try again.'
+                localeString('general.error'),
+                localeString('views.NostrContacts.importContactsError')
             );
         }
     };
@@ -409,8 +417,8 @@ export default class NostrContacts extends React.Component<
         } catch (error) {
             console.log('Error importing contacts:', error);
             Alert.alert(
-                'Error',
-                'Failed to import contacts. Please try again.'
+                localeString('general.error'),
+                localeString('views.NostrContacts.importContactsError')
             );
         }
     };
@@ -422,7 +430,14 @@ export default class NostrContacts extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { loading } = this.state;
+        const {
+            loading,
+            contactsData,
+            selectedContacts,
+            isSelectionMode,
+            isValidNpub,
+            npub
+        } = this.state;
 
         const SelectButton = () => (
             <TouchableOpacity
@@ -430,16 +445,16 @@ export default class NostrContacts extends React.Component<
                     this.toggleSelectionMode();
                 }}
             >
-                {this.state.isSelectionMode ? (
+                {isSelectionMode ? (
                     <SelectOn
-                        height={32}
-                        width={32}
+                        height={36}
+                        width={36}
                         fill="white"
                         style={{
                             borderRadius: 2,
                             marginRight: 2,
                             alignSelf: 'center',
-                            marginTop: -6
+                            marginTop: -12
                         }}
                     />
                 ) : (
@@ -451,7 +466,7 @@ export default class NostrContacts extends React.Component<
                             borderRadius: 2,
                             marginRight: 2,
                             alignSelf: 'center',
-                            marginTop: -6
+                            marginTop: -12
                         }}
                     />
                 )}
@@ -468,7 +483,7 @@ export default class NostrContacts extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.NostrContacts.NostrContacts'),
+                        text: localeString('views.NostrContacts.nostrContacts'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -476,7 +491,7 @@ export default class NostrContacts extends React.Component<
                     }}
                     rightComponent={
                         <Row>
-                            {this.state.contactsData.length > 0 && (
+                            {contactsData.length > 0 && (
                                 <>
                                     <SelectButton />
                                     <Icon
@@ -485,14 +500,19 @@ export default class NostrContacts extends React.Component<
                                                 contactsData: [],
                                                 selectedContacts: [],
                                                 npub: '',
-                                                isSelectionMode: false
+                                                isSelectionMode: false,
+                                                fadeAnim: new Animated.Value(0),
+                                                isValidNpub: false
                                             });
                                         }}
                                         name="close"
                                         type="material"
-                                        size={38}
+                                        size={50}
                                         color={themeColor('text')}
-                                        containerStyle={{ marginTop: -12 }}
+                                        containerStyle={{
+                                            marginTop: -10,
+                                            marginRight: -12
+                                        }}
                                     />
                                 </>
                             )}
@@ -501,7 +521,7 @@ export default class NostrContacts extends React.Component<
                     navigation={navigation}
                 />
 
-                {this.state.contactsData.length === 0 && !loading && (
+                {contactsData.length === 0 && !loading && (
                     <>
                         <Text
                             style={{
@@ -510,16 +530,15 @@ export default class NostrContacts extends React.Component<
                                 fontSize: 16
                             }}
                         >
-                            Enter npub
+                            {localeString('views.NostrContacts.enterNpub')}
                         </Text>
                         <TextInput
                             placeholder={'npub...'}
-                            value={this.state.npub}
+                            value={npub}
                             style={{
                                 marginHorizontal: 22,
                                 borderColor:
-                                    !this.state.isValidNpub &&
-                                    this.state.npub.length > 0
+                                    !isValidNpub && npub.length > 0
                                         ? themeColor('delete')
                                         : 'transparent',
                                 borderWidth: 1
@@ -536,13 +555,13 @@ export default class NostrContacts extends React.Component<
                         <Button
                             onPress={() => this.fetchNostrContacts()}
                             title={localeString(
-                                'views.NostrContacts.LookUpContacts'
+                                'views.NostrContacts.lookUpContacts'
                             )}
                             containerStyle={{
                                 marginTop: 20,
                                 marginBottom: 8
                             }}
-                            disabled={!this.state.isValidNpub}
+                            disabled={!isValidNpub}
                         />
                     </>
                 )}
@@ -553,21 +572,22 @@ export default class NostrContacts extends React.Component<
                     </View>
                 ) : (
                     <FlatList
-                        data={this.state.contactsData}
+                        data={contactsData}
                         style={{ marginTop: 10 }}
                         renderItem={this.renderContactItem}
                         keyExtractor={(item, index) => index.toString()}
                     />
                 )}
-                {this.state.contactsData.length > 0 &&
-                    this.state.selectedContacts.length === 0 && (
+                {!isSelectionMode &&
+                    contactsData.length > 0 &&
+                    selectedContacts.length === 0 && (
                         <Button
                             title={localeString(
-                                'views.NostrContacts.ImportAllContacts'
+                                'views.NostrContacts.importAllContacts'
                             )}
                             onPress={() => {
                                 this.importAllContacts();
-                                this.props.navigation.navigate('Contacts');
+                                navigation.navigate('Contacts');
                             }}
                             containerStyle={{
                                 paddingBottom: 12,
@@ -576,15 +596,24 @@ export default class NostrContacts extends React.Component<
                             secondary
                         />
                     )}
-                {this.state.selectedContacts.length > 0 && (
+                {isSelectionMode && selectedContacts.length >= 0 && (
                     <Button
-                        title={`Import ${this.state.selectedContacts.length} Contacts`}
+                        title={`${localeString(
+                            'views.OpenChannel.import'
+                        )} ${localeString('views.Settings.Contacts.contacts')}${
+                            selectedContacts.length > 0
+                                ? ` (${selectedContacts.length})`
+                                : ''
+                        }`}
                         onPress={() => {
                             this.importSelectedContacts();
-                            this.props.navigation.navigate('Contacts');
+                            navigation.navigate('Contacts');
                         }}
                         containerStyle={{ paddingBottom: 12, paddingTop: 8 }}
                         secondary
+                        disabled={
+                            isSelectionMode && selectedContacts.length === 0
+                        }
                     />
                 )}
             </Screen>

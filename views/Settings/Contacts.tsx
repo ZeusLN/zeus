@@ -123,7 +123,7 @@ export default class Contacts extends React.Component<
                 : item.pubkey[0];
         }
 
-        return 'No Address';
+        return localeString('views.Settings.Contacts.noAddress');
     };
 
     renderContactItem = ({ item }: { item: ContactItem }) => (
