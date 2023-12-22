@@ -51,8 +51,8 @@ export interface ILndMobileTools {
     saveChannelsBackup(base64Backups: string): Promise<string>;
     saveChannelBackupFile(network: string): Promise<boolean>;
     DEBUG_getWalletPasswordFromKeychain(): Promise<string>;
-    DEBUG_deleteSpeedloaderLastrunFile(): boolean;
-    DEBUG_deleteSpeedloaderDgraphDirectory(): null;
+    DEBUG_deleteSpeedloaderLastrunFile(): Promise<boolean>;
+    DEBUG_deleteSpeedloaderDgraphDirectory(): Promise<null>;
 
     // Android-specific
     getIntentStringData(): Promise<string | null>;
