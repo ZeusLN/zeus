@@ -1,6 +1,7 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { removeListeners } from '../utils/LndMobileUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 
@@ -168,6 +169,7 @@ export default class EmbeddedLND extends LND {
     // subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
+    disconnect = () => removeListeners();
 
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
