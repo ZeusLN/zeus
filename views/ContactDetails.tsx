@@ -559,7 +559,7 @@ export default class ContactDetails extends React.Component<
                             <Button
                                 onPress={() => this.importToContacts()}
                                 title={localeString(
-                                    'views.ContactDetails.SaveToContacts'
+                                    'views.ContactDetails.saveToContacts'
                                 )}
                                 containerStyle={{ paddingBottom: 12 }}
                             />
