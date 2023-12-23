@@ -75,7 +75,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         await this.props.SettingsStore.getSettings().then((settings: any) => {
             this.setState({
                 loading: false,
-                nodes: (settings && settings.nodes) || []
+                nodes: settings?.nodes || []
             });
         });
     }
