@@ -19,6 +19,7 @@ import Screen from '../components/Screen';
 import Payment from '../models/Payment';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import Base64Utils from '../utils/Base64Utils';
 
 import LnurlPayStore from '../stores/LnurlPayStore';
 
@@ -37,21 +38,29 @@ interface PaymentProps {
 export default class PaymentView extends React.Component<PaymentProps> {
     state = {
         lnurlpaytx: null,
-        storedNotes: ''
+        storedNotes: '',
+        paymentHash: null
     };
 
     async componentDidMount() {
         const { navigation, LnurlPayStore } = this.props;
         const payment: Payment = navigation.getParam('payment', null);
-        const lnurlpaytx = await LnurlPayStore.load(payment.payment_hash);
+        const paymentHash =
+            typeof payment.payment_hash === 'string'
+                ? payment.payment_hash
+                : payment.payment_hash?.type === 'Buffer'
+                ? Base64Utils.bytesToHex(payment.payment_hash.data)
+                : null;
+        if (paymentHash) {
+            this.setState({ paymentHash });
+        }
+        const lnurlpaytx = await LnurlPayStore.load(paymentHash);
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
         navigation.addListener('didFocus', () => {
             const noteKey =
-                typeof payment.payment_hash === 'string'
-                    ? payment.payment_hash
-                    : typeof payment.getPreimage === 'string'
+                paymentHash ?? typeof payment.getPreimage === 'string'
                     ? payment.getPreimage
                     : null;
 
@@ -67,14 +76,13 @@ export default class PaymentView extends React.Component<PaymentProps> {
 
     render() {
         const { navigation } = this.props;
-        const { storedNotes, lnurlpaytx } = this.state;
+        const { storedNotes, lnurlpaytx, paymentHash } = this.state;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
             getDisplayTime,
             getFee,
             getFeePercentage,
-            payment_hash,
             getPreimage,
             enhancedPath,
             getMemo,
@@ -82,11 +90,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         } = payment;
         const date = getDisplayTime;
         const noteKey =
-            typeof payment_hash === 'string'
-                ? payment_hash
-                : typeof getPreimage === 'string'
-                ? getPreimage
-                : null;
+            paymentHash ?? typeof getPreimage === 'string' ? getPreimage : null;
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
@@ -175,12 +179,12 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             />
                         )}
 
-                        {typeof payment_hash === 'string' && (
+                        {typeof paymentHash === 'string' && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Payment.paymentHash'
                                 )}
-                                value={payment_hash}
+                                value={paymentHash}
                                 sensitive
                             />
                         )}
