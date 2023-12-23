@@ -28,6 +28,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
+import Invoice from '../../models/Invoice';
 
 interface ActivityProps {
     navigation: any;
@@ -249,12 +250,13 @@ export default class Activity extends React.PureComponent<
                             let displayName = item.model;
                             let subTitle = item.model;
 
-                            if (
-                                item.model ===
-                                localeString('views.Invoice.title')
-                            ) {
+                            if (item instanceof Invoice) {
                                 displayName = item.isPaid
                                     ? localeString('views.Activity.youReceived')
+                                    : item.isExpired
+                                    ? localeString(
+                                          'views.Activity.expiredRequested'
+                                      )
                                     : localeString(
                                           'views.Activity.requestedPayment'
                                       );
@@ -430,6 +432,7 @@ export default class Activity extends React.PureComponent<
                                                 {subTitle}
                                             </ListItem.Subtitle>
                                             {!item.isPaid &&
+                                                !item.isExpired &&
                                                 item.formattedTimeUntilExpiry && (
                                                     <ListItem.Subtitle
                                                         right
@@ -506,6 +509,7 @@ export default class Activity extends React.PureComponent<
                                                     : item.getDisplayTimeShort}
                                             </ListItem.Subtitle>
                                             {!item.isPaid &&
+                                                !item.isExpired &&
                                                 item.formattedTimeUntilExpiry && (
                                                     <ListItem.Subtitle
                                                         right
