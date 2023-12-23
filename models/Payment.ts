@@ -8,7 +8,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { lnrpc } from '../proto/lightning';
 
 export default class Payment extends BaseModel {
-    payment_hash: string;
+    payment_hash: string | { data: number[]; type: string }; // object if lndhub
     creation_date?: string;
     value: string | number;
     fee_sat?: string;
