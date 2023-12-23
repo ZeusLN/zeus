@@ -10,6 +10,7 @@ import {
 import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import AddIcon from '../../assets/images/SVG/Add.svg';
 import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
@@ -101,7 +102,7 @@ export default class Settings extends React.Component<
 
         const selectedNode: any =
             (settings &&
-                settings.nodes &&
+                settings.nodes?.length &&
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
@@ -154,46 +155,39 @@ export default class Settings extends React.Component<
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('Nodes')}
-                    >
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginBottom: 5,
-                                paddingVertical: 10,
-                                alignItems: 'center',
-                                gap: 12
-                            }}
+                    {selectedNode ? (
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Nodes')}
                         >
-                            {selectedNode && (
-                                <View style={{ marginLeft: 12 }}>
-                                    <NodeIdenticon
-                                        selectedNode={selectedNode}
-                                        width={50}
-                                        rounded
-                                    />
-                                </View>
-                            )}
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        fontSize: 20,
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {selectedNode
-                                        ? NodeTitle(selectedNode)
-                                        : localeString(
-                                              'views.Settings.connectNode'
-                                          )}
-                                </Text>
-                                {selectedNode && (
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    gap: 12,
+                                    marginBottom: 5,
+                                    paddingLeft: 12,
+                                    paddingVertical: 10,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <NodeIdenticon
+                                    selectedNode={selectedNode}
+                                    width={50}
+                                    rounded
+                                />
+                                <View style={{ flex: 1 }}>
+                                    <Text
+                                        style={{
+                                            fontSize: 20,
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {NodeTitle(selectedNode)}
+                                    </Text>
                                     <Text
                                         style={{
                                             fontSize: 16,
@@ -204,13 +198,56 @@ export default class Settings extends React.Component<
                                     >
                                         {nodeSubtitle}
                                     </Text>
-                                )}
+                                </View>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
+                                </View>
                             </View>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
-                            </View>
+                        </TouchableOpacity>
+                    ) : (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('NodeConfiguration', {
+                                        newEntry: true,
+                                        index: 0
+                                    })
+                                }
+                            >
+                                <View style={styles.icon}>
+                                    <AddIcon
+                                        fill={themeColor('highlight')}
+                                        width={18}
+                                        height={18}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('highlight')
+                                    }}
+                                >
+                                    {localeString('views.Settings.connectNode')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
+                                </View>
+                            </TouchableOpacity>
                         </View>
-                    </TouchableOpacity>
+                    )}
 
                     {BackendUtils.supportsLSPs() && (
                         <View
@@ -219,8 +256,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             <TouchableOpacity
@@ -245,7 +281,9 @@ export default class Settings extends React.Component<
                                     {localeString('general.lsp')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -260,8 +298,7 @@ export default class Settings extends React.Component<
                                     width: '90%',
                                     borderRadius: 10,
                                     alignSelf: 'center',
-                                    marginTop: 5,
-                                    marginBottom: 5
+                                    marginVertical: 5
                                 }}
                             >
                                 <TouchableOpacity
@@ -299,7 +336,9 @@ export default class Settings extends React.Component<
                                         )}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
-                                        <ForwardIcon />
+                                        <ForwardIcon
+                                            stroke={themeColor('text')}
+                                        />
                                     </View>
                                 </TouchableOpacity>
                             </View>
@@ -312,8 +351,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             <TouchableOpacity
@@ -338,7 +376,9 @@ export default class Settings extends React.Component<
                                         )}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
-                                        <ForwardIcon />
+                                        <ForwardIcon
+                                            stroke={themeColor('text')}
+                                        />
                                     </View>
                                 </View>
                             </TouchableOpacity>
@@ -352,8 +392,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             {implementation === 'embedded-lnd' && (
@@ -390,7 +429,11 @@ export default class Settings extends React.Component<
                                                 <View
                                                     style={styles.ForwardArrow}
                                                 >
-                                                    <ForwardIcon />
+                                                    <ForwardIcon
+                                                        stroke={themeColor(
+                                                            'text'
+                                                        )}
+                                                    />
                                                 </View>
                                             </TouchableOpacity>
 
@@ -426,7 +469,9 @@ export default class Settings extends React.Component<
                                             )}
                                         </Text>
                                         <View style={styles.ForwardArrow}>
-                                            <ForwardIcon />
+                                            <ForwardIcon
+                                                stroke={themeColor('text')}
+                                            />
                                         </View>
                                     </TouchableOpacity>
 
@@ -458,7 +503,9 @@ export default class Settings extends React.Component<
                                             )}
                                         </Text>
                                         <View style={styles.ForwardArrow}>
-                                            <ForwardIcon />
+                                            <ForwardIcon
+                                                stroke={themeColor('text')}
+                                            />
                                         </View>
                                     </TouchableOpacity>
                                 </>
@@ -492,7 +539,9 @@ export default class Settings extends React.Component<
                                             )}
                                         </Text>
                                         <View style={styles.ForwardArrow}>
-                                            <ForwardIcon />
+                                            <ForwardIcon
+                                                stroke={themeColor('text')}
+                                            />
                                         </View>
                                     </TouchableOpacity>
                                 </>
@@ -523,7 +572,9 @@ export default class Settings extends React.Component<
                                     Accounts
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('text')}
+                                    />
                                 </View>
                             </View> */}
                         </View>
@@ -535,8 +586,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             <TouchableOpacity
@@ -561,7 +611,9 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.payments')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
 
@@ -594,7 +646,9 @@ export default class Settings extends React.Component<
                                             )}
                                         </Text>
                                         <View style={styles.ForwardArrow}>
-                                            <ForwardIcon />
+                                            <ForwardIcon
+                                                stroke={themeColor('text')}
+                                            />
                                         </View>
                                     </TouchableOpacity>
                                     <View style={styles.separationLine} />
@@ -607,8 +661,8 @@ export default class Settings extends React.Component<
                                         <View style={styles.icon}>
                                             <SpeedometerIcon
                                                 fill={themeColor('text')}
-                                                width={27}
-                                                height={27}
+                                                width={23}
+                                                height={23}
                                             />
                                         </View>
                                         <Text
@@ -622,7 +676,9 @@ export default class Settings extends React.Component<
                                             )}
                                         </Text>
                                         <View style={styles.ForwardArrow}>
-                                            <ForwardIcon />
+                                            <ForwardIcon
+                                                stroke={themeColor('text')}
+                                            />
                                         </View>
                                     </TouchableOpacity>
                                 </>
@@ -639,8 +695,7 @@ export default class Settings extends React.Component<
                                     width: '90%',
                                     borderRadius: 10,
                                     alignSelf: 'center',
-                                    marginTop: 5,
-                                    marginBottom: 5
+                                    marginVertical: 5
                                 }}
                             >
                                 <TouchableOpacity
@@ -667,7 +722,9 @@ export default class Settings extends React.Component<
                                         )}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
-                                        <ForwardIcon />
+                                        <ForwardIcon
+                                            stroke={themeColor('text')}
+                                        />
                                     </View>
                                 </TouchableOpacity>
                             </View>
@@ -679,8 +736,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             <TouchableOpacity
@@ -699,7 +755,9 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.privacy')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
 
@@ -725,7 +783,9 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.security')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
 
@@ -754,7 +814,9 @@ export default class Settings extends React.Component<
                                     )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -765,8 +827,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             <TouchableOpacity
@@ -785,7 +846,9 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.privacy')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
 
@@ -811,7 +874,9 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.security')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -824,8 +889,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             <TouchableOpacity
@@ -846,7 +910,9 @@ export default class Settings extends React.Component<
                                     )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -857,8 +923,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             <TouchableOpacity
@@ -879,7 +944,9 @@ export default class Settings extends React.Component<
                                     )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
 
@@ -902,7 +969,9 @@ export default class Settings extends React.Component<
                                     )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -913,8 +982,7 @@ export default class Settings extends React.Component<
                             width: '90%',
                             borderRadius: 10,
                             alignSelf: 'center',
-                            marginTop: 5,
-                            marginBottom: 5
+                            marginVertical: 5
                         }}
                     >
                         <TouchableOpacity
@@ -937,7 +1005,9 @@ export default class Settings extends React.Component<
                                 {localeString('views.Settings.Display.title')}
                             </Text>
                             <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
+                                <ForwardIcon
+                                    stroke={themeColor('secondaryText')}
+                                />
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -949,8 +1019,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             <TouchableOpacity
@@ -973,7 +1042,9 @@ export default class Settings extends React.Component<
                                     Nostr
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -986,8 +1057,7 @@ export default class Settings extends React.Component<
                                 width: '90%',
                                 borderRadius: 10,
                                 alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
+                                marginVertical: 5
                             }}
                         >
                             <TouchableOpacity
@@ -1013,7 +1083,9 @@ export default class Settings extends React.Component<
                                     {localeString('general.pos')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
+                                    <ForwardIcon
+                                        stroke={themeColor('secondaryText')}
+                                    />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -1025,8 +1097,7 @@ export default class Settings extends React.Component<
                             width: '90%',
                             borderRadius: 10,
                             alignSelf: 'center',
-                            marginTop: 5,
-                            marginBottom: 5
+                            marginVertical: 5
                         }}
                     >
                         <TouchableOpacity
@@ -1052,7 +1123,9 @@ export default class Settings extends React.Component<
                                 )}
                             </Text>
                             <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
+                                <ForwardIcon
+                                    stroke={themeColor('secondaryText')}
+                                />
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -1063,8 +1136,7 @@ export default class Settings extends React.Component<
                             width: '90%',
                             borderRadius: 10,
                             alignSelf: 'center',
-                            marginTop: 5,
-                            marginBottom: 5
+                            marginVertical: 5
                         }}
                     >
                         <TouchableOpacity
@@ -1088,7 +1160,9 @@ export default class Settings extends React.Component<
                                 {localeString('general.help')}
                             </Text>
                             <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
+                                <ForwardIcon
+                                    stroke={themeColor('secondaryText')}
+                                />
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -1105,11 +1179,11 @@ export default class Settings extends React.Component<
                         <Text
                             style={{
                                 fontSize: 16,
-                                color: '#A7A9AC',
+                                color: themeColor('secondaryText'),
                                 alignSelf: 'center',
                                 fontFamily: 'PPNeueMontreal-Book',
                                 marginTop: 5,
-                                marginBottom: 20
+                                marginBottom: 10
                             }}
                         >
                             {`ZEUS v${version}`}

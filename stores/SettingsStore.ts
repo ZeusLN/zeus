@@ -1030,7 +1030,7 @@ export default class SettingsStore {
                 }
 
                 const node: any =
-                    this.settings.nodes &&
+                    this.settings.nodes?.length &&
                     this.settings.nodes[this.settings.selectedNode || 0];
                 if (node) {
                     this.host = node.host;

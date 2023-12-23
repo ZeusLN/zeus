@@ -213,7 +213,7 @@ export default class WalletHeader extends React.Component<
             (settings && settings.nodes && settings.nodes.length > 1) || false;
         const selectedNode: any =
             (settings &&
-                settings.nodes &&
+                settings.nodes?.length &&
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
