@@ -433,7 +433,6 @@ export default class StandalonePosPane extends React.PureComponent<
             SettingsStore,
             PosStore,
             FiatStore,
-            UnitsStore,
             NodeInfoStore,
             navigation
         } = this.props;
@@ -447,7 +446,7 @@ export default class StandalonePosPane extends React.PureComponent<
             updateSearch,
             hideOrder
         } = PosStore;
-        const { fiatRates, getRate, getFiatRates }: any = FiatStore;
+        const { getRate, getFiatRates }: any = FiatStore;
         const orders =
             selectedIndex === 0
                 ? []
@@ -456,16 +455,6 @@ export default class StandalonePosPane extends React.PureComponent<
                 : filteredPaidOrders;
 
         const currentOrder = PosStore.currentOrder;
-        const { units } = UnitsStore;
-        const { settings } = SettingsStore;
-        const fiat = settings.fiat;
-        const fiatEntry =
-            fiat && fiatRates
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
-        const rate =
-            fiat && fiatRates && fiatEntry ? fiatEntry.rate.toFixed(2) : 0;
-        const exchangeRate = getRate(false);
         const disableButtons =
             !currentOrder || currentOrder.total_money.amount === 0;
 
@@ -765,38 +754,9 @@ export default class StandalonePosPane extends React.PureComponent<
                                         );
 
                                         // now let's create the charge
-                                        this.props.navigation.navigate(
-                                            'Receive',
-                                            {
-                                                amount:
-                                                    units === 'sats'
-                                                        ? String(
-                                                              currentOrder
-                                                                  .total_money
-                                                                  .sats
-                                                          )
-                                                        : units === 'BTC'
-                                                        ? new BigNumber(
-                                                              currentOrder
-                                                                  .total_money
-                                                                  .sats || 0
-                                                          )
-                                                              .div(SATS_PER_BTC)
-                                                              .toFixed(8)
-                                                        : currentOrder.getTotalMoney,
-                                                autoGenerate: true,
-                                                // For displaying paid orders
-                                                orderId: currentOrder.id,
-                                                // sats
-                                                orderTotal:
-                                                    currentOrder.total_money
-                                                        .sats,
-                                                // formatted string rate
-                                                exchangeRate,
-                                                // numerical rate
-                                                rate
-                                            }
-                                        );
+                                        navigation.navigate('Order', {
+                                            order: currentOrder
+                                        });
                                     }}
                                 />
                                 <Button
