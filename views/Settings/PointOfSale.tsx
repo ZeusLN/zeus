@@ -36,6 +36,7 @@ interface PointOfSaleState {
     confirmationPreference: string;
     disableTips: boolean;
     squareDevMode: boolean;
+    taxPercentage: string;
 }
 
 @inject('SettingsStore')
@@ -51,7 +52,8 @@ export default class PointOfSale extends React.Component<
         merchantName: '',
         confirmationPreference: 'lnOnly',
         disableTips: false,
-        squareDevMode: false
+        squareDevMode: false,
+        taxPercentage: '0'
     };
 
     async UNSAFE_componentWillMount() {
@@ -72,7 +74,9 @@ export default class PointOfSale extends React.Component<
                 (settings.pos && settings.pos.confirmationPreference) ||
                 'lnOnly',
             disableTips: (settings.pos && settings.pos.disableTips) || false,
-            squareDevMode: (settings.pos && settings.pos.squareDevMode) || false
+            squareDevMode:
+                (settings.pos && settings.pos.squareDevMode) || false,
+            taxPercentage: (settings.pos && settings.pos.taxPercentage) || '0'
         });
     }
 
@@ -94,7 +98,8 @@ export default class PointOfSale extends React.Component<
             merchantName,
             confirmationPreference,
             disableTips,
-            squareDevMode
+            squareDevMode,
+            taxPercentage
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { passphrase, pin, fiatEnabled } = settings;
@@ -175,7 +180,8 @@ export default class PointOfSale extends React.Component<
                                             merchantName,
                                             confirmationPreference,
                                             disableTips,
-                                            squareDevMode
+                                            squareDevMode,
+                                            taxPercentage
                                         }
                                     });
                                 }}
@@ -209,7 +215,8 @@ export default class PointOfSale extends React.Component<
                                                     merchantName,
                                                     confirmationPreference,
                                                     disableTips,
-                                                    squareDevMode
+                                                    squareDevMode,
+                                                    taxPercentage
                                                 }
                                             });
                                         }}
@@ -240,7 +247,8 @@ export default class PointOfSale extends React.Component<
                                                     merchantName,
                                                     confirmationPreference,
                                                     disableTips,
-                                                    squareDevMode
+                                                    squareDevMode,
+                                                    taxPercentage
                                                 }
                                             });
                                         }}
@@ -271,7 +279,8 @@ export default class PointOfSale extends React.Component<
                                                     merchantName: text,
                                                     confirmationPreference,
                                                     disableTips,
-                                                    squareDevMode
+                                                    squareDevMode,
+                                                    taxPercentage
                                                 }
                                             });
                                         }}
@@ -321,7 +330,8 @@ export default class PointOfSale extends React.Component<
                                                             confirmationPreference,
                                                             disableTips,
                                                             squareDevMode:
-                                                                !squareDevMode
+                                                                !squareDevMode,
+                                                            taxPercentage
                                                         }
                                                     });
                                                 }}
@@ -353,7 +363,8 @@ export default class PointOfSale extends React.Component<
                                                     confirmationPreference:
                                                         value,
                                                     disableTips,
-                                                    squareDevMode
+                                                    squareDevMode,
+                                                    taxPercentage
                                                 }
                                             });
                                         }}
@@ -404,13 +415,51 @@ export default class PointOfSale extends React.Component<
                                                             confirmationPreference,
                                                             disableTips:
                                                                 !disableTips,
-                                                            squareDevMode
+                                                            squareDevMode,
+                                                            taxPercentage
                                                         }
                                                     });
                                                 }}
                                             />
                                         </View>
                                     </ListItem>
+                                </>
+                            )}
+
+                            {posEnabled === PosEnabled.Standalone && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.taxPercentage'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={taxPercentage}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                taxPercentage: text
+                                            });
+
+                                            await updateSettings({
+                                                pos: {
+                                                    posEnabled,
+                                                    squareAccessToken,
+                                                    squareLocationId,
+                                                    merchantName,
+                                                    confirmationPreference,
+                                                    disableTips,
+                                                    squareDevMode,
+                                                    taxPercentage: text
+                                                }
+                                            });
+                                        }}
+                                        suffix="%"
+                                    />
                                 </>
                             )}
                         </View>

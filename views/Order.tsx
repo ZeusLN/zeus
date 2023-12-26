@@ -326,7 +326,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                         const unitPrice =
                             item.base_price_money.amount > 0
-                                ? item.base_price_money.amount / 100
+                                ? // TODO: div 100 here?
+                                  item.base_price_money.amount
                                 : new BigNumber(item.base_price_money.sats)
                                       .multipliedBy(rate)
                                       .dividedBy(SATS_PER_BTC)

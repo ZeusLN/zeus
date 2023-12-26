@@ -199,6 +199,26 @@ export default class PosStore {
 
             this.currentOrder.total_money.amount = totalFiat.toNumber();
             this.currentOrder.total_money.sats = totalSats.toNumber();
+
+            // calculate taxes
+            if (this.settingsStore?.settings?.pos?.taxPercentage !== '0') {
+                this.currentOrder.total_tax_money.amount = new BigNumber(
+                    totalFiat
+                )
+                    .div(100)
+                    .multipliedBy(
+                        this.settingsStore?.settings?.pos?.taxPercentage || 0
+                    )
+                    .toNumber();
+                if (this.fiatStore.fiatRates) {
+                    const fiatEntry = this.fiatStore.fiatRates.filter(
+                        (entry: any) =>
+                            entry.code === this.settingsStore.settings.fiat
+                    )[0];
+                    const { code } = fiatEntry;
+                    this.currentOrder.total_tax_money.currency = code;
+                }
+            }
         }
     };
 
