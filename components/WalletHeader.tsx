@@ -47,6 +47,40 @@ const Contact = require('../assets/images/Mascot.png');
 
 const TorIcon = require('../assets/images/tor.png');
 
+const Mailbox = () => (
+    <MailboxFlagUp fill={themeColor('highlight')} width={34.29} height={30} />
+);
+
+const MailboxAnimated = () => {
+    let state = new Animated.Value(1);
+    Animated.loop(
+        Animated.sequence([
+            Animated.timing(state, {
+                toValue: 0,
+                duration: 500,
+                delay: 1000,
+                useNativeDriver: true
+            }),
+            Animated.timing(state, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true
+            })
+        ])
+    ).start();
+
+    return (
+        <Animated.View
+            style={{
+                alignSelf: 'center',
+                opacity: state
+            }}
+        >
+            <Mailbox />
+        </Animated.View>
+    );
+};
+
 const protectedNavigation = async (
     navigation: any,
     route: string,
@@ -205,7 +239,7 @@ export default class WalletHeader extends React.Component<
         } = this.props;
         const { filteredPendingChannels } = ChannelsStore!;
         const { settings, posStatus, setPosStatus } = SettingsStore!;
-        const { paid } = LightningAddressStore!;
+        const { paid, redeemingAll } = LightningAddressStore!;
         const laLoading = LightningAddressStore?.loading;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
@@ -382,11 +416,11 @@ export default class WalletHeader extends React.Component<
                                     }
                                     style={{ left: 18 }}
                                 >
-                                    <MailboxFlagUp
-                                        fill={themeColor('highlight')}
-                                        width={34.29}
-                                        height={30}
-                                    />
+                                    {redeemingAll ? (
+                                        <MailboxAnimated />
+                                    ) : (
+                                        <Mailbox />
+                                    )}
                                 </TouchableOpacity>
                             )}
                         </Row>
