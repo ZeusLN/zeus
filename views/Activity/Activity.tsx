@@ -278,7 +278,11 @@ export default class Activity extends React.PureComponent<
                                 item.model ===
                                 localeString('views.Payment.title')
                             ) {
-                                displayName = item.isInTransit
+                                displayName = item.isFailed
+                                    ? localeString(
+                                          'views.Payment.failedPayment'
+                                      )
+                                    : item.isInTransit
                                     ? localeString(
                                           'views.Payment.inTransitPayment'
                                       )
