@@ -57,6 +57,7 @@ interface PosSettings {
     confirmationPreference?: string;
     disableTips?: boolean;
     squareDevMode?: boolean;
+    taxPercentage?: string;
 }
 
 interface PaymentsSettings {
@@ -745,7 +746,8 @@ export default class SettingsStore {
             merchantName: '',
             confirmationPreference: 'lnOnly',
             disableTips: false,
-            squareDevMode: false
+            squareDevMode: false,
+            taxPercentage: '0'
         },
         payments: {
             defaultFeeMethod: 'fixed', // deprecated

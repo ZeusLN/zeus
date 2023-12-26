@@ -703,6 +703,7 @@
     "views.Settings.POS.merchantName": "Merchant name (Optional, used for invoice memos)",
     "views.Settings.POS.confPref": "Confirmation preference",
     "views.Settings.POS.disableTips": "Disable tips",
+    "views.Settings.POS.taxPercentage": "Tax percentage",
     "views.Settings.POS.devMode": "Developer mode",
     "views.Settings.POS.recon": "Reconciliation",
     "views.Settings.POS.reconExport": "Reconciliation Export",
