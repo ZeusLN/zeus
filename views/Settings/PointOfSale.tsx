@@ -277,6 +277,62 @@ export default class PointOfSale extends React.Component<
                                         }}
                                     />
 
+                                    <ListItem
+                                        containerStyle={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor:
+                                                themeColor('background')
+                                        }}
+                                    >
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                left: -10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.POS.devMode'
+                                            )}
+                                        </ListItem.Title>
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
+                                            }}
+                                        >
+                                            <Switch
+                                                value={squareDevMode}
+                                                onValueChange={async () => {
+                                                    this.setState({
+                                                        squareDevMode:
+                                                            !squareDevMode
+                                                    });
+                                                    await updateSettings({
+                                                        pos: {
+                                                            squareAccessToken,
+                                                            squareLocationId,
+                                                            posEnabled,
+                                                            merchantName,
+                                                            confirmationPreference,
+                                                            disableTips,
+                                                            squareDevMode:
+                                                                !squareDevMode
+                                                        }
+                                                    });
+                                                }}
+                                            />
+                                        </View>
+                                    </ListItem>
+                                </>
+                            )}
+
+                            {posEnabled !== PosEnabled.Disabled && (
+                                <>
                                     <DropdownSetting
                                         title={localeString(
                                             'views.Settings.POS.confPref'
@@ -349,58 +405,6 @@ export default class PointOfSale extends React.Component<
                                                             disableTips:
                                                                 !disableTips,
                                                             squareDevMode
-                                                        }
-                                                    });
-                                                }}
-                                            />
-                                        </View>
-                                    </ListItem>
-
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor:
-                                                themeColor('background')
-                                        }}
-                                    >
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                left: -10
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.POS.devMode'
-                                            )}
-                                        </ListItem.Title>
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
-                                            }}
-                                        >
-                                            <Switch
-                                                value={squareDevMode}
-                                                onValueChange={async () => {
-                                                    this.setState({
-                                                        squareDevMode:
-                                                            !squareDevMode
-                                                    });
-                                                    await updateSettings({
-                                                        pos: {
-                                                            squareAccessToken,
-                                                            squareLocationId,
-                                                            posEnabled,
-                                                            merchantName,
-                                                            confirmationPreference,
-                                                            disableTips,
-                                                            squareDevMode:
-                                                                !squareDevMode
                                                         }
                                                     });
                                                 }}
