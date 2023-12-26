@@ -23,11 +23,7 @@ class ActivityFilterUtils {
 
         if (filter.onChain == false) {
             filteredActivity = filteredActivity.filter(
-                (activity) =>
-                    !(
-                        activity instanceof Transaction &&
-                        Number(activity.getAmount) != 0
-                    )
+                (activity) => !(activity instanceof Transaction)
             );
         }
 
