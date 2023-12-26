@@ -672,8 +672,8 @@ export const POS_CONF_PREF_KEYS = [
 
 export const POS_ENABLED_KEYS = [
     { key: 'Disabled', value: PosEnabled.Disabled },
-    { key: 'Square', value: PosEnabled.Square },
-    { key: 'Standalone', value: PosEnabled.Standalone }
+    { key: 'Standalone', value: PosEnabled.Standalone },
+    { key: 'Square', value: PosEnabled.Square }
 ];
 
 export const LNDHUB_AUTH_MODES = [
