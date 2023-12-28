@@ -8059,6 +8059,11 @@ react-native-date-picker@4.3.3:
   resolved "https://registry.yarnpkg.com/react-native-date-picker/-/react-native-date-picker-4.3.3.tgz#5ca4ca10283538ab9307b7f2dc6b83233ded122b"
   integrity sha512-Lq2hGZkwoyCMsxi/uw4KVGu4/xdPZ8AHEx2SU5KY2mipHFpX+r4n5/gXa+rpCRkARJaTFYPZ7S59bT9KMh7fGw==
 
+react-native-draglist@3.5.1:
+  version "3.5.1"
+  resolved "https://registry.yarnpkg.com/react-native-draglist/-/react-native-draglist-3.5.1.tgz#894df241080fbb94ebeb322c971b8d2db92d8774"
+  integrity sha512-Xe5ZIJfLMdwVbvKg3ji4gndj4++eQjpdqKAXPztFyR5CM6ZAF593G40XLdTGQpuVOKVwY7d0NxrTdG2Z+xpewQ==
+
 react-native-elements@3.4.3:
   version "3.4.3"
   resolved "https://registry.yarnpkg.com/react-native-elements/-/react-native-elements-3.4.3.tgz#c33919002aef83a0c0f98d0ed56009714ad9b1b3"
