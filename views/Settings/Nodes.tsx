@@ -59,10 +59,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             this.props.navigation.removeListener('didFocus');
     }
 
-    UNSAFE_componentWillReceiveProps = () => {
-        this.refreshSettings();
-    };
-
     handleFocus = () => {
         if (this.isInitialFocus) {
             this.isInitialFocus = false;
@@ -137,9 +133,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         );
 
         const onReordered = async (fromIndex: number, toIndex: number) => {
-            this.setState({
-                loading: true
-            });
             const oldSelectedNode =
                 this.props.SettingsStore?.settings?.selectedNode || 0;
             let selectedNode = oldSelectedNode;
@@ -160,11 +153,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             const removed = copy.splice(fromIndex, 1);
 
             copy.splice(toIndex, 0, removed[0]); // Now insert at the new pos
-            await updateSettings({
+            this.setState({
+                nodes: copy
+            });
+            updateSettings({
                 nodes: copy,
                 selectedNode
             });
-            this.refreshSettings();
         };
 
         return (
