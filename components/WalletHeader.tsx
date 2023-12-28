@@ -13,7 +13,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
@@ -251,8 +251,9 @@ export default class WalletHeader extends React.Component<
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
-        const squareEnabled: boolean =
-            (settings && settings.pos && settings.pos.squareEnabled) || false;
+        const posEnabled: PosEnabled =
+            (settings && settings.pos && settings.pos.posEnabled) ||
+            PosEnabled.Disabled;
 
         const SettingsButton = () => (
             <TouchableOpacity
@@ -533,8 +534,12 @@ export default class WalletHeader extends React.Component<
                             <View>
                                 <ScanBadge navigation={navigation} />
                             </View>
-                            {squareEnabled && (
-                                <View style={{ marginLeft: 15 }}>
+                            {posEnabled !== PosEnabled.Disabled && (
+                                <View
+                                    style={{
+                                        marginLeft: 15
+                                    }}
+                                >
                                     <POSBadge
                                         setPosStatus={setPosStatus}
                                         getOrders={getOrders}

@@ -323,13 +323,20 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             item.quantity > 1
                                 ? `${item.name} (x${item.quantity})`
                                 : item.name;
+
+                        const unitPrice =
+                            item.base_price_money.amount > 0
+                                ? // TODO: div 100 here?
+                                  item.base_price_money.amount
+                                : new BigNumber(item.base_price_money.sats)
+                                      .multipliedBy(rate)
+                                      .dividedBy(SATS_PER_BTC)
+                                      .toFixed(2);
                         return (
                             <KeyValue
                                 key={index}
                                 keyValue={keyValue}
-                                value={`$${Number(
-                                    item.base_price_money.amount / 100
-                                ).toFixed(2)}`}
+                                value={`$${Number(unitPrice).toFixed(2)}`}
                             />
                         );
                     })}
