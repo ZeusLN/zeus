@@ -32,7 +32,7 @@ import { localeString } from '../../utils/LocaleUtils';
 
 import { version } from './../../package.json';
 
-interface PosPaneProps {
+interface SquarePosPaneProps {
     navigation: any;
     ActivityStore?: ActivityStore;
     FiatStore?: FiatStore;
@@ -42,7 +42,7 @@ interface PosPaneProps {
     SettingsStore?: SettingsStore;
 }
 
-interface PosPaneState {
+interface SquarePosPaneState {
     selectedIndex: number;
     search: string;
     fadeAnimation: any;
@@ -57,9 +57,9 @@ interface PosPaneState {
     'SettingsStore'
 )
 @observer
-export default class PosPane extends React.PureComponent<
-    PosPaneProps,
-    PosPaneState
+export default class SquarePosPane extends React.PureComponent<
+    SquarePosPaneProps,
+    SquarePosPaneState
 > {
     constructor(props: any) {
         super(props);

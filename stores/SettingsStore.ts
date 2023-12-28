@@ -42,7 +42,14 @@ interface DisplaySettings {
     showAllDecimalPlaces?: boolean;
 }
 
+export enum PosEnabled {
+    Disabled = 'disabled',
+    Square = 'square',
+    Standalone = 'standalone'
+}
+
 interface PosSettings {
+    posEnabled?: PosEnabled;
     squareEnabled?: boolean;
     squareAccessToken?: string;
     squareLocationId?: string;
@@ -50,6 +57,7 @@ interface PosSettings {
     confirmationPreference?: string;
     disableTips?: boolean;
     squareDevMode?: boolean;
+    taxPercentage?: string;
 }
 
 interface PaymentsSettings {
@@ -662,6 +670,12 @@ export const POS_CONF_PREF_KEYS = [
     { key: 'LN only', value: 'lnOnly' }
 ];
 
+export const POS_ENABLED_KEYS = [
+    { key: 'Disabled', value: PosEnabled.Disabled },
+    { key: 'Standalone', value: PosEnabled.Standalone },
+    { key: 'Square', value: PosEnabled.Square }
+];
+
 export const LNDHUB_AUTH_MODES = [
     { key: 'BlueWallet', value: 'BlueWallet' },
     { key: 'Alby', value: 'Alby' }
@@ -725,13 +739,15 @@ export default class SettingsStore {
             showAllDecimalPlaces: false
         },
         pos: {
+            posEnabled: PosEnabled.Disabled,
             squareEnabled: false,
             squareAccessToken: '',
             squareLocationId: '',
             merchantName: '',
             confirmationPreference: 'lnOnly',
             disableTips: false,
-            squareDevMode: false
+            squareDevMode: false,
+            taxPercentage: '0'
         },
         payments: {
             defaultFeeMethod: 'fixed', // deprecated
@@ -1029,6 +1045,15 @@ export default class SettingsStore {
                     await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
 
+                // migrate old POS squareEnabled setting to posEnabled
+                if (!this.settings.pos.posEnabled) {
+                    if (this.settings.pos.squareEnabled) {
+                        this.settings.pos.posEnabled = PosEnabled.Square;
+                    } else {
+                        this.settings.pos.posEnabled = PosEnabled.Disabled;
+                    }
+                }
+
                 const node: any =
                     this.settings.nodes &&
                     this.settings.nodes[this.settings.selectedNode || 0];
@@ -1077,7 +1102,6 @@ export default class SettingsStore {
     @action
     public updateSettings = async (newSetting: any) => {
         const existingSettings = await this.getSettings();
-
         const newSettings = {
             ...existingSettings,
             ...newSetting

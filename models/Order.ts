@@ -5,9 +5,14 @@ import BaseModel from './BaseModel';
 import { localeString } from './../utils/LocaleUtils';
 import { orderPaymentInfo } from './../stores/PosStore';
 
-interface LineItem {
+interface BasePriceMoney {
+    amount: number;
+    sats?: number;
+}
+export interface LineItem {
     name: string;
     quantity: number;
+    base_price_money: BasePriceMoney;
 }
 
 export default class Order extends BaseModel {
@@ -21,6 +26,7 @@ export default class Order extends BaseModel {
     total_money: {
         amount: number;
         currency: string;
+        sats?: number;
     };
     line_items: Array<LineItem>;
     payment?: orderPaymentInfo;
