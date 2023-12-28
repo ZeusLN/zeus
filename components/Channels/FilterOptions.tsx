@@ -16,6 +16,8 @@ export function FilterOptions(props: { ChannelsStore: ChannelsStore }) {
     const getFilterOptions = (): FilterOption[] => {
         const { ChannelsStore } = props;
         const options: { [key: string]: any } = {
+            online: false,
+            offline: false,
             announced: false,
             unannounced: false
         };
