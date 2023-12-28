@@ -310,7 +310,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     onPressIn={onDragStart}
                                                     onPressOut={onDragEnd}
                                                     accessibilityLabel={localeString(
-                                                        'general.add'
+                                                        'general.reorder'
                                                     )}
                                                 >
                                                     <DragDots
