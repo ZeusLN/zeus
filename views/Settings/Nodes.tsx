@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { FlatList, View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -17,6 +18,8 @@ import { themeColor } from '../../utils/ThemeUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
+import DragDots from '../../assets/images/SVG/DragDots.svg';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 interface NodesProps {
     nodes: any[];
@@ -133,6 +136,37 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             </TouchableOpacity>
         );
 
+        const onReordered = async (fromIndex: number, toIndex: number) => {
+            this.setState({
+                loading: true
+            });
+            const oldSelectedNode =
+                this.props.SettingsStore?.settings?.selectedNode || 0;
+            let selectedNode = oldSelectedNode;
+
+            if (oldSelectedNode >= fromIndex && oldSelectedNode <= toIndex) {
+                selectedNode--;
+            }
+
+            if (oldSelectedNode <= fromIndex && oldSelectedNode >= toIndex) {
+                selectedNode++;
+            }
+
+            if (fromIndex === oldSelectedNode) {
+                selectedNode = toIndex;
+            }
+
+            const copy = [...nodes]; // Don't modify react data in-place
+            const removed = copy.splice(fromIndex, 1);
+
+            copy.splice(toIndex, 0, removed[0]); // Now insert at the new pos
+            await updateSettings({
+                nodes: copy,
+                selectedNode
+            });
+            this.refreshSettings();
+        };
+
         return (
             <Screen>
                 <Header
@@ -147,120 +181,164 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     rightComponent={<AddButton />}
                     navigation={navigation}
                 />
-                {!!nodes && nodes.length > 0 && (
-                    <FlatList
-                        data={nodes}
-                        renderItem={({
-                            item,
-                            index
-                        }: {
-                            item: any;
-                            index: number;
-                        }) => {
-                            let nodeSubtitle = '';
-                            if (
-                                selectedNode === index ||
-                                (!selectedNode && index === 0)
-                            ) {
-                                nodeSubtitle = 'Active | ';
-                            }
+                {loading && <LoadingIndicator />}
+                {!loading && !!nodes && nodes.length > 0 && (
+                    <View>
+                        <DragList
+                            onReordered={onReordered}
+                            data={nodes}
+                            keyExtractor={(item: any) => {
+                                return JSON.stringify(item);
+                            }}
+                            // keyExtractor={(item) => item}
+                            renderItem={({
+                                item,
+                                index,
+                                onDragStart,
+                                onDragEnd,
+                                isActive
+                            }: DragListRenderItemInfo<any>) => {
+                                let nodeSubtitle = '';
+                                if (
+                                    selectedNode === index ||
+                                    (!selectedNode && index === 0)
+                                ) {
+                                    nodeSubtitle = 'Active | ';
+                                }
 
-                            nodeSubtitle +=
-                                implementationDisplayValue[item.implementation];
+                                nodeSubtitle +=
+                                    implementationDisplayValue[
+                                        item.implementation
+                                    ];
 
-                            if (item.embeddedLndNetwork) {
-                                nodeSubtitle += ` (${item.embeddedLndNetwork})`;
-                            }
+                                if (item.embeddedLndNetwork) {
+                                    nodeSubtitle += ` (${item.embeddedLndNetwork})`;
+                                }
 
-                            return (
-                                <ListItem
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor: 'transparent'
-                                    }}
-                                    onPress={async () => {
-                                        const currentImplementation =
-                                            implementation;
-                                        await updateSettings({
-                                            nodes,
-                                            selectedNode: index
-                                        }).then(() => {
-                                            if (
-                                                currentImplementation ===
-                                                'lightning-node-connect'
-                                            ) {
-                                                BackendUtils.disconnect();
-                                            }
-                                            BalanceStore.reset();
-                                            NodeInfoStore.reset();
-                                            ChannelsStore.reset();
-                                            setConnectingStatus(true);
-                                            navigation.navigate('Wallet', {
-                                                refresh: true
-                                            });
-                                        });
-                                    }}
-                                >
-                                    <NodeIdenticon
-                                        selectedNode={item}
-                                        width={35}
-                                        rounded
-                                    />
-                                    <ListItem.Content>
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
-                                            }}
-                                        >
-                                            {NodeTitle(item, 32)}
-                                        </ListItem.Title>
-                                        <ListItem.Subtitle
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
-                                            }}
-                                        >
-                                            {nodeSubtitle}
-                                        </ListItem.Subtitle>
-                                    </ListItem.Content>
-                                    <Button
-                                        title=""
-                                        accessibilityLabel={localeString(
-                                            'views.Settings.title'
-                                        )}
-                                        icon={{
-                                            name: 'settings',
-                                            size: 25,
-                                            color: themeColor('text')
+                                return (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor: isActive
+                                                ? themeColor('highlight')
+                                                : themeColor('background')
                                         }}
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                'NodeConfiguration',
-                                                {
-                                                    node: item,
-                                                    index,
-                                                    active:
-                                                        selectedNode === index,
-                                                    saved: true
+                                        onPress={async () => {
+                                            const currentImplementation =
+                                                implementation;
+                                            await updateSettings({
+                                                nodes,
+                                                selectedNode: index
+                                            }).then(() => {
+                                                if (
+                                                    currentImplementation ===
+                                                    'lightning-node-connect'
+                                                ) {
+                                                    BackendUtils.disconnect();
                                                 }
-                                            )
-                                        }
-                                        iconOnly
-                                        adaptiveWidth
-                                    />
-                                </ListItem>
-                            );
-                        }}
-                        refreshing={loading}
-                        keyExtractor={(item, index) => `${item.host}-${index}`}
-                        ItemSeparatorComponent={this.renderSeparator}
-                        onEndReachedThreshold={50}
-                    />
+                                                BalanceStore.reset();
+                                                NodeInfoStore.reset();
+                                                ChannelsStore.reset();
+                                                setConnectingStatus(true);
+                                                navigation.navigate('Wallet', {
+                                                    refresh: true
+                                                });
+                                            });
+                                        }}
+                                    >
+                                        <ListItem
+                                            containerStyle={{
+                                                borderBottomWidth: 0,
+                                                backgroundColor: 'transparent'
+                                            }}
+                                        >
+                                            <NodeIdenticon
+                                                selectedNode={item}
+                                                width={35}
+                                                rounded
+                                            />
+                                            <ListItem.Content>
+                                                <ListItem.Title
+                                                    style={{
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {NodeTitle(item, 32)}
+                                                </ListItem.Title>
+                                                <ListItem.Subtitle
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {nodeSubtitle}
+                                                </ListItem.Subtitle>
+                                            </ListItem.Content>
+                                            <>
+                                                <Button
+                                                    title=""
+                                                    accessibilityLabel={localeString(
+                                                        'views.Settings.title'
+                                                    )}
+                                                    icon={{
+                                                        name: 'settings',
+                                                        size: 35,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'NodeConfiguration',
+                                                            {
+                                                                node: item,
+                                                                index,
+                                                                active:
+                                                                    selectedNode ===
+                                                                    index,
+                                                                saved: true
+                                                            }
+                                                        )
+                                                    }
+                                                    iconOnly
+                                                    adaptiveWidth
+                                                />
+                                                <TouchableOpacity
+                                                    onPressIn={onDragStart}
+                                                    onPressOut={onDragEnd}
+                                                    accessibilityLabel={localeString(
+                                                        'general.add'
+                                                    )}
+                                                >
+                                                    <DragDots
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="30"
+                                                        height="30"
+                                                        style={{
+                                                            alignSelf: 'center'
+                                                        }}
+                                                    />
+                                                </TouchableOpacity>
+                                            </>
+                                        </ListItem>
+                                    </TouchableOpacity>
+                                );
+                            }}
+                            refreshing={loading}
+                            ItemSeparatorComponent={this.renderSeparator}
+                            onEndReachedThreshold={50}
+                        />
+                    </View>
                 )}
                 {nodes && nodes.length === 0 && !loading && (
                     <View
