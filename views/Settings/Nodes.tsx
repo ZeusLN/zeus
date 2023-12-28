@@ -35,6 +35,7 @@ interface NodesProps {
 
 interface NodesState {
     nodes: any[];
+    selectedNode: number;
     loading: boolean;
 }
 
@@ -45,6 +46,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
     state = {
         nodes: [],
+        selectedNode: 0,
         loading: false
     };
 
@@ -74,7 +76,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         await this.props.SettingsStore.getSettings().then((settings: any) => {
             this.setState({
                 loading: false,
-                nodes: (settings && settings.nodes) || []
+                nodes: (settings && settings.nodes) || [],
+                selectedNode: (settings && settings.selectedNode) || 0
             });
         });
     }
@@ -98,14 +101,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             ChannelsStore,
             SettingsStore
         } = this.props;
-        const { loading, nodes } = this.state;
-        const {
-            updateSettings,
-            settings,
-            setConnectingStatus,
-            implementation
-        }: any = SettingsStore;
-        const { selectedNode } = settings;
+        const { loading, nodes, selectedNode } = this.state;
+        const { updateSettings, setConnectingStatus, implementation }: any =
+            SettingsStore;
 
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
@@ -154,7 +152,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
             copy.splice(toIndex, 0, removed[0]); // Now insert at the new pos
             this.setState({
-                nodes: copy
+                nodes: copy,
+                selectedNode
             });
             updateSettings({
                 nodes: copy,
