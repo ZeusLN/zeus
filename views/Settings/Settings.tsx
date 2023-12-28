@@ -133,7 +133,8 @@ export default class Settings extends React.Component<
             }
         }
 
-        const youveGotSats = paid && paid.length > 0;
+        const youveGotSats = paid?.length > 0;
+        const forwardArrowColor = themeColor('secondaryText');
 
         return (
             <Screen>
@@ -200,9 +201,7 @@ export default class Settings extends React.Component<
                                     </Text>
                                 </View>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </View>
                         </TouchableOpacity>
@@ -241,9 +240,7 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.connectNode')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -281,9 +278,7 @@ export default class Settings extends React.Component<
                                     {localeString('general.lsp')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -337,7 +332,7 @@ export default class Settings extends React.Component<
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
-                                            stroke={themeColor('text')}
+                                            stroke={forwardArrowColor}
                                         />
                                     </View>
                                 </TouchableOpacity>
@@ -377,7 +372,7 @@ export default class Settings extends React.Component<
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
-                                            stroke={themeColor('text')}
+                                            stroke={forwardArrowColor}
                                         />
                                     </View>
                                 </View>
@@ -430,9 +425,9 @@ export default class Settings extends React.Component<
                                                     style={styles.ForwardArrow}
                                                 >
                                                     <ForwardIcon
-                                                        stroke={themeColor(
-                                                            'text'
-                                                        )}
+                                                        stroke={
+                                                            forwardArrowColor
+                                                        }
                                                     />
                                                 </View>
                                             </TouchableOpacity>
@@ -470,7 +465,7 @@ export default class Settings extends React.Component<
                                         </Text>
                                         <View style={styles.ForwardArrow}>
                                             <ForwardIcon
-                                                stroke={themeColor('text')}
+                                                stroke={forwardArrowColor}
                                             />
                                         </View>
                                     </TouchableOpacity>
@@ -504,7 +499,7 @@ export default class Settings extends React.Component<
                                         </Text>
                                         <View style={styles.ForwardArrow}>
                                             <ForwardIcon
-                                                stroke={themeColor('text')}
+                                                stroke={forwardArrowColor}
                                             />
                                         </View>
                                     </TouchableOpacity>
@@ -540,7 +535,7 @@ export default class Settings extends React.Component<
                                         </Text>
                                         <View style={styles.ForwardArrow}>
                                             <ForwardIcon
-                                                stroke={themeColor('text')}
+                                                stroke={forwardArrowColor}
                                             />
                                         </View>
                                     </TouchableOpacity>
@@ -572,9 +567,7 @@ export default class Settings extends React.Component<
                                     Accounts
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('text')}
-                                    />
+                                    <ForwardIcon stroke={forwardIconColor} />
                                 </View>
                             </View> */}
                         </View>
@@ -611,9 +604,7 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.payments')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
 
@@ -647,7 +638,7 @@ export default class Settings extends React.Component<
                                         </Text>
                                         <View style={styles.ForwardArrow}>
                                             <ForwardIcon
-                                                stroke={themeColor('text')}
+                                                stroke={forwardArrowColor}
                                             />
                                         </View>
                                     </TouchableOpacity>
@@ -677,7 +668,7 @@ export default class Settings extends React.Component<
                                         </Text>
                                         <View style={styles.ForwardArrow}>
                                             <ForwardIcon
-                                                stroke={themeColor('text')}
+                                                stroke={forwardArrowColor}
                                             />
                                         </View>
                                     </TouchableOpacity>
@@ -723,7 +714,7 @@ export default class Settings extends React.Component<
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
-                                            stroke={themeColor('text')}
+                                            stroke={forwardArrowColor}
                                         />
                                     </View>
                                 </TouchableOpacity>
@@ -755,9 +746,7 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.privacy')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
 
@@ -783,9 +772,7 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.security')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
 
@@ -814,9 +801,7 @@ export default class Settings extends React.Component<
                                     )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -846,9 +831,7 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.privacy')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
 
@@ -874,9 +857,7 @@ export default class Settings extends React.Component<
                                     {localeString('views.Settings.security')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -910,9 +891,7 @@ export default class Settings extends React.Component<
                                     )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -944,9 +923,7 @@ export default class Settings extends React.Component<
                                     )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
 
@@ -969,9 +946,7 @@ export default class Settings extends React.Component<
                                     )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -1005,9 +980,7 @@ export default class Settings extends React.Component<
                                 {localeString('views.Settings.Display.title')}
                             </Text>
                             <View style={styles.ForwardArrow}>
-                                <ForwardIcon
-                                    stroke={themeColor('secondaryText')}
-                                />
+                                <ForwardIcon stroke={forwardArrowColor} />
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -1042,9 +1015,7 @@ export default class Settings extends React.Component<
                                     Nostr
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -1083,9 +1054,7 @@ export default class Settings extends React.Component<
                                     {localeString('general.pos')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
-                                    <ForwardIcon
-                                        stroke={themeColor('secondaryText')}
-                                    />
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -1123,9 +1092,7 @@ export default class Settings extends React.Component<
                                 )}
                             </Text>
                             <View style={styles.ForwardArrow}>
-                                <ForwardIcon
-                                    stroke={themeColor('secondaryText')}
-                                />
+                                <ForwardIcon stroke={forwardArrowColor} />
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -1160,9 +1127,7 @@ export default class Settings extends React.Component<
                                 {localeString('general.help')}
                             </Text>
                             <View style={styles.ForwardArrow}>
-                                <ForwardIcon
-                                    stroke={themeColor('secondaryText')}
-                                />
+                                <ForwardIcon stroke={forwardArrowColor} />
                             </View>
                         </TouchableOpacity>
                     </View>
