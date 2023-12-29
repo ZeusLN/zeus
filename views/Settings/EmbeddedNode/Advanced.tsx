@@ -1,12 +1,5 @@
 import * as React from 'react';
-import {
-    Alert,
-    NativeModules,
-    Platform,
-    ScrollView,
-    Text,
-    View
-} from 'react-native';
+import { NativeModules, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -18,6 +11,7 @@ import Switch from '../../../components/Switch';
 import SettingsStore from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
+import { restartNeeded } from '../../../utils/RestartUtils';
 import { sleep } from '../../../utils/SleepUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
@@ -30,35 +24,6 @@ interface EmbeddedNodeAdvancedSettingsState {
     rescan: boolean | undefined;
     compactDb: boolean | undefined;
 }
-
-const restartNeeded = () => {
-    const title = localeString('restart.title');
-    const message = localeString('restart.msg');
-    if (Platform.OS === 'android') {
-        Alert.alert(title, message + '\n' + localeString('restart.msg1'), [
-            {
-                style: 'cancel',
-                text: localeString('general.no')
-            },
-            {
-                style: 'default',
-                text: localeString('general.yes'),
-                onPress: async () => {
-                    try {
-                        // await NativeModules.ZeusTor.stopTor();
-                        await NativeModules.LndMobile.stopLnd();
-                        await NativeModules.LndMobileTools.killLnd();
-                    } catch (e) {
-                        console.log(e);
-                    }
-                    NativeModules.LndMobileTools.restartApp();
-                }
-            }
-        ]);
-    } else {
-        Alert.alert(title, message);
-    }
-};
 
 @inject('SettingsStore')
 @observer
@@ -173,6 +138,7 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                             await updateSettings({
                                                 rescan: !rescan
                                             });
+                                            restartNeeded();
                                         }}
                                     />
                                 </View>
@@ -226,6 +192,7 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                             await updateSettings({
                                                 compactDb: !compactDb
                                             });
+                                            restartNeeded();
                                         }}
                                     />
                                 </View>
