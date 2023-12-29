@@ -25,6 +25,7 @@ import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
 import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
+import NostrContacts from './views/NostrContacts';
 
 // Settings views
 import Settings from './views/Settings/Settings';
@@ -52,6 +53,10 @@ import Mortals from './views/Settings/Mortals';
 import PointOfSale from './views/Settings/PointOfSale';
 import PointOfSaleRecon from './views/Settings/PointOfSaleRecon';
 import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
+import Categories from './views/POS/Categories';
+import ProductCategoryDetails from './views/POS/ProductCategoryDetails';
+import Products from './views/POS/Products';
+import ProductDetails from './views/POS/ProductDetails';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
@@ -293,6 +298,18 @@ const AppScenes = {
     PointOfSaleReconExport: {
         screen: PointOfSaleReconExport
     },
+    Categories: {
+        screen: Categories
+    },
+    ProductCategoryDetails: {
+        screen: ProductCategoryDetails
+    },
+    Products: {
+        screen: Products
+    },
+    ProductDetails: {
+        screen: ProductDetails
+    },
     PaymentsSettings: {
         screen: PaymentsSettings
     },
@@ -391,6 +408,9 @@ const AppScenes = {
     },
     SocialMedia: {
         screen: SocialMedia
+    },
+    NostrContacts: {
+        screen: NostrContacts
     }
 };
 

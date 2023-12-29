@@ -10,7 +10,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import TextInput from '../components/TextInput';
 import ShowHideToggle from '../components/ShowHideToggle';
 
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 
 import { verifyBiometry } from '../utils/BiometricUtils';
 import LinkingUtils from '../utils/LinkingUtils';
@@ -74,8 +74,9 @@ export default class Lockscreen extends React.Component<
         const attemptAdminLogin: boolean =
             navigation.getParam('attemptAdminLogin');
 
-        const posEnabled: boolean =
-            (settings && settings.pos && settings.pos.squareEnabled) || false;
+        const posEnabled: PosEnabled =
+            (settings && settings.pos && settings.pos.posEnabled) ||
+            PosEnabled.Disabled;
 
         const isBiometryConfigured = SettingsStore.isBiometryConfigured();
 

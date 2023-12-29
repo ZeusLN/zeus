@@ -201,6 +201,9 @@ const handleAnything = async (
         if (settingsStore.enableTor && domain.includes('.onion')) {
             await doTorRequest(url, RequestMethod.GET)
                 .then((response: any) => {
+                    if (!response.callback) {
+                        throw new Error(error);
+                    }
                     return [
                         'LnurlPay',
                         {
@@ -218,6 +221,9 @@ const handleAnything = async (
                     const status = response.info().status;
                     if (status == 200) {
                         const data = response.json();
+                        if (!data.callback) {
+                            throw new Error(error);
+                        }
                         return [
                             'LnurlPay',
                             {
