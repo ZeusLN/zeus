@@ -12,6 +12,7 @@ import Screen from '../components/Screen';
 import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
+import { Row } from '../components/layout/Row';
 
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
@@ -19,6 +20,7 @@ import KeySecurity from '../assets/images/SVG/Key Security.svg';
 import VerifiedAccount from '../assets/images/SVG/Verified Account.svg';
 import EditContact from '../assets/images/SVG/Pen.svg';
 import Star from '../assets/images/SVG/Star.svg';
+import QR from '../assets/images/SVG/QR.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
 import LinkingUtils from '../utils/LinkingUtils';
@@ -215,10 +217,11 @@ export default class ContactDetails extends React.Component<
                     fill={contact.isFavourite ? themeColor('text') : 'none'}
                     stroke={contact.isFavourite ? 'none' : themeColor('text')}
                     strokeWidth={2}
-                    style={{ alignSelf: 'center' }}
+                    style={{ alignSelf: 'center', marginRight: 12 }}
                 />
             </TouchableOpacity>
         );
+
         const EditContactButton = () => (
             <TouchableOpacity
                 onPress={() =>
@@ -234,6 +237,20 @@ export default class ContactDetails extends React.Component<
                 />
             </TouchableOpacity>
         );
+
+        const QRButton = () => (
+            <TouchableOpacity
+                onPress={() =>
+                    navigation.navigate('QR', {
+                        value: JSON.stringify(this.state.contact),
+                        hideText: true
+                    })
+                }
+            >
+                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
+            </TouchableOpacity>
+        );
+
         return (
             <>
                 {isLoading ? (
@@ -259,7 +276,12 @@ export default class ContactDetails extends React.Component<
                                 )
                             }
                             rightComponent={
-                                !this.state.isNostrContact && <StarButton />
+                                <Row>
+                                    {!this.state.isNostrContact && (
+                                        <StarButton />
+                                    )}
+                                    <QRButton />
+                                </Row>
                             }
                             centerContainerStyle={{
                                 paddingRight: 6,
