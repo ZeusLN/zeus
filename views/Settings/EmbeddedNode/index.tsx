@@ -1,16 +1,25 @@
 import * as React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import {
+    Alert,
+    NativeModules,
+    Platform,
+    ScrollView,
+    Text,
+    View
+} from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Screen from '../../../components/Screen';
+import Button from '../../../components/Button';
 import Header from '../../../components/Header';
+import Screen from '../../../components/Screen';
+import Switch from '../../../components/Switch';
 
 import SettingsStore from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
+import { sleep } from '../../../utils/SleepUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import Switch from '../../../components/Switch';
 
 interface EmbeddedNodeProps {
     navigation: any;
@@ -21,6 +30,35 @@ interface EmbeddedNodeState {
     rescan: boolean | undefined;
     compactDb: boolean | undefined;
 }
+
+const restartNeeded = () => {
+    const title = localeString('restart.title');
+    const message = localeString('restart.msg');
+    if (Platform.OS === 'android') {
+        Alert.alert(title, message + '\n' + localeString('restart.msg1'), [
+            {
+                style: 'cancel',
+                text: localeString('general.no')
+            },
+            {
+                style: 'default',
+                text: localeString('general.yes'),
+                onPress: async () => {
+                    try {
+                        // await NativeModules.ZeusTor.stopTor();
+                        await NativeModules.LndMobile.stopLnd();
+                        await NativeModules.LndMobileTools.killLnd();
+                    } catch (e) {
+                        console.log(e);
+                    }
+                    NativeModules.LndMobileTools.restartApp();
+                }
+            }
+        ]);
+    } else {
+        Alert.alert(title, message);
+    }
+};
 
 @inject('SettingsStore')
 @observer
@@ -341,6 +379,40 @@ export default class EmbeddedNode extends React.Component<
                                         'views.Settings.EmbeddedNode.compactDb.subtitle'
                                     )}
                                 </Text>
+                            </View>
+                        </>
+                        <>
+                            <View style={{ margin: 10 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
+                                    )}
+                                    onPress={async () => {
+                                        try {
+                                            await NativeModules.LndMobile.stopLnd();
+                                            await sleep(5000); // Let lnd close down
+                                        } catch (e: any) {
+                                            // If lnd was closed down already
+                                            if (
+                                                e?.message?.includes?.('closed')
+                                            ) {
+                                                console.log('yes closed');
+                                            } else {
+                                                console.error(e.message, 10000);
+                                                return;
+                                            }
+                                        }
+
+                                        console.log(
+                                            await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+                                                embeddedLndNetwork === 'Mainnet'
+                                                    ? 'mainnet'
+                                                    : 'testnet'
+                                            )
+                                        );
+                                        restartNeeded();
+                                    }}
+                                />
                             </View>
                         </>
                     </ScrollView>

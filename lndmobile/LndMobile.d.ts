@@ -53,6 +53,7 @@ export interface ILndMobileTools {
     DEBUG_getWalletPasswordFromKeychain(): Promise<string>;
     DEBUG_deleteSpeedloaderLastrunFile(): boolean;
     DEBUG_deleteSpeedloaderDgraphDirectory(): null;
+    DEBUG_deleteNeutrinoFiles(network: string): boolean;
 
     // Android-specific
     getIntentStringData(): Promise<string | null>;
