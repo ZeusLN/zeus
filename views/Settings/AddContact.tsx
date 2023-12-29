@@ -21,6 +21,7 @@ import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../../assets/images/SVG/Key Security.svg';
 import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
+import Scan from '../../assets/images/SVG/Scan.svg';
 import { themeColor } from '../../utils/ThemeUtils';
 import AddressUtils from '../../utils/AddressUtils';
 
@@ -28,6 +29,7 @@ import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
+import { Row } from '../../components/layout/Row';
 
 import Star from '../../assets/images/SVG/Star.svg';
 
@@ -384,6 +386,20 @@ export default class AddContact extends React.Component<
             null
         );
 
+        const ScanBadge = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('HandleAnythingQRScanner')}
+                accessibilityLabel={localeString('general.scan')}
+            >
+                <Scan
+                    fill={themeColor('text')}
+                    width={30}
+                    height={30}
+                    style={{ marginRight: 12 }}
+                />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <KeyboardAvoidingView
@@ -401,10 +417,13 @@ export default class AddContact extends React.Component<
                         <Header
                             leftComponent="Back"
                             rightComponent={
-                                <StarButton
-                                    isFavourite={this.state.isFavourite}
-                                    onPress={this.toggleFavorite}
-                                />
+                                <Row>
+                                    <ScanBadge />
+                                    <StarButton
+                                        isFavourite={this.state.isFavourite}
+                                        onPress={this.toggleFavorite}
+                                    />
+                                </Row>
                             }
                             containerStyle={{
                                 borderBottomWidth: 0

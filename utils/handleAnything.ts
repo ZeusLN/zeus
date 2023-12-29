@@ -16,7 +16,7 @@ const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
 
 const handleAnything = async (
-    data: string,
+    data?: any,
     setAmount?: string,
     isClipboardValue?: boolean
 ): Promise<any> => {
@@ -364,6 +364,14 @@ const handleAnything = async (
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
             });
+    } else if (JSON.parse(data)?.id) {
+        return [
+            'ContactDetails',
+            {
+                nostrContact: JSON.parse(data),
+                isNostrContact: true
+            }
+        ];
     } else {
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));
