@@ -305,24 +305,27 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     iconOnly
                                                     adaptiveWidth
                                                 />
-                                                <TouchableOpacity
-                                                    onPressIn={onDragStart}
-                                                    onPressOut={onDragEnd}
-                                                    accessibilityLabel={localeString(
-                                                        'general.reorder'
-                                                    )}
-                                                >
-                                                    <DragDots
-                                                        fill={themeColor(
-                                                            'text'
+                                                {nodes.length > 1 && (
+                                                    <TouchableOpacity
+                                                        onPressIn={onDragStart}
+                                                        onPressOut={onDragEnd}
+                                                        accessibilityLabel={localeString(
+                                                            'general.reorder'
                                                         )}
-                                                        width="30"
-                                                        height="30"
-                                                        style={{
-                                                            alignSelf: 'center'
-                                                        }}
-                                                    />
-                                                </TouchableOpacity>
+                                                    >
+                                                        <DragDots
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="30"
+                                                            height="30"
+                                                            style={{
+                                                                alignSelf:
+                                                                    'center'
+                                                            }}
+                                                        />
+                                                    </TouchableOpacity>
+                                                )}
                                             </>
                                         </ListItem>
                                     </TouchableOpacity>
