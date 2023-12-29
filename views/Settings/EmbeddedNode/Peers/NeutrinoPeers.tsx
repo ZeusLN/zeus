@@ -3,18 +3,19 @@ import { FlatList, ScrollView, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import { Row } from '../../../../components/layout/Row';
 import Button from '../../../../components/Button';
+import Header from '../../../../components/Header';
 import Text from '../../../../components/Text';
 import TextInput from '../../../../components/TextInput';
 import Screen from '../../../../components/Screen';
-import Header from '../../../../components/Header';
+import Switch from '../../../../components/Switch';
+import { Row } from '../../../../components/layout/Row';
 
 import SettingsStore from '../../../../stores/SettingsStore';
 
 import { localeString } from '../../../../utils/LocaleUtils';
+import { restartNeeded } from '../../../../utils/RestartUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
-import Switch from '../../../../components/Switch';
 
 interface NeutrinoPeersProps {
     navigation: any;
@@ -132,6 +133,7 @@ export default class NeutrinoPeers extends React.Component<
                                                 dontAllowOtherPeers:
                                                     !dontAllowOtherPeers
                                             });
+                                            restartNeeded();
                                         }}
                                     />
                                 </View>
