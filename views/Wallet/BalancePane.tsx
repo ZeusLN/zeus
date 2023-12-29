@@ -30,7 +30,7 @@ interface BalancePaneProps {
 }
 
 interface BalancePaneState {
-    isBackedUp: boolean;
+    showBackupPrompt: boolean;
 }
 
 @inject('BalanceStore', 'NodeInfoStore', 'SettingsStore', 'SyncStore')
@@ -40,14 +40,14 @@ export default class BalancePane extends React.PureComponent<
     BalancePaneState
 > {
     state = {
-        isBackedUp: false
+        showBackupPrompt: false
     };
 
     async UNSAFE_componentWillMount() {
         const isBackedUp = await EncryptedStorage.getItem('backup-complete');
-        if (isBackedUp === 'true') {
+        if (isBackedUp !== 'true') {
             this.setState({
-                isBackedUp: true
+                showBackupPrompt: true
             });
         }
     }
@@ -60,7 +60,7 @@ export default class BalancePane extends React.PureComponent<
             SyncStore,
             navigation
         } = this.props;
-        const { isBackedUp } = this.state;
+        const { showBackupPrompt } = this.state;
         const {
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
@@ -252,7 +252,7 @@ export default class BalancePane extends React.PureComponent<
                         )}
                         {implementation === 'embedded-lnd' &&
                             !isSyncing &&
-                            !isBackedUp &&
+                            showBackupPrompt &&
                             (BalanceStore.lightningBalance !== 0 ||
                                 BalanceStore.totalBlockchainBalance !== 0) &&
                             !BalanceStore.loadingBlockchainBalance &&

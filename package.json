@@ -10,7 +10,9 @@
     "transformIgnorePatterns": [
       "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes)/)"
     ],
-    "testPathIgnorePatterns": ["check-styles.test.ts"]
+    "testPathIgnorePatterns": [
+      "check-styles.test.ts"
+    ]
   },
   "scripts": {
     "start": "react-native start",
@@ -91,6 +93,7 @@
     "react-native-circular-progress-indicator": "4.4.2",
     "react-native-crypto": "2.2.0",
     "react-native-date-picker": "4.3.3",
+    "react-native-draglist": "3.5.1",
     "react-native-elements": "3.4.3",
     "react-native-encrypted-storage": "4.0.3",
     "react-native-gesture-handler": "2.12.1",

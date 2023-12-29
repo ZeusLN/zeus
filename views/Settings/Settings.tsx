@@ -44,7 +44,10 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
-import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    INTERFACE_KEYS,
+    PosEnabled
+} from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import { version } from '../../package.json';
@@ -106,7 +109,10 @@ export default class Settings extends React.Component<
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
-        const posEnabled = settings?.pos?.squareEnabled;
+        const posEnabled =
+            settings &&
+            settings.pos &&
+            settings.pos.posEnabled !== PosEnabled.Disabled;
 
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
@@ -1021,44 +1027,42 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {(showHiddenSettings || posEnabled) && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() =>
+                                navigation.navigate('PointOfSaleSettings')
+                            }
                         >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('PointOfSaleSettings')
-                                }
+                            <View style={styles.icon}>
+                                <POS
+                                    stroke={themeColor('text')}
+                                    fill={themeColor('secondary')}
+                                    width={23}
+                                    height={23}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <POS
-                                        stroke={themeColor('text')}
-                                        fill={themeColor('secondary')}
-                                        width={23}
-                                        height={23}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('general.pos')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                {localeString('general.pos')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
 
                     <View
                         style={{

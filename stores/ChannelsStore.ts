@@ -200,11 +200,20 @@ export default class ChannelsStore {
                         ?.toLocaleLowerCase()
                         .includes(query.toLocaleLowerCase())
             )
-            .filter(
+            ?.filter(
                 (channel: Channel) =>
-                    this.filterOptions?.length === 0 ||
+                    (!this.filterOptions?.includes('unannounced') &&
+                        !this.filterOptions?.includes('announced')) ||
                     this.filterOptions?.includes(
                         channel.private ? 'unannounced' : 'announced'
+                    )
+            )
+            .filter(
+                (channel: Channel) =>
+                    (!this.filterOptions?.includes('online') &&
+                        !this.filterOptions?.includes('offline')) ||
+                    this.filterOptions?.includes(
+                        channel.active ? 'online' : 'offline'
                     )
             );
         const sorted = filtered?.sort((a: any, b: any) => {
