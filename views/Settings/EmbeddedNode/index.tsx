@@ -22,16 +22,6 @@ export default class EmbeddedNode extends React.Component<
     EmbeddedNodeProps,
     {}
 > {
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        this.setState({
-            rescan: settings.rescan,
-            compactDb: settings.compactDb
-        });
-    }
-
     render() {
         const { navigation, SettingsStore } = this.props;
         const { embeddedLndNetwork, settings }: any = SettingsStore;
