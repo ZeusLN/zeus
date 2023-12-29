@@ -19,6 +19,7 @@ interface EmbeddedNodeProps {
 
 interface EmbeddedNodeState {
     rescan: boolean | undefined;
+    compactDb: boolean | undefined;
 }
 
 @inject('SettingsStore')
@@ -28,7 +29,8 @@ export default class EmbeddedNode extends React.Component<
     EmbeddedNodeState
 > {
     state = {
-        rescan: false
+        rescan: false,
+        compactDb: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -36,13 +38,14 @@ export default class EmbeddedNode extends React.Component<
         const { settings } = SettingsStore;
 
         this.setState({
-            rescan: settings.rescan
+            rescan: settings.rescan,
+            compactDb: settings.compactDb
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { rescan } = this.state;
+        const { rescan, compactDb } = this.state;
         const { updateSettings, embeddedLndNetwork, settings }: any =
             SettingsStore;
         const {
@@ -283,6 +286,59 @@ export default class EmbeddedNode extends React.Component<
                                 >
                                     {localeString(
                                         'views.Settings.EmbeddedNode.rescan.subtitle'
+                                    )}
+                                </Text>
+                            </View>
+                        </>
+                        <>
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: 'transparent'
+                                }}
+                            >
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.compactDb'
+                                    )}
+                                </ListItem.Title>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    <Switch
+                                        value={compactDb}
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                compactDb: !compactDb
+                                            });
+                                            await updateSettings({
+                                                compactDb: !compactDb
+                                            });
+                                        }}
+                                    />
+                                </View>
+                            </ListItem>
+                            <View
+                                style={{
+                                    margin: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.compactDb.subtitle'
                                     )}
                                 </Text>
                             </View>
