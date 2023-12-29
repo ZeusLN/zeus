@@ -5,10 +5,11 @@ import BigNumber from 'bignumber.js';
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
 
 export default class Payment extends BaseModel {
-    payment_hash: string | { data: number[]; type: string }; // object if lndhub
+    payment_hash: string;
     creation_date?: string;
     value: string | number;
     fee_sat?: string;
@@ -35,6 +36,10 @@ export default class Payment extends BaseModel {
     constructor(data?: any, nodes?: any) {
         super(data);
         this.nodes = nodes;
+        // lndhub
+        if (data.payment_hash?.type === 'Buffer') {
+            this.payment_hash = Base64Utils.bytesToHex(data.payment_hash.data);
+        }
     }
 
     @computed public get getPaymentRequest(): string | undefined {
