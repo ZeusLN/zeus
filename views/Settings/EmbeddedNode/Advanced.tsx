@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { NativeModules, ScrollView, Text, View } from 'react-native';
+import { Platform, NativeModules, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
@@ -15,6 +16,8 @@ import { restartNeeded } from '../../../utils/RestartUtils';
 import { sleep } from '../../../utils/SleepUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
+import { stopLnd } from '../../../utils/LndMobileUtils';
+
 interface EmbeddedNodeAdvancedSettingsProps {
     navigation: any;
     SettingsStore: SettingsStore;
@@ -22,8 +25,12 @@ interface EmbeddedNodeAdvancedSettingsProps {
 
 interface EmbeddedNodeAdvancedSettingsState {
     rescan: boolean | undefined;
+    embeddedTor: boolean | undefined;
+    persistentMode: boolean | undefined;
     compactDb: boolean | undefined;
 }
+
+const PERSISTENT_KEY = 'persistentServicesEnabled';
 
 @inject('SettingsStore')
 @observer
@@ -33,6 +40,8 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
 > {
     state = {
         rescan: false,
+        persistentMode: false,
+        embeddedTor: false,
         compactDb: false
     };
 
@@ -40,15 +49,19 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
 
+        const persistentMode = await AsyncStorage.getItem(PERSISTENT_KEY);
+
         this.setState({
             rescan: settings.rescan,
+            persistentMode: persistentMode === 'true' ? true : false,
+            embeddedTor: settings.embeddedTor,
             compactDb: settings.compactDb
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { rescan, compactDb } = this.state;
+        const { rescan, persistentMode, embeddedTor, compactDb } = this.state;
         const { updateSettings, embeddedLndNetwork, settings }: any =
             SettingsStore;
         const { bimodalPathfinding } = settings;
@@ -105,6 +118,132 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
+                        {false && (
+                            <>
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                >
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString('general.tor')}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={embeddedTor}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    embeddedTor: !embeddedTor
+                                                });
+                                                await updateSettings({
+                                                    embeddedTor: !embeddedTor
+                                                });
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
+                                <View
+                                    style={{
+                                        margin: 10
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {`${localeString(
+                                            'views.Settings.EmbeddedNode.embeddedTor.subtitle'
+                                        )} ${localeString(
+                                            'views.Settings.EmbeddedNode.embeddedTor.clearnetWarning'
+                                        )} ${localeString(
+                                            'views.Settings.EmbeddedNode.restart'
+                                        )}`}
+                                    </Text>
+                                </View>
+                            </>
+                        )}
+                        {Platform.OS === 'android' && (
+                            <>
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                >
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            embeddedTor
+                                                ? 'views.Settings.EmbeddedNode.persistentModeTor'
+                                                : 'views.Settings.EmbeddedNode.persistentMode'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={persistentMode}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    persistentMode:
+                                                        !persistentMode
+                                                });
+                                                await updateSettings({
+                                                    persistentMode:
+                                                        !persistentMode
+                                                });
+                                                const newValue =
+                                                    !persistentMode;
+                                                await AsyncStorage.setItem(
+                                                    PERSISTENT_KEY,
+                                                    newValue.toString()
+                                                );
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
+                                <View
+                                    style={{
+                                        margin: 10
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {`${localeString(
+                                            embeddedTor
+                                                ? 'views.Settings.EmbeddedNode.persistentMode.subtitleTor'
+                                                : 'views.Settings.EmbeddedNode.persistentMode.subtitle'
+                                        )} ${localeString(
+                                            'views.Settings.EmbeddedNode.restart'
+                                        )}`}
+                                    </Text>
+                                </View>
+                            </>
+                        )}
                         <>
                             <ListItem
                                 containerStyle={{
@@ -247,6 +386,15 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                 />
                             </View>
                         </>
+                        {false && persistentMode && (
+                            <View style={{ margin: 15 }}>
+                                <Button
+                                    warning={true}
+                                    title="Stop LND"
+                                    onPress={() => stopLnd()}
+                                />
+                            </View>
+                        )}
                     </ScrollView>
                 </View>
             </Screen>

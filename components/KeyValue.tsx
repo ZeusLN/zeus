@@ -23,7 +23,7 @@ interface KeyValueProps {
     sensitive?: boolean;
     mempoolLink?: () => void;
     disableCopy?: boolean;
-    SettingsStore: SettingsStore;
+    SettingsStore?: SettingsStore;
 }
 
 @inject('SettingsStore')

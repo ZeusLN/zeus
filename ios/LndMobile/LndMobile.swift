@@ -120,9 +120,9 @@ class LndMobile: RCTEventEmitter {
     resolve(Lnd.shared.checkStatus())
   }
 
-  @objc(startLnd:resolver:rejecter:)
-  func startLnd(_ args: String, resolve: @escaping RCTPromiseResolveBlock, rejecter reject:@escaping RCTPromiseRejectBlock) {
-    Lnd.shared.startLnd(args) { (data, error) in
+  @objc(startLnd:isTorEnabled:isTestnet:resolver:rejecter:)
+  func startLnd(_ args: String, isTorEnabled: Bool, isTestnet: Bool, resolve: @escaping RCTPromiseResolveBlock, rejecter reject:@escaping RCTPromiseRejectBlock) {
+    Lnd.shared.startLnd(args, isTorEnabled: isTorEnabled, isTestnet: isTestnet) { (data, error) in
       if let e = error {
         reject("error", e.localizedDescription, e)
         return
