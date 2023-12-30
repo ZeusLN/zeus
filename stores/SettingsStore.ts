@@ -120,6 +120,7 @@ export interface Settings {
     neutrinoPeers: Array<string>;
     zeroConfPeers: Array<string>;
     rescan: boolean;
+    compactDb: boolean;
     recovery: boolean;
     initialLoad: boolean;
     embeddedTor: boolean;
@@ -781,6 +782,7 @@ export default class SettingsStore {
         neutrinoPeers: [],
         zeroConfPeers: [],
         rescan: false,
+        compactDb: false,
         recovery: false,
         initialLoad: true,
         embeddedTor: false,

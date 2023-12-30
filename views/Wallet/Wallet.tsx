@@ -313,6 +313,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             fiatEnabled,
             pos,
             rescan,
+            compactDb,
             recovery,
             lightningAddress,
             embeddedTor,
@@ -346,7 +347,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
-                await initializeLnd(embeddedLndNetwork === 'Testnet', rescan);
+                await initializeLnd(
+                    embeddedLndNetwork === 'Testnet',
+                    rescan,
+                    compactDb
+                );
 
                 // on initial load, do not run EGS
                 if (initialLoad) {

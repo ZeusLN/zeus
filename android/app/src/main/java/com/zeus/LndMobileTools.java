@@ -431,6 +431,19 @@ class LndMobileTools extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
+  public void DEBUG_deleteNeutrinoFiles(String network, Promise promise) {
+    String chainFolder = getReactApplicationContext().getFilesDir().toString() + "/data/chain/bitcoin/" + network;
+
+    String neutrinoDb = chainFolder + "/neutrino.db";
+    String blockHeadersBin = chainFolder + "/block_headers.bin";
+    String regHeadersBin = chainFolder + "/reg_filter_headers.bin";
+    File neutrinoDbFile = new File(neutrinoDb);
+    File blockHeadersBinFile = new File(blockHeadersBin);
+    File regHeadersBinFiles = new File(regHeadersBin);
+    promise.resolve(neutrinoDbFile.delete() && blockHeadersBinFile.delete() && regHeadersBinFiles.delete());
+  }
+
+  @ReactMethod
   public void DEBUG_listProcesses(Promise promise) {
     String processes = "";
 
