@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <uses-feature android:name="android.hardware.nfc.hce" android:required="false" />
 
@@ -51,6 +53,7 @@
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+            <category android:name="android.intent.category.DEFAULT" />
         </intent-filter>
         <intent-filter>
             <action android:name="android.intent.action.VIEW" />
@@ -140,7 +143,14 @@
       </service>
       <service
         android:name=".LndMobileService"
-        android:exported="false" />
+                android:exported="false"
+        android:foregroundServiceType="specialUse"
+      >
+        <property
+          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+          android:value="Run Bitcoin Lightning Network node LND in order for the user to receive incoming payments"
+        />
+      </service>
     </application>
 
     <!-- <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">

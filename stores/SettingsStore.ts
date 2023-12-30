@@ -123,6 +123,7 @@ export interface Settings {
     compactDb: boolean;
     recovery: boolean;
     initialLoad: boolean;
+    embeddedTor: boolean;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -784,6 +785,7 @@ export default class SettingsStore {
         compactDb: false,
         recovery: false,
         initialLoad: true,
+        embeddedTor: false,
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,

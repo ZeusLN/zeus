@@ -199,7 +199,16 @@ export async function initializeLnd(
     await initialize();
 }
 
-export async function startLnd(walletPassword: string) {
+export async function stopLnd() {
+    const { stopLnd } = lndMobile.index;
+    return await stopLnd();
+}
+
+export async function startLnd(
+    walletPassword: string,
+    isTorEnabled: boolean = false,
+    isTestnet: boolean = false
+) {
     const { checkStatus, startLnd, decodeState, subscribeState } =
         lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
@@ -209,7 +218,7 @@ export async function startLnd(walletPassword: string) {
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
-        await startLnd('');
+        await startLnd('', isTorEnabled, isTestnet);
     }
 
     await new Promise(async (res) => {
@@ -254,6 +263,7 @@ export async function startLnd(walletPassword: string) {
 export async function createLndWallet(
     seedMnemonic?: string,
     walletPassphrase?: string,
+    isTorEnabled?: boolean,
     isTestnet?: boolean,
     channelBackupsBase64?: string
 ) {
@@ -279,7 +289,7 @@ export async function createLndWallet(
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
-        await startLnd('');
+        await startLnd('', isTorEnabled, isTestnet);
     }
     await sleep(2000);
 
