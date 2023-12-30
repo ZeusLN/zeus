@@ -163,11 +163,14 @@ open class Lnd {
     return flags
   }
 
-  func startLnd(_ args: String, lndStartedCallback: @escaping Callback) -> Void {
+  func startLnd(_ args: String, isTorEnabled: Bool, isTestnet: Bool, lndStartedCallback: @escaping Callback) -> Void {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     let lndPath = applicationSupport.appendingPathComponent("lnd", isDirectory: true)
 
     var lndArgs = "--nolisten --lnddir=\"\(lndPath.path)\" " + args
+    if (isTorEnabled) {
+      lndArgs += " --tor.active"
+    }
 
     let started: Callback = {(data: Data?, error: Error?) in {
       self.lndStarted = true
