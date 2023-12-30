@@ -150,6 +150,7 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                                 await updateSettings({
                                                     embeddedTor: !embeddedTor
                                                 });
+                                                restartNeeded();
                                             }}
                                         />
                                     </View>
@@ -219,6 +220,7 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                                     PERSISTENT_KEY,
                                                     newValue.toString()
                                                 );
+                                                restartNeeded();
                                             }}
                                         />
                                     </View>
