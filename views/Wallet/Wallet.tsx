@@ -315,6 +315,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             rescan,
             recovery,
             lightningAddress,
+            embeddedTor,
             initialLoad
         } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
@@ -356,7 +357,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     if (expressGraphSyncEnabled) await expressGraphSync();
                 }
 
-                await startLnd(walletPassword);
+                await startLnd(
+                    walletPassword,
+                    embeddedTor,
+                    embeddedLndNetwork === 'Testnet'
+                );
             }
             if (BackendUtils.supportsLSPs()) {
                 if (SettingsStore.settings.enableLSP) {
