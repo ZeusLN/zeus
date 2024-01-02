@@ -330,10 +330,12 @@ export default class StandalonePosPane extends React.PureComponent<
     renderGridItem = ({ item }) => {
         const { UnitsStore } = this.props;
 
-        const priceDisplay =
-            item.pricedIn === PricedIn.Sats
-                ? UnitsStore.getAmount(item.price, item.pricedIn)
-                : `$${item.price}`;
+        let priceDisplay;
+        if (item.pricedIn === PricedIn.Sats) {
+            priceDisplay = UnitsStore.getAmount(item.price, item.pricedIn);
+        } else {
+            priceDisplay = UnitsStore.getAmount(item.price, 'fiat');
+        }
 
         return (
             <TouchableOpacity
