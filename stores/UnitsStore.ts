@@ -177,14 +177,10 @@ export default class UnitsStore {
                     (entry: any) => entry.code === fiat
                 )[0];
                 const { code } = fiatEntry;
-                const rate = (fiatEntry && fiatEntry.rate) || 0;
                 const { symbol, space, rtl, separatorSwap } =
                     this.fiatStore.symbolLookup(code);
 
-                const amount = (
-                    FeeUtils.toFixed(Number(wholeSats || 0) / SATS_PER_BTC) *
-                    rate
-                ).toFixed(2);
+                const amount = value;
 
                 const formattedAmount = separatorSwap
                     ? this.fiatStore.numberWithDecimals(amount)
