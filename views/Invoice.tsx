@@ -76,7 +76,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const QRButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('QR', { value: getPaymentRequest })
+                    navigation.navigate('QR', {
+                        value: `lightning:${getPaymentRequest}`
+                    })
                 }
             >
                 <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
