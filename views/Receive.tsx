@@ -871,7 +871,7 @@ export default class Receive extends React.Component<
         const { fontScale } = Dimensions.get('window');
 
         const { zeroConfFee, showLspSettings } = LSPStore;
-        const { getAmount } = UnitsStore;
+        const { getAmountFromSats } = UnitsStore;
 
         const {
             createUnifiedInvoice,
@@ -1191,7 +1191,7 @@ export default class Receive extends React.Component<
                                               )
                                             : `${localeString(
                                                   'views.Receive.youReceived'
-                                              )} ${getAmount(
+                                              )} ${getAmountFromSats(
                                                   watchedInvoicePaidAmt ||
                                                       payment_request_amt
                                               )}`}

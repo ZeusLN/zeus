@@ -21,6 +21,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import LnurlPayStore from '../stores/LnurlPayStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import LnurlPayHistorical from './LnurlPay/Historical';
 
@@ -29,10 +30,11 @@ import Button from '../components/Button';
 
 interface PaymentProps {
     navigation: any;
-    LnurlPayStore: LnurlPayStore;
+    LnurlPayStore?: LnurlPayStore;
+    SettingsStore?: SettingsStore;
 }
 
-@inject('LnurlPayStore')
+@inject('LnurlPayStore', 'SettingsStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     state = {
@@ -44,7 +46,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const { navigation, LnurlPayStore } = this.props;
         const payment: Payment = navigation.getParam('payment', null);
         const lnurlpaytx = payment.paymentHash
-            ? await LnurlPayStore.load(payment.paymentHash)
+            ? await LnurlPayStore!.load(payment.paymentHash)
             : undefined;
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
@@ -66,10 +68,14 @@ export default class PaymentView extends React.Component<PaymentProps> {
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { storedNotes, lnurlpaytx } = this.state;
 
         const payment: Payment = navigation.getParam('payment', null);
+        const formattedOriginalTimeUntilExpiry =
+            payment.getFormattedOriginalTimeUntilExpiry(
+                SettingsStore!.settings.locale
+            );
         const {
             getDisplayTime,
             getFee,
@@ -78,7 +84,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getPreimage,
             enhancedPath,
             getMemo,
-            isInTransit
+            isIncomplete,
+            isInTransit,
+            isFailed
         } = payment;
         const date = getDisplayTime;
         const noteKey =
@@ -101,7 +109,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: isInTransit
+                        text: isFailed
+                            ? localeString('views.Payment.failedPayment')
+                            : isInTransit
                             ? localeString('views.Payment.inTransitPayment')
                             : localeString('views.Payment.title'),
                         style: {
@@ -181,7 +191,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             />
                         )}
 
-                        {getPreimage && !isInTransit && (
+                        {getPreimage && !isIncomplete && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Payment.paymentPreimage'
@@ -197,6 +207,16 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     'views.Payment.creationDate'
                                 )}
                                 value={date}
+                                sensitive
+                            />
+                        )}
+
+                        {formattedOriginalTimeUntilExpiry && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.originalExpiration'
+                                )}
+                                value={formattedOriginalTimeUntilExpiry}
                                 sensitive
                             />
                         )}

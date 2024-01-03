@@ -21,3 +21,5 @@
 -keep enum com.sifir.** { *;}
 -keep public class com.horcrux.svg.** {*;}
 -keep class com.swmansion.reanimated.** { *; }
+
+-keep class org.torproject.jni.** { *; }

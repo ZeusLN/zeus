@@ -23,11 +23,7 @@ class ActivityFilterUtils {
 
         if (filter.onChain == false) {
             filteredActivity = filteredActivity.filter(
-                (activity) =>
-                    !(
-                        activity instanceof Transaction &&
-                        Number(activity.getAmount) != 0
-                    )
+                (activity) => !(activity instanceof Transaction)
             );
         }
 
@@ -63,6 +59,13 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
                     !(activity instanceof Payment && activity.isInTransit)
+            );
+        }
+
+        if (filter.isFailed == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) =>
+                    !(activity instanceof Payment && activity.isFailed)
             );
         }
 

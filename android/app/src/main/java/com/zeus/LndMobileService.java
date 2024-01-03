@@ -1,10 +1,16 @@
 package app.zeusln.zeus;
 
 import android.app.ActivityManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -13,7 +19,8 @@ import android.os.Process;
 import android.os.RemoteException;
 import android.util.Base64;
 import android.util.Log;
-
+import android.content.pm.ServiceInfo;
+import static android.app.Notification.FOREGROUND_SERVICE_IMMEDIATE;
 
 import lndmobile.Callback;
 import lndmobile.Lndmobile;
@@ -27,11 +34,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil;
+import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
 
 import com.google.protobuf.ByteString;
 
 public class LndMobileService extends Service {
   private static final String TAG = "LndMobileService";
+  private final int ONGOING_NOTIFICATION_ID = 1;
   boolean lndStarted = false;
   boolean subscribeInvoicesStreamActive = false;
   Set<String> streamsStarted = new HashSet<String>();
@@ -67,6 +77,8 @@ public class LndMobileService extends Service {
   private Map<String, Method> syncMethods = new HashMap<>();
   private Map<String, Method> streamMethods = new HashMap<>();
   private Map<String, lndmobile.SendStream> writeStreams = new HashMap<>();
+
+  private NotificationManager notificationManager;
 
   private static boolean isReceiveStream(Method m) {
     return m.toString().contains("RecvStream");
@@ -456,6 +468,70 @@ public class LndMobileService extends Service {
     }
   }
 
+  private boolean getPersistentServicesEnabled(Context context) {
+    ReactDatabaseSupplier dbSupplier = ReactDatabaseSupplier.getInstance(context);
+    SQLiteDatabase db = dbSupplier.get();
+    String persistentServicesEnabled = AsyncLocalStorageUtil.getItemImpl(db, "persistentServicesEnabled");
+    if (persistentServicesEnabled != null) {
+      return persistentServicesEnabled.equals("true");
+    }
+    // Hyperlog.w(TAG, "Could not find persistentServicesEnabled in asyncStorage");
+    return false;
+  }
+
+  @Override
+  public int onStartCommand(Intent intent, int flags, int startid) {
+    // Hyperlog.v(TAG, "onStartCommand()");
+    if (intent != null && intent.getAction() != null && intent.getAction().equals("app.zeusln.zeus.android.intent.action.STOP")) {
+      Log.i(TAG, "Received stopForeground Intent");
+      stopForeground(true);
+      stopSelf();
+      return START_NOT_STICKY;
+    } else {
+      boolean persistentServicesEnabled = getPersistentServicesEnabled(this);
+      // persistent services on, start service as foreground-svc
+      if (persistentServicesEnabled) {
+        Notification.Builder notificationBuilder = null;
+        Intent notificationIntent = new Intent (this, MainActivity.class);
+        PendingIntent pendingIntent =
+          PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          NotificationChannel chan = new NotificationChannel(BuildConfig.APPLICATION_ID, "ZEUS", NotificationManager.IMPORTANCE_NONE);
+          chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+          notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+          assert notificationManager != null;
+          notificationManager.createNotificationChannel(chan);
+
+          notificationBuilder = new Notification.Builder(this, BuildConfig.APPLICATION_ID);
+        } else {
+          notificationBuilder = new Notification.Builder(this);
+      }
+
+        notificationBuilder
+          .setContentTitle("ZEUS")
+          .setContentText("LND is running in the background")
+          .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
+          .setContentIntent(pendingIntent)
+          .setOngoing(true);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+          notificationBuilder.setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE);
+        }
+
+        Notification notification = notificationBuilder.build();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          startForeground(ONGOING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+          startForeground(ONGOING_NOTIFICATION_ID, notification);
+        }
+      }
+    }
+
+    // else noop, instead of calling startService, start will be handled by binding
+    return startid;
+  }
+
   @Override
   public IBinder onBind(Intent intent) {
     return messenger.getBinder();
@@ -516,6 +592,9 @@ public class LndMobileService extends Service {
   }
 
   private void stopLnd(Messenger recipient, int request) {
+    if (notificationManager != null) {
+      notificationManager.cancelAll();
+    }
     Lndmobile.stopDaemon(
       lnrpc.LightningOuterClass.StopRequest.newBuilder().build().toByteArray(),
       new Callback() {
