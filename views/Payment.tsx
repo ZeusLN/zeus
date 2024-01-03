@@ -43,13 +43,15 @@ export default class PaymentView extends React.Component<PaymentProps> {
     async componentDidMount() {
         const { navigation, LnurlPayStore } = this.props;
         const payment: Payment = navigation.getParam('payment', null);
-        const lnurlpaytx = await LnurlPayStore.load(payment.payment_hash);
+        const lnurlpaytx = payment.paymentHash
+            ? await LnurlPayStore.load(payment.paymentHash)
+            : undefined;
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
         navigation.addListener('didFocus', () => {
             const noteKey =
-                payment.payment_hash ?? typeof payment.getPreimage === 'string'
+                payment.paymentHash ?? typeof payment.getPreimage === 'string'
                     ? payment.getPreimage
                     : null;
 
@@ -72,7 +74,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getDisplayTime,
             getFee,
             getFeePercentage,
-            payment_hash,
+            paymentHash,
             getPreimage,
             enhancedPath,
             getMemo,
@@ -80,9 +82,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         } = payment;
         const date = getDisplayTime;
         const noteKey =
-            payment_hash ?? typeof getPreimage === 'string'
-                ? getPreimage
-                : null;
+            paymentHash ?? typeof getPreimage === 'string' ? getPreimage : null;
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
@@ -171,12 +171,12 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             />
                         )}
 
-                        {payment_hash && (
+                        {paymentHash && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Payment.paymentHash'
                                 )}
-                                value={payment_hash}
+                                value={paymentHash}
                                 sensitive
                             />
                         )}
