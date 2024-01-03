@@ -439,12 +439,12 @@ export default class StandalonePosPane extends React.PureComponent<
             PosStore,
             FiatStore,
             NodeInfoStore,
+            InventoryStore,
             navigation
         } = this.props;
         const { search, selectedIndex } = this.state;
         const { setFiltersPos } = ActivityStore;
         const {
-            loading,
             getOrders,
             filteredOpenOrders,
             filteredPaidOrders,
@@ -470,6 +470,8 @@ export default class StandalonePosPane extends React.PureComponent<
         })`;
 
         const error = NodeInfoStore.error || SettingsStore.error;
+
+        const loading = PosStore.loading || InventoryStore.loading;
 
         const newOrderButton = () => (
             <Text
