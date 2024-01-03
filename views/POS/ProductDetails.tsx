@@ -375,10 +375,16 @@ export default class ProductDetails extends React.Component<
                                                 ) {
                                                     price = satAmount;
                                                     pricedIn = PricedIn.Sats;
+                                                } else if (
+                                                    UnitsStore.units === 'BTC'
+                                                ) {
+                                                    price = amount;
+                                                    pricedIn = PricedIn.Bitcoin;
                                                 } else {
                                                     price = amount;
                                                     pricedIn = PricedIn.Fiat;
                                                 }
+
                                                 this.setValue(
                                                     'pricedIn',
                                                     pricedIn

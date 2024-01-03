@@ -347,7 +347,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         if (fiatPriced) {
                             displayValue = UnitsStore.getFormattedAmount(
                                 unitPrice,
-                                item.pricedIn
+                                'fiat'
                             );
                         } else {
                             displayValue = UnitsStore.getFormattedAmount(
