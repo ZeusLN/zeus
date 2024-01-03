@@ -12,7 +12,7 @@ import InventoryStore from '../../stores/InventoryStore';
 import UnitsStore from '../../stores/UnitsStore';
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Divider, Icon, ListItem } from 'react-native-elements';
+import { Divider, ListItem } from 'react-native-elements';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -216,20 +216,8 @@ export default class ProductDetails extends React.Component<
     };
 
     render() {
-        const { product, isLoading, isExisting } = this.state;
         const { navigation } = this.props;
-
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.goBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
-        );
+        const { product, isLoading, isExisting } = this.state;
 
         const Delete = () => (
             <TouchableOpacity onPress={() => this.confirmDelete()}>
@@ -257,17 +245,17 @@ export default class ProductDetails extends React.Component<
                 {isLoading ? (
                     <Screen>
                         <Header
-                            leftComponent={<BackButton />}
+                            leftComponent="Back"
                             centerComponent={{
                                 text: localeString(
                                     'views.Settings.POS.Product'
                                 ),
                                 style: { color: themeColor('text') }
                             }}
-                            backgroundColor="none"
                             containerStyle={{
                                 borderBottomWidth: 0
                             }}
+                            navigation={navigation}
                         />
                         <View style={{ marginTop: 60 }}>
                             <LoadingIndicator />
@@ -290,7 +278,7 @@ export default class ProductDetails extends React.Component<
                                 }}
                             >
                                 <Header
-                                    leftComponent={<BackButton />}
+                                    leftComponent="Back"
                                     centerComponent={{
                                         text: localeString(
                                             'views.Settings.POS.Product'
@@ -300,10 +288,10 @@ export default class ProductDetails extends React.Component<
                                     rightComponent={
                                         isExisting ? <Delete /> : undefined
                                     }
-                                    backgroundColor="transparent"
                                     containerStyle={{
                                         borderBottomWidth: 0
                                     }}
+                                    navigation={navigation}
                                 />
                                 {isLoading && (
                                     <View style={{ marginTop: 60 }}>
