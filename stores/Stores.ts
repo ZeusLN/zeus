@@ -19,6 +19,7 @@ import SyncStore from './SyncStore';
 import LSPStore from './LSPStore';
 import LightningAddressStore from './LightningAddressStore';
 import ChannelBackupStore from './ChannelBackupStore';
+import InventoryStore from './InventoryStore';
 
 class Stores {
     public channelsStore: ChannelsStore;
@@ -42,6 +43,7 @@ class Stores {
     public lspStore: LSPStore;
     public lightningAddressStore: LightningAddressStore;
     public channelBackupStore: ChannelBackupStore;
+    public inventoryStore: InventoryStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
@@ -88,7 +90,8 @@ class Stores {
             this.invoicesStore,
             this.transactionsStore
         );
-        this.posStore = new PosStore(this.settingsStore);
+        this.posStore = new PosStore(this.settingsStore, this.fiatStore);
+        this.inventoryStore = new InventoryStore();
     }
 }
 

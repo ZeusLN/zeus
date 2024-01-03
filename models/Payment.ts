@@ -1,10 +1,12 @@
 import { computed } from 'mobx';
 import bolt11 from 'bolt11';
 import BigNumber from 'bignumber.js';
+import humanizeDuration from 'humanize-duration';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
 
@@ -75,11 +77,43 @@ export default class Payment extends BaseModel {
         return this.preimage || this.payment_preimage;
     }
 
-    @computed public get isInTransit(): boolean {
+    @computed public get isIncomplete(): boolean {
         return (
             this.getPreimage ===
             '0000000000000000000000000000000000000000000000000000000000000000'
         );
+    }
+
+    @computed public get isInTransit(): boolean {
+        if (!this.isIncomplete) return false;
+        if (!this.htlcs) return false;
+        let inTransit = false;
+        for (const htlc of this.htlcs) {
+            if (
+                htlc.status === 'IN_FLIGHT' ||
+                htlc.status === lnrpc.HTLCAttempt.HTLCStatus.IN_FLIGHT
+            ) {
+                inTransit = true;
+                break;
+            }
+        }
+        return inTransit;
+    }
+
+    @computed public get isFailed(): boolean {
+        if (!this.isIncomplete) return false;
+        if (!this.htlcs) return false;
+        let isFailed = false;
+        for (const htlc of this.htlcs) {
+            if (
+                htlc.status === 'FAILED' ||
+                htlc.status === lnrpc.HTLCAttempt.HTLCStatus.FAILED
+            ) {
+                isFailed = true;
+                break;
+            }
+        }
+        return isFailed;
     }
 
     @computed public get getTimestamp(): string | number {
@@ -154,7 +188,7 @@ export default class Payment extends BaseModel {
                 const route: any[] = [];
                 if (
                     htlc.status === 'SUCCEEDED' ||
-                    htlc.status === lnrpc.HTLCAttempt.HTLCStatus['SUCCEEDED']
+                    htlc.status === lnrpc.HTLCAttempt.HTLCStatus.SUCCEEDED
                 ) {
                     htlc.route.hops &&
                         htlc.route.hops.forEach((hop: any) => {
@@ -178,5 +212,52 @@ export default class Payment extends BaseModel {
             });
 
         return enhancedPath;
+    }
+
+    @computed public get originalTimeUntilExpiryInSeconds():
+        | number
+        | undefined {
+        const decodedPaymentRequest =
+            this.payment_request != null
+                ? Bolt11Utils.decode(this.payment_request)
+                : this.bolt
+                ? Bolt11Utils.decode(this.bolt)
+                : this.bolt11
+                ? Bolt11Utils.decode(this.bolt11)
+                : null;
+        return decodedPaymentRequest?.expiry;
+    }
+
+    public getFormattedOriginalTimeUntilExpiry(
+        locale: string | undefined
+    ): string {
+        const originalTimeUntilExpiryInSeconds =
+            this.originalTimeUntilExpiryInSeconds;
+
+        if (originalTimeUntilExpiryInSeconds == null) {
+            return localeString('models.Invoice.never');
+        }
+
+        const originalTimeUntilExpiryInMs =
+            originalTimeUntilExpiryInSeconds * 1000;
+
+        return this.formatHumanReadableDuration(
+            originalTimeUntilExpiryInMs,
+            locale
+        );
+    }
+
+    private formatHumanReadableDuration(
+        durationInMs: number,
+        locale: string | undefined
+    ) {
+        return humanizeDuration(durationInMs, {
+            language: locale === 'zh' ? 'zh_CN' : locale,
+            fallbacks: ['en'],
+            round: true,
+            largest: 2
+        })
+            .replace(/(\d+) /g, '$1 ')
+            .replace(/ (\d+)/g, ' $1');
     }
 }

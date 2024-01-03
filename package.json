@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "0.8.0",
+  "version": "0.8.1-beta1",
   "private": true,
   "jest": {
     "preset": "react-native",
@@ -10,7 +10,9 @@
     "transformIgnorePatterns": [
       "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes)/)"
     ],
-    "testPathIgnorePatterns": ["check-styles.test.ts"]
+    "testPathIgnorePatterns": [
+      "check-styles.test.ts"
+    ]
   },
   "scripts": {
     "start": "react-native start",
@@ -41,10 +43,12 @@
     "@remobile/react-native-qrcode-local-image": "github:BlueWallet/react-native-qrcode-local-image#31b0113",
     "@tradle/react-native-http": "2.0.1",
     "@types/dateformat": "5.0.0",
+    "@types/humanize-duration": "3.27.1",
     "@types/react-native-snap-carousel": "3.8.5",
     "assert": "1.5.0",
     "base-x": "4.0.0",
     "bc-ur": "0.1.6",
+    "bech32": "2.0.0",
     "bignumber.js": "9.0.2",
     "bip39": "3.1.0",
     "bitcoinjs-lib": "3.3.2",
@@ -65,6 +69,7 @@
     "fast-sha256": "1.3.0",
     "hash.js": "1.1.7",
     "https-browserify": "0.0.1",
+    "humanize-duration": "3.28.0",
     "identicon.js": "2.3.3",
     "inherits": "2.0.4",
     "js-lnurl": "0.5.1",
@@ -91,6 +96,7 @@
     "react-native-circular-progress-indicator": "4.4.2",
     "react-native-crypto": "2.2.0",
     "react-native-date-picker": "4.3.3",
+    "react-native-draglist": "3.5.1",
     "react-native-elements": "3.4.3",
     "react-native-encrypted-storage": "4.0.3",
     "react-native-gesture-handler": "2.12.1",
@@ -100,7 +106,7 @@
     "react-native-keychain": "8.1.1",
     "react-native-level-fs": "3.0.1",
     "react-native-linear-gradient": "2.6.2",
-    "react-native-nfc-manager": "3.13.0",
+    "react-native-nfc-manager": "3.14.11",
     "react-native-notifications": "5.1.0",
     "react-native-os": "aprock/react-native-os#5/head",
     "react-native-permissions": "3.8.0",

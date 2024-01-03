@@ -7,7 +7,11 @@ export enum ELndMobileStatusCodes {
 export interface ILndMobile {
     // General
     initialize(): Promise<{ data: string }>;
-    startLnd(args: string): Promise<{ data: string }>;
+    startLnd(
+        args: string,
+        isTorEnabled?: boolean,
+        isTestnet?: boolean
+    ): Promise<{ data: string }>;
     stopLnd(): Promise<{ data: string }>;
     initWallet(
         seed: string[],
@@ -53,6 +57,7 @@ export interface ILndMobileTools {
     DEBUG_getWalletPasswordFromKeychain(): Promise<string>;
     DEBUG_deleteSpeedloaderLastrunFile(): boolean;
     DEBUG_deleteSpeedloaderDgraphDirectory(): null;
+    DEBUG_deleteNeutrinoFiles(network: string): boolean;
 
     // Android-specific
     getIntentStringData(): Promise<string | null>;

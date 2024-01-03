@@ -17,6 +17,7 @@ import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Header from '../../components/Header';
 import { localeString } from '../../utils/LocaleUtils';
+import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 interface ContactsSettingsProps {
     navigation: any;
@@ -122,7 +123,7 @@ export default class Contacts extends React.Component<
                 : item.pubkey[0];
         }
 
-        return localeString('views.Settings.Contacts.multipleAddresses');
+        return localeString('views.Settings.Contacts.noAddress');
     };
 
     renderContactItem = ({ item }: { item: ContactItem }) => (
@@ -159,7 +160,8 @@ export default class Contacts extends React.Component<
                             contactName: item.name
                         })) ||
                     this.props.navigation.navigate('ContactDetails', {
-                        contactId: item.id
+                        contactId: item.id,
+                        isNostrContact: false
                     });
             }}
         >
@@ -213,7 +215,7 @@ export default class Contacts extends React.Component<
                           input.toLowerCase().includes(search.toLowerCase())
                       )
                     : contact[field]
-                          .toLowerCase()
+                          ?.toLowerCase()
                           .includes(search.toLowerCase());
 
             return (
@@ -258,7 +260,20 @@ export default class Contacts extends React.Component<
                 <Header
                     leftComponent="Back"
                     containerStyle={{ borderBottomWidth: 0 }}
+                    centerComponent={
+                        SendScreen ? undefined : (
+                            <NostrichIcon
+                                onPress={() =>
+                                    navigation.navigate('NostrContacts')
+                                }
+                                fill={themeColor('text')}
+                                width={30}
+                                height={30}
+                            />
+                        )
+                    }
                     rightComponent={SendScreen ? undefined : <AddButton />}
+                    placement="right"
                     navigation={navigation}
                 />
                 {contacts.length > 0 && (

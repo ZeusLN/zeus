@@ -27,6 +27,8 @@ class Base64Utils {
             ''
         );
 
+    bytesToUtf8 = (input: Uint8Array) => Buffer.from(input).toString('utf-8');
+
     utf8ToHex = (input: string) => Buffer.from(input, 'utf8').toString('hex');
 
     base64UrlToHex = (input: string) =>

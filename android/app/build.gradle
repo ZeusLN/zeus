@@ -99,8 +99,8 @@ android {
         applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 80
-        versionName "0.8.0"
+        versionCode 81
+        versionName "0.8.1-beta1"
         multiDexEnabled true
         missingDimensionStrategy 'react-native-camera', 'general'
     }
@@ -206,6 +206,16 @@ dependencies {
     // LN address notifications
     // Import the Firebase BoM
     implementation platform('com.google.firebase:firebase-bom:32.3.1')
+
+    // Tor + Persistent LND
+    implementation "com.jakewharton:process-phoenix:2.0.0"
+
+    implementation 'info.guardianproject:tor-android:0.4.7.8'
+    implementation 'info.guardianproject:jtorctl:0.4.5.7'
+
+    implementation('dev.doubledot.doki:library:0.0.1@aar') {
+        transitive = true
+    }
 }
 
 configurations {

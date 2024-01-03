@@ -40,6 +40,7 @@ export default class LightningAddressStore {
     @observable public lightningAddressActivated: boolean = false;
     @observable public loading: boolean = false;
     @observable public redeeming: boolean = false;
+    @observable public redeemingAll: boolean = false;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public availableHashes: number = 0;
@@ -1010,6 +1011,7 @@ export default class LightningAddressStore {
 
     @action
     public redeemAllOpenPayments = async () => {
+        this.redeemingAll = true;
         const attestationLevel = this.settingsStore?.settings?.lightningAddress
             ?.automaticallyAcceptAttestationLevel
             ? this.settingsStore.settings.lightningAddress
@@ -1027,7 +1029,6 @@ export default class LightningAddressStore {
                 );
                 return;
             }
-            this.status();
         } else {
             for (const item of this.paid) {
                 await this.lookupAttestations(item.hash, item.amount_msat)
@@ -1047,8 +1048,9 @@ export default class LightningAddressStore {
                         console.log('Error looking up attestation', e);
                     });
             }
-            this.status();
         }
+        this.status();
+        this.redeemingAll = false;
     };
 
     @action

@@ -544,6 +544,7 @@ export default class NodeConfiguration extends React.Component<
         const response = await createLndWallet(
             recoveryCipherSeed,
             undefined,
+            false,
             network === 'Testnet',
             channelBackupsBase64
         );
