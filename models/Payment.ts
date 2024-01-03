@@ -9,7 +9,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
 
 export default class Payment extends BaseModel {
-    payment_hash: string;
+    private payment_hash: string | { data: number[]; type: string }; // object if lndhub
     creation_date?: string;
     value: string | number;
     fee_sat?: string;
@@ -36,10 +36,17 @@ export default class Payment extends BaseModel {
     constructor(data?: any, nodes?: any) {
         super(data);
         this.nodes = nodes;
-        // lndhub
-        if (data.payment_hash?.type === 'Buffer') {
-            this.payment_hash = Base64Utils.bytesToHex(data.payment_hash.data);
+    }
+
+    @computed public get paymentHash(): string | undefined {
+        if (typeof this.payment_hash === 'string') {
+            return this.payment_hash;
         }
+        if (this.payment_hash?.type === 'Buffer') {
+            this.payment_hash = Base64Utils.bytesToHex(this.payment_hash.data);
+            return this.payment_hash;
+        }
+        return undefined;
     }
 
     @computed public get getPaymentRequest(): string | undefined {
