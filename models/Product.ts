@@ -2,6 +2,7 @@ import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
 
 export enum PricedIn {
+    Bitcoin = 'BTC',
     Sats = 'sats',
     Fiat = 'fiat'
 }

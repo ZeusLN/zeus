@@ -12,6 +12,7 @@ import InventoryStore from '../../stores/InventoryStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Product from '../../models/Product';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 interface ProductsProps {
     navigation: any;
@@ -21,7 +22,6 @@ interface ProductsProps {
 interface ProductsState {
     search: string;
     products: Array<Product>;
-    loading: boolean;
 }
 
 @inject('InventoryStore')
@@ -32,8 +32,7 @@ export default class Products extends React.Component<
 > {
     state = {
         search: '',
-        products: [],
-        loading: true
+        products: []
     };
 
     async componentDidMount() {
@@ -77,8 +76,9 @@ export default class Products extends React.Component<
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, InventoryStore } = this.props;
         const { products, search } = this.state;
+        const { loading } = InventoryStore;
 
         const BackButton = () => (
             <Icon
@@ -144,36 +144,43 @@ export default class Products extends React.Component<
                             backgroundColor: themeColor('secondary')
                         }}
                     />
-                    <FlatList
-                        data={products}
-                        renderItem={({ item }: { item: Product }) => (
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                                onPress={async () => {
-                                    navigation.navigate('ProductDetails', {
-                                        productId: item.id
-                                    });
-                                }}
-                            >
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {item.name}
-                                    </ListItem.Title>
-                                </ListItem.Content>
-                            </ListItem>
-                        )}
-                        keyExtractor={(item: Product, index) =>
-                            `${item.id}-${index}`
-                        }
-                        ItemSeparatorComponent={this.renderSeparator}
-                    />
+                    {loading && (
+                        <View style={{ margin: 20 }}>
+                            <LoadingIndicator />
+                        </View>
+                    )}
+                    {!loading && (
+                        <FlatList
+                            data={products}
+                            renderItem={({ item }: { item: Product }) => (
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                    onPress={async () => {
+                                        navigation.navigate('ProductDetails', {
+                                            productId: item.id
+                                        });
+                                    }}
+                                >
+                                    <ListItem.Content>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {item.name}
+                                        </ListItem.Title>
+                                    </ListItem.Content>
+                                </ListItem>
+                            )}
+                            keyExtractor={(item: Product, index) =>
+                                `${item.id}-${index}`
+                            }
+                            ItemSeparatorComponent={this.renderSeparator}
+                        />
+                    )}
                 </View>
             </Screen>
         );

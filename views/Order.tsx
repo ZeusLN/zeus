@@ -345,12 +345,12 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                         let displayValue;
                         if (fiatPriced) {
-                            displayValue = UnitsStore.getAmount(
+                            displayValue = UnitsStore.getFormattedAmount(
                                 unitPrice,
-                                'fiat'
+                                item.pricedIn
                             );
                         } else {
-                            displayValue = UnitsStore.getAmount(
+                            displayValue = UnitsStore.getFormattedAmount(
                                 unitPrice,
                                 'sats'
                             );

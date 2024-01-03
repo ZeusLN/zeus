@@ -310,7 +310,12 @@ export default class StandalonePosPane extends React.PureComponent<
                 base_price_money: {
                     amount:
                         product.pricedIn === PricedIn.Fiat ? product.price : 0,
-                    sats: product.pricedIn === PricedIn.Sats ? product.price : 0
+                    sats:
+                        product.pricedIn === PricedIn.Sats
+                            ? product.price
+                            : product.pricedIn === PricedIn.Bitcoin
+                            ? product.price * SATS_PER_BTC
+                            : 0
                 }
             });
         }
@@ -330,12 +335,10 @@ export default class StandalonePosPane extends React.PureComponent<
     renderGridItem = ({ item }) => {
         const { UnitsStore } = this.props;
 
-        let priceDisplay;
-        if (item.pricedIn === PricedIn.Sats) {
-            priceDisplay = UnitsStore.getAmount(item.price, item.pricedIn);
-        } else {
-            priceDisplay = UnitsStore.getAmount(item.price, 'fiat');
-        }
+        let priceDisplay = UnitsStore.getFormattedAmount(
+            item.price,
+            item.pricedIn
+        );
 
         return (
             <TouchableOpacity
