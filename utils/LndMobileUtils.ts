@@ -90,6 +90,7 @@ const writeLndConfig = async (
     accept-keysend=1
     tlsdisableautofill=1
     maxpendingchannels=1000
+    max-commit-fee-rate-anchors=100
     ${rescan ? 'reset-wallet-transactions=true' : ''}
     
     [db]
