@@ -461,7 +461,9 @@ export default class StandalonePosPane extends React.PureComponent<
 
         const currentOrder = PosStore.currentOrder;
         const disableButtons =
-            !currentOrder || currentOrder.total_money.amount === 0;
+            !currentOrder ||
+            (currentOrder.total_money.amount === 0 &&
+                currentOrder.total_money.sats === 0);
 
         const headerString = `${localeString('general.pos')} (${
             orders.length || 0
