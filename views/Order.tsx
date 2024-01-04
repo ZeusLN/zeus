@@ -76,10 +76,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const { settings } = SettingsStore;
         const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
-        const disableTips: boolean =
-            (settings && settings.pos && settings.pos.disableTips) || false;
-        const merchantName =
-            settings && settings.pos && settings.pos.merchantName;
+        const disableTips: boolean = settings?.pos?.disableTips;
+        const merchantName = settings?.pos?.merchantName;
+        const taxPercentage = settings?.pos?.taxPercentage;
 
         const fiatEntry =
             fiat && fiatRates
@@ -655,7 +654,11 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     )}
 
                     <KeyValue
-                        keyValue={localeString('pos.views.Order.tax')}
+                        keyValue={`${localeString('pos.views.Order.tax')}${
+                            taxPercentage && Number(taxPercentage) > 0
+                                ? ` (${taxPercentage}%)`
+                                : ''
+                        }`}
                         value={order.getTaxMoneyDisplay}
                     />
 
