@@ -488,6 +488,17 @@ export default class FiatStore {
         }
     };
 
+    @action
+    public formatAmountForDisplay = (input: string | number) => {
+        const { symbol, space, rtl, separatorSwap } = this.getSymbol();
+        const amount = separatorSwap
+            ? this.numberWithDecimals(input)
+            : this.numberWithCommas(input);
+
+        if (rtl) return `${amount}${space ? ' ' : ''}${symbol}`;
+        return `${symbol}${space ? ' ' : ''}${amount}`;
+    };
+
     private getSelectedFiatRateFromYadio = async (code: string) => {
         try {
             const response = await ReactNativeBlobUtil.fetch(
