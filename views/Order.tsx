@@ -374,7 +374,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                     <KeyValue
                         keyValue={localeString('pos.views.Order.subtotalFiat')}
-                        value={`${getSymbol().symbol}${subTotalFiat}`}
+                        value={FiatStore.formatAmountForDisplay(subTotalFiat)}
                     />
 
                     <TouchableOpacity
@@ -551,7 +551,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyValue={localeString(
                                     'pos.views.Order.tipFiat'
                                 )}
-                                value={`${getSymbol().symbol}${tipFiat}`}
+                                value={FiatStore.formatAmountForDisplay(
+                                    tipFiat
+                                )}
                             />
 
                             <TouchableOpacity
@@ -594,7 +596,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyValue={localeString(
                                     'pos.views.Order.tipFiat'
                                 )}
-                                value={`${getSymbol().symbol}${tipFiat}`}
+                                value={FiatStore.formatAmountForDisplay(
+                                    tipFiat
+                                )}
                             />
 
                             <TouchableOpacity
@@ -657,7 +661,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                     <KeyValue
                         keyValue={localeString('pos.views.Order.totalFiat')}
-                        value={`${getSymbol().symbol}${totalFiat}`}
+                        value={FiatStore.formatAmountForDisplay(totalFiat)}
                     />
 
                     <TouchableOpacity
