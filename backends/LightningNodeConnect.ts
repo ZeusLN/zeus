@@ -25,6 +25,7 @@ export default class LightningNodeConnect {
 
     permOpenChannel: boolean;
     permSendCoins: boolean;
+    permSendLN: boolean;
     permNewAddress: boolean;
     permImportAccount: boolean;
     permForwardingHistory: boolean;
@@ -54,6 +55,9 @@ export default class LightningNodeConnect {
         );
         this.permSendCoins = await this.lnc.hasPerms(
             'lnrpc.Lightning.SendCoins'
+        );
+        this.permSendLN = await this.lnc.hasPerms(
+            'routerrpc.Router.SendPaymentV2'
         );
         this.permNewAddress = await this.lnc.hasPerms(
             'lnrpc.Lightning.NewAddress'
@@ -367,7 +371,7 @@ export default class LightningNodeConnect {
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => this.permSendCoins;
     supportsOnchainReceiving = () => this.permNewAddress;
-    supportsLightningSends = () => this.permSendCoins;
+    supportsLightningSends = () => this.permSendLN;
     supportsKeysend = () => true;
     supportsChannelManagement = () => this.permOpenChannel;
     supportsPendingChannels = () => true;
