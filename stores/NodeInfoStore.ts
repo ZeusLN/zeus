@@ -40,6 +40,13 @@ export default class NodeInfoStore {
     };
 
     @action
+    getNetworkInfoError = () => {
+        this.error = true;
+        this.loading = false;
+        this.networkInfo = {};
+    };
+
+    @action
     setLoading = () => {
         this.loading = true;
     };
@@ -65,6 +72,9 @@ export default class NodeInfoStore {
                 return nodeInfo;
             })
             .catch((error: any) => {
+                if (this.currentRequest !== currentRequest) {
+                    return;
+                }
                 // handle error
                 this.errorMsg = errorToUserFriendly(error.toString());
                 this.getNodeInfoError();
@@ -75,7 +85,6 @@ export default class NodeInfoStore {
     public getNetworkInfo = () => {
         this.errorMsg = '';
         this.loading = true;
-        const currentRequest = (this.currentRequest = {});
         return BackendUtils.getNetworkInfo()
             .then((data: any) => {
                 this.networkInfo = data;
@@ -84,12 +93,9 @@ export default class NodeInfoStore {
                 return this.networkInfo;
             })
             .catch((error: any) => {
-                if (this.currentRequest !== currentRequest) {
-                    return;
-                }
                 // handle error
                 this.errorMsg = errorToUserFriendly(error.toString());
-                this.getNodeInfoError();
+                this.getNetworkInfoError();
             });
     };
 
