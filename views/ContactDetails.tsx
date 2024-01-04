@@ -238,12 +238,21 @@ export default class ContactDetails extends React.Component<
             </TouchableOpacity>
         );
 
+        const filterEmptyValues = (array: any) =>
+            (array || []).filter((value: any) => value !== '');
+
         const QRButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('QR', {
-                        value: JSON.stringify(this.state.contact),
-                        hideText: true
+                    navigation.navigate('ContactInfo', {
+                        contactData: JSON.stringify(this.state.contact),
+                        addressData: [
+                            ...filterEmptyValues(this.state.contact?.lnAddress),
+                            ...filterEmptyValues(this.state.contact?.pubkey),
+                            ...filterEmptyValues(
+                                this.state.contact?.onchainAddress
+                            )
+                        ]
                     })
                 }
             >
