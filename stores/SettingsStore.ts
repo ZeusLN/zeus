@@ -667,14 +667,22 @@ export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
 export const DEFAULT_LOCALE = 'English';
 
 export const POS_CONF_PREF_KEYS = [
-    { key: '0 conf', value: '0conf' },
-    { key: '1 conf', value: '1conf' },
-    { key: 'LN only', value: 'lnOnly' }
+    { translateKey: 'views.Settings.POS.0conf', value: '0conf' },
+    { translateKey: 'views.Settings.POS.1conf', value: '1conf' },
+    { translateKey: 'views.Settings.POS.lnOnly', value: 'lnOnly' }
 ];
 
 export const POS_ENABLED_KEYS = [
-    { key: 'Disabled', value: PosEnabled.Disabled },
-    { key: 'Standalone', value: PosEnabled.Standalone },
+    {
+        key: 'Disabled',
+        translateKey: 'views.Settings.disabled',
+        value: PosEnabled.Disabled
+    },
+    {
+        key: 'Standalone',
+        tanslateKey: 'views.Settings.POS.standalone',
+        value: PosEnabled.Standalone
+    },
     { key: 'Square', value: PosEnabled.Square }
 ];
 
