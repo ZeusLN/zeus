@@ -40,7 +40,7 @@ interface ContactItem {
     description: string;
     photo: string | null;
     isFavourite: boolean;
-    id: string;
+    contactId: string;
     banner: string;
 }
 interface ContactDetailsState {
@@ -66,7 +66,7 @@ export default class ContactDetails extends React.Component<
                 description: '',
                 photo: null,
                 isFavourite: false,
-                id: '',
+                contactId: '',
                 banner: ''
             },
             isLoading: true,
@@ -107,7 +107,8 @@ export default class ContactDetails extends React.Component<
                 if (contactsString && contactId) {
                     const existingContact = JSON.parse(contactsString);
                     const contact = existingContact.find(
-                        (contact: ContactItem) => contact.id === contactId
+                        (contact: ContactItem) =>
+                            contact.contactId === contactId
                     );
 
                     // Store the found contact in the component's state
@@ -143,7 +144,7 @@ export default class ContactDetails extends React.Component<
 
                 // Find the index of the contact with the same name
                 const contactIndex = existingContacts.findIndex(
-                    (contact) => contact.id === updatedContact.id
+                    (contact) => contact.contactId === updatedContact.contactId
                 );
 
                 if (contactIndex !== -1) {

@@ -364,7 +364,7 @@ const handleAnything = async (
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
             });
-    } else if (JSON.parse(data)?.id) {
+    } else if (JSON.parse(data)?.contactId) {
         return [
             'ContactDetails',
             {
