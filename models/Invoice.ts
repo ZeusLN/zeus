@@ -359,7 +359,7 @@ export default class Invoice extends BaseModel {
             round: true,
             largest: 2
         })
-            .replace(/(\d+) /g, '$1 ')
-            .replace(/ (\d+)/g, ' $1');
+            .replace(/(\d) ([^,])/g, '$1 $2')
+            .replace(/([^,]) (\d)/g, '$2 $1');
     }
 }
