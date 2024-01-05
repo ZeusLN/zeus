@@ -644,12 +644,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             return;
                                         }
                                         if (route.name === 'Keypad') {
-                                            return (
-                                                <Bitcoin
-                                                    height={20}
-                                                    fill={color}
-                                                />
-                                            );
+                                            return <Bitcoin fill={color} />;
                                         }
                                         if (route.name === 'Balance') {
                                             return <Temple fill={color} />;
@@ -665,7 +660,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             BackendUtils.supportsChannelManagement()
                                         ) {
                                             return (
-                                                <ChannelsIcon fill={color} />
+                                                <ChannelsIcon
+                                                    height={26}
+                                                    width={26}
+                                                    fill={color}
+                                                />
                                             );
                                         }
                                     }
