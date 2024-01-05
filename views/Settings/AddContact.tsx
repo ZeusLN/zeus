@@ -45,7 +45,7 @@ interface Contact {
     pubkey: string[];
     name: string;
     description: string;
-    id: string;
+    contactId: string;
     photo: string | null;
     isFavourite: boolean;
 }
@@ -140,7 +140,7 @@ export default class AddContact extends React.Component<
             if (isEdit && prefillContact) {
                 // Editing an existing contact
                 const updatedContacts = existingContacts.map((contact) =>
-                    contact.id === prefillContact.id
+                    contact.contactId === prefillContact.contactId
                         ? {
                               ...contact,
                               lnAddress,
@@ -172,7 +172,7 @@ export default class AddContact extends React.Component<
                 const contactId = uuidv4();
 
                 const newContact: Contact = {
-                    id: contactId,
+                    contactId,
                     lnAddress,
                     onchainAddress,
                     nip05,
@@ -231,7 +231,7 @@ export default class AddContact extends React.Component<
                     : [];
 
                 const updatedContacts = existingContacts.filter(
-                    (contact) => contact.id !== prefillContact.id
+                    (contact) => contact.contactId !== prefillContact.contactId
                 );
 
                 await EncryptedStorage.setItem(

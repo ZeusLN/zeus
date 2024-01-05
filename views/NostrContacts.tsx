@@ -189,7 +189,7 @@ export default class NostrContacts extends React.Component<
             pubkey: contact?.pubkey ? [contact?.pubkey] : [],
             nip05: contact?.nip05 ? [contact?.nip05] : [],
             nostrNpub: contact?.npub ? [contact?.npub] : [],
-            id: uuidv4(),
+            contactId: uuidv4(),
             isFavourite: false,
             banner: contact?.banner,
             isSelected: false
