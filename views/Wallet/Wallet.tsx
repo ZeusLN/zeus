@@ -313,8 +313,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             fiatEnabled,
             pos,
             rescan,
+            compactDb,
             recovery,
             lightningAddress,
+            embeddedTor,
             initialLoad
         } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
@@ -345,7 +347,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
-                await initializeLnd(embeddedLndNetwork === 'Testnet', rescan);
+                await initializeLnd(
+                    embeddedLndNetwork === 'Testnet',
+                    rescan,
+                    compactDb
+                );
 
                 // on initial load, do not run EGS
                 if (initialLoad) {
@@ -356,7 +362,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     if (expressGraphSyncEnabled) await expressGraphSync();
                 }
 
-                await startLnd(walletPassword);
+                await startLnd(
+                    walletPassword,
+                    embeddedTor,
+                    embeddedLndNetwork === 'Testnet'
+                );
             }
             if (BackendUtils.supportsLSPs()) {
                 if (SettingsStore.settings.enableLSP) {
@@ -634,12 +644,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             return;
                                         }
                                         if (route.name === 'Keypad') {
-                                            return (
-                                                <Bitcoin
-                                                    height={20}
-                                                    fill={color}
-                                                />
-                                            );
+                                            return <Bitcoin fill={color} />;
                                         }
                                         if (route.name === 'Balance') {
                                             return <Temple fill={color} />;
@@ -655,7 +660,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             BackendUtils.supportsChannelManagement()
                                         ) {
                                             return (
-                                                <ChannelsIcon fill={color} />
+                                                <ChannelsIcon
+                                                    height={26}
+                                                    width={26}
+                                                    fill={color}
+                                                />
                                             );
                                         }
                                     }
@@ -716,39 +725,46 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 }}
                             >
                                 <LoadingColumns />
-                                <Text
+                                <View
                                     style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        alignSelf: 'center',
-                                        fontSize: 15,
-                                        padding: 8
+                                        position: 'absolute',
+                                        bottom: 130
                                     }}
                                 >
-                                    {settings.nodes &&
-                                    loggedIn &&
-                                    implementation
-                                        ? implementation === 'embedded-lnd'
-                                            ? isInExpressGraphSync
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            alignSelf: 'center',
+                                            fontSize: 15,
+                                            padding: 8
+                                        }}
+                                    >
+                                        {settings.nodes &&
+                                        loggedIn &&
+                                        implementation
+                                            ? implementation === 'embedded-lnd'
+                                                ? isInExpressGraphSync
+                                                    ? localeString(
+                                                          'views.Wallet.Wallet.expressGraphSync'
+                                                      ).replace('Zeus', 'ZEUS')
+                                                    : localeString(
+                                                          'views.Wallet.Wallet.startingNode'
+                                                      ).replace('Zeus', 'ZEUS')
+                                                : implementation === 'lndhub'
                                                 ? localeString(
-                                                      'views.Wallet.Wallet.expressGraphSync'
+                                                      'views.Wallet.Wallet.loadingAccount'
                                                   ).replace('Zeus', 'ZEUS')
                                                 : localeString(
-                                                      'views.Wallet.Wallet.startingNode'
+                                                      'views.Wallet.Wallet.connecting'
                                                   ).replace('Zeus', 'ZEUS')
-                                            : implementation === 'lndhub'
-                                            ? localeString(
-                                                  'views.Wallet.Wallet.loadingAccount'
-                                              ).replace('Zeus', 'ZEUS')
                                             : localeString(
-                                                  'views.Wallet.Wallet.connecting'
-                                              ).replace('Zeus', 'ZEUS')
-                                        : localeString(
-                                              'views.Wallet.Wallet.startingUp'
-                                          ).replace('Zeus', 'ZEUS')}
-                                </Text>
-                                <View style={{ marginTop: 40 }}>
-                                    <LoadingIndicator />
+                                                  'views.Wallet.Wallet.startingUp'
+                                              ).replace('Zeus', 'ZEUS')}
+                                    </Text>
+                                    <View style={{ marginTop: 40 }}>
+                                        <LoadingIndicator />
+                                    </View>
                                 </View>
                             </View>
                             {posStatus !== 'active' && (

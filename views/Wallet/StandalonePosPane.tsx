@@ -310,7 +310,12 @@ export default class StandalonePosPane extends React.PureComponent<
                 base_price_money: {
                     amount:
                         product.pricedIn === PricedIn.Fiat ? product.price : 0,
-                    sats: product.pricedIn === PricedIn.Sats ? product.price : 0
+                    sats:
+                        product.pricedIn === PricedIn.Sats
+                            ? product.price
+                            : product.pricedIn === PricedIn.Bitcoin
+                            ? product.price * SATS_PER_BTC
+                            : 0
                 }
             });
         }
@@ -330,10 +335,10 @@ export default class StandalonePosPane extends React.PureComponent<
     renderGridItem = ({ item }) => {
         const { UnitsStore } = this.props;
 
-        const priceDisplay =
-            item.pricedIn === PricedIn.Sats
-                ? UnitsStore.getAmount(item.price, item.pricedIn)
-                : `$${item.price}`;
+        let priceDisplay = UnitsStore.getFormattedAmount(
+            item.price,
+            item.pricedIn
+        );
 
         return (
             <TouchableOpacity
@@ -434,12 +439,12 @@ export default class StandalonePosPane extends React.PureComponent<
             PosStore,
             FiatStore,
             NodeInfoStore,
+            InventoryStore,
             navigation
         } = this.props;
         const { search, selectedIndex } = this.state;
         const { setFiltersPos } = ActivityStore;
         const {
-            loading,
             getOrders,
             filteredOpenOrders,
             filteredPaidOrders,
@@ -456,13 +461,17 @@ export default class StandalonePosPane extends React.PureComponent<
 
         const currentOrder = PosStore.currentOrder;
         const disableButtons =
-            !currentOrder || currentOrder.total_money.amount === 0;
+            !currentOrder ||
+            (currentOrder.total_money.amount === 0 &&
+                currentOrder.total_money.sats === 0);
 
         const headerString = `${localeString('general.pos')} (${
             orders.length || 0
         })`;
 
         const error = NodeInfoStore.error || SettingsStore.error;
+
+        const loading = PosStore.loading || InventoryStore.loading;
 
         const newOrderButton = () => (
             <Text

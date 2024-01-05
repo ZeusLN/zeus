@@ -4,14 +4,15 @@ import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../../components/Button';
-import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
+import Screen from '../../../components/Screen';
+import Switch from '../../../components/Switch';
 
 import SettingsStore from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
+import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import Switch from '../../../components/Switch';
 
 import { resetMissionControl } from '../../../lndmobile';
 
@@ -102,6 +103,7 @@ export default class Pathfinding extends React.Component<
                                                 bimodalPathfinding:
                                                     !bimodalPathfinding
                                             });
+                                            restartNeeded();
                                         }}
                                     />
                                 </View>

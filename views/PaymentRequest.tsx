@@ -380,7 +380,9 @@ export default class PaymentRequest extends React.Component<
         const QRButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('QR', { value: paymentRequest })
+                    navigation.navigate('QR', {
+                        value: `lightning:${paymentRequest}`
+                    })
                 }
             >
                 <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
