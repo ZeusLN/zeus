@@ -227,6 +227,31 @@ class LndMobileTools: RCTEventEmitter {
     resolve(nil)
   }
 
+  @objc(DEBUG_deleteNeutrinoFiles:resolver:rejecter:)
+  func DEBUG_deleteNeutrinoFiles(network: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    let chainPath = applicationSupport.appendingPathComponent("lnd", isDirectory: true)
+                                      .appendingPathComponent("data", isDirectory: true)
+                                      .appendingPathComponent("chain", isDirectory: true)
+                                      .appendingPathComponent("bitcoin", isDirectory: true)
+                                      .appendingPathComponent(network ?? "mainnet", isDirectory: true)
+
+    let neutrinoDbPath = chainPath.appendingPathComponent("neutrino.db")
+    let blockHeadersBinPath = chainPath.appendingPathComponent("block_headers.bin")
+    let regFiltersHeadersBinPath = chainPath.appendingPathComponent("reg_filter_headers.bin")
+
+    do {
+      try FileManager.default.removeItem(at: neutrinoDbPath)
+      try FileManager.default.removeItem(at: blockHeadersBinPath)
+      try FileManager.default.removeItem(at: regFiltersHeadersBinPath)
+    } catch {
+      reject("error", error.localizedDescription, error)
+      return
+    }
+
+    resolve(true)
+  }
+
   @objc(checkApplicationSupportExists:rejecter:)
   func checkApplicationSupportExists(resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!

@@ -1,10 +1,12 @@
 import { computed } from 'mobx';
 import bolt11 from 'bolt11';
 import BigNumber from 'bignumber.js';
+import humanizeDuration from 'humanize-duration';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 import { lnrpc } from '../proto/lightning';
 
 export default class Payment extends BaseModel {
@@ -198,5 +200,52 @@ export default class Payment extends BaseModel {
             });
 
         return enhancedPath;
+    }
+
+    @computed public get originalTimeUntilExpiryInSeconds():
+        | number
+        | undefined {
+        const decodedPaymentRequest =
+            this.payment_request != null
+                ? Bolt11Utils.decode(this.payment_request)
+                : this.bolt
+                ? Bolt11Utils.decode(this.bolt)
+                : this.bolt11
+                ? Bolt11Utils.decode(this.bolt11)
+                : null;
+        return decodedPaymentRequest?.expiry;
+    }
+
+    public getFormattedOriginalTimeUntilExpiry(
+        locale: string | undefined
+    ): string {
+        const originalTimeUntilExpiryInSeconds =
+            this.originalTimeUntilExpiryInSeconds;
+
+        if (originalTimeUntilExpiryInSeconds == null) {
+            return localeString('models.Invoice.never');
+        }
+
+        const originalTimeUntilExpiryInMs =
+            originalTimeUntilExpiryInSeconds * 1000;
+
+        return this.formatHumanReadableDuration(
+            originalTimeUntilExpiryInMs,
+            locale
+        );
+    }
+
+    private formatHumanReadableDuration(
+        durationInMs: number,
+        locale: string | undefined
+    ) {
+        return humanizeDuration(durationInMs, {
+            language: locale === 'zh' ? 'zh_CN' : locale,
+            fallbacks: ['en'],
+            round: true,
+            largest: 2
+        })
+            .replace(/(\d+) /g, '$1 ')
+            .replace(/ (\d+)/g, ' $1');
     }
 }

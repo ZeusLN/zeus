@@ -1,9 +1,10 @@
 import { observable, computed } from 'mobx';
-import BigNumber from 'bignumber.js';
+import humanizeDuration from 'humanize-duration';
 
 import BaseModel from './BaseModel';
 import Base64Utils from './../utils/Base64Utils';
 import DateTimeUtils from './../utils/DateTimeUtils';
+import Bolt11Utils from './../utils/Bolt11Utils';
 import { localeString } from './../utils/LocaleUtils';
 
 interface HopHint {
@@ -71,6 +72,9 @@ export default class Invoice extends BaseModel {
     public expire_time?: number;
     public millisatoshis?: string;
     public pay_req?: string;
+
+    public formattedOriginalTimeUntilExpiry: string;
+    public formattedTimeUntilExpiry: string;
 
     @computed public get model(): string {
         return localeString('views.Invoice.title');
@@ -233,41 +237,14 @@ export default class Invoice extends BaseModel {
         return DateTimeUtils.listFormattedDate(this.creation_date);
     }
 
-    @computed public get expirationDate(): Date | string {
-        const expiry = this.expiry || this.expire_time;
-
-        // handle LNDHub
-        if (expiry && new BigNumber(expiry).gte(1600000000)) {
-            return DateTimeUtils.listFormattedDate(expiry);
-        }
-
-        if (expiry) {
-            if (expiry == '0') return localeString('models.Invoice.never');
-            return `${expiry} ${localeString('models.Invoice.seconds')}`;
-        }
-
-        return this.expires_at
-            ? DateTimeUtils.listFormattedDate(this.expires_at)
-            : localeString('models.Invoice.never');
-    }
-
     @computed public get isExpired(): boolean {
-        const expiry = this.expiry || this.expire_time;
+        const getExpiryTimestamp = this.getExpiryUnixTimestamp();
 
-        if (expiry && new BigNumber(expiry).gte(1600000000)) {
-            return (
-                new Date().getTime() > DateTimeUtils.listDate(expiry).getTime()
-            );
+        if (getExpiryTimestamp == null) {
+            return false;
         }
 
-        if (expiry) {
-            return (
-                new Date().getTime() / 1000 >
-                Number(this.creation_date) + Number(expiry)
-            );
-        }
-
-        return false;
+        return getExpiryTimestamp * 1000 <= Date.now();
     }
 
     @computed public get getKeysendMessage(): string {
@@ -292,5 +269,97 @@ export default class Invoice extends BaseModel {
     @computed public get isZeusPay(): boolean {
         if (this.getMemo?.startsWith('ZEUS PAY')) return true;
         return false;
+    }
+
+    @computed public get originalTimeUntilExpiryInSeconds():
+        | number
+        | undefined {
+        const decodedPaymentRequest = Bolt11Utils.decode(
+            this.getPaymentRequest
+        );
+        if (this.expires_at != null) {
+            // expiry is missing in payment request in Core Lightning
+            return this.expires_at - decodedPaymentRequest.timestamp;
+        }
+        return decodedPaymentRequest.expiry;
+    }
+
+    public determineFormattedOriginalTimeUntilExpiry(
+        locale: string | undefined
+    ): void {
+        const originalTimeUntilExpiryInSeconds =
+            this.originalTimeUntilExpiryInSeconds;
+
+        if (originalTimeUntilExpiryInSeconds == null) {
+            return localeString('models.Invoice.never');
+        }
+
+        const originalTimeUntilExpiryInMs =
+            originalTimeUntilExpiryInSeconds * 1000;
+
+        this.formattedOriginalTimeUntilExpiry =
+            this.formatHumanReadableDuration(
+                originalTimeUntilExpiryInMs,
+                locale
+            );
+    }
+
+    public determineFormattedRemainingTimeUntilExpiry(
+        locale: string | undefined
+    ): void {
+        const millisecondsUntilExpiry =
+            this.getRemainingMillisecondsUntilExpiry();
+
+        if (millisecondsUntilExpiry == null) {
+            this.formattedTimeUntilExpiry = localeString(
+                'models.Invoice.never'
+            );
+            return;
+        }
+
+        this.formattedTimeUntilExpiry =
+            millisecondsUntilExpiry <= 0
+                ? localeString('views.Activity.expired')
+                : this.formatHumanReadableDuration(
+                      millisecondsUntilExpiry,
+                      locale
+                  );
+    }
+
+    private getRemainingMillisecondsUntilExpiry(): number | undefined {
+        const expiryTimestamp = this.getExpiryUnixTimestamp();
+
+        return expiryTimestamp != null
+            ? expiryTimestamp * 1000 - Date.now()
+            : undefined;
+    }
+
+    private getExpiryUnixTimestamp(): number | undefined {
+        const originalTimeUntilExpiryInSeconds =
+            this.originalTimeUntilExpiryInSeconds;
+
+        if (originalTimeUntilExpiryInSeconds == null) {
+            return undefined;
+        }
+
+        const paymentRequestTimestamp = Bolt11Utils.decode(
+            this.getPaymentRequest
+        ).timestamp;
+
+        return paymentRequestTimestamp + originalTimeUntilExpiryInSeconds;
+    }
+
+    private formatHumanReadableDuration(
+        durationInMs: number,
+        locale: string | undefined
+    ) {
+        return humanizeDuration(durationInMs, {
+            language: locale === 'zh' ? 'zh_CN' : locale,
+            fallbacks: ['en'],
+            round: true,
+            largest: 2
+        })
+            .replace(/(\d+) /g, '$1 ')
+            .replace(/ (\d+)/g, ' $1');
     }
 }

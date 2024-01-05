@@ -102,7 +102,7 @@ export default class Lockscreen extends React.Component<
         }
 
         if (
-            posEnabled &&
+            posEnabled !== PosEnabled.Disabled &&
             !attemptAdminLogin &&
             !deletePin &&
             !deleteDuressPin

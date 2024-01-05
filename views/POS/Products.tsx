@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { FlatList, TouchableOpacity, View } from 'react-native';
-import { Icon, ListItem, SearchBar } from 'react-native-elements';
+import { ListItem, SearchBar } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import { inject, observer } from 'mobx-react';
 
@@ -12,6 +12,7 @@ import InventoryStore from '../../stores/InventoryStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Product from '../../models/Product';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 interface ProductsProps {
     navigation: any;
@@ -21,7 +22,6 @@ interface ProductsProps {
 interface ProductsState {
     search: string;
     products: Array<Product>;
-    loading: boolean;
 }
 
 @inject('InventoryStore')
@@ -32,8 +32,7 @@ export default class Products extends React.Component<
 > {
     state = {
         search: '',
-        products: [],
-        loading: true
+        products: []
     };
 
     async componentDidMount() {
@@ -77,20 +76,10 @@ export default class Products extends React.Component<
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, InventoryStore } = this.props;
         const { products, search } = this.state;
+        const { loading } = InventoryStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.goBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
-        );
         const Add = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('ProductDetails')}
@@ -119,12 +108,13 @@ export default class Products extends React.Component<
             <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
-                        leftComponent={<BackButton />}
+                        leftComponent="Back"
                         centerComponent={{
                             text: localeString('views.Settings.POS.Products'),
                             style: { color: themeColor('text') }
                         }}
                         rightComponent={<Add navigation={navigation} />}
+                        navigation={navigation}
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}
@@ -144,36 +134,43 @@ export default class Products extends React.Component<
                             backgroundColor: themeColor('secondary')
                         }}
                     />
-                    <FlatList
-                        data={products}
-                        renderItem={({ item }: { item: Product }) => (
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                                onPress={async () => {
-                                    navigation.navigate('ProductDetails', {
-                                        productId: item.id
-                                    });
-                                }}
-                            >
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {item.name}
-                                    </ListItem.Title>
-                                </ListItem.Content>
-                            </ListItem>
-                        )}
-                        keyExtractor={(item: Product, index) =>
-                            `${item.id}-${index}`
-                        }
-                        ItemSeparatorComponent={this.renderSeparator}
-                    />
+                    {loading && (
+                        <View style={{ margin: 20 }}>
+                            <LoadingIndicator />
+                        </View>
+                    )}
+                    {!loading && (
+                        <FlatList
+                            data={products}
+                            renderItem={({ item }: { item: Product }) => (
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                    onPress={async () => {
+                                        navigation.navigate('ProductDetails', {
+                                            productId: item.id
+                                        });
+                                    }}
+                                >
+                                    <ListItem.Content>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {item.name}
+                                        </ListItem.Title>
+                                    </ListItem.Content>
+                                </ListItem>
+                            )}
+                            keyExtractor={(item: Product, index) =>
+                                `${item.id}-${index}`
+                            }
+                            ItemSeparatorComponent={this.renderSeparator}
+                        />
+                    )}
                 </View>
             </Screen>
         );

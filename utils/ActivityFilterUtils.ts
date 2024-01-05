@@ -1,6 +1,5 @@
 import moment from 'moment';
 import { Filter } from '../stores/ActivityStore';
-import { localeString } from './LocaleUtils';
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import Transaction from '../models/Transaction';
@@ -72,18 +71,14 @@ class ActivityFilterUtils {
         if (filter.unconfirmed == false) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
-                    !(activity instanceof Transaction) || activity.isConfirmed
+                    !(activity instanceof Transaction && !activity.isConfirmed)
             );
         }
 
         if (filter.zeusPay == false) {
             filteredActivity = filteredActivity.filter(
                 (activity: any) =>
-                    !(
-                        activity.model ===
-                            localeString('views.Invoice.title') &&
-                        activity.isZeusPay
-                    )
+                    !(activity instanceof Invoice && activity.isZeusPay)
             );
         }
 

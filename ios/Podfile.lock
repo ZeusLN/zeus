@@ -338,8 +338,8 @@ PODS:
     - React-Core
   - react-native-netinfo (9.4.1):
     - React-Core
-  - react-native-nfc-manager (3.13.0):
-    - React
+  - react-native-nfc-manager (3.14.11):
+    - React-Core
   - react-native-notifications (5.1.0):
     - React-Core
   - react-native-randombytes (3.5.3):
@@ -791,7 +791,7 @@ SPEC CHECKSUMS:
   react-native-hce: 677aa1c41edf183523bb7b1014d106a08631ff88
   react-native-image-picker: 8cb4280e2c1efc3daeb2d9d597f9429a60472e40
   react-native-netinfo: fefd4e98d75cbdd6e85fc530f7111a8afdf2b0c5
-  react-native-nfc-manager: 001c3a98e68efd57b7fb04b1837ab06ca7243238
+  react-native-nfc-manager: 250424ac5f6b2827f98bec7a1ed7f27615852ed4
   react-native-notifications: 4601a5a8db4ced6ae7cfc43b44d35fe437ac50c4
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-restart: 7595693413fe3ca15893702f2c8306c62a708162

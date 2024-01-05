@@ -215,7 +215,7 @@ export default class Contacts extends React.Component<
                           input.toLowerCase().includes(search.toLowerCase())
                       )
                     : contact[field]
-                          .toLowerCase()
+                          ?.toLowerCase()
                           .includes(search.toLowerCase());
 
             return (

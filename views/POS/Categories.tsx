@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { FlatList, TouchableOpacity, View } from 'react-native';
-import { Icon, ListItem, SearchBar } from 'react-native-elements';
+import { ListItem, SearchBar } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import { inject, observer } from 'mobx-react';
 
@@ -80,17 +80,6 @@ export default class ProductCategories extends React.Component<
         const { navigation } = this.props;
         const { categories, search } = this.state;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.goBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
-        );
         const Add = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('ProductCategoryDetails')}
@@ -119,12 +108,13 @@ export default class ProductCategories extends React.Component<
             <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
-                        leftComponent={<BackButton />}
+                        leftComponent="Back"
                         centerComponent={{
                             text: localeString('views.Settings.POS.Categories'),
                             style: { color: themeColor('text') }
                         }}
                         rightComponent={<Add navigation={navigation} />}
+                        navigation={navigation}
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}

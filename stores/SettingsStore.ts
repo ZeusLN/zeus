@@ -120,8 +120,10 @@ export interface Settings {
     neutrinoPeers: Array<string>;
     zeroConfPeers: Array<string>;
     rescan: boolean;
+    compactDb: boolean;
     recovery: boolean;
     initialLoad: boolean;
+    embeddedTor: boolean;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -740,7 +742,7 @@ export default class SettingsStore {
         },
         pos: {
             posEnabled: PosEnabled.Disabled,
-            squareEnabled: false,
+            squareEnabled: false, // deprecated
             squareAccessToken: '',
             squareLocationId: '',
             merchantName: '',
@@ -780,8 +782,10 @@ export default class SettingsStore {
         neutrinoPeers: [],
         zeroConfPeers: [],
         rescan: false,
+        compactDb: false,
         recovery: false,
         initialLoad: true,
+        embeddedTor: false,
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
@@ -1046,12 +1050,9 @@ export default class SettingsStore {
                 }
 
                 // migrate old POS squareEnabled setting to posEnabled
-                if (!this.settings.pos.posEnabled) {
-                    if (this.settings.pos.squareEnabled) {
-                        this.settings.pos.posEnabled = PosEnabled.Square;
-                    } else {
-                        this.settings.pos.posEnabled = PosEnabled.Disabled;
-                    }
+                if (this.settings?.pos?.squareEnabled) {
+                    this.settings.pos.posEnabled = PosEnabled.Square;
+                    this.settings.pos.squareEnabled = false;
                 }
 
                 const node: any =

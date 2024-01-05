@@ -81,6 +81,7 @@ import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
 import Peers from './views/Settings/EmbeddedNode/Peers';
 import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
 import ZeroConfPeers from './views/Settings/EmbeddedNode/Peers/ZeroConfPeers';
+import Advanced from './views/Settings/EmbeddedNode/Advanced';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -369,6 +370,9 @@ const AppScenes = {
     },
     ZeroConfPeers: {
         screen: ZeroConfPeers
+    },
+    EmbeddedNodeSettingsAdvanced: {
+        screen: Advanced
     },
     LSPSettings: {
         screen: LSP

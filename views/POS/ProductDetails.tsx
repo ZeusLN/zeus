@@ -12,7 +12,7 @@ import InventoryStore from '../../stores/InventoryStore';
 import UnitsStore from '../../stores/UnitsStore';
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Divider, Icon, ListItem } from 'react-native-elements';
+import { Divider, ListItem } from 'react-native-elements';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -63,6 +63,11 @@ export default class ProductDetails extends React.Component<
 
     componentDidMount() {
         this.fetchProduct();
+    }
+
+    componentWillUnmount(): void {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('didFocus');
     }
 
     fetchProduct = async () => {
@@ -120,10 +125,9 @@ export default class ProductDetails extends React.Component<
                         if (this.props.UnitsStore.units !== product.pricedIn) {
                             // change unit to match product
                             while (
-                                this.props.UnitsStore.changeUnits() !==
-                                product.pricedIn
+                                this.props.UnitsStore.units !== product.pricedIn
                             ) {
-                                continue;
+                                this.props.UnitsStore.changeUnits();
                             }
                         }
 
@@ -212,20 +216,8 @@ export default class ProductDetails extends React.Component<
     };
 
     render() {
-        const { product, isLoading, isExisting } = this.state;
         const { navigation } = this.props;
-
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.goBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
-        );
+        const { product, isLoading, isExisting } = this.state;
 
         const Delete = () => (
             <TouchableOpacity onPress={() => this.confirmDelete()}>
@@ -253,17 +245,17 @@ export default class ProductDetails extends React.Component<
                 {isLoading ? (
                     <Screen>
                         <Header
-                            leftComponent={<BackButton />}
+                            leftComponent="Back"
                             centerComponent={{
                                 text: localeString(
                                     'views.Settings.POS.Product'
                                 ),
                                 style: { color: themeColor('text') }
                             }}
-                            backgroundColor="none"
                             containerStyle={{
                                 borderBottomWidth: 0
                             }}
+                            navigation={navigation}
                         />
                         <View style={{ marginTop: 60 }}>
                             <LoadingIndicator />
@@ -286,7 +278,7 @@ export default class ProductDetails extends React.Component<
                                 }}
                             >
                                 <Header
-                                    leftComponent={<BackButton />}
+                                    leftComponent="Back"
                                     centerComponent={{
                                         text: localeString(
                                             'views.Settings.POS.Product'
@@ -296,134 +288,163 @@ export default class ProductDetails extends React.Component<
                                     rightComponent={
                                         isExisting ? <Delete /> : undefined
                                     }
-                                    backgroundColor="transparent"
                                     containerStyle={{
                                         borderBottomWidth: 0
                                     }}
+                                    navigation={navigation}
                                 />
-                                <View
-                                    style={{
-                                        padding: Platform.OS === 'ios' ? 8 : 0,
-                                        paddingLeft: 15,
-                                        paddingRight: 15
-                                    }}
-                                >
-                                    <View>
-                                        <TextInput
-                                            onChangeText={(text: string) => {
-                                                this.setValue('name', text);
-                                            }}
-                                            value={product?.name}
-                                            placeholder={localeString(
-                                                'views.Settings.POS.Product.name'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={styles.textInput}
-                                            autoCapitalize="none"
-                                        />
-                                        <TextInput
-                                            onChangeText={(text: string) => {
-                                                this.setValue('sku', text);
-                                            }}
-                                            value={product?.sku}
-                                            placeholder={localeString(
-                                                'views.Settings.POS.Product.sku'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={styles.textInput}
-                                            autoCapitalize="none"
-                                        />
+                                {isLoading && (
+                                    <View style={{ marginTop: 60 }}>
+                                        <LoadingIndicator />
                                     </View>
-                                    <AmountInput
-                                        amount={String(
-                                            product?.price == 0
-                                                ? ''
-                                                : product?.price
-                                        )}
-                                        title={localeString(
-                                            'views.Settings.POS.Product.price'
-                                        )}
-                                        onAmountChange={(
-                                            amount: string,
-                                            satAmount: string | number
-                                        ) => {
-                                            const { UnitsStore } = this.props;
-                                            let price: string | number;
-                                            let pricedIn: PricedIn;
-                                            if (UnitsStore.units === 'sats') {
-                                                price = satAmount;
-                                                pricedIn = PricedIn.Sats;
-                                            } else {
-                                                price = amount;
-                                                pricedIn = PricedIn.Fiat;
-                                            }
-                                            this.setValue('pricedIn', pricedIn);
-                                            this.setValue('price', price);
-                                        }}
-                                        preventUnitReset={true}
-                                    />
-                                    <DropdownSetting
-                                        title={localeString(
-                                            'views.Settings.POS.Category.name'
-                                        )}
-                                        selectedValue={product?.category ?? ''}
-                                        onValueChange={async (
-                                            value: string
-                                        ) => {
-                                            this.setValue('category', value);
-                                        }}
-                                        values={this.state.categories}
-                                    />
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
+                                )}
+                                {!isLoading && (
+                                    <View
+                                        style={{
+                                            padding:
+                                                Platform.OS === 'ios' ? 8 : 0,
+                                            paddingLeft: 15,
+                                            paddingRight: 15
                                         }}
                                     >
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                left: -10
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.POS.Product.active'
-                                            )}
-                                        </ListItem.Title>
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
-                                            }}
-                                        >
-                                            <Switch
-                                                value={
-                                                    product?.status ===
-                                                    ProductStatus.Inactive
-                                                        ? false
-                                                        : true
-                                                }
-                                                onValueChange={async (
-                                                    value: boolean
+                                        <View>
+                                            <TextInput
+                                                onChangeText={(
+                                                    text: string
                                                 ) => {
-                                                    this.setValue(
-                                                        'status',
-                                                        value
-                                                    );
+                                                    this.setValue('name', text);
                                                 }}
+                                                value={product?.name}
+                                                placeholder={localeString(
+                                                    'views.Settings.POS.Product.name'
+                                                )}
+                                                placeholderTextColor={themeColor(
+                                                    'secondaryText'
+                                                )}
+                                                style={styles.textInput}
+                                                autoCapitalize="none"
+                                            />
+                                            <TextInput
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setValue('sku', text);
+                                                }}
+                                                value={product?.sku}
+                                                placeholder={localeString(
+                                                    'views.Settings.POS.Product.sku'
+                                                )}
+                                                placeholderTextColor={themeColor(
+                                                    'secondaryText'
+                                                )}
+                                                style={styles.textInput}
+                                                autoCapitalize="none"
                                             />
                                         </View>
-                                    </ListItem>
-                                </View>
+                                        <AmountInput
+                                            amount={String(
+                                                product?.price == 0
+                                                    ? ''
+                                                    : product?.price
+                                            )}
+                                            title={localeString(
+                                                'views.Settings.POS.Product.price'
+                                            )}
+                                            onAmountChange={(
+                                                amount: string,
+                                                satAmount: string | number
+                                            ) => {
+                                                const { UnitsStore } =
+                                                    this.props;
+                                                let price: string | number;
+                                                let pricedIn: PricedIn;
+                                                if (
+                                                    UnitsStore.units === 'sats'
+                                                ) {
+                                                    price = satAmount;
+                                                    pricedIn = PricedIn.Sats;
+                                                } else if (
+                                                    UnitsStore.units === 'BTC'
+                                                ) {
+                                                    price = amount;
+                                                    pricedIn = PricedIn.Bitcoin;
+                                                } else {
+                                                    price = amount;
+                                                    pricedIn = PricedIn.Fiat;
+                                                }
+
+                                                this.setValue(
+                                                    'pricedIn',
+                                                    pricedIn
+                                                );
+                                                this.setValue('price', price);
+                                            }}
+                                            preventUnitReset={true}
+                                        />
+                                        <DropdownSetting
+                                            title={localeString(
+                                                'views.Settings.POS.Category.name'
+                                            )}
+                                            selectedValue={
+                                                product?.category ?? ''
+                                            }
+                                            onValueChange={async (
+                                                value: string
+                                            ) => {
+                                                this.setValue(
+                                                    'category',
+                                                    value
+                                                );
+                                            }}
+                                            values={this.state.categories}
+                                        />
+                                        <ListItem
+                                            containerStyle={{
+                                                borderBottomWidth: 0,
+                                                backgroundColor: 'transparent'
+                                            }}
+                                        >
+                                            <ListItem.Title
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    left: -10
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.POS.Product.active'
+                                                )}
+                                            </ListItem.Title>
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'flex-end'
+                                                }}
+                                            >
+                                                <Switch
+                                                    value={
+                                                        product?.status ===
+                                                        ProductStatus.Inactive
+                                                            ? false
+                                                            : true
+                                                    }
+                                                    onValueChange={async (
+                                                        value: boolean
+                                                    ) => {
+                                                        this.setValue(
+                                                            'status',
+                                                            value
+                                                        );
+                                                    }}
+                                                />
+                                            </View>
+                                        </ListItem>
+                                    </View>
+                                )}
                                 <Divider
                                     orientation="horizontal"
                                     style={{ marginTop: 6 }}

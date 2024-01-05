@@ -3,14 +3,15 @@ import { ScrollView, Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
+import Screen from '../../../components/Screen';
+import Switch from '../../../components/Switch';
 
 import SettingsStore from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
+import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import Switch from '../../../components/Switch';
 
 interface ExpressGraphSyncProps {
     navigation: any;
@@ -101,6 +102,17 @@ export default class ExpressGraphSync extends React.Component<
                                                 expressGraphSync:
                                                     !expressGraphSync
                                             });
+                                            if (expressGraphSync) {
+                                                this.setState({
+                                                    resetExpressGraphSyncOnStartup:
+                                                        false
+                                                });
+                                                await updateSettings({
+                                                    resetExpressGraphSyncOnStartup:
+                                                        false
+                                                });
+                                            }
+                                            restartNeeded();
                                         }}
                                     />
                                 </View>
@@ -156,6 +168,7 @@ export default class ExpressGraphSync extends React.Component<
                                                 resetExpressGraphSyncOnStartup:
                                                     !resetExpressGraphSyncOnStartup
                                             });
+                                            restartNeeded();
                                         }}
                                         disabled={!expressGraphSync}
                                     />
