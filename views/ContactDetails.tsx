@@ -31,11 +31,12 @@ interface ContactDetailsProps {
 }
 
 interface ContactItem {
-    lnAddress: string;
-    onchainAddress: string;
-    pubkey: string;
-    nip05: string;
-    nostrNpub: string;
+    id: string;
+    lnAddress: string[];
+    onchainAddress: string[];
+    pubkey: string[];
+    nip05: string[];
+    nostrNpub: string[];
     name: string;
     description: string;
     photo: string | null;
@@ -57,17 +58,18 @@ export default class ContactDetails extends React.Component<
 
         this.state = {
             contact: {
-                lnAddress: '',
-                onchainAddress: '',
-                pubkey: '',
-                nip05: '',
-                nostrNpub: '',
+                lnAddress: [''],
+                onchainAddress: [''],
+                pubkey: [''],
+                nip05: [''],
+                nostrNpub: [''],
                 name: '',
                 description: '',
                 photo: null,
                 isFavourite: false,
                 contactId: '',
-                banner: ''
+                banner: '',
+                id: ''
             },
             isLoading: true,
             isNostrContact: false
@@ -108,7 +110,8 @@ export default class ContactDetails extends React.Component<
                     const existingContact = JSON.parse(contactsString);
                     const contact = existingContact.find(
                         (contact: ContactItem) =>
-                            contact.contactId === contactId
+                            contact.contactId === contactId ||
+                            contact.id === contactId
                     );
 
                     // Store the found contact in the component's state
@@ -239,8 +242,14 @@ export default class ContactDetails extends React.Component<
             </TouchableOpacity>
         );
 
-        const filterEmptyValues = (array: any) =>
-            (array || []).filter((value: any) => value !== '');
+        // Function to add prefixes to addresses based on their types
+        const addPrefixToAddresses = (
+            addresses: string[] | undefined,
+            prefix: string
+        ) =>
+            (addresses || [])
+                .filter(Boolean)
+                .map((address) => `${prefix}${address}`);
 
         const QRButton = () => (
             <TouchableOpacity
@@ -248,10 +257,25 @@ export default class ContactDetails extends React.Component<
                     navigation.navigate('ContactInfo', {
                         contactData: JSON.stringify(this.state.contact),
                         addressData: [
-                            ...filterEmptyValues(this.state.contact?.lnAddress),
-                            ...filterEmptyValues(this.state.contact?.pubkey),
-                            ...filterEmptyValues(
-                                this.state.contact?.onchainAddress
+                            ...addPrefixToAddresses(
+                                this.state.contact?.lnAddress,
+                                'lightning:'
+                            ),
+                            ...addPrefixToAddresses(
+                                this.state.contact?.pubkey,
+                                'lightning:'
+                            ),
+                            ...addPrefixToAddresses(
+                                this.state.contact?.onchainAddress,
+                                'bitcoin:'
+                            ),
+                            ...addPrefixToAddresses(
+                                this.state.contact?.nostrNpub,
+                                'nostr:'
+                            ),
+                            ...addPrefixToAddresses(
+                                this.state.contact?.nip05,
+                                'nostr:'
                             )
                         ]
                     })
