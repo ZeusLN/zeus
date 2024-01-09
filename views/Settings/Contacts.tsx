@@ -167,7 +167,7 @@ export default class Contacts extends React.Component<
         >
             <View
                 style={{
-                    marginHorizontal: 24,
+                    marginHorizontal: 28,
                     paddingBottom: 20,
                     flexDirection: 'row',
                     alignItems: 'center'
@@ -317,8 +317,10 @@ export default class Contacts extends React.Component<
                                     }
                                     leftIconContainerStyle={{
                                         marginLeft: 18,
-                                        marginRight: -8
+                                        marginRight: -8,
+                                        marginBottom: 6
                                     }}
+                                    multiline={true}
                                 />
                                 <Divider orientation="horizontal" />
                             </View>
