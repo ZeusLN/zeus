@@ -476,7 +476,8 @@ export default class AddContact extends React.Component<
                             style={{
                                 alignContent: 'center',
                                 alignSelf: 'center',
-                                padding: Platform.OS === 'ios' ? 8 : 0
+                                padding: Platform.OS === 'ios' ? 8 : 0,
+                                width: '100%'
                             }}
                         >
                             <TextInput
@@ -493,7 +494,9 @@ export default class AddContact extends React.Component<
                                 )}
                                 style={{
                                     ...styles.textInput,
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    paddingHorizontal: 12,
+                                    textAlign: 'center'
                                 }}
                                 autoCapitalize="none"
                             />
