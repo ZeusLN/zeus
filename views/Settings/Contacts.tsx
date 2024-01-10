@@ -312,7 +312,9 @@ export default class Contacts extends React.Component<
                                                 fontWeight: 'bold'
                                             }}
                                         >
-                                            To
+                                            {localeString(
+                                                'views.Settings.Contacts.to'
+                                            )}
                                         </Text>
                                     }
                                     leftIconContainerStyle={{
