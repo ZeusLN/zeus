@@ -53,7 +53,7 @@ export default class Transaction extends BaseModel {
     @computed public get getFeePercentage(): string {
         const amount = this.getAmount;
         const fee = this.getFee;
-        if (!fee || !amount || fee == '0') return '';
+        if (!fee || !amount || fee == '0' || amount == '0') return '';
 
         // use at most 3 decimal places and remove trailing 0s
         return (
