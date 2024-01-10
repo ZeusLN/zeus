@@ -20,9 +20,10 @@ class Base64Utils {
         new Uint8Array(
             input.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
         );
-    bytesToHex = (input: any) =>
+    bytesToHex = (input: number[]) =>
         input.reduce(
-            (memo: any, i: number) => memo + ('0' + i.toString(16)).slice(-2),
+            (memo: string, i: number) =>
+                memo + ('0' + i.toString(16)).slice(-2),
             ''
         );
 
