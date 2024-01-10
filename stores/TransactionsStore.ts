@@ -3,6 +3,7 @@ import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
 import Transaction from '../models/Transaction';
 import TransactionRequest from '../models/TransactionRequest';
+import Payment from '../models/Payment';
 import SettingsStore from './SettingsStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
@@ -306,12 +307,7 @@ export default class TransactionsStore {
         this.loading = false;
         this.payment_route = result.payment_route;
         this.payment_preimage = result.payment_preimage;
-        this.payment_hash =
-            result.payment_hash && typeof result.payment_hash === 'string'
-                ? result.payment_hash
-                : result.payment_hash.type === 'Buffer'
-                ? Base64Utils.bytesToHex(result.payment_hash.data)
-                : null;
+        this.payment_hash = new Payment(result).paymentHash;
 
         const implementation = this.settingsStore.implementation;
 
