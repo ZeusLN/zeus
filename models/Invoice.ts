@@ -353,13 +353,16 @@ export default class Invoice extends BaseModel {
         durationInMs: number,
         locale: string | undefined
     ) {
-        return humanizeDuration(durationInMs, {
-            language: locale === 'zh' ? 'zh_CN' : locale,
-            fallbacks: ['en'],
-            round: true,
-            largest: 2
-        })
-            .replace(/(\d+) /g, '$1 ')
-            .replace(/ (\d+)/g, ' $1');
+        return (
+            humanizeDuration(durationInMs, {
+                language: locale === 'zh' ? 'zh_CN' : locale,
+                fallbacks: ['en'],
+                round: true,
+                largest: 2
+            })
+                // replace spaces between digits and units with non-breaking spaces
+                .replace(/(\d) ([^,])/g, '$1 $2') // LTR
+                .replace(/([^,]) (\d)/g, '$2 $1') // RTL
+        );
     }
 }
