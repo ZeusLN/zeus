@@ -831,6 +831,7 @@
     "views.Settings.Contacts.contacts": "Contacts",
     "views.Settings.Contacts.noContacts": "No Contacts",
     "views.Settings.Contacts.noAddress": "No Address",
+    "views.Settings.Contacts.to": "To",
     "views.Transaction.title": "Transaction",
     "views.Transaction.totalFees": "Total Fees",
     "views.Transaction.transactionHash": "Transaction Hash",
