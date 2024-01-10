@@ -19,6 +19,7 @@ import SettingsStore from '../stores/SettingsStore';
 interface KeyValueProps {
     keyValue: string;
     value?: any;
+    valueIsComponent?: boolean;
     color?: string;
     sensitive?: boolean;
     mempoolLink?: () => void;
@@ -33,6 +34,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         const {
             keyValue,
             value,
+            valueIsComponent,
             color,
             sensitive,
             mempoolLink,
@@ -64,7 +66,9 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                 </Text>
             </Body>
         );
-        const Value = (
+        const Value = valueIsComponent ? (
+            value
+        ) : (
             <Text
                 style={{
                     color: color || themeColor('text'),
@@ -119,7 +123,7 @@ const styles = StyleSheet.create({
         maxWidth: '50%'
     },
     value: {
-        flex: 1,
+        flexShrink: 1,
         flexWrap: 'wrap',
         flexDirection: 'row',
         justifyContent: 'flex-end'

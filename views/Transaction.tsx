@@ -116,6 +116,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             </Text>
                         </TouchableOpacity>
                     }
+                    valueIsComponent={true}
                     key={key}
                     sensitive
                 />
@@ -187,6 +188,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                     )}
                                 </Row>
                             }
+                            valueIsComponent={true}
                         />
                     ) : null}
 
@@ -210,6 +212,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 </Text>
                             </TouchableOpacity>
                         }
+                        valueIsComponent={true}
                     />
 
                     {!!block_hash && (
@@ -238,6 +241,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                     </Text>
                                 </TouchableOpacity>
                             }
+                            valueIsComponent={true}
                         />
                     )}
 
@@ -269,6 +273,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                     </Text>
                                 </TouchableOpacity>
                             }
+                            valueIsComponent={true}
                         />
                     )}
 
