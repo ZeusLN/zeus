@@ -64,16 +64,19 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                 </Text>
             </Body>
         );
-        const Value = (
-            <Text
-                style={{
-                    color: color || themeColor('text'),
-                    fontFamily: 'PPNeueMontreal-Book'
-                }}
-            >
-                {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-            </Text>
-        );
+        const Value =
+            typeof value === 'object' ? (
+                value
+            ) : (
+                <Text
+                    style={{
+                        color: color || themeColor('text'),
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+                </Text>
+            );
 
         const copyText = () => {
             Clipboard.setString(value);
