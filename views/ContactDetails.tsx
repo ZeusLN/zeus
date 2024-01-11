@@ -214,7 +214,10 @@ export default class ContactDetails extends React.Component<
     render() {
         const { contact, isLoading } = this.state;
         const { navigation } = this.props;
-
+        const nostrContact = this.props.navigation.getParam(
+            'nostrContact',
+            null
+        );
         const StarButton = () => (
             <TouchableOpacity onPress={this.toggleFavorite}>
                 <Star
@@ -253,9 +256,24 @@ export default class ContactDetails extends React.Component<
 
         const QRButton = () => (
             <TouchableOpacity
-                onPress={() =>
+                onPress={() => {
+                    const contactDataWithoutPhoto = { ...this.state.contact };
+
+                    // Check if 'photo' exists and doesn't start with 'http'
+                    if (
+                        contactDataWithoutPhoto.photo &&
+                        !contactDataWithoutPhoto.photo.startsWith('http')
+                    ) {
+                        delete contactDataWithoutPhoto.photo;
+                    }
+
+                    // Add the 'zeuscontact:' prefix to the contactData parameter
+                    const zeusContactData =
+                        'zeuscontact:' +
+                        JSON.stringify(contactDataWithoutPhoto);
+
                     navigation.navigate('ContactInfo', {
-                        contactData: JSON.stringify(this.state.contact),
+                        contactData: zeusContactData,
                         addressData: [
                             ...addPrefixToAddresses(
                                 this.state.contact?.lnAddress,
@@ -278,8 +296,8 @@ export default class ContactDetails extends React.Component<
                                 'nostr:'
                             )
                         ]
-                    })
-                }
+                    });
+                }}
             >
                 <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
             </TouchableOpacity>
@@ -612,13 +630,29 @@ export default class ContactDetails extends React.Component<
                                 )}
                         </ScrollView>
                         {this.state.isNostrContact && (
-                            <Button
-                                onPress={() => this.importToContacts()}
-                                title={localeString(
-                                    'views.ContactDetails.saveToContacts'
-                                )}
-                                containerStyle={{ paddingBottom: 12 }}
-                            />
+                            <>
+                                <Button
+                                    onPress={() => this.importToContacts()}
+                                    title={localeString(
+                                        'views.ContactDetails.saveToContacts'
+                                    )}
+                                    containerStyle={{ paddingBottom: 12 }}
+                                />
+                                <Button
+                                    onPress={() => {
+                                        navigation.goBack();
+                                        navigation.navigate('AddContact', {
+                                            prefillContact: nostrContact,
+                                            isEdit: true,
+                                            isNostrContact:
+                                                this.state.isNostrContact
+                                        });
+                                    }}
+                                    title="Edit and save contact"
+                                    containerStyle={{ paddingBottom: 12 }}
+                                    secondary
+                                />
+                            </>
                         )}
                     </Screen>
                 )}

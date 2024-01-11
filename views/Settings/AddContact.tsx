@@ -127,6 +127,10 @@ export default class AddContact extends React.Component<
             'prefillContact',
             null
         );
+        const isNostrContact = this.props.navigation.getParam(
+            'isNostrContact',
+            null
+        );
 
         try {
             // Retrieve existing contacts from storage
@@ -137,7 +141,7 @@ export default class AddContact extends React.Component<
                 ? JSON.parse(contactsString)
                 : [];
 
-            if (isEdit && prefillContact) {
+            if (isEdit && prefillContact && !isNostrContact) {
                 // Editing an existing contact
                 const updatedContacts = existingContacts.map((contact) =>
                     contact.contactId === prefillContact.contactId
@@ -166,7 +170,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact updated successfully!');
-                this.props.navigation.goBack();
+                this.props.navigation.navigate('Contacts');
             } else {
                 // Creating a new contact
                 const contactId = uuidv4();
@@ -195,7 +199,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact saved successfully!');
-                this.props.navigation.goBack();
+                this.props.navigation.navigate('Contacts');
 
                 // Reset the input fields after saving the contact
                 this.setState({
@@ -306,11 +310,38 @@ export default class AddContact extends React.Component<
         });
     };
 
+    toggleFavorite = () => {
+        this.setState((prevState) => ({
+            isFavourite: !prevState.isFavourite
+        }));
+    };
+
     componentDidMount() {
+        this.handlePrefillContact();
+    }
+
+    componentDidUpdate(prevProps) {
         const prefillContact = this.props.navigation.getParam(
             'prefillContact',
             null
         );
+        const prevPrefillContact = prevProps.navigation.getParam(
+            'prefillContact',
+            null
+        );
+
+        // Check if the prefillContact prop has changed
+        if (prefillContact !== prevPrefillContact) {
+            this.handlePrefillContact();
+        }
+    }
+
+    handlePrefillContact() {
+        const prefillContact = this.props.navigation.getParam(
+            'prefillContact',
+            null
+        );
+
         if (prefillContact) {
             this.setState({
                 lnAddress: prefillContact.lnAddress,
@@ -325,12 +356,6 @@ export default class AddContact extends React.Component<
             });
         }
     }
-
-    toggleFavorite = () => {
-        this.setState((prevState) => ({
-            isFavourite: !prevState.isFavourite
-        }));
-    };
 
     render() {
         const { navigation } = this.props;
@@ -386,7 +411,7 @@ export default class AddContact extends React.Component<
             null
         );
 
-        const ScanBadge = () => (
+        const ScanBadge = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('HandleAnythingQRScanner')}
                 accessibilityLabel={localeString('general.scan')}
@@ -395,7 +420,7 @@ export default class AddContact extends React.Component<
                     fill={themeColor('text')}
                     width={30}
                     height={30}
-                    style={{ marginRight: 12 }}
+                    style={{ marginLeft: 12 }}
                 />
             </TouchableOpacity>
         );
@@ -418,11 +443,11 @@ export default class AddContact extends React.Component<
                             leftComponent="Back"
                             rightComponent={
                                 <Row>
-                                    <ScanBadge />
                                     <StarButton
                                         isFavourite={this.state.isFavourite}
                                         onPress={this.toggleFavorite}
                                     />
+                                    <ScanBadge navigation={navigation} />
                                 </Row>
                             }
                             containerStyle={{

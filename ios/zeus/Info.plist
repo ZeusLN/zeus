@@ -38,6 +38,7 @@
 				<string>keyauth</string>
 				<string>lndconnect</string>
 				<string>zeusln</string>
+				<string>zeuscontact</string>
 			</array>
 		</dict>
 	</array>
