@@ -12,6 +12,7 @@ import Screen from '../components/Screen';
 import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
+import { Row } from '../components/layout/Row';
 
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
@@ -19,6 +20,7 @@ import KeySecurity from '../assets/images/SVG/Key Security.svg';
 import VerifiedAccount from '../assets/images/SVG/Verified Account.svg';
 import EditContact from '../assets/images/SVG/Pen.svg';
 import Star from '../assets/images/SVG/Star.svg';
+import QR from '../assets/images/SVG/QR.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
 import LinkingUtils from '../utils/LinkingUtils';
@@ -29,16 +31,17 @@ interface ContactDetailsProps {
 }
 
 interface ContactItem {
-    lnAddress: string;
-    onchainAddress: string;
-    pubkey: string;
-    nip05: string;
-    nostrNpub: string;
+    id: string;
+    lnAddress: string[];
+    onchainAddress: string[];
+    pubkey: string[];
+    nip05: string[];
+    nostrNpub: string[];
     name: string;
     description: string;
     photo: string | null;
     isFavourite: boolean;
-    id: string;
+    contactId: string;
     banner: string;
 }
 interface ContactDetailsState {
@@ -55,17 +58,18 @@ export default class ContactDetails extends React.Component<
 
         this.state = {
             contact: {
-                lnAddress: '',
-                onchainAddress: '',
-                pubkey: '',
-                nip05: '',
-                nostrNpub: '',
+                lnAddress: [''],
+                onchainAddress: [''],
+                pubkey: [''],
+                nip05: [''],
+                nostrNpub: [''],
                 name: '',
                 description: '',
                 photo: null,
                 isFavourite: false,
-                id: '',
-                banner: ''
+                contactId: '',
+                banner: '',
+                id: ''
             },
             isLoading: true,
             isNostrContact: false
@@ -105,7 +109,9 @@ export default class ContactDetails extends React.Component<
                 if (contactsString && contactId) {
                     const existingContact = JSON.parse(contactsString);
                     const contact = existingContact.find(
-                        (contact: ContactItem) => contact.id === contactId
+                        (contact: ContactItem) =>
+                            contact.contactId === contactId ||
+                            contact.id === contactId
                     );
 
                     // Store the found contact in the component's state
@@ -141,7 +147,7 @@ export default class ContactDetails extends React.Component<
 
                 // Find the index of the contact with the same name
                 const contactIndex = existingContacts.findIndex(
-                    (contact) => contact.id === updatedContact.id
+                    (contact) => contact.contactId === updatedContact.contactId
                 );
 
                 if (contactIndex !== -1) {
@@ -206,19 +212,23 @@ export default class ContactDetails extends React.Component<
     };
 
     render() {
-        const { contact, isLoading } = this.state;
+        const { contact, isLoading, isNostrContact } = this.state;
         const { navigation } = this.props;
-
+        const nostrContact = this.props.navigation.getParam(
+            'nostrContact',
+            null
+        );
         const StarButton = () => (
             <TouchableOpacity onPress={this.toggleFavorite}>
                 <Star
                     fill={contact.isFavourite ? themeColor('text') : 'none'}
                     stroke={contact.isFavourite ? 'none' : themeColor('text')}
                     strokeWidth={2}
-                    style={{ alignSelf: 'center' }}
+                    style={{ alignSelf: 'center', marginRight: 16 }}
                 />
             </TouchableOpacity>
         );
+
         const EditContactButton = () => (
             <TouchableOpacity
                 onPress={() =>
@@ -234,6 +244,65 @@ export default class ContactDetails extends React.Component<
                 />
             </TouchableOpacity>
         );
+
+        // Function to add prefixes to addresses based on their types
+        const addPrefixToAddresses = (
+            addresses: string[] | undefined,
+            prefix: string
+        ) =>
+            (addresses || [])
+                .filter(Boolean)
+                .map((address) => `${prefix}${address}`);
+
+        const QRButton = () => {
+            const { contact } = this.state;
+            const { lnAddress, onchainAddress, pubkey, nostrNpub, nip05 } =
+                contact;
+            return (
+                <TouchableOpacity
+                    onPress={() => {
+                        const contactDataWithoutPhoto = {
+                            ...this.state.contact
+                        };
+
+                        // Check if 'photo' exists and doesn't start with 'http'
+                        if (
+                            contactDataWithoutPhoto.photo &&
+                            !contactDataWithoutPhoto.photo.startsWith('http')
+                        ) {
+                            delete contactDataWithoutPhoto.photo;
+                        }
+
+                        // Add the 'zeuscontact:' prefix to the contactData parameter
+                        const zeusContactData = `zeuscontact:${JSON.stringify(
+                            contactDataWithoutPhoto
+                        )}`;
+                        navigation.navigate('ContactQR', {
+                            contactData: zeusContactData,
+                            addressData: [
+                                ...addPrefixToAddresses(
+                                    lnAddress,
+                                    'lightning:'
+                                ),
+                                ...addPrefixToAddresses(pubkey, 'lightning:'),
+                                ...addPrefixToAddresses(
+                                    onchainAddress,
+                                    'bitcoin:'
+                                ),
+                                ...addPrefixToAddresses(nostrNpub, 'nostr:'),
+                                ...addPrefixToAddresses(nip05, 'nostr:')
+                            ]
+                        });
+                    }}
+                >
+                    <QR
+                        fill={themeColor('text')}
+                        style={{ alignSelf: 'center' }}
+                    />
+                </TouchableOpacity>
+            );
+        };
+
         return (
             <>
                 {isLoading ? (
@@ -254,12 +323,13 @@ export default class ContactDetails extends React.Component<
                         <Header
                             leftComponent="Back"
                             centerComponent={
-                                !this.state.isNostrContact && (
-                                    <EditContactButton />
-                                )
+                                !isNostrContact && <EditContactButton />
                             }
                             rightComponent={
-                                !this.state.isNostrContact && <StarButton />
+                                <Row>
+                                    <StarButton />
+                                    <QRButton />
+                                </Row>
                             }
                             centerContainerStyle={{
                                 paddingRight: 6,
@@ -555,14 +625,31 @@ export default class ContactDetails extends React.Component<
                                     </View>
                                 )}
                         </ScrollView>
-                        {this.state.isNostrContact && (
-                            <Button
-                                onPress={() => this.importToContacts()}
-                                title={localeString(
-                                    'views.ContactDetails.saveToContacts'
-                                )}
-                                containerStyle={{ paddingBottom: 12 }}
-                            />
+                        {isNostrContact && (
+                            <>
+                                <Button
+                                    onPress={() => this.importToContacts()}
+                                    title={localeString(
+                                        'views.ContactDetails.saveToContacts'
+                                    )}
+                                    containerStyle={{ paddingBottom: 12 }}
+                                />
+                                <Button
+                                    onPress={() => {
+                                        navigation.goBack();
+                                        navigation.navigate('AddContact', {
+                                            prefillContact: nostrContact,
+                                            isEdit: true,
+                                            isNostrContact
+                                        });
+                                    }}
+                                    title={localeString(
+                                        'views.ContactDetails.editAndSaveContact'
+                                    )}
+                                    containerStyle={{ paddingBottom: 12 }}
+                                    secondary
+                                />
+                            </>
                         )}
                     </Screen>
                 )}

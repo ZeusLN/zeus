@@ -21,6 +21,7 @@ import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../../assets/images/SVG/Key Security.svg';
 import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
+import Scan from '../../assets/images/SVG/Scan.svg';
 import { themeColor } from '../../utils/ThemeUtils';
 import AddressUtils from '../../utils/AddressUtils';
 
@@ -28,6 +29,7 @@ import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
+import { Row } from '../../components/layout/Row';
 
 import Star from '../../assets/images/SVG/Star.svg';
 
@@ -43,7 +45,7 @@ interface Contact {
     pubkey: string[];
     name: string;
     description: string;
-    id: string;
+    contactId: string;
     photo: string | null;
     isFavourite: boolean;
 }
@@ -125,6 +127,10 @@ export default class AddContact extends React.Component<
             'prefillContact',
             null
         );
+        const isNostrContact = this.props.navigation.getParam(
+            'isNostrContact',
+            null
+        );
 
         try {
             // Retrieve existing contacts from storage
@@ -135,10 +141,10 @@ export default class AddContact extends React.Component<
                 ? JSON.parse(contactsString)
                 : [];
 
-            if (isEdit && prefillContact) {
+            if (isEdit && prefillContact && !isNostrContact) {
                 // Editing an existing contact
                 const updatedContacts = existingContacts.map((contact) =>
-                    contact.id === prefillContact.id
+                    contact.contactId === prefillContact.contactId
                         ? {
                               ...contact,
                               lnAddress,
@@ -164,13 +170,13 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact updated successfully!');
-                this.props.navigation.goBack();
+                this.props.navigation.navigate('Contacts');
             } else {
                 // Creating a new contact
                 const contactId = uuidv4();
 
                 const newContact: Contact = {
-                    id: contactId,
+                    contactId,
                     lnAddress,
                     onchainAddress,
                     nip05,
@@ -193,7 +199,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact saved successfully!');
-                this.props.navigation.goBack();
+                this.props.navigation.navigate('Contacts');
 
                 // Reset the input fields after saving the contact
                 this.setState({
@@ -229,7 +235,7 @@ export default class AddContact extends React.Component<
                     : [];
 
                 const updatedContacts = existingContacts.filter(
-                    (contact) => contact.id !== prefillContact.id
+                    (contact) => contact.contactId !== prefillContact.contactId
                 );
 
                 await EncryptedStorage.setItem(
@@ -304,11 +310,38 @@ export default class AddContact extends React.Component<
         });
     };
 
+    toggleFavorite = () => {
+        this.setState((prevState) => ({
+            isFavourite: !prevState.isFavourite
+        }));
+    };
+
     componentDidMount() {
+        this.handlePrefillContact();
+    }
+
+    componentDidUpdate(prevProps) {
         const prefillContact = this.props.navigation.getParam(
             'prefillContact',
             null
         );
+        const prevPrefillContact = prevProps.navigation.getParam(
+            'prefillContact',
+            null
+        );
+
+        // Check if the prefillContact prop has changed
+        if (prefillContact !== prevPrefillContact) {
+            this.handlePrefillContact();
+        }
+    }
+
+    handlePrefillContact() {
+        const prefillContact = this.props.navigation.getParam(
+            'prefillContact',
+            null
+        );
+
         if (prefillContact) {
             this.setState({
                 lnAddress: prefillContact.lnAddress,
@@ -323,12 +356,6 @@ export default class AddContact extends React.Component<
             });
         }
     }
-
-    toggleFavorite = () => {
-        this.setState((prevState) => ({
-            isFavourite: !prevState.isFavourite
-        }));
-    };
 
     render() {
         const { navigation } = this.props;
@@ -384,6 +411,20 @@ export default class AddContact extends React.Component<
             null
         );
 
+        const ScanBadge = ({ navigation }: { navigation: any }) => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('HandleAnythingQRScanner')}
+                accessibilityLabel={localeString('general.scan')}
+            >
+                <Scan
+                    fill={themeColor('text')}
+                    width={30}
+                    height={30}
+                    style={{ marginLeft: 12 }}
+                />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <KeyboardAvoidingView
@@ -401,10 +442,13 @@ export default class AddContact extends React.Component<
                         <Header
                             leftComponent="Back"
                             rightComponent={
-                                <StarButton
-                                    isFavourite={this.state.isFavourite}
-                                    onPress={this.toggleFavorite}
-                                />
+                                <Row>
+                                    <StarButton
+                                        isFavourite={this.state.isFavourite}
+                                        onPress={this.toggleFavorite}
+                                    />
+                                    <ScanBadge navigation={navigation} />
+                                </Row>
                             }
                             containerStyle={{
                                 borderBottomWidth: 0

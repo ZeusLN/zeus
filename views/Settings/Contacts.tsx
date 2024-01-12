@@ -24,6 +24,7 @@ interface ContactsSettingsProps {
 }
 
 interface ContactItem {
+    id: string;
     lnAddress: string;
     onchainAddress: string;
     pubkey: string;
@@ -33,7 +34,7 @@ interface ContactItem {
     description: string;
     photo: string | null;
     isFavourite: boolean;
-    id: string;
+    contactId: string;
 }
 
 interface ContactsSettingsState {
@@ -160,7 +161,7 @@ export default class Contacts extends React.Component<
                             contactName: item.name
                         })) ||
                     this.props.navigation.navigate('ContactDetails', {
-                        contactId: item.id,
+                        contactId: item.contactId || item.id,
                         isNostrContact: false
                     });
             }}
