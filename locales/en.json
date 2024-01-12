@@ -406,7 +406,7 @@
     "views.Invoice.creationDate": "Creation Date",
     "views.Invoice.originalExpiration": "Original Expiry",
     "views.Invoice.expiration": "Time until Expiry",
-    "views.Invoice.private": "Private",
+    "views.Invoice.private": "Route hints included",
     "views.Invoice.fallbackAddress": "Fallback Address",
     "views.Invoice.cltvExpiry": "CLTV Expiry",
     "views.Invoice.rHash": "R Hash",
