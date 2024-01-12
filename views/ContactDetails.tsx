@@ -212,7 +212,7 @@ export default class ContactDetails extends React.Component<
     };
 
     render() {
-        const { contact, isLoading } = this.state;
+        const { contact, isLoading, isNostrContact } = this.state;
         const { navigation } = this.props;
         const nostrContact = this.props.navigation.getParam(
             'nostrContact',
@@ -224,7 +224,7 @@ export default class ContactDetails extends React.Component<
                     fill={contact.isFavourite ? themeColor('text') : 'none'}
                     stroke={contact.isFavourite ? 'none' : themeColor('text')}
                     strokeWidth={2}
-                    style={{ alignSelf: 'center', marginRight: 12 }}
+                    style={{ alignSelf: 'center', marginRight: 16 }}
                 />
             </TouchableOpacity>
         );
@@ -254,54 +254,54 @@ export default class ContactDetails extends React.Component<
                 .filter(Boolean)
                 .map((address) => `${prefix}${address}`);
 
-        const QRButton = () => (
-            <TouchableOpacity
-                onPress={() => {
-                    const contactDataWithoutPhoto = { ...this.state.contact };
+        const QRButton = () => {
+            const { contact } = this.state;
+            const { lnAddress, onchainAddress, pubkey, nostrNpub, nip05 } =
+                contact;
+            return (
+                <TouchableOpacity
+                    onPress={() => {
+                        const contactDataWithoutPhoto = {
+                            ...this.state.contact
+                        };
 
-                    // Check if 'photo' exists and doesn't start with 'http'
-                    if (
-                        contactDataWithoutPhoto.photo &&
-                        !contactDataWithoutPhoto.photo.startsWith('http')
-                    ) {
-                        delete contactDataWithoutPhoto.photo;
-                    }
+                        // Check if 'photo' exists and doesn't start with 'http'
+                        if (
+                            contactDataWithoutPhoto.photo &&
+                            !contactDataWithoutPhoto.photo.startsWith('http')
+                        ) {
+                            delete contactDataWithoutPhoto.photo;
+                        }
 
-                    // Add the 'zeuscontact:' prefix to the contactData parameter
-                    const zeusContactData =
-                        'zeuscontact:' +
-                        JSON.stringify(contactDataWithoutPhoto);
-
-                    navigation.navigate('ContactInfo', {
-                        contactData: zeusContactData,
-                        addressData: [
-                            ...addPrefixToAddresses(
-                                this.state.contact?.lnAddress,
-                                'lightning:'
-                            ),
-                            ...addPrefixToAddresses(
-                                this.state.contact?.pubkey,
-                                'lightning:'
-                            ),
-                            ...addPrefixToAddresses(
-                                this.state.contact?.onchainAddress,
-                                'bitcoin:'
-                            ),
-                            ...addPrefixToAddresses(
-                                this.state.contact?.nostrNpub,
-                                'nostr:'
-                            ),
-                            ...addPrefixToAddresses(
-                                this.state.contact?.nip05,
-                                'nostr:'
-                            )
-                        ]
-                    });
-                }}
-            >
-                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
-            </TouchableOpacity>
-        );
+                        // Add the 'zeuscontact:' prefix to the contactData parameter
+                        const zeusContactData = `zeuscontact:${JSON.stringify(
+                            contactDataWithoutPhoto
+                        )}`;
+                        navigation.navigate('ContactQR', {
+                            contactData: zeusContactData,
+                            addressData: [
+                                ...addPrefixToAddresses(
+                                    lnAddress,
+                                    'lightning:'
+                                ),
+                                ...addPrefixToAddresses(pubkey, 'lightning:'),
+                                ...addPrefixToAddresses(
+                                    onchainAddress,
+                                    'bitcoin:'
+                                ),
+                                ...addPrefixToAddresses(nostrNpub, 'nostr:'),
+                                ...addPrefixToAddresses(nip05, 'nostr:')
+                            ]
+                        });
+                    }}
+                >
+                    <QR
+                        fill={themeColor('text')}
+                        style={{ alignSelf: 'center' }}
+                    />
+                </TouchableOpacity>
+            );
+        };
 
         return (
             <>
@@ -323,15 +323,11 @@ export default class ContactDetails extends React.Component<
                         <Header
                             leftComponent="Back"
                             centerComponent={
-                                !this.state.isNostrContact && (
-                                    <EditContactButton />
-                                )
+                                !isNostrContact && <EditContactButton />
                             }
                             rightComponent={
                                 <Row>
-                                    {!this.state.isNostrContact && (
-                                        <StarButton />
-                                    )}
+                                    <StarButton />
                                     <QRButton />
                                 </Row>
                             }
@@ -629,7 +625,7 @@ export default class ContactDetails extends React.Component<
                                     </View>
                                 )}
                         </ScrollView>
-                        {this.state.isNostrContact && (
+                        {isNostrContact && (
                             <>
                                 <Button
                                     onPress={() => this.importToContacts()}
@@ -644,11 +640,12 @@ export default class ContactDetails extends React.Component<
                                         navigation.navigate('AddContact', {
                                             prefillContact: nostrContact,
                                             isEdit: true,
-                                            isNostrContact:
-                                                this.state.isNostrContact
+                                            isNostrContact
                                         });
                                     }}
-                                    title="Edit and save contact"
+                                    title={localeString(
+                                        'views.ContactDetails.editAndSaveContact'
+                                    )}
                                     containerStyle={{ paddingBottom: 12 }}
                                     secondary
                                 />

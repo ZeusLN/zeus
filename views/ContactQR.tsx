@@ -14,15 +14,11 @@ import Header from '../components/Header';
 import { themeColor } from '../utils/ThemeUtils';
 import CollapsedQR from '../components/CollapsedQR';
 
-interface ContactInfoProps {
+interface ContactQRProps {
     navigation: any;
 }
 
-interface IntroProps {
-    navigation: any;
-}
-
-const ContactInfo: React.FC<IntroProps> = (props: ContactInfoProps) => {
+const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
     const [addressData, setAddressData] = useState(['']);
     const { navigation } = props;
 
@@ -164,4 +160,4 @@ const ContactInfo: React.FC<IntroProps> = (props: ContactInfoProps) => {
     );
 };
 
-export default ContactInfo;
+export default ContactQR;
