@@ -96,13 +96,11 @@ export default class ContactDetails extends React.Component<
 
                 if (contactsString && contactId) {
                     const existingContact = JSON.parse(contactsString);
-                    const rawContact = existingContact.find(
+                    const contact = existingContact.find(
                         (contact: Contact) =>
                             contact.contactId === contactId ||
                             contact.id === contactId
                     );
-
-                    const contact = new Contact(rawContact);
 
                     // Store the found contact in the component's state
                     this.setState({ contact, isLoading: false });
@@ -201,8 +199,10 @@ export default class ContactDetails extends React.Component<
     };
 
     render() {
-        const { contact, isLoading, isNostrContact } = this.state;
+        const { isLoading, isNostrContact } = this.state;
         const { navigation } = this.props;
+
+        const contact = new Contact(this.state.contact);
         const nostrContact = this.props.navigation.getParam(
             'nostrContact',
             null
@@ -244,7 +244,6 @@ export default class ContactDetails extends React.Component<
                 .map((address) => `${prefix}${address}`);
 
         const QRButton = () => {
-            const { contact } = this.state;
             const { lnAddress, onchainAddress, pubkey, nostrNpub, nip05 } =
                 contact;
             return (
@@ -381,101 +380,83 @@ export default class ContactDetails extends React.Component<
                                     .trim()
                                     .replace(/\s+/g, ' ')}
                             </Text>
-                            {contact.lnAddress &&
-                                contact.lnAddress.length >= 1 &&
-                                contact.lnAddress[0] !== '' && (
-                                    <View>
-                                        {contact.lnAddress.map(
-                                            (
-                                                address: string,
-                                                index: number
-                                            ) => (
-                                                <TouchableOpacity
-                                                    key={index}
-                                                    onPress={() =>
-                                                        this.sendAddress(
-                                                            address
-                                                        )
-                                                    }
-                                                >
-                                                    <View
-                                                        style={
-                                                            styles.contactRow
-                                                        }
+
+                            {contact.hasLnAddress && (
+                                <View>
+                                    {contact.lnAddress.map(
+                                        (address: string, index: number) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                onPress={() =>
+                                                    this.sendAddress(address)
+                                                }
+                                            >
+                                                <View style={styles.contactRow}>
+                                                    <LightningBolt />
+                                                    <Text
+                                                        style={{
+                                                            ...styles.contactFields,
+                                                            color: themeColor(
+                                                                'chain'
+                                                            )
+                                                        }}
                                                     >
-                                                        <LightningBolt />
-                                                        <Text
-                                                            style={{
-                                                                ...styles.contactFields,
-                                                                color: themeColor(
-                                                                    'chain'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {address.length > 23
-                                                                ? `${address.substring(
-                                                                      0,
+                                                        {address.length > 23
+                                                            ? `${address.substring(
+                                                                  0,
+                                                                  10
+                                                              )}...${address.substring(
+                                                                  address.length -
                                                                       10
-                                                                  )}...${address.substring(
-                                                                      address.length -
-                                                                          10
-                                                                  )}`
-                                                                : address}
-                                                        </Text>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            )
-                                        )}
-                                    </View>
-                                )}
-                            {contact.pubkey &&
-                                contact.pubkey.length >= 1 &&
-                                contact.pubkey[0] !== '' && (
-                                    <View>
-                                        {contact.pubkey.map(
-                                            (
-                                                address: string,
-                                                index: number
-                                            ) => (
-                                                <TouchableOpacity
+                                                              )}`
+                                                            : address}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )
+                                    )}
+                                </View>
+                            )}
+
+                            {contact.hasPubkey && (
+                                <View>
+                                    {contact.pubkey.map(
+                                        (address: string, index: number) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                onPress={() =>
+                                                    this.sendAddress(address)
+                                                }
+                                            >
+                                                <View
                                                     key={index}
-                                                    onPress={() =>
-                                                        this.sendAddress(
-                                                            address
-                                                        )
-                                                    }
+                                                    style={styles.contactRow}
                                                 >
-                                                    <View
-                                                        key={index}
-                                                        style={
-                                                            styles.contactRow
-                                                        }
+                                                    <LightningBolt />
+                                                    <Text
+                                                        style={{
+                                                            ...styles.contactFields,
+                                                            color: themeColor(
+                                                                'chain'
+                                                            )
+                                                        }}
                                                     >
-                                                        <LightningBolt />
-                                                        <Text
-                                                            style={{
-                                                                ...styles.contactFields,
-                                                                color: themeColor(
-                                                                    'chain'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {address.length > 23
-                                                                ? `${address.substring(
-                                                                      0,
+                                                        {address.length > 23
+                                                            ? `${address.substring(
+                                                                  0,
+                                                                  10
+                                                              )}...${address.substring(
+                                                                  address.length -
                                                                       10
-                                                                  )}...${address.substring(
-                                                                      address.length -
-                                                                          10
-                                                                  )}`
-                                                                : address}
-                                                        </Text>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            )
-                                        )}
-                                    </View>
-                                )}
+                                                              )}`
+                                                            : address}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )
+                                    )}
+                                </View>
+                            )}
 
                             {contact.hasOnchainAddress && (
                                 <View>
@@ -556,6 +537,7 @@ export default class ContactDetails extends React.Component<
                                     )}
                                 </View>
                             )}
+
                             {contact.hasNpub && (
                                 <View>
                                     {contact.nostrNpub.map(
