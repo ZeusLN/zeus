@@ -370,6 +370,19 @@ const handleAnything = async (
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
             });
+    } else if (data.startsWith('zeuscontact:')) {
+        const zeusContactData = data.replace('zeuscontact:', '');
+        const contact = JSON.parse(zeusContactData);
+
+        if (contact?.contactId) {
+            return [
+                'ContactDetails',
+                {
+                    nostrContact: contact,
+                    isNostrContact: true
+                }
+            ];
+        }
     } else {
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));

@@ -26,6 +26,7 @@ import NodeInfo from './views/NodeInfo';
 import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
 import NostrContacts from './views/NostrContacts';
+import ContactQR from './views/ContactQR';
 
 // Settings views
 import Settings from './views/Settings/Settings';
@@ -415,6 +416,9 @@ const AppScenes = {
     },
     NostrContacts: {
         screen: NostrContacts
+    },
+    ContactQR: {
+        screen: ContactQR
     }
 };
 
