@@ -8,37 +8,27 @@ import {
     ScrollView
 } from 'react-native';
 import { SearchBar, Divider } from 'react-native-elements';
-import Add from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
-import { themeColor } from '../../utils/ThemeUtils';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Header from '../../components/Header';
+
 import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+
+import Contact from '../../models/Contact';
+
+import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 interface ContactsSettingsProps {
     navigation: any;
 }
 
-interface ContactItem {
-    id: string;
-    lnAddress: string;
-    onchainAddress: string;
-    pubkey: string;
-    nip05: string;
-    nostrNpub: string;
-    name: string;
-    description: string;
-    photo: string | null;
-    isFavourite: boolean;
-    contactId: string;
-}
-
 interface ContactsSettingsState {
-    contacts: ContactItem[];
+    contacts: Contact[];
     search: string;
     SendScreen: boolean;
     loading: boolean;
@@ -73,7 +63,7 @@ export default class Contacts extends React.Component<
                     'zeus-contacts'
                 );
                 if (contactsString) {
-                    const contacts: ContactItem[] = JSON.parse(contactsString);
+                    const contacts: Contact[] = JSON.parse(contactsString);
                     this.setState({ contacts, loading: false });
                 } else {
                     this.setState({ loading: false });
@@ -84,19 +74,17 @@ export default class Contacts extends React.Component<
             }
         });
     };
-    displayAddress = (item) => {
-        const hasLnAddress =
-            item.lnAddress &&
-            item.lnAddress.length === 1 &&
-            item.lnAddress[0] !== '';
-        const hasOnchainAddress =
-            item.onchainAddress &&
-            item.onchainAddress.length === 1 &&
-            item.onchainAddress[0] !== '';
-        const hasPubkey =
-            item.pubkey && item.pubkey.length === 1 && item.pubkey[0] !== '';
 
-        if (hasLnAddress + hasOnchainAddress + hasPubkey >= 2) {
+    displayAddress = (item) => {
+        const contact = new Contact(item);
+        const {
+            hasLnAddress,
+            hasOnchainAddress,
+            hasPubkey,
+            hasMultiplePayableAddresses
+        } = contact;
+
+        if (hasMultiplePayableAddresses) {
             return localeString('views.Settings.Contacts.multipleAddresses');
         }
 
@@ -127,80 +115,73 @@ export default class Contacts extends React.Component<
         return localeString('views.Settings.Contacts.noAddress');
     };
 
-    renderContactItem = ({ item }: { item: ContactItem }) => (
-        <TouchableOpacity
-            onPress={() => {
-                (item.lnAddress &&
-                    item.lnAddress.length === 1 &&
-                    item.lnAddress[0] !== '' &&
-                    item.onchainAddress[0] === '' &&
-                    item.pubkey[0] === '' &&
-                    this.state.SendScreen &&
-                    this.props.navigation.navigate('Send', {
-                        destination: item.lnAddress[0],
-                        contactName: item.name
-                    })) ||
-                    (item.onchainAddress &&
-                        item.onchainAddress.length === 1 &&
-                        item.onchainAddress[0] !== '' &&
-                        item.lnAddress[0] === '' &&
-                        item.pubkey[0] === '' &&
+    renderContactItem = ({ item }: { item: Contact }) => {
+        const contact = new Contact(item);
+        return (
+            <TouchableOpacity
+                onPress={() => {
+                    (contact.isSingleLnAddress &&
                         this.state.SendScreen &&
                         this.props.navigation.navigate('Send', {
-                            destination: item.onchainAddress[0],
+                            destination: item.lnAddress[0],
                             contactName: item.name
                         })) ||
-                    (item.pubkey &&
-                        item.pubkey.length === 1 &&
-                        item.pubkey[0] !== '' &&
-                        item.lnAddress[0] === '' &&
-                        item.onchainAddress[0] === '' &&
-                        this.state.SendScreen &&
-                        this.props.navigation.navigate('Send', {
-                            destination: item.pubkey[0],
-                            contactName: item.name
-                        })) ||
-                    this.props.navigation.navigate('ContactDetails', {
-                        contactId: item.contactId || item.id,
-                        isNostrContact: false
-                    });
-            }}
-        >
-            <View
-                style={{
-                    marginHorizontal: 28,
-                    paddingBottom: 20,
-                    flexDirection: 'row',
-                    alignItems: 'center'
+                        (contact.isSingleOnchainAddress &&
+                            this.state.SendScreen &&
+                            this.props.navigation.navigate('Send', {
+                                destination: item.onchainAddress[0],
+                                contactName: item.name
+                            })) ||
+                        (contact.isSinglePubkey &&
+                            this.state.SendScreen &&
+                            this.props.navigation.navigate('Send', {
+                                destination: item.pubkey[0],
+                                contactName: item.name
+                            })) ||
+                        this.props.navigation.navigate('ContactDetails', {
+                            contactId: item.contactId || item.id,
+                            isNostrContact: false
+                        });
                 }}
             >
-                {item.photo && (
-                    <Image
-                        source={{ uri: item.photo }}
-                        style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            marginRight: 10
-                        }}
-                    />
-                )}
-                <View>
-                    <Text style={{ fontSize: 16, color: themeColor('text') }}>
-                        {item.name}
-                    </Text>
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {this.displayAddress(item)}
-                    </Text>
+                <View
+                    style={{
+                        marginHorizontal: 28,
+                        paddingBottom: 20,
+                        flexDirection: 'row',
+                        alignItems: 'center'
+                    }}
+                >
+                    {item.photo && (
+                        <Image
+                            source={{ uri: item.photo }}
+                            style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 20,
+                                marginRight: 10
+                            }}
+                        />
+                    )}
+                    <View>
+                        <Text
+                            style={{ fontSize: 16, color: themeColor('text') }}
+                        >
+                            {item.name}
+                        </Text>
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {this.displayAddress(item)}
+                        </Text>
+                    </View>
                 </View>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        );
+    };
 
     updateSearch = (query: string) => {
         this.setState({ search: query });
