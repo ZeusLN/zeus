@@ -711,7 +711,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     onPress={() => {
                                         this.setState({
                                             contactName: '',
-                                            destination: ''
+                                            destination: '',
+                                            transactionType: ''
                                         });
                                     }}
                                     style={{
