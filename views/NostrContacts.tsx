@@ -10,20 +10,22 @@ import {
     Easing
 } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
-import Screen from '../components/Screen';
-import Button from '../components/Button';
-import { themeColor } from '../utils/ThemeUtils';
-import AddressUtils from '../utils/AddressUtils';
+import { CheckBox, Icon } from 'react-native-elements';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import { relayInit, nip05, nip19 } from 'nostr-tools';
 
+import Button from '../components/Button';
 import Header from '../components/Header';
+import Screen from '../components/Screen';
 import TextInput from '../components/TextInput';
 import LoadingIndicator from '../components/LoadingIndicator';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
 import { Row } from '../components/layout/Row';
 
-import { relayInit, nip19 } from 'nostr-tools';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import AddressUtils from '../utils/AddressUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { CheckBox, Icon } from 'react-native-elements';
+import { themeColor } from '../utils/ThemeUtils';
+
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 
 import SelectOff from '../assets/images/SVG/Select Off.svg';
@@ -34,13 +36,16 @@ interface NostrContactsProps {
 }
 
 interface NostrContactsState {
-    npub: string;
+    account: string;
     contactsData: any[];
     loading: boolean;
     isSelectionMode: boolean;
     selectedContacts: any[];
     fadeAnim: any;
+    isValid: boolean;
     isValidNpub: boolean;
+    isValidNip05: boolean;
+    error: string;
 }
 
 export default class NostrContacts extends React.Component<
@@ -50,13 +55,16 @@ export default class NostrContacts extends React.Component<
     constructor(props: NostrContactsProps) {
         super(props);
         this.state = {
-            npub: '',
+            account: '',
             contactsData: [],
             loading: false,
             isSelectionMode: false,
             selectedContacts: [],
             fadeAnim: new Animated.Value(0),
-            isValidNpub: false
+            isValid: false,
+            isValidNpub: false,
+            isValidNip05: false,
+            error: ''
         };
     }
 
@@ -78,8 +86,25 @@ export default class NostrContacts extends React.Component<
     };
 
     async fetchNostrContacts() {
-        this.setState({ loading: true });
-        let { data } = nip19.decode(this.state.npub);
+        this.setState({ loading: true, error: '' });
+        const { account } = this.state;
+
+        let pubkey: string;
+        if (this.state.isValidNpub) {
+            const decoded = nip19.decode(account);
+            pubkey = decoded.data.toString();
+        } else if (this.state.isValidNip05) {
+            try {
+                const lookup: any = await nip05.queryProfile(account);
+                pubkey = lookup.pubkey;
+            } catch (e) {
+                this.setState({
+                    loading: false,
+                    error: localeString('views.NostrContacts.nip05Error')
+                });
+                return;
+            }
+        }
 
         DEFAULT_NOSTR_RELAYS.map(async (relayItem) => {
             const relay = relayInit(relayItem);
@@ -91,8 +116,6 @@ export default class NostrContacts extends React.Component<
             });
 
             await relay.connect();
-
-            let pubkey: string = data;
             let eventReceived = await relay.list([
                 {
                     authors: [pubkey],
@@ -111,7 +134,7 @@ export default class NostrContacts extends React.Component<
                 }
             });
 
-            const tags: string = [];
+            const tags: Array<string> = [];
             latestContactEvent.tags.forEach((tag: string) => {
                 if (tag[0] === 'p') {
                     tags.push(tag[1]);
@@ -425,7 +448,9 @@ export default class NostrContacts extends React.Component<
 
     handleNostrValidation = (text: string) => {
         const isValidNpub = AddressUtils.isValidNpub(text);
-        this.setState({ isValidNpub });
+        const isValidNip05 = AddressUtils.isValidLightningAddress(text);
+        const isValid = isValidNpub || isValidNip05;
+        this.setState({ isValid, isValidNpub, isValidNip05 });
     };
 
     render() {
@@ -435,8 +460,9 @@ export default class NostrContacts extends React.Component<
             contactsData,
             selectedContacts,
             isSelectionMode,
-            isValidNpub,
-            npub
+            isValid,
+            account,
+            error
         } = this.state;
 
         const SelectButton = () => (
@@ -499,10 +525,12 @@ export default class NostrContacts extends React.Component<
                                             this.setState({
                                                 contactsData: [],
                                                 selectedContacts: [],
-                                                npub: '',
+                                                account: '',
                                                 isSelectionMode: false,
                                                 fadeAnim: new Animated.Value(0),
-                                                isValidNpub: false
+                                                isValid: false,
+                                                isValidNpub: false,
+                                                isValidNip05: false
                                             });
                                         }}
                                         name="close"
@@ -521,6 +549,8 @@ export default class NostrContacts extends React.Component<
                     navigation={navigation}
                 />
 
+                {error && <ErrorMessage message={error} dismissable />}
+
                 {contactsData.length === 0 && !loading && (
                     <>
                         <Text
@@ -533,23 +563,26 @@ export default class NostrContacts extends React.Component<
                             {localeString('views.NostrContacts.enterNpub')}
                         </Text>
                         <TextInput
-                            placeholder={'npub...'}
-                            value={npub}
+                            placeholder={
+                                'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5'
+                            }
+                            value={account}
                             style={{
                                 marginHorizontal: 22,
                                 borderColor:
-                                    !isValidNpub && npub.length > 0
+                                    !isValid && account.length > 0
                                         ? themeColor('delete')
                                         : 'transparent',
                                 borderWidth: 1
                             }}
                             onChangeText={(text: string) => {
                                 if (!text) {
-                                    this.setState({ isValidNpub: true });
+                                    this.setState({ isValid: true });
                                 }
-                                this.setState({ npub: text });
+                                this.setState({ account: text, error: '' });
                                 this.handleNostrValidation(text);
                             }}
+                            autoCapitalize="none"
                         />
 
                         <Button
@@ -561,7 +594,7 @@ export default class NostrContacts extends React.Component<
                                 marginTop: 20,
                                 marginBottom: 8
                             }}
-                            disabled={!isValidNpub}
+                            disabled={!isValid}
                         />
                     </>
                 )}
