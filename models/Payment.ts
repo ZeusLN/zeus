@@ -217,15 +217,19 @@ export default class Payment extends BaseModel {
     @computed public get originalTimeUntilExpiryInSeconds():
         | number
         | undefined {
-        const decodedPaymentRequest =
-            this.payment_request != null
-                ? Bolt11Utils.decode(this.payment_request)
-                : this.bolt
-                ? Bolt11Utils.decode(this.bolt)
-                : this.bolt11
-                ? Bolt11Utils.decode(this.bolt11)
-                : null;
-        return decodedPaymentRequest?.expiry;
+        try {
+            const decodedPaymentRequest =
+                this.payment_request != null
+                    ? Bolt11Utils.decode(this.payment_request)
+                    : this.bolt
+                    ? Bolt11Utils.decode(this.bolt)
+                    : this.bolt11
+                    ? Bolt11Utils.decode(this.bolt11)
+                    : null;
+            return decodedPaymentRequest?.expiry;
+        } catch (e) {
+            return undefined;
+        }
     }
 
     public getFormattedOriginalTimeUntilExpiry(
