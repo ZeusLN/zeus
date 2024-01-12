@@ -163,6 +163,7 @@
     "@types/react-native-vector-icons": "6.4.14",
     "@types/react-test-renderer": "18.0.2",
     "@types/sha.js": "2.4.1",
+    "@types/uuid": "9.0.7",
     "@typescript-eslint/eslint-plugin": "5.61.0",
     "@typescript-eslint/parser": "6.7.5",
     "babel-jest": "29.2.1",
