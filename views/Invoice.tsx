@@ -206,10 +206,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
-                        {!!privateInvoice && (
+                        {privateInvoice && (
                             <KeyValue
                                 keyValue={localeString('views.Invoice.private')}
-                                value={privateInvoice}
+                                value={localeString('general.true')}
                             />
                         )}
 
