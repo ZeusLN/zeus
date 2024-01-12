@@ -11,14 +11,15 @@ import { Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from '../../models/Channel';
 
+import Amount from '../../components/Amount';
 import BalanceSlider from '../../components/BalanceSlider';
 import Button from '../../components/Button';
+import FeeBreakdown from '../../components/FeeBreakdown';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
-import Amount from '../../components/Amount';
-import FeeBreakdown from '../../components/FeeBreakdown';
 import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
 
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -115,7 +116,7 @@ export default class ChannelView extends React.Component<
         const { navigation, SettingsStore, NodeInfoStore } = this.props;
         const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
             this.state;
-        const { settings, implementation } = SettingsStore;
+        const { settings } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
         const { testnet } = NodeInfoStore;
@@ -568,7 +569,7 @@ export default class ChannelView extends React.Component<
                         )}
                     {confirmCloseChannel && (
                         <View>
-                            {(BackendUtils.isLNDBased() || !implementation) && (
+                            {BackendUtils.isLNDBased() && (
                                 <>
                                     <Text
                                         style={{
@@ -588,6 +589,28 @@ export default class ChannelView extends React.Component<
                                             });
                                         }}
                                     />
+                                    <View style={{ marginBottom: 10 }}>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text'),
+                                                top: 20
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Channel.forceClose'
+                                            )}
+                                        </Text>
+                                        <Switch
+                                            value={forceCloseChannel}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    forceCloseChannel:
+                                                        !forceCloseChannel
+                                                })
+                                            }
+                                        />
+                                    </View>
                                 </>
                             )}
                             <View style={styles.button}>
