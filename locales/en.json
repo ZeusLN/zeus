@@ -589,6 +589,7 @@
     "views.NostrContacts.enterNpub": "Enter npub",
     "views.NostrContacts.importContactsError": "Failed to import contacts. Please try again.",
     "views.ContactDetails.saveToContacts": "Save to Contacts",
+    "views.ContactDetails.editAndSaveContact": "Edit and Save Contact",
     "views.ContactInfo.title": "Contact Info",
     "views.Settings.title": "Settings",
     "views.Settings.enabled": "Enabled",

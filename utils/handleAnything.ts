@@ -16,7 +16,7 @@ const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
 
 const handleAnything = async (
-    data?: any,
+    data: string,
     setAmount?: string,
     isClipboardValue?: boolean
 ): Promise<any> => {
