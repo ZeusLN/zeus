@@ -1093,7 +1093,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {destination && transactionType !== 'On-chain' && (
+                    {destination && !transactionType && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('general.proceed')}
@@ -1104,7 +1104,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {favoriteContacts.length > 0 && (
+                    {!transactionType && favoriteContacts.length > 0 && (
                         <>
                             <View style={{ margin: 28 }}>
                                 <Text
