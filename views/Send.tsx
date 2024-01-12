@@ -53,6 +53,7 @@ import NFCUtils from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import Sweep from '../assets/images/SVG/Sweep.svg';
@@ -595,6 +596,17 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </TouchableOpacity>
                                     </View>
                                 )}
+                            <View style={{ marginTop: 3, marginRight: 15 }}>
+                                <TouchableOpacity
+                                    onPress={() => this.enableNfc()}
+                                >
+                                    <NFC
+                                        fill={themeColor('text')}
+                                        width={30}
+                                        height={30}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                             <View style={{ marginTop: 3 }}>
                                 <TouchableOpacity
                                     onPress={() =>
@@ -1090,18 +1102,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             />
                         </View>
                     )}
-
-                    <View style={{ ...styles.button, paddingTop: 20 }}>
-                        <Button
-                            title={localeString('general.enableNfc')}
-                            icon={{
-                                name: 'nfc',
-                                size: 25
-                            }}
-                            onPress={() => this.enableNfc()}
-                            secondary
-                        />
-                    </View>
 
                     {favoriteContacts.length > 0 && (
                         <>
