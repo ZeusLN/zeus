@@ -26,26 +26,14 @@ import { themeColor } from '../utils/ThemeUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { localeString } from '../utils/LocaleUtils';
 
+import Contact from '../models/Contact';
+
 interface ContactDetailsProps {
     navigation: any;
 }
 
-interface ContactItem {
-    id: string;
-    lnAddress: string[];
-    onchainAddress: string[];
-    pubkey: string[];
-    nip05: string[];
-    nostrNpub: string[];
-    name: string;
-    description: string;
-    photo: string | null;
-    isFavourite: boolean;
-    contactId: string;
-    banner: string;
-}
 interface ContactDetailsState {
-    contact: ContactItem;
+    contact: Contact | any;
     isLoading: boolean;
     isNostrContact: boolean;
 }
@@ -108,11 +96,13 @@ export default class ContactDetails extends React.Component<
 
                 if (contactsString && contactId) {
                     const existingContact = JSON.parse(contactsString);
-                    const contact = existingContact.find(
-                        (contact: ContactItem) =>
+                    const rawContact = existingContact.find(
+                        (contact: Contact) =>
                             contact.contactId === contactId ||
                             contact.id === contactId
                     );
+
+                    const contact = new Contact(rawContact);
 
                     // Store the found contact in the component's state
                     this.setState({ contact, isLoading: false });
@@ -135,15 +125,14 @@ export default class ContactDetails extends React.Component<
         });
     };
 
-    saveUpdatedContact = async (updatedContact: ContactItem) => {
+    saveUpdatedContact = async (updatedContact: Contact) => {
         try {
             const contactsString = await EncryptedStorage.getItem(
                 'zeus-contacts'
             );
 
             if (contactsString) {
-                const existingContacts: ContactItem[] =
-                    JSON.parse(contactsString);
+                const existingContacts: Contact[] = JSON.parse(contactsString);
 
                 // Find the index of the contact with the same name
                 const contactIndex = existingContacts.findIndex(
@@ -173,7 +162,7 @@ export default class ContactDetails extends React.Component<
 
         const contactsString = await EncryptedStorage.getItem('zeus-contacts');
 
-        const existingContacts: ContactItem[] = contactsString
+        const existingContacts: Contact[] = contactsString
             ? JSON.parse(contactsString)
             : [];
 
@@ -488,142 +477,123 @@ export default class ContactDetails extends React.Component<
                                     </View>
                                 )}
 
-                            {contact.onchainAddress &&
-                                contact.onchainAddress.length >= 1 &&
-                                contact.onchainAddress[0] !== '' && (
-                                    <View>
-                                        {contact.onchainAddress.map(
-                                            (
-                                                address: string,
-                                                index: number
-                                            ) => (
-                                                <TouchableOpacity
+                            {contact.hasOnchainAddress && (
+                                <View>
+                                    {contact.onchainAddress.map(
+                                        (address: string, index: number) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                onPress={() =>
+                                                    this.sendAddress(address)
+                                                }
+                                            >
+                                                <View
                                                     key={index}
-                                                    onPress={() =>
-                                                        this.sendAddress(
-                                                            address
-                                                        )
-                                                    }
+                                                    style={styles.contactRow}
                                                 >
-                                                    <View
-                                                        key={index}
-                                                        style={
-                                                            styles.contactRow
-                                                        }
+                                                    <BitcoinIcon />
+                                                    <Text
+                                                        style={{
+                                                            ...styles.contactFields,
+                                                            color: themeColor(
+                                                                'chain'
+                                                            )
+                                                        }}
                                                     >
-                                                        <BitcoinIcon />
-                                                        <Text
-                                                            style={{
-                                                                ...styles.contactFields,
-                                                                color: themeColor(
-                                                                    'chain'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {address.length > 23
-                                                                ? `${address.substring(
-                                                                      0,
+                                                        {address.length > 23
+                                                            ? `${address.substring(
+                                                                  0,
+                                                                  10
+                                                              )}...${address.substring(
+                                                                  address.length -
                                                                       10
-                                                                  )}...${address.substring(
-                                                                      address.length -
-                                                                          10
-                                                                  )}`
-                                                                : address}
-                                                        </Text>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            )
-                                        )}
-                                    </View>
-                                )}
+                                                              )}`
+                                                            : address}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )
+                                    )}
+                                </View>
+                            )}
 
-                            {contact.nip05 &&
-                                contact.nip05.length >= 1 &&
-                                contact.nip05[0] !== '' && (
-                                    <View>
-                                        {contact.nip05.map(
-                                            (value: string, index: number) => (
-                                                <TouchableOpacity
+                            {contact.hasNip05 && (
+                                <View>
+                                    {contact.nip05.map(
+                                        (value: string, index: number) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                onPress={() =>
+                                                    this.handleNostr(value)
+                                                }
+                                            >
+                                                <View
                                                     key={index}
-                                                    onPress={() =>
-                                                        this.handleNostr(value)
-                                                    }
+                                                    style={styles.contactRow}
                                                 >
-                                                    <View
-                                                        key={index}
-                                                        style={
-                                                            styles.contactRow
-                                                        }
+                                                    <VerifiedAccount />
+                                                    <Text
+                                                        style={{
+                                                            ...styles.contactFields,
+                                                            color: themeColor(
+                                                                'chain'
+                                                            )
+                                                        }}
                                                     >
-                                                        <VerifiedAccount />
-                                                        <Text
-                                                            style={{
-                                                                ...styles.contactFields,
-                                                                color: themeColor(
-                                                                    'chain'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {value.length > 15
-                                                                ? `${value.substring(
-                                                                      0,
-                                                                      10
-                                                                  )}...${value.substring(
-                                                                      value.length -
-                                                                          5
-                                                                  )}`
-                                                                : value}
-                                                        </Text>
+                                                        {value.length > 15
+                                                            ? `${value.substring(
+                                                                  0,
+                                                                  10
+                                                              )}...${value.substring(
+                                                                  value.length -
+                                                                      5
+                                                              )}`
+                                                            : value}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )
+                                    )}
+                                </View>
+                            )}
+                            {contact.hasNpub && (
+                                <View>
+                                    {contact.nostrNpub.map(
+                                        (value: string, index: number) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                onPress={() =>
+                                                    this.handleNostr(value)
+                                                }
+                                            >
+                                                <View style={styles.contactRow}>
+                                                    <View>
+                                                        <KeySecurity />
                                                     </View>
-                                                </TouchableOpacity>
-                                            )
-                                        )}
-                                    </View>
-                                )}
-                            {contact.nostrNpub &&
-                                contact.nostrNpub.length >= 1 &&
-                                contact.nostrNpub[0] !== '' && (
-                                    <View>
-                                        {contact.nostrNpub.map(
-                                            (value: string, index: number) => (
-                                                <TouchableOpacity
-                                                    key={index}
-                                                    onPress={() =>
-                                                        this.handleNostr(value)
-                                                    }
-                                                >
-                                                    <View
-                                                        style={
-                                                            styles.contactRow
-                                                        }
+                                                    <Text
+                                                        style={{
+                                                            ...styles.contactFields,
+                                                            color: themeColor(
+                                                                'chain'
+                                                            )
+                                                        }}
                                                     >
-                                                        <View>
-                                                            <KeySecurity />
-                                                        </View>
-                                                        <Text
-                                                            style={{
-                                                                ...styles.contactFields,
-                                                                color: themeColor(
-                                                                    'chain'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {value.length > 15
-                                                                ? `${value.substring(
-                                                                      0,
-                                                                      10
-                                                                  )}...${value.substring(
-                                                                      value.length -
-                                                                          5
-                                                                  )}`
-                                                                : value}
-                                                        </Text>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            )
-                                        )}
-                                    </View>
-                                )}
+                                                        {value.length > 15
+                                                            ? `${value.substring(
+                                                                  0,
+                                                                  10
+                                                              )}...${value.substring(
+                                                                  value.length -
+                                                                      5
+                                                              )}`
+                                                            : value}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )
+                                    )}
+                                </View>
+                            )}
                         </ScrollView>
                         {isNostrContact && (
                             <>
