@@ -274,14 +274,18 @@ export default class Invoice extends BaseModel {
     @computed public get originalTimeUntilExpiryInSeconds():
         | number
         | undefined {
-        const decodedPaymentRequest = Bolt11Utils.decode(
-            this.getPaymentRequest
-        );
-        if (this.expires_at != null) {
-            // expiry is missing in payment request in Core Lightning
-            return this.expires_at - decodedPaymentRequest.timestamp;
+        try {
+            const decodedPaymentRequest = Bolt11Utils.decode(
+                this.getPaymentRequest
+            );
+            if (this.expires_at != null) {
+                // expiry is missing in payment request in Core Lightning
+                return this.expires_at - decodedPaymentRequest.timestamp;
+            }
+            return decodedPaymentRequest.expiry;
+        } catch (e) {
+            return undefined;
         }
-        return decodedPaymentRequest.expiry;
     }
 
     public determineFormattedOriginalTimeUntilExpiry(
@@ -342,11 +346,15 @@ export default class Invoice extends BaseModel {
             return undefined;
         }
 
-        const paymentRequestTimestamp = Bolt11Utils.decode(
-            this.getPaymentRequest
-        ).timestamp;
+        try {
+            const paymentRequestTimestamp = Bolt11Utils.decode(
+                this.getPaymentRequest
+            ).timestamp;
 
-        return paymentRequestTimestamp + originalTimeUntilExpiryInSeconds;
+            return paymentRequestTimestamp + originalTimeUntilExpiryInSeconds;
+        } catch (e) {
+            return undefined;
+        }
     }
 
     private formatHumanReadableDuration(
