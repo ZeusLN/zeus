@@ -465,9 +465,10 @@ export default class StandalonePosPane extends React.PureComponent<
             (currentOrder.total_money.amount === 0 &&
                 currentOrder.total_money.sats === 0);
 
-        const headerString = `${localeString('general.pos')} (${
-            orders.length || 0
-        })`;
+        const headerString =
+            selectedIndex === 0
+                ? localeString('general.pos')
+                : `${localeString('general.pos')} (${orders.length || 0})`;
 
         const error = NodeInfoStore.error || SettingsStore.error;
 
