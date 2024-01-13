@@ -859,6 +859,7 @@
     "views.ActivityFilter.onChainPayments": "On-chain payments",
     "views.ActivityFilter.minimumAmount": "Minimum Amount (sats)",
     "views.ActivityFilter.inTransit": "In transit payments",
+    "views.ActivityFilter.isFailed": "Failed payments",
     "general.clearChanges": "Clear changes",
     "views.Routing.RoutingEvent.sourceChannel": "Source Channel",
     "views.Routing.RoutingEvent.destinationChannel": "Destination Channel",
