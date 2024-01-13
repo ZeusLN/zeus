@@ -57,6 +57,7 @@ interface PosSettings {
     confirmationPreference?: string;
     disableTips?: boolean;
     squareDevMode?: boolean;
+    showKeypad?: boolean;
     taxPercentage?: string;
 }
 
@@ -667,9 +668,13 @@ export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
 export const DEFAULT_LOCALE = 'English';
 
 export const POS_CONF_PREF_KEYS = [
-    { translateKey: 'views.Settings.POS.0conf', value: '0conf' },
-    { translateKey: 'views.Settings.POS.1conf', value: '1conf' },
-    { translateKey: 'views.Settings.POS.lnOnly', value: 'lnOnly' }
+    { key: '0 conf', translateKey: 'views.Settings.POS.0conf', value: '0conf' },
+    { key: '1 conf', translateKey: 'views.Settings.POS.1conf', value: '1conf' },
+    {
+        key: 'LN only',
+        translateKey: 'views.Settings.POS.lnOnly',
+        value: 'lnOnly'
+    }
 ];
 
 export const POS_ENABLED_KEYS = [
@@ -757,6 +762,7 @@ export default class SettingsStore {
             confirmationPreference: 'lnOnly',
             disableTips: false,
             squareDevMode: false,
+            showKeypad: true,
             taxPercentage: '0'
         },
         payments: {
