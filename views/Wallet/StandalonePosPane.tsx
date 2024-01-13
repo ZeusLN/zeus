@@ -465,9 +465,10 @@ export default class StandalonePosPane extends React.PureComponent<
             (currentOrder.total_money.amount === 0 &&
                 currentOrder.total_money.sats === 0);
 
-        const headerString = `${localeString('general.pos')} (${
-            orders.length || 0
-        })`;
+        const headerString =
+            selectedIndex === 0
+                ? localeString('general.pos')
+                : `${localeString('general.pos')} (${orders.length || 0})`;
 
         const error = NodeInfoStore.error || SettingsStore.error;
 
@@ -715,7 +716,7 @@ export default class StandalonePosPane extends React.PureComponent<
                                 renderSectionHeader={this.renderSectionHeader}
                                 stickySectionHeadersEnabled={false}
                                 renderItem={this.renderSection}
-                                keyExtractor={(item, index) => `${index}`}
+                                keyExtractor={(_, index) => `${index}`}
                                 contentContainerStyle={{
                                     marginLeft: 10,
                                     marginRight: 10
@@ -726,7 +727,8 @@ export default class StandalonePosPane extends React.PureComponent<
                                     flexDirection: 'row',
                                     paddingLeft: 10,
                                     paddingRight: 10,
-                                    paddingTop: 5
+                                    paddingTop: 5,
+                                    marginBottom: 10
                                 }}
                             >
                                 <Button
