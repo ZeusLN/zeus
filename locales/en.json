@@ -848,7 +848,7 @@
     "views.Activity.youReceived": "You received",
     "views.Activity.requestedPayment": "Requested Payment",
     "views.Activity.expiredRequested": "Expired Request",
-    "views.Activity.channelOperation": "Channel operation",
+    "views.Activity.channelOperation": "Self send or Channel operation",
     "views.ActivityFilter.title": "Filter Activity",
     "views.ActivityFilter.set": "Set",
     "views.ActivityFilter.edit": "Edit",
