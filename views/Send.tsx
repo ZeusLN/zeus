@@ -1106,7 +1106,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
                     {!transactionType && favoriteContacts.length > 0 && (
                         <>
-                            <View style={{ margin: 28 }}>
+                            <View style={{ marginTop: 18 }}>
                                 <Text
                                     style={{
                                         fontSize: 16,
@@ -1120,12 +1120,16 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     })`}
                                 </Text>
                             </View>
-                            <FlatList
-                                data={favoriteContacts}
-                                renderItem={this.renderContactItem}
-                                keyExtractor={(_, index) => index.toString()}
-                                scrollEnabled={false}
-                            />
+                            <View style={{ marginTop: 20, marginLeft: -24 }}>
+                                <FlatList
+                                    data={favoriteContacts}
+                                    renderItem={this.renderContactItem}
+                                    keyExtractor={(_, index) =>
+                                        index.toString()
+                                    }
+                                    scrollEnabled={false}
+                                />
+                            </View>
                         </>
                     )}
 
