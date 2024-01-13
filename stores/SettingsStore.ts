@@ -57,6 +57,7 @@ interface PosSettings {
     confirmationPreference?: string;
     disableTips?: boolean;
     squareDevMode?: boolean;
+    showKeypad?: boolean;
     taxPercentage?: string;
 }
 
@@ -757,6 +758,7 @@ export default class SettingsStore {
             confirmationPreference: 'lnOnly',
             disableTips: false,
             squareDevMode: false,
+            showKeypad: true,
             taxPercentage: '0'
         },
         payments: {

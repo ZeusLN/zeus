@@ -723,6 +723,7 @@
     "views.Settings.POS.disableTips": "Disable tips",
     "views.Settings.POS.taxPercentage": "Tax percentage",
     "views.Settings.POS.devMode": "Developer mode",
+    "views.Settings.POS.showKeypad": "Show keypad",
     "views.Settings.POS.recon": "Reconciliation",
     "views.Settings.POS.reconExport": "Reconciliation Export",
     "views.Settings.POS.Categories": "Categories",
@@ -1012,5 +1013,6 @@
     "views.LspExplanationOverview.step6": "The LSP then forwards the payment to the receiver using that new channel and the payment is completed",
     "views.LspExplanationOverview.buttonText": "Learn more about wrapped invoices",
     "views.Sweep.title": "Sweep on-chain wallet",
-    "views.Sweep.explainer": "Sweeping the on-chain wallet will send both the confirmed and unconfirmed balance to the destination address specified above."
+    "views.Sweep.explainer": "Sweeping the on-chain wallet will send both the confirmed and unconfirmed balance to the destination address specified above.",
+    "pos.customItem": "Custom item"
 }

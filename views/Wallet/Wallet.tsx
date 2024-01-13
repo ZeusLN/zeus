@@ -27,6 +27,7 @@ import BalancePane from './BalancePane';
 import KeypadPane from './KeypadPane';
 import SquarePosPane from './SquarePosPane';
 import StandalonePosPane from './StandalonePosPane';
+import StandalonePosKeypadPane from './StandalonePosKeypadPane';
 
 import Button from '../../components/Button';
 import LayerBalances from '../../components/LayerBalances';
@@ -498,8 +499,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const loginRequired = !settings || SettingsStore.loginRequired();
 
         const posEnabled: PosEnabled =
-            (settings && settings.pos && settings.pos.posEnabled) ||
-            PosEnabled.Disabled;
+            settings?.pos?.posEnabled || PosEnabled.Disabled;
+
+        const showKeypad: boolean = settings?.pos?.showKeypad || false;
 
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
@@ -590,6 +592,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
+        const PosKeypadScreen = () => {
+            return (
+                <Screen>
+                    <StandalonePosKeypadPane navigation={navigation} />
+                </Screen>
+            );
+        };
+
         const KeypadScreen = () => {
             return (
                 <Screen>
@@ -650,11 +660,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             return <Temple fill={color} />;
                                         }
                                         if (route.name === 'POS') {
-                                            return (
-                                                <POS
-                                                    stroke={themeColor('text')}
-                                                />
-                                            );
+                                            return <POS stroke={color} />;
+                                        }
+                                        if (route.name === 'POS Keypad') {
+                                            return <Bitcoin fill={color} />;
                                         }
                                         if (
                                             BackendUtils.supportsChannelManagement()
@@ -691,6 +700,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         component={BalanceScreen}
                                     />
                                 )}
+                                {posEnabled === PosEnabled.Standalone &&
+                                    showKeypad && (
+                                        <Tab.Screen
+                                            name="POS Keypad"
+                                            component={PosKeypadScreen}
+                                        />
+                                    )}
                                 {posStatus !== 'active' && (
                                     <>
                                         {!error && !isSyncing && (
