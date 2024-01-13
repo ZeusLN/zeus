@@ -270,7 +270,9 @@ export default class PosKeypadPane extends React.PureComponent<
                     >
                         <View style={{ width: '100%' }}>
                             <Button
-                                title={localeString('general.request')}
+                                title={localeString(
+                                    'general.request'
+                                ).toUpperCase()}
                                 quinary
                                 noUppercase
                                 onPress={() => {
