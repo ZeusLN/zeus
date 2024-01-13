@@ -76,7 +76,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const { settings } = SettingsStore;
         const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
-        const disableTips: boolean = settings?.pos?.disableTips;
+        const disableTips: boolean = settings?.pos?.disableTips || false;
         const merchantName = settings?.pos?.merchantName;
         const taxPercentage = settings?.pos?.taxPercentage;
 

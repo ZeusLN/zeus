@@ -36,6 +36,7 @@ interface PointOfSaleState {
     confirmationPreference: string;
     disableTips: boolean;
     squareDevMode: boolean;
+    showKeypad: boolean;
     taxPercentage: string;
 }
 
@@ -53,6 +54,7 @@ export default class PointOfSale extends React.Component<
         confirmationPreference: 'lnOnly',
         disableTips: false,
         squareDevMode: false,
+        showKeypad: true,
         taxPercentage: '0'
     };
 
@@ -62,21 +64,16 @@ export default class PointOfSale extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            posEnabled:
-                (settings.pos && settings.pos.posEnabled) ||
-                PosEnabled.Disabled,
-            squareAccessToken:
-                (settings.pos && settings.pos.squareAccessToken) || '',
-            squareLocationId:
-                (settings.pos && settings.pos.squareLocationId) || '',
-            merchantName: (settings.pos && settings.pos.merchantName) || '',
+            posEnabled: settings?.pos?.posEnabled || PosEnabled.Disabled,
+            squareAccessToken: settings?.pos?.squareAccessToken || '',
+            squareLocationId: settings?.pos?.squareLocationId || '',
+            merchantName: settings?.pos?.merchantName || '',
             confirmationPreference:
-                (settings.pos && settings.pos.confirmationPreference) ||
-                'lnOnly',
-            disableTips: (settings.pos && settings.pos.disableTips) || false,
-            squareDevMode:
-                (settings.pos && settings.pos.squareDevMode) || false,
-            taxPercentage: (settings.pos && settings.pos.taxPercentage) || '0'
+                settings?.pos?.confirmationPreference || 'lnOnly',
+            disableTips: settings?.pos?.disableTips || false,
+            squareDevMode: settings?.pos?.squareDevMode || false,
+            showKeypad: settings?.pos?.showKeypad || false,
+            taxPercentage: settings?.pos?.taxPercentage || '0'
         });
     }
 
@@ -99,6 +96,7 @@ export default class PointOfSale extends React.Component<
             confirmationPreference,
             disableTips,
             squareDevMode,
+            showKeypad,
             taxPercentage
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
@@ -181,6 +179,7 @@ export default class PointOfSale extends React.Component<
                                             confirmationPreference,
                                             disableTips,
                                             squareDevMode,
+                                            showKeypad,
                                             taxPercentage
                                         }
                                     });
@@ -216,6 +215,7 @@ export default class PointOfSale extends React.Component<
                                                     confirmationPreference,
                                                     disableTips,
                                                     squareDevMode,
+                                                    showKeypad,
                                                     taxPercentage
                                                 }
                                             });
@@ -248,6 +248,7 @@ export default class PointOfSale extends React.Component<
                                                     confirmationPreference,
                                                     disableTips,
                                                     squareDevMode,
+                                                    showKeypad,
                                                     taxPercentage
                                                 }
                                             });
@@ -280,6 +281,7 @@ export default class PointOfSale extends React.Component<
                                                     confirmationPreference,
                                                     disableTips,
                                                     squareDevMode,
+                                                    showKeypad,
                                                     taxPercentage
                                                 }
                                             });
@@ -331,6 +333,7 @@ export default class PointOfSale extends React.Component<
                                                             disableTips,
                                                             squareDevMode:
                                                                 !squareDevMode,
+                                                            showKeypad,
                                                             taxPercentage
                                                         }
                                                     });
@@ -428,6 +431,58 @@ export default class PointOfSale extends React.Component<
 
                             {posEnabled === PosEnabled.Standalone && (
                                 <>
+                                    <ListItem
+                                        containerStyle={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor:
+                                                themeColor('background')
+                                        }}
+                                    >
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                left: -10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.POS.showKeypad'
+                                            )}
+                                        </ListItem.Title>
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
+                                            }}
+                                        >
+                                            <Switch
+                                                value={showKeypad}
+                                                onValueChange={async () => {
+                                                    this.setState({
+                                                        showKeypad: !showKeypad
+                                                    });
+                                                    await updateSettings({
+                                                        pos: {
+                                                            squareAccessToken,
+                                                            squareLocationId,
+                                                            posEnabled,
+                                                            merchantName,
+                                                            confirmationPreference,
+                                                            disableTips,
+                                                            squareDevMode,
+                                                            showKeypad:
+                                                                !showKeypad,
+                                                            taxPercentage
+                                                        }
+                                                    });
+                                                }}
+                                            />
+                                        </View>
+                                    </ListItem>
                                     <Text
                                         style={{
                                             color: themeColor('secondaryText'),
