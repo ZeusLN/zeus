@@ -701,6 +701,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     />
                                 )}
                                 {posEnabled === PosEnabled.Standalone &&
+                                    posStatus === 'active' &&
                                     showKeypad && (
                                         <Tab.Screen
                                             name="POS Keypad"
