@@ -14,6 +14,7 @@
     "general.error": "Error",
     "general.danger": "Danger!",
     "general.ok": "OK",
+    "general.readOnlyWallet": "Read-only wallet",
     "general.show": "Show",
     "general.close": "Close",
     "general.hide": "Hide",
