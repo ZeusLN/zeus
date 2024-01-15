@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Badge } from 'react-native-elements';
 import {
     Animated,
+    Dimensions,
     Easing,
     Image,
+    StyleSheet,
     Text,
     TouchableOpacity,
     View
@@ -283,17 +285,20 @@ export default class WalletHeader extends React.Component<
             infoValue = localeString('views.Wallet.MainPane.regnet');
         }
 
+        const { fontScale } = Dimensions.get('window');
+
         const NetworkBadge = () => {
             return infoValue ? (
                 <Badge
                     onPress={() => navigation.navigate('NodeInfo')}
                     value={infoValue}
                     badgeStyle={{
+                        ...styles.badgeStyle,
                         backgroundColor: 'gray',
-                        borderWidth: 0,
-                        marginLeft: 8,
-                        marginRight: 8
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale
                     }}
+                    textStyle={styles.badgeTextStyle}
                 />
             ) : null;
         };
@@ -326,11 +331,12 @@ export default class WalletHeader extends React.Component<
                 <Badge
                     value={localeString('general.readOnlyWallet')}
                     badgeStyle={{
+                        ...styles.badgeStyle,
                         backgroundColor: themeColor('error'),
-                        borderWidth: 0,
-                        marginLeft: 8,
-                        marginRight: 8
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale
                     }}
+                    textStyle={styles.badgeTextStyle}
                 />
             ) : null;
         };
@@ -405,7 +411,12 @@ export default class WalletHeader extends React.Component<
             <Header
                 leftComponent={
                     loading ? undefined : (
-                        <Row>
+                        <Row
+                            style={{
+                                flexGrow: 1,
+                                alignItems: 'center'
+                            }}
+                        >
                             <SettingsButton />
                             {paid && paid.length > 0 && (
                                 <TouchableOpacity
@@ -481,7 +492,7 @@ export default class WalletHeader extends React.Component<
                             </Row>
                         </View>
                     ) : (
-                        <Row>
+                        <Row style={{ alignItems: 'center', flexGrow: 1 }}>
                             <NetworkBadge />
                             <ReadOnlyBadge />
                             <TorBadge />
@@ -502,7 +513,7 @@ export default class WalletHeader extends React.Component<
                     ) : (
                         <View
                             style={{
-                                flex: 1,
+                                flexGrow: 1,
                                 flexDirection: 'row',
                                 alignItems: 'center'
                             }}
@@ -553,3 +564,15 @@ export default class WalletHeader extends React.Component<
         );
     }
 }
+
+const styles = StyleSheet.create({
+    badgeStyle: {
+        borderWidth: 0,
+        marginHorizontal: 8,
+        height: undefined
+    },
+    badgeTextStyle: {
+        fontWeight: 'normal',
+        textAlign: 'center'
+    }
+});
