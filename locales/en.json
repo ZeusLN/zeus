@@ -833,6 +833,7 @@
     "views.Settings.Contacts.noContacts": "No Contacts",
     "views.Settings.Contacts.noAddress": "No Address",
     "views.Settings.Contacts.to": "To",
+    "views.Settings.Contacts.deleteAllContacts": "Delete all contacts",
     "views.Transaction.title": "Transaction",
     "views.Transaction.totalFees": "Total Fees",
     "views.Transaction.transactionHash": "Transaction Hash",

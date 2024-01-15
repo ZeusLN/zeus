@@ -32,6 +32,7 @@ interface ContactsSettingsState {
     search: string;
     SendScreen: boolean;
     loading: boolean;
+    deletionAwaitingConfirmation: boolean;
 }
 
 export default class Contacts extends React.Component<
@@ -48,31 +49,33 @@ export default class Contacts extends React.Component<
             contacts: [],
             search: '',
             SendScreen,
-            loading: true
+            loading: false,
+            deletionAwaitingConfirmation: false
         };
     }
 
     componentDidMount() {
-        this.loadContacts();
+        this.props.navigation.addListener('didFocus', async () => {
+            this.loadContacts();
+        });
     }
 
     loadContacts = async () => {
-        this.props.navigation.addListener('didFocus', async () => {
-            try {
-                const contactsString = await EncryptedStorage.getItem(
-                    'zeus-contacts'
-                );
-                if (contactsString) {
-                    const contacts: Contact[] = JSON.parse(contactsString);
-                    this.setState({ contacts, loading: false });
-                } else {
-                    this.setState({ loading: false });
-                }
-            } catch (error) {
-                console.log('Error loading contacts:', error);
+        try {
+            this.setState({ loading: true });
+            const contactsString = await EncryptedStorage.getItem(
+                'zeus-contacts'
+            );
+            if (contactsString) {
+                const contacts: Contact[] = JSON.parse(contactsString);
+                this.setState({ contacts, loading: false });
+            } else {
                 this.setState({ loading: false });
             }
-        });
+        } catch (error) {
+            console.log('Error loading contacts:', error);
+            this.setState({ loading: false });
+        }
     };
 
     displayAddress = (item) => {
@@ -189,7 +192,13 @@ export default class Contacts extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { search, contacts, SendScreen, loading } = this.state;
+        const {
+            search,
+            contacts,
+            SendScreen,
+            loading,
+            deletionAwaitingConfirmation
+        } = this.state;
         const filteredContacts = contacts.filter((contact) => {
             const hasMatch = (field: string) =>
                 Array.isArray(contact[field])
@@ -386,6 +395,40 @@ export default class Contacts extends React.Component<
                         keyExtractor={(item, index) => index.toString()}
                         scrollEnabled={false}
                     />
+                    {!loading && contacts.length !== 0 && (
+                        <Button
+                            title={
+                                deletionAwaitingConfirmation
+                                    ? localeString(
+                                          'views.Settings.AddEditNode.tapToConfirm'
+                                      )
+                                    : localeString(
+                                          'views.Settings.Contacts.deleteAllContacts'
+                                      )
+                            }
+                            onPress={async () => {
+                                if (!deletionAwaitingConfirmation) {
+                                    this.setState({
+                                        deletionAwaitingConfirmation: true
+                                    });
+                                } else {
+                                    await EncryptedStorage.setItem(
+                                        'zeus-contacts',
+                                        JSON.stringify([])
+                                    );
+
+                                    this.loadContacts();
+                                }
+                            }}
+                            containerStyle={{
+                                borderColor: themeColor('delete')
+                            }}
+                            titleStyle={{
+                                color: themeColor('delete')
+                            }}
+                            secondary
+                        />
+                    )}
                     {loading ? (
                         <LoadingIndicator />
                     ) : (
