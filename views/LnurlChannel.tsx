@@ -9,6 +9,10 @@ import Button from '../components/Button';
 import Header from '../components/Header';
 import LightningIndicator from '../components/LightningIndicator';
 import Screen from '../components/Screen';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from '../components/SuccessErrorMessage';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
@@ -131,9 +135,7 @@ export default class LnurlChannel extends React.Component<
         qs.private = this.state.privateChannel ? 1 : 0;
 
         const { nodeInfo } = NodeInfoStore;
-        const nodeids = nodeInfo.getURIs;
-        const localnodeid = nodeids[0];
-        const { pubkey } = NodeUriUtils.processNodeUri(localnodeid);
+        const pubkey = nodeInfo.getPubkey;
 
         qs.remoteid = pubkey;
         u.search = querystring.stringify(qs);
@@ -179,7 +181,13 @@ export default class LnurlChannel extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { domain, privateChannel } = this.state;
+        const {
+            domain,
+            privateChannel,
+            peerSuccess,
+            lnurlChannelSuccess,
+            errorMsgPeer
+        } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
 
         return (
@@ -260,54 +268,40 @@ export default class LnurlChannel extends React.Component<
                             icon={{
                                 name: 'send',
                                 size: 25,
-                                color: 'white'
+                                color: themeColor('background')
                             }}
                             onPress={() => {
                                 this.sendValues();
                             }}
-                            style={styles.button}
-                            disabled={!this.state.peerSuccess}
-                            buttonStyle={{
-                                backgroundColor: 'orange',
-                                borderRadius: 30
-                            }}
+                            disabled={!peerSuccess}
                         />
                     </View>
 
                     <View style={styles.content}>
                         {this.state.connectingToPeer && <LightningIndicator />}
-                        {this.state.peerSuccess && (
-                            <Text
-                                style={{
-                                    color: 'green',
-                                    fontFamily: 'PPNeueMontreal-Book'
-                                }}
-                            >
-                                {localeString('views.OpenChannel.peerSuccess')}
-                            </Text>
+                        {peerSuccess && (
+                            <SuccessMessage
+                                message={localeString(
+                                    'views.OpenChannel.peerSuccess'
+                                )}
+                            />
                         )}
-                        {this.state.lnurlChannelSuccess && (
-                            <Text
-                                style={{
-                                    color: 'green',
-                                    fontFamily: 'PPNeueMontreal-Book'
-                                }}
-                            >
-                                {localeString('views.LnurlChannel.success')}
-                            </Text>
+                        {lnurlChannelSuccess && (
+                            <SuccessMessage
+                                message={localeString(
+                                    'views.LnurlChannel.success'
+                                )}
+                            />
                         )}
-                        {this.state.errorMsgPeer &&
-                            !this.state.peerSuccess &&
-                            !this.state.lnurlChannelSuccess && (
-                                <Text
-                                    style={{
-                                        color: 'red',
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {this.state.errorMsgPeer ||
-                                        localeString('general.error')}
-                                </Text>
+                        {errorMsgPeer &&
+                            !peerSuccess &&
+                            !lnurlChannelSuccess && (
+                                <ErrorMessage
+                                    message={
+                                        errorMsgPeer ||
+                                        localeString('general.error')
+                                    }
+                                />
                             )}
                     </View>
                 </View>
