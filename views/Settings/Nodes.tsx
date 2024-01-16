@@ -216,7 +216,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             borderBottomWidth: 0,
                                             backgroundColor: isActive
                                                 ? themeColor('highlight')
-                                                : themeColor('background')
+                                                : 'transparent'
                                         }}
                                         onPress={async () => {
                                             const currentImplementation =
