@@ -384,7 +384,7 @@ export default class ChannelView extends React.Component<
                                 )}
                                 value={channel_point}
                                 sensitive
-                                color={themeColor('chain')}
+                                color={themeColor('highlight')}
                                 mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
                                         channel_point,
