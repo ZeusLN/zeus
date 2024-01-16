@@ -389,7 +389,7 @@ export default class FeeBreakdown extends React.Component<
                                     'views.Channel.channelPoint'
                                 )}
                                 value={channelPoint}
-                                color={themeColor('chain')}
+                                color={themeColor('highlight')}
                                 sensitive
                                 mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
