@@ -291,8 +291,7 @@ export default class PointOfSale extends React.Component<
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                themeColor('background')
+                                            backgroundColor: 'transparent'
                                         }}
                                     >
                                         <ListItem.Title
@@ -377,8 +376,7 @@ export default class PointOfSale extends React.Component<
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                themeColor('background')
+                                            backgroundColor: 'transparent'
                                         }}
                                     >
                                         <ListItem.Title
@@ -434,8 +432,7 @@ export default class PointOfSale extends React.Component<
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                themeColor('background')
+                                            backgroundColor: 'transparent'
                                         }}
                                     >
                                         <ListItem.Title
