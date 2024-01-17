@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
+import RNFS from 'react-native-fs';
 
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
@@ -260,13 +261,33 @@ export default class AddContact extends React.Component<
                 maxHeight: 500,
                 includeBase64: true
             },
-            (response: any) => {
+            async (response: any) => {
                 if (!response.didCancel) {
                     const asset = response?.assets[0];
                     if (asset.base64) {
-                        this.setState({
-                            photo: `data:image/png;base64,${asset.base64}`
-                        });
+                        // Generate a unique name for the image
+                        const timestamp = new Date().getTime(); // Timestamp
+                        const fileName = `photo_${timestamp}.png`;
+
+                        const filePath =
+                            RNFS.DocumentDirectoryPath + '/' + fileName;
+
+                        try {
+                            // Write the base64 data to the file
+                            await RNFS.writeFile(
+                                filePath,
+                                asset.base64,
+                                'base64'
+                            );
+                            console.log('File saved to ', filePath);
+
+                            // Set the local file path in the state
+                            this.setState({
+                                photo: 'file://' + filePath
+                            });
+                        } catch (error) {
+                            console.error('Error saving file: ', error);
+                        }
                     }
                 }
             }
