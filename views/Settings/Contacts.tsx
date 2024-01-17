@@ -60,6 +60,18 @@ export default class Contacts extends React.Component<
         });
     }
 
+    UNSAFE_componentWillReceiveProps(
+        nextProps: Readonly<ContactsSettingsProps>
+    ): void {
+        const loading: boolean = nextProps.navigation.getParam('loading', null);
+
+        if (loading) {
+            this.setState({
+                loading
+            });
+        }
+    }
+
     loadContacts = async () => {
         try {
             this.setState({ loading: true });

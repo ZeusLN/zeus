@@ -111,6 +111,7 @@ export default class AddContact extends React.Component<
     };
 
     saveContact = async () => {
+        const { navigation } = this.props;
         const {
             lnAddress,
             onchainAddress,
@@ -123,15 +124,9 @@ export default class AddContact extends React.Component<
             isFavourite
         } = this.state;
 
-        const isEdit = !!this.props.navigation.getParam('isEdit', false);
-        const prefillContact = this.props.navigation.getParam(
-            'prefillContact',
-            null
-        );
-        const isNostrContact = this.props.navigation.getParam(
-            'isNostrContact',
-            null
-        );
+        const isEdit = !!navigation.getParam('isEdit', false);
+        const prefillContact = navigation.getParam('prefillContact', null);
+        const isNostrContact = navigation.getParam('isNostrContact', null);
 
         try {
             // Retrieve existing contacts from storage
@@ -171,7 +166,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact updated successfully!');
-                this.props.navigation.navigate('Contacts');
+                navigation.navigate('Contacts', { loading: true });
             } else {
                 // Creating a new contact
                 const contactId = uuidv4();
@@ -200,7 +195,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact saved successfully!');
-                this.props.navigation.navigate('Contacts');
+                navigation.navigate('Contacts', { loading: true });
 
                 // Reset the input fields after saving the contact
                 this.setState({
@@ -221,10 +216,8 @@ export default class AddContact extends React.Component<
     };
 
     deleteContact = async () => {
-        const prefillContact = this.props.navigation.getParam(
-            'prefillContact',
-            null
-        );
+        const { navigation } = this.props;
+        const prefillContact = navigation.getParam('prefillContact', null);
 
         if (prefillContact) {
             try {
@@ -245,7 +238,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact deleted successfully!');
-                this.props.navigation.navigate('Contacts');
+                navigation.navigate('Contacts', { loading: true });
             } catch (error) {
                 console.log('Error deleting contact:', error);
             }
