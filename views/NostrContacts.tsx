@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { CheckBox, Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { relayInit, nip05, nip19 } from 'nostr-tools';
+import RNFS from 'react-native-fs';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -196,31 +197,84 @@ export default class NostrContacts extends React.Component<
         });
     }
 
-    transformContactData = (contact: any) => {
-        return {
-            photo: contact?.picture,
-            name: contact?.display_name || contact?.name,
-            description: contact?.about,
-            lnAddress: contact?.lud16
-                ? [contact?.lud16]
-                : contact?.lud06
-                ? [contact?.lud06]
-                : contact?.lud16 && contact?.lud06
-                ? [contact?.lud06, contact?.lud16]
-                : [],
-            onchainAddress: [''],
-            pubkey: [''],
-            nip05: contact?.nip05 ? [contact?.nip05] : [],
-            nostrNpub: contact?.npub
-                ? [contact?.npub]
-                : contact?.pubkey
-                ? [nip19.npubEncode(contact.pubkey)]
-                : [],
-            contactId: uuidv4(),
-            isFavourite: false,
-            banner: contact?.banner,
-            isSelected: false
-        };
+    transformContactData = async (contact: any) => {
+        try {
+            const name = contact?.display_name || contact?.name || '';
+            const transformedContact = {
+                photo: '',
+                name,
+                description: contact?.about || '',
+                lnAddress: contact?.lud16
+                    ? [contact?.lud16]
+                    : contact?.lud06
+                    ? [contact?.lud06]
+                    : contact?.lud16 && contact?.lud06
+                    ? [contact?.lud06, contact?.lud16]
+                    : [],
+                onchainAddress: [''],
+                pubkey: [''],
+                nip05: contact?.nip05 ? [contact?.nip05] : [],
+                nostrNpub: contact?.npub
+                    ? [contact?.npub]
+                    : contact?.pubkey
+                    ? [nip19.npubEncode(contact.pubkey)]
+                    : [],
+                contactId: uuidv4(),
+                isFavourite: false,
+                banner: '',
+                isSelected: false
+            };
+
+            if (contact?.banner) {
+                console.log('Downloading banner...');
+                const bannerFileName =
+                    'nostrContactBanner_' + transformedContact.name + '.png';
+                const bannerFilePath =
+                    RNFS.DocumentDirectoryPath + '/' + bannerFileName;
+
+                try {
+                    // Download the banner and save it locally
+                    await RNFS.downloadFile({
+                        fromUrl: contact?.banner,
+                        toFile: bannerFilePath
+                    }).promise;
+
+                    console.log('Banner download successful!');
+                    transformedContact.banner = 'file://' + bannerFilePath;
+                } catch (bannerError) {
+                    console.error('Error downloading banner:', bannerError);
+                }
+            }
+
+            console.log('Transformed contact:', transformedContact);
+
+            if (contact?.picture) {
+                console.log('Downloading image...');
+                const fileName =
+                    'nostrContactPhoto_' +
+                    transformedContact.contactId +
+                    '.png';
+                const filePath = RNFS.DocumentDirectoryPath + '/' + fileName;
+
+                try {
+                    // Download the image and save it locally
+                    await RNFS.downloadFile({
+                        fromUrl: contact?.picture,
+                        toFile: filePath
+                    }).promise;
+
+                    console.log('Download successful!');
+                    transformedContact.photo = 'file://' + filePath;
+                } catch (photoError) {
+                    console.error('Error downloading photo:', photoError);
+                }
+            }
+
+            return transformedContact;
+        } catch (error) {
+            console.error('Error transforming contact:', error);
+            return null;
+        }
     };
 
     toggleContactSelection = (contact: any) => {
@@ -267,7 +321,7 @@ export default class NostrContacts extends React.Component<
             return `${str.substring(0, 6)}...${str.substring(str.length - 6)}`;
         };
 
-        if (!item.name && !item.display_name) {
+        if (!item?.name && !item?.display_name) {
             return null;
         }
 
@@ -286,14 +340,12 @@ export default class NostrContacts extends React.Component<
 
         return (
             <TouchableOpacity
-                onPress={() => {
+                onPress={async () => {
                     if (isSelectionMode) {
-                        this.toggleContactSelection(
-                            this.transformContactData(item)
-                        );
+                        this.toggleContactSelection(item);
                     } else {
                         navigation.navigate('ContactDetails', {
-                            nostrContact: this.transformContactData(item),
+                            nostrContact: await this.transformContactData(item),
                             isNostrContact: true
                         });
                     }
@@ -314,9 +366,7 @@ export default class NostrContacts extends React.Component<
                         <CheckBox
                             checked={isSelected}
                             onPress={() => {
-                                this.toggleContactSelection(
-                                    this.transformContactData(item)
-                                );
+                                this.toggleContactSelection(item);
                             }}
                         />
                     </Animated.View>
@@ -349,7 +399,7 @@ export default class NostrContacts extends React.Component<
                                 color: themeColor('text')
                             }}
                         >
-                            {item.display_name || item.name}
+                            {item?.display_name || item?.name}
                         </Text>
                         {item.lud06 && (
                             <Text
@@ -377,47 +427,33 @@ export default class NostrContacts extends React.Component<
         );
     };
 
-    importSelectedContacts = async () => {
+    importContacts = async () => {
         try {
-            const { selectedContacts } = this.state;
+            let contactsToImport = [];
 
-            // Retrieve existing contacts from Encrypted storage
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
+            // Check if selectedContacts is not empty, use it; otherwise, use contactsData
+            if (this.state.selectedContacts.length > 0) {
+                contactsToImport = this.state.selectedContacts;
+            } else {
+                contactsToImport = this.state.contactsData;
+            }
+
+            // Remove null values and contacts without name or display_name
+            contactsToImport = contactsToImport.filter(
+                (contact) =>
+                    contact !== null &&
+                    (contact?.name || contact?.display_name) &&
+                    contact?.picture &&
+                    (contact?.lud06 || contact.lud16)
             );
-            const existingContacts: any = contactsString
-                ? JSON.parse(contactsString)
-                : [];
-
-            // Merge existing contacts with the selected contacts
-            const updatedContacts = [
-                ...existingContacts,
-                ...selectedContacts
-            ].sort((a, b) => a.name.localeCompare(b.name));
-
-            // Save the updated contacts to encrypted storage
-            await EncryptedStorage.setItem(
-                'zeus-contacts',
-                JSON.stringify(updatedContacts)
-            );
-
-            console.log('Contacts imported successfully!');
-        } catch (error) {
-            console.log('Error importing contacts:', error);
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.NostrContacts.importContactsError')
-            );
-        }
-    };
-
-    importAllContacts = async () => {
-        try {
-            const contactsToImport = this.state.contactsData;
 
             // Transform Nostr contacts data to match the format in AddContact
-            const transformedContacts = contactsToImport.map((contact) =>
-                this.transformContactData(contact)
+            const transformedContactsPromises = contactsToImport.map(
+                (contact) => this.transformContactData(contact)
+            );
+
+            const transformedContacts = await Promise.all(
+                transformedContactsPromises
             );
 
             // Retrieve existing contacts from Encrypted storage
@@ -623,7 +659,7 @@ export default class NostrContacts extends React.Component<
                                 'views.NostrContacts.importAllContacts'
                             )}
                             onPress={() => {
-                                this.importAllContacts();
+                                this.importContacts();
                                 navigation.navigate('Contacts');
                             }}
                             containerStyle={{
@@ -643,7 +679,7 @@ export default class NostrContacts extends React.Component<
                                 : ''
                         }`}
                         onPress={() => {
-                            this.importSelectedContacts();
+                            this.importContacts();
                             navigation.navigate('Contacts');
                         }}
                         containerStyle={{ paddingBottom: 12, paddingTop: 8 }}
