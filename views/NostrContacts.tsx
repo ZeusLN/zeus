@@ -428,6 +428,10 @@ export default class NostrContacts extends React.Component<
     };
 
     importContacts = async () => {
+        this.setState({
+            loading: true
+        });
+
         try {
             let contactsToImport = [];
 
@@ -477,12 +481,18 @@ export default class NostrContacts extends React.Component<
             );
 
             console.log('Contacts imported successfully!');
+            this.setState({
+                loading: false
+            });
         } catch (error) {
             console.log('Error importing contacts:', error);
             Alert.alert(
                 localeString('general.error'),
                 localeString('views.NostrContacts.importContactsError')
             );
+            this.setState({
+                loading: false
+            });
         }
     };
 
@@ -648,18 +658,19 @@ export default class NostrContacts extends React.Component<
                         data={contactsData}
                         style={{ marginTop: 10 }}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(item, index) => index.toString()}
+                        keyExtractor={(_, index) => index.toString()}
                     />
                 )}
-                {!isSelectionMode &&
+                {!loading &&
+                    !isSelectionMode &&
                     contactsData.length > 0 &&
                     selectedContacts.length === 0 && (
                         <Button
                             title={localeString(
                                 'views.NostrContacts.importAllContacts'
                             )}
-                            onPress={() => {
-                                this.importContacts();
+                            onPress={async () => {
+                                await this.importContacts();
                                 navigation.navigate('Contacts');
                             }}
                             containerStyle={{
@@ -669,7 +680,7 @@ export default class NostrContacts extends React.Component<
                             secondary
                         />
                     )}
-                {isSelectionMode && selectedContacts.length >= 0 && (
+                {!loading && isSelectionMode && selectedContacts.length >= 0 && (
                     <Button
                         title={`${localeString(
                             'views.OpenChannel.import'
@@ -678,8 +689,8 @@ export default class NostrContacts extends React.Component<
                                 ? ` (${selectedContacts.length})`
                                 : ''
                         }`}
-                        onPress={() => {
-                            this.importContacts();
+                        onPress={async () => {
+                            await this.importContacts();
                             navigation.navigate('Contacts');
                         }}
                         containerStyle={{ paddingBottom: 12, paddingTop: 8 }}
