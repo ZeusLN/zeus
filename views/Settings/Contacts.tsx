@@ -49,7 +49,7 @@ export default class Contacts extends React.Component<
             contacts: [],
             search: '',
             SendScreen,
-            loading: false,
+            loading: true,
             deletionAwaitingConfirmation: false
         };
     }
