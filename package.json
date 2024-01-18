@@ -99,7 +99,7 @@
     "react-native-draglist": "3.5.1",
     "react-native-elements": "3.4.3",
     "react-native-encrypted-storage": "4.0.3",
-    "react-native-fs": "^2.20.0",
+    "react-native-fs": "2.20.0",
     "react-native-gesture-handler": "2.12.1",
     "react-native-get-random-values": "1.9.0",
     "react-native-hce": "0.1.2",
