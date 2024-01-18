@@ -49,7 +49,7 @@ public class MainApplication extends Application implements ReactApplication {
           packages.add(new LndMobileToolsPackage());
           packages.add(new LndMobileScheduledSyncPackage());
           packages.add(new LncPackage());
-          packages.add(new ZeusTorPackage());
+          // packages.add(new ZeusTorPackage());
 
           return packages;
         }

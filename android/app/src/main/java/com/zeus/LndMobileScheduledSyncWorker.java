@@ -36,7 +36,7 @@ import com.oblador.keychain.KeychainModule;
 import com.google.protobuf.ByteString;
 // import com.hypertrack.Hyperlog.Hyperlog;
 
-import org.torproject.jni.TorService;
+// import org.torproject.jni.TorService;
 
 public class LndMobileScheduledSyncWorker extends ListenableWorker {
   private final String TAG = "LndScheduledSyncWorker";
@@ -56,7 +56,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
   // we'll close down lnd and the worker
   private int numGetInfoCalls = 0;
 
-  ZeusTor zeusTor;
+  // ZeusTor zeusTor;
 
   // private enum WorkState {
   //   NOT_STARTED, BOUND, WALLET_UNLOCKED, WAITING_FOR_SYNC, DONE;
@@ -72,7 +72,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
   public LndMobileScheduledSyncWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
     super(context, workerParams);
     dbSupplier = ReactDatabaseSupplier.getInstance(getApplicationContext());
-    zeusTor = new ZeusTor(new ReactApplicationContext(getApplicationContext()));
+    // zeusTor = new ZeusTor(new ReactApplicationContext(getApplicationContext()));
   }
 
   @Override
@@ -116,38 +116,32 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
             // Hyperlog.d(TAG, "Password retrieved");
 
             if (torEnabled) {
-              //            boolean startTorResult = startTor();
-              //            if (!startTorResult) {
-              //              Log.e(TAG, "Could not start Tor");
-              //              future.set(Result.failure());
-              //              return;
-              //            }
-              zeusTor.startTor(new PromiseWrapper() {
-                @Override
-                void onSuccess(@Nullable Object value) {
-                  // Hyperlog.i(TAG, "Tor started");
-                  // Hyperlog.i(TAG, "torSocksPort: " + (int) value);
-                  torStarted = true;
-                  torSocksPort = (int) value;
+              // zeusTor.startTor(new PromiseWrapper() {
+              //   @Override
+              //   void onSuccess(@Nullable Object value) {
+              //     // Hyperlog.i(TAG, "Tor started");
+              //     // Hyperlog.i(TAG, "torSocksPort: " + (int) value);
+              //     torStarted = true;
+              //     torSocksPort = (int) value;
 
-                  startLndWorkThread(completer, password);
-                }
+              //     startLndWorkThread(completer, password);
+              //   }
 
-                @Override
-                void onFail(Throwable throwable) {
-                  // Hyperlog.e(TAG, "Failed to start Tor", throwable);
-                  zeusTor.stopTor(new PromiseWrapper() {
-                    @Override
-                    void onSuccess(@Nullable Object value) {
-                    }
+              //   @Override
+              //   void onFail(Throwable throwable) {
+              //     // Hyperlog.e(TAG, "Failed to start Tor", throwable);
+              //     zeusTor.stopTor(new PromiseWrapper() {
+              //       @Override
+              //       void onSuccess(@Nullable Object value) {
+              //       }
 
-                    @Override
-                    void onFail(Throwable throwable) {
-                    }
-                  });
-                  completer.set(Result.failure());
-                }
-              });
+              //       @Override
+              //       void onFail(Throwable throwable) {
+              //       }
+              //     });
+              //     completer.set(Result.failure());
+              //   }
+              // });
             } else {
               startLndWorkThread(completer, password);
             }
@@ -322,19 +316,17 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     unbindLndMobileService();
 
     if (torStarted) {
-//      if (!MainActivity.started) {
-        // Hyperlog.i(TAG, "Stopping Tor");
-         zeusTor.stopTor(new PromiseWrapper() {
-           @Override
-           void onSuccess(@Nullable Object value) {
-             // Hyperlog.i(TAG,"Tor stopped");
-           }
+        //  zeusTor.stopTor(new PromiseWrapper() {
+        //    @Override
+        //    void onSuccess(@Nullable Object value) {
+        //      // Hyperlog.i(TAG,"Tor stopped");
+        //    }
 
-          @Override
-          void onFail(Throwable throwable) {
-            // Hyperlog.e(TAG, "Fail while stopping Tor", throwable);
-          }
-        });
+        //   @Override
+        //   void onFail(Throwable throwable) {
+        //     // Hyperlog.e(TAG, "Fail while stopping Tor", throwable);
+        //   }
+        // });
 //      } else {
 //        // Hyperlog.w(TAG, "MainActivity was started when shutting down sync work. I will not stop Tor");
 //      }
@@ -351,28 +343,28 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
 
   private boolean startTor(CallbackToFutureAdapter.Completer<Result> completer) {
     // Hyperlog.i(TAG, "Starting Tor");
-    zeusTor.startTor(new PromiseWrapper() {
-      @Override
-      void onSuccess(@Nullable Object value) {
-        // Hyperlog.i(TAG, "Tor started");
-        // Hyperlog.i(TAG, "torSocksPort: " + (int) value);
-        torStarted = true;
-        torSocksPort = (int) value;
-      }
+    // zeusTor.startTor(new PromiseWrapper() {
+    //   @Override
+    //   void onSuccess(@Nullable Object value) {
+    //     // Hyperlog.i(TAG, "Tor started");
+    //     // Hyperlog.i(TAG, "torSocksPort: " + (int) value);
+    //     torStarted = true;
+    //     torSocksPort = (int) value;
+    //   }
 
-      @Override
-      void onFail(Throwable throwable) {
-        // Hyperlog.e(TAG, "Failed to start Tor", throwable);
-        zeusTor.stopTor(new PromiseWrapper() {
-          @Override
-          void onSuccess(@Nullable Object value) {}
+    //   @Override
+    //   void onFail(Throwable throwable) {
+    //     // Hyperlog.e(TAG, "Failed to start Tor", throwable);
+    //     zeusTor.stopTor(new PromiseWrapper() {
+    //       @Override
+    //       void onSuccess(@Nullable Object value) {}
 
-          @Override
-          void onFail(Throwable throwable) {}
-        });
-        completer.set(Result.failure());
-      }
-    });
+    //       @Override
+    //       void onFail(Throwable throwable) {}
+    //     });
+    //     completer.set(Result.failure());
+    //   }
+    // });
     int torTries = 0;
     while (!torStarted) {
       if (torTries++ > 40) {
@@ -396,10 +388,10 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     Bundle bundle = new Bundle();
     String params = "--lnddir=" + getApplicationContext().getFilesDir().getPath();
     if (torEnabled) {
-      String controlSocket = "unix://" + getApplicationContext().getDir(TorService.class.getSimpleName(), Context.MODE_PRIVATE).getAbsolutePath() + "/data/ControlSocket";
+      // String controlSocket = "unix://" + getApplicationContext().getDir(TorService.class.getSimpleName(), Context.MODE_PRIVATE).getAbsolutePath() + "/data/ControlSocket";
       // Hyperlog.d(TAG, "Adding Tor params for starting lnd, torSocksPort: " + torSocksPort + ", controlSocket: " + controlSocket);
-      params += " --tor.active --tor.socks=127.0.0.1:" + torSocksPort + " --tor.control=" + controlSocket;
-      params += " --nolisten";
+      // params += " --tor.active --tor.socks=127.0.0.1:" + torSocksPort + " --tor.control=" + controlSocket;
+      // params += " --nolisten";
     }
     else {
       // If Tor isn't active, make sure we aren't
