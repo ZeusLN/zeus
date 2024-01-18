@@ -407,7 +407,7 @@ export default class Contacts extends React.Component<
                         keyExtractor={(item, index) => index.toString()}
                         scrollEnabled={false}
                     />
-                    {!loading && contacts.length !== 0 && (
+                    {!loading && contacts.length > 1 && (
                         <Button
                             title={
                                 deletionAwaitingConfirmation
@@ -428,7 +428,9 @@ export default class Contacts extends React.Component<
                                         'zeus-contacts',
                                         JSON.stringify([])
                                     );
-
+                                    this.setState({
+                                        deletionAwaitingConfirmation: false
+                                    });
                                     this.loadContacts();
                                 }
                             }}
