@@ -111,6 +111,7 @@ class BackendUtils {
         this.call('subscribeInvoices', args);
     subscribeTransactions = (...args: any[]) =>
         this.call('subscribeTransactions', args);
+    initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
 
     // lndhub
     login = (...args: any[]) => this.call('login', args);

@@ -433,6 +433,68 @@ export default class LND {
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
     subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
+    initChanAcceptor = (data?: any) => {
+        const { host, lndhubUrl, port, macaroonHex, accessToken } =
+            stores.settingsStore;
+
+        const auth = macaroonHex || accessToken;
+        const headers: any = this.getHeaders(auth, true);
+        const url = this.getURL(
+            host || lndhubUrl,
+            port,
+            '/v1/channels/acceptor?method=POST',
+            true
+        );
+
+        const ws: any = new WebSocket(url, null, {
+            headers
+        });
+
+        // keep pulling in responses until the socket closes
+        let resp: any;
+
+        const { zeroConfPeers, lspPubkey } = data;
+
+        ws.addEventListener('open', (e: any) => {
+            console.log('channel acceptor opened', e);
+            ws.send(JSON.stringify({ accept: true }));
+        });
+
+        ws.addEventListener('message', (e: any) => {
+            // a message was received
+            const res = JSON.parse(e.data);
+            if (res.error) {
+                console.log('chanAcceptor err', res.error);
+            } else {
+                resp = JSON.parse(e.data).result;
+                const requestPubkey = Base64Utils.base64ToHex(resp.node_pubkey);
+                const pending_chan_id = resp.pending_chan_id;
+
+                const isZeroConfAllowed =
+                    lspPubkey === requestPubkey ||
+                    (zeroConfPeers && zeroConfPeers.includes(requestPubkey));
+
+                const acceptData = {
+                    accept: !resp.wants_zero_conf || isZeroConfAllowed,
+                    zero_conf: isZeroConfAllowed,
+                    pending_chan_id
+                };
+                ws.send(JSON.stringify(acceptData)); // send a message
+            }
+        });
+
+        ws.addEventListener('error', (e: any) => {
+            const certWarning = localeString('backends.LND.wsReq.warning');
+            // an error occurred
+            console.log(
+                e.message ? `${certWarning} (${e.message})` : certWarning
+            );
+        });
+
+        ws.addEventListener('close', () => {
+            console.log('channel acceptor close');
+        });
+    };
 
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
@@ -454,7 +516,7 @@ export default class LND {
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
-    supportsLSPs = () => false;
+    supportsLSPs = () => true;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
