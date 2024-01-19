@@ -126,7 +126,7 @@ export function themeColor(themeString: string): any {
         background: '#56042c',
         secondary: '#8A1538',
         separator: '#8A1538',
-        highlight: '#fff'
+        highlight: '#ffd24b'
     };
 
     const Purple: { [key: string]: any } = {
