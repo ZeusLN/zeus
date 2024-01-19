@@ -234,6 +234,8 @@ export default class InvoicesStore {
             return;
         }
 
+        console.log('->', req);
+
         return BackendUtils.createInvoice(req)
             .then(async (data: any) => {
                 if (data.error) {

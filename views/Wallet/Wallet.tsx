@@ -369,12 +369,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     embeddedLndNetwork === 'Testnet'
                 );
             }
-            if (BackendUtils.supportsLSPs()) {
-                if (SettingsStore.settings.enableLSP) {
-                    LSPStore.getLSPInfo();
-                }
-                LSPStore.initChannelAcceptor();
-            }
             NodeInfoStore.getNodeInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
@@ -453,6 +447,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     LightningAddressStore.updatePushCredentials();
                 }
             }
+        }
+
+        if (BackendUtils.supportsLSPs()) {
+            if (SettingsStore.settings.enableLSP) {
+                await LSPStore.getLSPInfo();
+            }
+            LSPStore.initChannelAcceptor();
         }
 
         if (connecting) {
