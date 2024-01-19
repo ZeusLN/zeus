@@ -127,7 +127,6 @@ export default class LSPStore {
                     const status = response.info().status;
                     const data = response.json();
                     if (status == 200) {
-                        console.log('~~~&&&data', data);
                         this.zeroConfFee = data.fee_amount_msat
                             ? Number.parseInt(
                                   (
@@ -136,8 +135,6 @@ export default class LSPStore {
                               )
                             : undefined;
                         this.feeId = data.id;
-                        console.log('zeroConfFee', this.zeroConfFee);
-                        console.log('feeId', this.feeId);
                         this.error = false;
                         resolve(this.zeroConfFee);
                     } else {
@@ -238,7 +235,6 @@ export default class LSPStore {
                 .then(async (response: any) => {
                     const status = response.info().status;
                     const data = response.json();
-                    console.log('~~', data);
                     if (status == 200 || status == 201) {
                         resolve(data.jit_bolt11);
                     } else {

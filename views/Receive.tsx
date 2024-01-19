@@ -115,6 +115,7 @@ interface ReceiveState {
     needInbound: boolean;
     enableLSP: boolean;
     lspIsActive: boolean;
+    lspNotConfigured: boolean;
 }
 
 @inject(
@@ -155,7 +156,8 @@ export default class Receive extends React.Component<
         // LSP
         needInbound: false,
         enableLSP: true,
-        lspIsActive: false
+        lspIsActive: false,
+        lspNotConfigured: true
     };
 
     async UNSAFE_componentWillMount() {
@@ -163,7 +165,8 @@ export default class Receive extends React.Component<
             navigation,
             InvoicesStore,
             SettingsStore,
-            LightningAddressStore
+            LightningAddressStore,
+            NodeInfoStore
         } = this.props;
         const { reset } = InvoicesStore;
         const { getSettings, posStatus } = SettingsStore;
@@ -175,6 +178,8 @@ export default class Receive extends React.Component<
             status();
         }
 
+        const { lspNotConfigured } = NodeInfoStore.lspNotConfigured();
+
         this.setState({
             addressType: settings?.invoices?.addressType || '0',
             memo: settings?.invoices?.memo || '',
@@ -182,7 +187,11 @@ export default class Receive extends React.Component<
             routeHints: settings?.invoices?.routeHints || false,
             ampInvoice: settings?.invoices?.ampInvoice || false,
             enableLSP: settings?.enableLSP,
-            lspIsActive: settings?.enableLSP && BackendUtils.supportsLSPs()
+            lspIsActive:
+                settings?.enableLSP &&
+                BackendUtils.supportsLSPs() &&
+                !lspNotConfigured,
+            lspNotConfigured
         });
 
         const lnOnly =
@@ -378,7 +387,9 @@ export default class Receive extends React.Component<
             lspIsActive ? false : routeHints || false,
             BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
-                : undefined
+                : undefined,
+            undefined,
+            !lspIsActive
         ).then(
             ({
                 rHash,
@@ -479,7 +490,12 @@ export default class Receive extends React.Component<
                             lspIsActive ? '' : memo,
                             amount.toString(),
                             '3600',
-                            lnurlParams
+                            lnurlParams,
+                            undefined,
+                            undefined,
+                            undefined,
+                            undefined,
+                            !lspIsActive
                         )
                             .then(
                                 ({
@@ -865,7 +881,8 @@ export default class Receive extends React.Component<
             routeHints,
             needInbound,
             enableLSP,
-            lspIsActive
+            lspIsActive,
+            lspNotConfigured
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1547,45 +1564,48 @@ export default class Receive extends React.Component<
                                 )}
                                 {!loading && !haveInvoice && !creatingInvoice && (
                                     <>
-                                        {BackendUtils.supportsLSPs() && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.secondaryText,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        top: 20
-                                                    }}
-                                                    infoText={[
-                                                        localeString(
-                                                            'views.Receive.lspSwitchExplainer1'
-                                                        ),
-                                                        localeString(
-                                                            'views.Receive.lspSwitchExplainer2'
-                                                        )
-                                                    ]}
-                                                    infoNav="LspExplanationOverview"
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.LSP.enableLSP'
-                                                    )}
-                                                </Text>
-                                                <Switch
-                                                    value={enableLSP}
-                                                    onValueChange={async () => {
-                                                        this.setState({
-                                                            enableLSP:
-                                                                !enableLSP
-                                                        });
-                                                        await updateSettings({
-                                                            enableLSP:
-                                                                !enableLSP
-                                                        });
-                                                    }}
-                                                />
-                                            </>
-                                        )}
+                                        {BackendUtils.supportsLSPs() &&
+                                            !lspNotConfigured && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            top: 20
+                                                        }}
+                                                        infoText={[
+                                                            localeString(
+                                                                'views.Receive.lspSwitchExplainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.Receive.lspSwitchExplainer2'
+                                                            )
+                                                        ]}
+                                                        infoNav="LspExplanationOverview"
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.LSP.enableLSP'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={enableLSP}
+                                                        onValueChange={async () => {
+                                                            this.setState({
+                                                                enableLSP:
+                                                                    !enableLSP
+                                                            });
+                                                            await updateSettings(
+                                                                {
+                                                                    enableLSP:
+                                                                        !enableLSP
+                                                                }
+                                                            );
+                                                        }}
+                                                    />
+                                                </>
+                                            )}
 
                                         {!lspIsActive && (
                                             <>
@@ -1894,7 +1914,8 @@ export default class Receive extends React.Component<
                                                         BackendUtils.supportsCustomPreimages() &&
                                                             showCustomPreimageField
                                                             ? customPreimage
-                                                            : undefined
+                                                            : undefined,
+                                                        !lspIsActive
                                                     ).then(
                                                         ({
                                                             rHash,
