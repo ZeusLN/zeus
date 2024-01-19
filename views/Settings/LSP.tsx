@@ -60,19 +60,11 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
     render() {
         const { navigation, NodeInfoStore, SettingsStore } = this.props;
         const { enableLSP, lsp, accessKey, requestSimpleTaproot } = this.state;
-        const {
-            updateSettings,
-            embeddedLndNetwork,
-            implementation,
-            certVerification
-        }: any = SettingsStore;
-        const { nodeInfo } = NodeInfoStore;
+        const { updateSettings, embeddedLndNetwork, certVerification }: any =
+            SettingsStore;
 
-        const scidAlias = nodeInfo.features['47'];
-        const zeroConf = nodeInfo.features['51'];
-        const zeroConfConfig = zeroConf && scidAlias;
-
-        const restIsConfigured = certVerification && zeroConfConfig;
+        const { lspNotConfigured, zeroConfConfig, scidAlias, zeroConf } =
+            NodeInfoStore.lspNotConfigured();
 
         const showReset: boolean =
             !enableLSP ||
@@ -95,7 +87,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                         }}
                         navigation={navigation}
                     />
-                    {implementation === 'lnd' && !restIsConfigured ? (
+                    {lspNotConfigured ? (
                         <>
                             <ListItem containerStyle={styles.listItem}>
                                 <Text style={{ color: themeColor('text') }}>

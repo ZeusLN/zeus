@@ -121,7 +121,8 @@ export default class InvoicesStore {
         ampInvoice?: boolean,
         routeHints?: boolean,
         addressType?: string,
-        customPreimage?: string
+        customPreimage?: string,
+        noLsp?: boolean
     ) => {
         this.creatingInvoice = true;
         return this.createInvoice(
@@ -132,7 +133,8 @@ export default class InvoicesStore {
             ampInvoice,
             routeHints,
             true,
-            customPreimage
+            customPreimage,
+            noLsp
         ).then(
             ({
                 rHash,
@@ -176,7 +178,8 @@ export default class InvoicesStore {
         ampInvoice?: boolean,
         routeHints?: boolean,
         unified?: boolean,
-        customPreimage?: string
+        customPreimage?: string,
+        noLsp?: boolean
     ) => {
         this.lspStore?.resetFee();
         this.payment_request = null;
@@ -200,7 +203,8 @@ export default class InvoicesStore {
             BackendUtils.supportsLSPs() &&
             this.settingsStore.settings?.enableLSP &&
             value &&
-            value !== '0'
+            value !== '0' &&
+            !noLsp
         ) {
             const info: any = this.lspStore?.info;
             const method =
@@ -234,8 +238,6 @@ export default class InvoicesStore {
             return;
         }
 
-        console.log('->', req);
-
         return BackendUtils.createInvoice(req)
             .then(async (data: any) => {
                 if (data.error) {
@@ -265,7 +267,8 @@ export default class InvoicesStore {
                 if (
                     BackendUtils.supportsLSPs() &&
                     this.settingsStore.settings?.enableLSP &&
-                    value !== '0'
+                    value !== '0' &&
+                    !noLsp
                 ) {
                     await this.lspStore
                         .getZeroConfInvoice(invoice.getPaymentRequest)
