@@ -158,7 +158,7 @@ export function themeColor(themeString: string): any {
         background: '#0a0612',
         secondary: '#150c25',
         separator: '#150c25',
-        highlight: '#fff'
+        highlight: '#ffd24b'
     };
 
     const Deadpool: { [key: string]: any } = {
