@@ -94,7 +94,7 @@ export function themeColor(themeString: string): any {
         secondary: '#f0f0f0',
         text: '#2b74b4',
         secondaryText: '#8a8999',
-        highlight: '#2b74b4',
+        highlight: 'orange',
         error: '#cc3300',
         separator: '#CED0CE',
         bolt: '#2b74b4',
