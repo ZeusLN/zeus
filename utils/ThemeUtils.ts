@@ -96,7 +96,11 @@ export function themeColor(themeString: string): any {
         secondaryText: '#8a8999',
         highlight: '#2b74b4',
         error: '#cc3300',
-        separator: '#CED0CE'
+        separator: '#CED0CE',
+        bolt: '#2b74b4',
+        chain: '#2b74b4',
+        inbound: 'lightblue',
+        outbound: '#2b74b4'
     };
 
     const Orange: { [key: string]: any } = {
