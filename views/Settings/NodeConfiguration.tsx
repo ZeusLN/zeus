@@ -646,7 +646,10 @@ export default class NodeConfiguration extends React.Component<
                     this.setState({
                         implementation: value,
                         saved: false,
-                        certVerification: value === 'lndhub' ? true : false
+                        certVerification: value === 'lndhub' ? true : false,
+                        host: '',
+                        lndhubUrl: '',
+                        url: ''
                     });
                 }}
                 values={interfaceKeys}
