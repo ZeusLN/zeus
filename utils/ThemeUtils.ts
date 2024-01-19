@@ -150,7 +150,7 @@ export function themeColor(themeString: string): any {
         background: '#04235A',
         secondary: '#064490',
         separator: '#064490',
-        highlight: '#fff'
+        highlight: '#ffd24b'
     };
 
     const DeepPurple: { [key: string]: any } = {
