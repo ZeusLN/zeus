@@ -135,7 +135,7 @@ export function themeColor(themeString: string): any {
         secondary: '#ba9cbf',
         text: '#776d86',
         secondaryText: '#6f7286',
-        highlight: '#575062',
+        highlight: '#ffd24b',
         error: '#C9592D',
         separator: '##9fa3bf',
         outbound: '#FFD93F',
