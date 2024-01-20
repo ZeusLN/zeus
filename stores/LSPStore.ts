@@ -1,12 +1,13 @@
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 
 import SettingsStore from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
 import stores from './Stores';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-const { channel } = lndMobile;
+const { channel, index } = lndMobile;
 
 import Base64Utils from '../utils/Base64Utils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
@@ -170,22 +171,58 @@ export default class LSPStore {
 
     @action
     public initChannelAcceptor = async () => {
+        const { implementation } = this.settingsStore;
         if (this.channelAcceptor) return;
-        this.channelAcceptor = LndMobileEventEmitter.addListener(
-            'ChannelAcceptor',
-            async (event: any) => {
-                try {
-                    const channelAcceptRequest =
-                        channel.decodeChannelAcceptRequest(event.data);
 
-                    await this.handleChannelAcceptorEvent(channelAcceptRequest);
-                } catch (error: any) {
-                    console.error('channel acceptance error: ' + error.message);
+        if (implementation === 'embedded-lnd') {
+            this.channelAcceptor = LndMobileEventEmitter.addListener(
+                'ChannelAcceptor',
+                async (event: any) => {
+                    try {
+                        const result = channel.decodeChannelAcceptRequest(
+                            event.data
+                        );
+                        await this.handleChannelAcceptorEvent(result);
+                    } catch (error: any) {
+                        console.error(
+                            'channelAcceptorEvent embedded-lnd error:',
+                            error.message
+                        );
+                    }
                 }
-            }
-        );
+            );
 
-        await channel.channelAcceptor();
+            await channel.channelAcceptor();
+        }
+
+        if (implementation === 'lightning-node-connect') {
+            const { LncModule } = NativeModules;
+            const eventEmitter = new NativeEventEmitter(LncModule);
+            this.channelAcceptor = eventEmitter.addListener(
+                'lnrpc.Lightning.ChannelAcceptor',
+                async (event: any) => {
+                    if (event.result) {
+                        try {
+                            const result = JSON.parse(event.result);
+                            // only allow zero conf chans from the LSP
+                            const isZeroConfAllowed =
+                                result.node_pubkey === this.info.pub_key;
+
+                            index.channelAcceptorAnswer(
+                                result.pending_chan_id,
+                                !result.wants_zero_conf || isZeroConfAllowed,
+                                isZeroConfAllowed
+                            );
+                        } catch (error: any) {
+                            console.error(
+                                'channelAcceptorEvent lightning-node-connect error:',
+                                error.message
+                            );
+                        }
+                    }
+                }
+            );
+        }
     };
 
     @action

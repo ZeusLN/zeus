@@ -841,6 +841,28 @@ export const subscribeChannelGraph = async (): Promise<string> => {
     return response;
 };
 
+/**
+ * @throws
+ */
+export const channelAcceptorAnswer = async (
+    pending_chan_id: Uint8Array,
+    zero_conf: boolean,
+    accept: boolean
+) => {
+    await sendStreamCommand<
+        lnrpc.IChannelAcceptResponse,
+        lnrpc.ChannelAcceptResponse
+    >({
+        request: lnrpc.ChannelAcceptResponse,
+        method: 'ChannelAcceptor',
+        options: {
+            pending_chan_id,
+            zero_conf,
+            accept
+        }
+    });
+};
+
 export type IReadLndLogResponse = string[];
 /**
  * @throws

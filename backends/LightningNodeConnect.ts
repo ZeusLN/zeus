@@ -388,7 +388,7 @@ export default class LightningNodeConnect {
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
-    supportsLSPs = () => false;
+    supportsLSPs = () => true;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;

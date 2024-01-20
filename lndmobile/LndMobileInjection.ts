@@ -36,6 +36,7 @@ import {
     listPayments,
     listInvoices,
     subscribeChannelGraph,
+    channelAcceptorAnswer,
     sendKeysendPaymentV2
 } from './index';
 import {
@@ -196,6 +197,11 @@ export interface ILndMobileInjections {
         ) => Promise<lnrpc.QueryRoutesResponse>;
         listPayments: () => Promise<lnrpc.ListPaymentsResponse>;
         subscribeChannelGraph: () => Promise<string>;
+        channelAcceptorAnswer: (
+            pending_chan_id: Uint8Array,
+            zero_conf: boolean,
+            accept: boolean
+        ) => void;
         sendKeysendPaymentV2: ({
             amt,
             max_shard_size_msat,
@@ -382,6 +388,7 @@ export default {
         listPayments,
         listInvoices,
         subscribeChannelGraph,
+        channelAcceptorAnswer,
         sendKeysendPaymentV2
     },
     channel: {
