@@ -375,7 +375,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 }
                 LSPStore.initChannelAcceptor();
             }
-            NodeInfoStore.getNodeInfo();
+            await NodeInfoStore.getNodeInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
             if (BackendUtils.supportsChannelManagement())
@@ -418,14 +418,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
             if (!error) {
                 await BackendUtils.checkPerms();
-                NodeInfoStore.getNodeInfo();
+                await NodeInfoStore.getNodeInfo();
                 if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
                 await BalanceStore.getCombinedBalance();
                 if (BackendUtils.supportsChannelManagement())
                     ChannelsStore.getChannels();
             }
         } else {
-            NodeInfoStore.getNodeInfo();
+            await NodeInfoStore.getNodeInfo();
             if (BackendUtils.supportsAccounts()) {
                 UTXOsStore.listAccounts();
             }
@@ -440,17 +440,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             !NodeInfoStore.testnet
         ) {
             if (connecting) {
-                await LightningAddressStore.status();
+                try {
+                    await LightningAddressStore.status();
 
-                if (lightningAddress.automaticallyAccept) {
-                    LightningAddressStore.prepareToAutomaticallyAccept();
-                }
+                    if (lightningAddress.automaticallyAccept) {
+                        LightningAddressStore.prepareToAutomaticallyAccept();
+                    }
 
-                if (
-                    // TODO add enum
-                    SettingsStore.settings.lightningAddress?.notifications === 1
-                ) {
-                    LightningAddressStore.updatePushCredentials();
+                    if (
+                        // TODO add enum
+                        SettingsStore.settings.lightningAddress
+                            ?.notifications === 1
+                    ) {
+                        LightningAddressStore.updatePushCredentials();
+                    }
+                } catch (e) {
+                    console.error('Lightning address error', e);
                 }
             }
         }
