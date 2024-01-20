@@ -64,7 +64,7 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
 import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil;
-import org.torproject.jni.TorService;
+// import org.torproject.jni.TorService;
 
 // TODO break this class up
 class LndMobile extends ReactContextBaseJavaModule {
@@ -348,10 +348,10 @@ class LndMobile extends ReactContextBaseJavaModule {
 
     String params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath();
     if (isTorEnabled) {
-      int listenPort = ZeusTorUtils.getListenPort(isTestnet);
-      String controlSocket = "unix://" + getReactApplicationContext().getDir(TorService.class.getSimpleName(), Context.MODE_PRIVATE).getAbsolutePath() + "/data/ControlSocket";
-      params += " --tor.active --tor.control=" + controlSocket;
-      params += " --tor.v3 --listen=localhost:" + listenPort;
+      // int listenPort = ZeusTorUtils.getListenPort(isTestnet);
+      // String controlSocket = "unix://" + getReactApplicationContext().getDir(TorService.class.getSimpleName(), Context.MODE_PRIVATE).getAbsolutePath() + "/data/ControlSocket";
+      // params += " --tor.active --tor.control=" + controlSocket;
+      // params += " --tor.v3 --listen=localhost:" + listenPort;
     } else {
       // If Tor isn't active, make sure we aren't
       // listening at all

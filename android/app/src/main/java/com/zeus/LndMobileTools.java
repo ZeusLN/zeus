@@ -65,7 +65,7 @@ import com.facebook.react.modules.permissions.PermissionsModule;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 import com.oblador.keychain.KeychainModule;
 
-import org.torproject.jni.TorService;
+// import org.torproject.jni.TorService;
 import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
 import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil;
 
@@ -484,9 +484,9 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void restartApp() {
-    Intent stopTorIntent = new Intent(getReactApplicationContext(), TorService.class);
-    stopTorIntent.setAction("org.torproject.android.intent.action.STOP");
-    getReactApplicationContext().stopService(stopTorIntent);
+    // Intent stopTorIntent = new Intent(getReactApplicationContext(), TorService.class);
+    // stopTorIntent.setAction("org.torproject.android.intent.action.STOP");
+    // getReactApplicationContext().stopService(stopTorIntent);
     Intent stopLndIntent = new Intent(getReactApplicationContext(), LndMobileService.class);
     stopLndIntent.setAction("app.zeusln.zeus.android.intent.action.STOP");
     getReactApplicationContext().startService(stopLndIntent);
