@@ -134,6 +134,8 @@ export default class NostrContacts extends React.Component<
                 }
             });
 
+            if (!latestContactEvent) return;
+
             const tags: Array<string> = [];
             latestContactEvent.tags.forEach((tag: string) => {
                 if (tag[0] === 'p') {
