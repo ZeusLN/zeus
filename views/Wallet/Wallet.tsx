@@ -4,7 +4,9 @@ import {
     AppState,
     BackHandler,
     Linking,
+    NativeEventEmitter,
     NativeEventSubscription,
+    NativeModules,
     PanResponder,
     PanResponderInstance,
     Platform,
@@ -119,6 +121,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private panResponder: PanResponderInstance;
     private handleAppStateChangeSubscription: NativeEventSubscription;
     private backPressSubscription: NativeEventSubscription;
+
+    channelAcceptor: any;
 
     constructor(props) {
         super(props);
@@ -369,12 +373,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     embeddedLndNetwork === 'Testnet'
                 );
             }
-            if (BackendUtils.supportsLSPs()) {
-                if (SettingsStore.settings.enableLSP) {
-                    LSPStore.getLSPInfo();
-                }
-                LSPStore.initChannelAcceptor();
-            }
             NodeInfoStore.getNodeInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
@@ -452,6 +450,51 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 ) {
                     LightningAddressStore.updatePushCredentials();
                 }
+            }
+        }
+
+        if (BackendUtils.supportsLSPs()) {
+            if (SettingsStore.settings.enableLSP) {
+                await LSPStore.getLSPInfo();
+            }
+            
+            if (implementation === 'lightning-node-connect' && !this.channelAcceptor) {
+                const { LncModule } = NativeModules;
+                    const eventEmitter = new NativeEventEmitter(LncModule);
+                    console.log('hERE~~2', eventEmitter);
+                    const call = BackendUtils.channelAcceptor();
+                    console.log('call', call)
+                    this.channelAcceptor = eventEmitter.addListener(
+                        'lnrpc.Lightning.SubscribePeerEvents',
+                        (event: any) => {
+                            if (event.result) {
+                                try {
+                                    const result = JSON.parse(event.result);
+                                    console.log('~~RESULT', result);
+                                    // // only allow zero conf chans from the LSP
+                                    // const isZeroConfAllowed =
+                                    //     result.node_pubkey === this.info.pub_key;
+        
+                                    // BackendUtils.channelAcceptorAnswer({
+                                    //     pending_chan_id: result.pending_chan_id,
+                                    //     zero_conf:
+                                    //         !result.wants_zero_conf ||
+                                    //         isZeroConfAllowed,
+                                    //     accept: isZeroConfAllowed
+                                    // });
+                                } catch (error: any) {
+                                    console.error(
+                                        'channelAcceptorEvent lightning-node-connect error:',
+                                        error.message
+                                    );
+                                }
+                            }
+                        }
+                    );
+        
+                    console.log('~~~this.channelAcceptor', this.channelAcceptor);
+            } else {
+                LSPStore.initChannelAcceptor();
             }
         }
 
