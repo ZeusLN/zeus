@@ -489,7 +489,7 @@ export default class NostrContacts extends React.Component<
                     }}
                     rightComponent={
                         <Row>
-                            {contactsData.length > 0 && (
+                            {contactsData.length > 0 && !loading && (
                                 <>
                                     <SelectButton />
                                     <Icon
