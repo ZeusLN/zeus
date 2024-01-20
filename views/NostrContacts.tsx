@@ -9,7 +9,6 @@ import {
     Animated,
     Easing
 } from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
 import { CheckBox, Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { relayInit, nip05, nip19 } from 'nostr-tools';
@@ -23,6 +22,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import { Row } from '../components/layout/Row';
 
 import AddressUtils from '../utils/AddressUtils';
+import ContactUtils from '../utils/ContactUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -196,33 +196,6 @@ export default class NostrContacts extends React.Component<
         });
     }
 
-    transformContactData = (contact: any) => {
-        return {
-            photo: contact?.picture,
-            name: contact?.display_name || contact?.name,
-            description: contact?.about,
-            lnAddress: contact?.lud16
-                ? [contact?.lud16]
-                : contact?.lud06
-                ? [contact?.lud06]
-                : contact?.lud16 && contact?.lud06
-                ? [contact?.lud06, contact?.lud16]
-                : [],
-            onchainAddress: [''],
-            pubkey: [''],
-            nip05: contact?.nip05 ? [contact?.nip05] : [],
-            nostrNpub: contact?.npub
-                ? [contact?.npub]
-                : contact?.pubkey
-                ? [nip19.npubEncode(contact.pubkey)]
-                : [],
-            contactId: uuidv4(),
-            isFavourite: false,
-            banner: contact?.banner,
-            isSelected: false
-        };
-    };
-
     toggleContactSelection = (contact: any) => {
         this.setState((prevState) => {
             const selectedContacts = [...prevState.selectedContacts];
@@ -267,7 +240,7 @@ export default class NostrContacts extends React.Component<
             return `${str.substring(0, 6)}...${str.substring(str.length - 6)}`;
         };
 
-        if (!item.name && !item.display_name) {
+        if (!item?.name && !item?.display_name) {
             return null;
         }
 
@@ -286,14 +259,13 @@ export default class NostrContacts extends React.Component<
 
         return (
             <TouchableOpacity
-                onPress={() => {
+                onPress={async () => {
                     if (isSelectionMode) {
-                        this.toggleContactSelection(
-                            this.transformContactData(item)
-                        );
+                        this.toggleContactSelection(item);
                     } else {
                         navigation.navigate('ContactDetails', {
-                            nostrContact: this.transformContactData(item),
+                            nostrContact:
+                                await ContactUtils.transformContactData(item),
                             isNostrContact: true
                         });
                     }
@@ -314,9 +286,7 @@ export default class NostrContacts extends React.Component<
                         <CheckBox
                             checked={isSelected}
                             onPress={() => {
-                                this.toggleContactSelection(
-                                    this.transformContactData(item)
-                                );
+                                this.toggleContactSelection(item);
                             }}
                         />
                     </Animated.View>
@@ -349,7 +319,7 @@ export default class NostrContacts extends React.Component<
                                 color: themeColor('text')
                             }}
                         >
-                            {item.display_name || item.name}
+                            {item?.display_name || item?.name}
                         </Text>
                         {item.lud06 && (
                             <Text
@@ -377,47 +347,37 @@ export default class NostrContacts extends React.Component<
         );
     };
 
-    importSelectedContacts = async () => {
+    importContacts = async () => {
+        this.setState({
+            loading: true
+        });
+
         try {
-            const { selectedContacts } = this.state;
+            let contactsToImport = [];
 
-            // Retrieve existing contacts from Encrypted storage
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
+            // Check if selectedContacts is not empty, use it; otherwise, use contactsData
+            if (this.state.selectedContacts.length > 0) {
+                contactsToImport = this.state.selectedContacts;
+            } else {
+                contactsToImport = this.state.contactsData;
+            }
+
+            // Remove null values and contacts without name or display_name
+            contactsToImport = contactsToImport.filter(
+                (contact) =>
+                    contact !== null &&
+                    (contact?.name || contact?.display_name) &&
+                    contact?.picture &&
+                    (contact?.lud06 || contact.lud16)
             );
-            const existingContacts: any = contactsString
-                ? JSON.parse(contactsString)
-                : [];
-
-            // Merge existing contacts with the selected contacts
-            const updatedContacts = [
-                ...existingContacts,
-                ...selectedContacts
-            ].sort((a, b) => a.name.localeCompare(b.name));
-
-            // Save the updated contacts to encrypted storage
-            await EncryptedStorage.setItem(
-                'zeus-contacts',
-                JSON.stringify(updatedContacts)
-            );
-
-            console.log('Contacts imported successfully!');
-        } catch (error) {
-            console.log('Error importing contacts:', error);
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.NostrContacts.importContactsError')
-            );
-        }
-    };
-
-    importAllContacts = async () => {
-        try {
-            const contactsToImport = this.state.contactsData;
 
             // Transform Nostr contacts data to match the format in AddContact
-            const transformedContacts = contactsToImport.map((contact) =>
-                this.transformContactData(contact)
+            const transformedContactsPromises = contactsToImport.map(
+                (contact) => ContactUtils.transformContactData(contact)
+            );
+
+            const transformedContacts = await Promise.all(
+                transformedContactsPromises
             );
 
             // Retrieve existing contacts from Encrypted storage
@@ -441,12 +401,18 @@ export default class NostrContacts extends React.Component<
             );
 
             console.log('Contacts imported successfully!');
+            this.setState({
+                loading: false
+            });
         } catch (error) {
             console.log('Error importing contacts:', error);
             Alert.alert(
                 localeString('general.error'),
                 localeString('views.NostrContacts.importContactsError')
             );
+            this.setState({
+                loading: false
+            });
         }
     };
 
@@ -612,19 +578,22 @@ export default class NostrContacts extends React.Component<
                         data={contactsData}
                         style={{ marginTop: 10 }}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(item, index) => index.toString()}
+                        keyExtractor={(_, index) => index.toString()}
                     />
                 )}
-                {!isSelectionMode &&
+                {!loading &&
+                    !isSelectionMode &&
                     contactsData.length > 0 &&
                     selectedContacts.length === 0 && (
                         <Button
                             title={localeString(
                                 'views.NostrContacts.importAllContacts'
                             )}
-                            onPress={() => {
-                                this.importAllContacts();
-                                navigation.navigate('Contacts');
+                            onPress={async () => {
+                                await this.importContacts();
+                                navigation.navigate('Contacts', {
+                                    loading: true
+                                });
                             }}
                             containerStyle={{
                                 paddingBottom: 12,
@@ -633,7 +602,7 @@ export default class NostrContacts extends React.Component<
                             secondary
                         />
                     )}
-                {isSelectionMode && selectedContacts.length >= 0 && (
+                {!loading && isSelectionMode && selectedContacts.length >= 0 && (
                     <Button
                         title={`${localeString(
                             'views.OpenChannel.import'
@@ -642,9 +611,9 @@ export default class NostrContacts extends React.Component<
                                 ? ` (${selectedContacts.length})`
                                 : ''
                         }`}
-                        onPress={() => {
-                            this.importSelectedContacts();
-                            navigation.navigate('Contacts');
+                        onPress={async () => {
+                            await this.importContacts();
+                            navigation.navigate('Contacts', { loading: true });
                         }}
                         containerStyle={{ paddingBottom: 12, paddingTop: 8 }}
                         secondary
