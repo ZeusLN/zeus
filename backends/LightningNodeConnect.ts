@@ -354,6 +354,15 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .lookupInvoice({ r_hash: Base64Utils.hexToBase64(data.r_hash) })
             .then((data: lnrpc.Invoice) => snakeize(data));
+    channelAcceptor = (data: lnrpc.channelAcceptRequest) => this.lnc.lnd.lightning.channelAcceptor(data);
+    channelAcceptorAnswer = (data: lnrpc.channelAcceptorResponse) => {
+        console.log('backend', data);
+        return this.lnc.lnd.lightning.channelAcceptor({
+            pending_chan_id: data.pending_chan_id,
+            zero_conf: data.zero_conf,
+            accept: data.accept
+        });
+    };
     subscribeInvoice = (r_hash: string) =>
         this.lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
     subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
@@ -388,7 +397,7 @@ export default class LightningNodeConnect {
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
-    supportsLSPs = () => false;
+    supportsLSPs = () => true;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;

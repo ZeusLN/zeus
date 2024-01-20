@@ -520,7 +520,7 @@ PODS:
   - RNVectorIcons (7.1.0):
     - React
   - SocketRocket (0.6.1)
-  - SwiftProtobuf (1.23.0)
+  - SwiftProtobuf (1.25.2)
   - TcpSockets (4.0.0):
     - React
   - Yoga (1.14.0)
@@ -830,7 +830,7 @@ SPEC CHECKSUMS:
   RNSVG: d00c8f91c3cbf6d476451313a18f04d220d4f396
   RNVectorIcons: bc69e6a278b14842063605de32bec61f0b251a59
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
-  SwiftProtobuf: b70d65f419fbfe61a2d58003456ca5da58e337d6
+  SwiftProtobuf: 407a385e97fd206c4fbe880cc84123989167e0d1
   TcpSockets: 4ef55305239923b343ed0a378b1fac188b1373b0
   Yoga: 86fed2e4d425ee4c6eab3813ba1791101ee153c6
 

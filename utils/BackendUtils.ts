@@ -106,6 +106,9 @@ class BackendUtils {
         this.call('publishTransaction', args);
     bumpFee = (...args: any[]) => this.call('bumpFee', args);
     lookupInvoice = (...args: any[]) => this.call('lookupInvoice', args);
+    channelAcceptor = (...args: any[]) => this.call('channelAcceptor', args);
+    channelAcceptorAnswer = (...args: any[]) =>
+        this.call('channelAcceptorAnswer', args);
     subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
     subscribeInvoices = (...args: any[]) =>
         this.call('subscribeInvoices', args);
