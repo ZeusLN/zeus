@@ -58,7 +58,7 @@ export default class NodeInfoStore {
         this.errorMsg = '';
         this.loading = true;
         const currentRequest = (this.currentRequest = {});
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             BackendUtils.getMyNodeInfo()
                 .then((data: any) => {
                     if (this.currentRequest !== currentRequest) {
@@ -74,12 +74,13 @@ export default class NodeInfoStore {
                 })
                 .catch((error: any) => {
                     if (this.currentRequest !== currentRequest) {
-                        reject('Old getNodeInfo call');
+                        resolve('Old getNodeInfo call');
+                        return;
                     }
                     // handle error
                     this.errorMsg = errorToUserFriendly(error.toString());
                     this.getNodeInfoError();
-                    reject(error);
+                    resolve(error);
                 });
         });
     };
