@@ -26,10 +26,11 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
+import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { protectedNavigation } from '../utils/NavigationUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import BackendUtils from '../utils/BackendUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
@@ -81,25 +82,6 @@ const MailboxAnimated = () => {
             <Mailbox />
         </Animated.View>
     );
-};
-
-const protectedNavigation = async (
-    navigation: any,
-    route: string,
-    disactivatePOS?: boolean
-) => {
-    const { posStatus, settings, setPosStatus } = stores.settingsStore;
-    const loginRequired = settings && (settings.passphrase || settings.pin);
-    const posEnabled = posStatus === 'active';
-
-    if (posEnabled && loginRequired) {
-        navigation.navigate('Lockscreen', {
-            attemptAdminLogin: true
-        });
-    } else {
-        if (disactivatePOS) setPosStatus('inactive');
-        navigation.navigate(route);
-    }
 };
 
 const ActivityButton = ({ navigation }: { navigation: any }) => (
