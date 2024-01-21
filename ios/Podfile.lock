@@ -469,11 +469,11 @@ PODS:
     - React
   - RNCAsyncStorage (1.19.3):
     - React-Core
-  - RNCClipboard (1.9.0):
+  - RNCClipboard (1.13.2):
     - React-Core
   - RNCMaskedView (0.1.11):
     - React
-  - RNCPicker (2.4.8):
+  - RNCPicker (2.6.1):
     - React-Core
   - RNFS (2.20.0):
     - React-Core
@@ -823,9 +823,9 @@ SPEC CHECKSUMS:
   ReactNativeCameraKit: 9d46a5d7dd544ca64aa9c03c150d2348faf437eb
   RemobileReactNativeQrcodeLocalImage: 57aadc12896b148fb5e04bc7c6805f3565f5c3fa
   RNCAsyncStorage: c913ede1fa163a71cea118ed4670bbaaa4b511bb
-  RNCClipboard: 99fc8ad669a376b756fbc8098ae2fd05c0ed0668
+  RNCClipboard: 60fed4b71560d7bfe40e9d35dea9762b024da86d
   RNCMaskedView: 0e1bc4bfa8365eba5fbbb71e07fbdc0555249489
-  RNCPicker: 0bf8ef8f7800524f32d2bb2a8bcadd53eda0ecd1
+  RNCPicker: b18aaf30df596e9b1738e7c1f9ee55402a229dca
   RNFS: 4ac0f0ea233904cb798630b3c077808c06931688
   RNGestureHandler: c0d04458598fcb26052494ae23dda8f8f5162b13
   RNKeychain: ff836453cba46938e0e9e4c22e43d43fa2c90333
