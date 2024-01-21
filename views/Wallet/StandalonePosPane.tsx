@@ -136,7 +136,7 @@ export default class StandalonePosPane extends React.PureComponent<
 
             const uncategorized: Array<Product> = [];
             const productsList: Array<ProductSectionList> = [];
-            products.forEach((product) => {
+            products?.forEach((product) => {
                 if (product.status !== ProductStatus.Active) return;
                 if (product.category === '') {
                     uncategorized.push(product);
