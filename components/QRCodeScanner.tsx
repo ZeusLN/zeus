@@ -6,7 +6,8 @@ import {
     View,
     Platform,
     TouchableOpacity,
-    PermissionsAndroid
+    PermissionsAndroid,
+    BackHandler
 } from 'react-native';
 import {
     Camera,
@@ -26,7 +27,6 @@ import FlashOffIcon from './../assets/images/SVG/Flash Off.svg';
 import FlashOnIcon from './../assets/images/SVG/Flash On.svg';
 import GalleryIcon from './../assets/images/SVG/Gallery.svg';
 import ScanFrameSvg from './../assets/images/SVG/DynamicSVG/ScanFrameSvg';
-import { useIsFocused } from './useIsFocused';
 
 const createHash = require('create-hash');
 
@@ -55,6 +55,21 @@ export default function QRCodeScanner({
     const [isTorchOn, setIsTorchOn] = useState(false);
     const [scannedQrCode, setScannedQrCode] = useState<string | null>(null);
     const [scannedCache, setScannedCache] = useState(new Set<string>());
+    const [backPressed, setBackPressed] = useState(false);
+
+    useEffect(() => {
+        console.log('registering back press listener');
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            () => {
+                console.log('back pressed');
+                setBackPressed(true);
+                return true;
+            }
+        );
+
+        return () => backHandler.remove();
+    }, []);
 
     console.log('QRCodeScanner render');
     const maskLength = (Dimensions.get('window').width * 80) / 100;
@@ -198,16 +213,17 @@ export default function QRCodeScanner({
                         device={device}
                         codeScanner={codeScanner}
                         torch={isTorchOn ? 'on' : 'off'}
-                        isActive={!scannedQrCode}
+                        isActive={!scannedQrCode && !backPressed}
                         enableZoomGesture={true}
-                        onInitialized={() => {
-                            console.log('onInitialized');
-                        }}
+                        onInitialized={() => console.log('onInitialized')}
                         onError={(error) => console.error('onError', error)}
                         onStopped={() => {
                             console.log('onStopped');
                             if (scannedQrCode) {
                                 handleQRScanned(scannedQrCode);
+                            } else if (backPressed) {
+                                console.log('back pressed -> nav pop');
+                                goBack();
                             }
                         }}
                     />
@@ -263,7 +279,7 @@ export default function QRCodeScanner({
                     <View style={styles.cancelOverlay}>
                         <Button
                             title={localeString('general.cancel')}
-                            onPress={() => goBack()}
+                            onPress={() => setBackPressed(true)}
                             iconOnly
                             noUppercase
                         />
