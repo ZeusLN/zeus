@@ -151,11 +151,7 @@ export default class BalancePane extends React.PureComponent<
 
         if (!error) {
             balancePane = (
-                <View
-                    style={{
-                        minHeight: 200
-                    }}
-                >
+                <View style={{ minHeight: 200 }}>
                     <WalletHeader
                         navigation={navigation}
                         SettingsStore={SettingsStore}
