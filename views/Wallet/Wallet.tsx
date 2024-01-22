@@ -38,38 +38,38 @@ import Screen from '../../components/Screen';
 import BackendUtils from '../../utils/BackendUtils';
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
+import {
+    initializeLnd,
+    startLnd,
+    expressGraphSync
+} from '../../utils/LndMobileUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import BalanceStore from '../../stores/BalanceStore';
+import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import FiatStore from '../../stores/FiatStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
+import LnurlPayStore from '../../stores/LnurlPayStore';
+import LSPStore from '../../stores/LSPStore';
+import ModalStore from '../../stores/ModalStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore, {
     PosEnabled,
     Settings
 } from '../../stores/SettingsStore';
-import UTXOsStore from '../../stores/UTXOsStore';
-import ModalStore from '../../stores/ModalStore';
 import SyncStore from '../../stores/SyncStore';
-import LSPStore from '../../stores/LSPStore';
-import ChannelBackupStore from '../../stores/ChannelBackupStore';
-import LightningAddressStore from '../../stores/LightningAddressStore';
-import LnurlPayStore from '../../stores/LnurlPayStore';
+import UnitsStore from '../../stores/UnitsStore';
+import UTXOsStore from '../../stores/UTXOsStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
-
-import {
-    initializeLnd,
-    startLnd,
-    expressGraphSync
-} from '../../utils/LndMobileUtils';
-import UnitsStore from '../../stores/UnitsStore';
 
 interface WalletProps {
     enterSetup: any;
@@ -789,37 +789,38 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     </View>
                                 </View>
                             </View>
-                            {posStatus !== 'active' && (
-                                <View
-                                    style={{
-                                        bottom: 56,
-                                        position: 'absolute',
-                                        alignSelf: 'center'
+                            <View
+                                style={{
+                                    bottom: 56,
+                                    position: 'absolute',
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                <Button
+                                    title={
+                                        settings.nodes
+                                            ? localeString(
+                                                  'views.Settings.title'
+                                              )
+                                            : null
+                                    }
+                                    containerStyle={{
+                                        width: 320
                                     }}
-                                >
-                                    <Button
-                                        title={
-                                            settings.nodes
-                                                ? localeString(
-                                                      'views.Settings.title'
-                                                  )
-                                                : null
-                                        }
-                                        containerStyle={{
-                                            width: 320
-                                        }}
-                                        titleStyle={{
-                                            color: themeColor('text')
-                                        }}
-                                        onPress={() => {
-                                            if (settings.nodes)
-                                                navigation.navigate('Settings');
-                                        }}
-                                        adaptiveWidth
-                                        iconOnly
-                                    />
-                                </View>
-                            )}
+                                    titleStyle={{
+                                        color: themeColor('text')
+                                    }}
+                                    onPress={() => {
+                                        if (settings.nodes)
+                                            protectedNavigation(
+                                                navigation,
+                                                'Settings'
+                                            );
+                                    }}
+                                    adaptiveWidth
+                                    iconOnly
+                                />
+                            </View>
                         </Screen>
                     )}
             </View>
