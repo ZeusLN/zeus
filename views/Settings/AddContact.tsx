@@ -276,7 +276,7 @@ export default class AddContact extends React.Component<
 
                             // Set the local file path in the state
                             this.setState({
-                                photo: 'file://' + filePath
+                                photo: 'rnfs://' + fileName
                             });
                         } catch (error) {
                             console.error('Error saving file: ', error);
@@ -371,6 +371,14 @@ export default class AddContact extends React.Component<
         }
     }
 
+    getPhoto(photo): string {
+        if (photo?.includes('rnfs://')) {
+            const fileName = photo.replace('rnfs://', '');
+            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
+        }
+        return photo || '';
+    }
+
     render() {
         const { navigation } = this.props;
         const {
@@ -381,6 +389,7 @@ export default class AddContact extends React.Component<
             pubkey,
             name,
             description,
+            photo,
             isValidOnchainAddress,
             isValidLightningAddress,
             isValidNIP05,
@@ -487,10 +496,10 @@ export default class AddContact extends React.Component<
                                         justifyContent: 'center'
                                     }}
                                 >
-                                    {this.state.photo ? (
+                                    {photo ? (
                                         <Image
                                             source={{
-                                                uri: this.state.photo
+                                                uri: this.getPhoto(photo)
                                             }}
                                             style={styles.photo}
                                         />

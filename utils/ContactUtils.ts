@@ -45,13 +45,11 @@ const transformContactData = async (contact: any) => {
                 }).promise;
 
                 console.log('Banner download successful!');
-                transformedContact.banner = 'file://' + bannerFilePath;
+                transformedContact.banner = 'rnfs://' + bannerFileName;
             } catch (bannerError) {
                 console.error('Error downloading banner:', bannerError);
             }
         }
-
-        console.log('Transformed contact:', transformedContact);
 
         if (contact?.picture) {
             console.log('Downloading image...');
@@ -67,11 +65,13 @@ const transformContactData = async (contact: any) => {
                 }).promise;
 
                 console.log('Download successful!');
-                transformedContact.photo = 'file://' + filePath;
+                transformedContact.photo = 'rnfs://' + fileName;
             } catch (photoError) {
                 console.error('Error downloading photo:', photoError);
             }
         }
+
+        console.log('Transformed contact:', transformedContact);
 
         return transformedContact;
     } catch (error) {
