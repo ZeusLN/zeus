@@ -553,6 +553,171 @@ export const CURRENCY_KEYS = [
         key: '🇲🇷 Mauritanian Ouguiya (MRU)',
         value: 'MRU',
         supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇦🇱 Albanian Lek (ALL)',
+        value: 'ALL',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇳🇱 Netherlands Antillean Guilder (ANG)',
+        value: 'ANG',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇦🇴 Angolan Kwanza (AOA)',
+        value: 'AOA',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇩 Bangladeshi Takka (BDT)',
+        value: 'BDT',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇬 Bulgarian Lev (BGN)',
+        value: 'BGN',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇭 Bahraini Dinar (BHD)',
+        value: 'BHD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇮 Burundian Franc (BIF)',
+        value: 'BIF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇲 Bermudan Dollar (BMD)',
+        value: 'BMD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇼 Botswanan Pula (BWP)',
+        value: 'BWP',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇩🇯 Djiboutian Franc (DJF)',
+        value: 'DJF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇩🇿 Algerian Dinar (DZD)',
+        value: 'DZD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇪🇬 Egyptian Pound (EGP)',
+        value: 'EGP',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇪🇹 Ethiopian Birr (ETB)',
+        value: 'ETB',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇬🇪 Georgian Lari (GEL)',
+        value: 'GEL',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇬🇭 Ghanaian Cedi (GHS)',
+        value: 'GHS',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇬🇳 Guinean Franc (GNF)',
+        value: 'GNF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇭🇳 Honduran Lempira (HNL)',
+        value: 'HNL',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇮🇷 Iranian Rial (IRR)',
+        value: 'IRR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇯🇴 Jordanian Dinar (JOD)',
+        value: 'JOD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇰🇬 Kyrgystani Som (KGS)',
+        value: 'KGS',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇰🇿 Kazakhstani Tenge (KZT)',
+        value: 'KZT',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇱🇰 Sri Lankan Rupee (LKR)',
+        value: 'LKR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇲🇦 Moroccan Dirham (MAD)',
+        value: 'MAD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇲🇬 Malagasy Ariar (MGA)',
+        value: 'MGA',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇳🇦 Namibian Dollar (NAD)',
+        value: 'NAD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇳🇵 Nepalese Rupee (NPR)',
+        value: 'NPR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇵🇦 Panamanian Balboa (PAB)',
+        value: 'PAB',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇵🇪 Peruvian Sol (PEN)',
+        value: 'PEN',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇵🇰 Pakistani Rupee (PKR)',
+        value: 'PKR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇷🇸 Serbian Dinar (RSD)',
+        value: 'RSD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇷🇼 Rwandan Franc (RWF)',
+        value: 'RWF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇺🇿 Uzbekistan Sum (UZS)',
+        value: 'UZS',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇻🇳 Vietnamese Dong (VND)',
+        value: 'VND',
+        supportedSources: ['Zeus', 'Yadio']
     }
 ];
 
