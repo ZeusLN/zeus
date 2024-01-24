@@ -51,8 +51,6 @@ const transformContactData = async (contact: any) => {
             }
         }
 
-        console.log('Transformed contact:', transformedContact);
-
         if (contact?.picture) {
             console.log('Downloading image...');
             const fileName =
@@ -72,6 +70,8 @@ const transformContactData = async (contact: any) => {
                 console.error('Error downloading photo:', photoError);
             }
         }
+
+        console.log('Transformed contact:', transformedContact);
 
         return transformedContact;
     } catch (error) {
