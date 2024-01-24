@@ -247,8 +247,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         await SettingsStore.getSettings().then(async (settings: Settings) => {
             const loginRequired = SettingsStore.loginRequired();
             const posEnabled =
-                settings &&
-                settings.pos &&
+                settings?.pos?.posEnabled &&
                 settings.pos.posEnabled !== PosEnabled.Disabled;
 
             if (!loginRequired) SettingsStore.setLoginStatus(true);
@@ -335,7 +334,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         LnurlPayStore.reset();
 
         if (
-            pos &&
+            pos?.posEnabled &&
             pos.posEnabled !== PosEnabled.Disabled &&
             posStatus === 'active'
         ) {
