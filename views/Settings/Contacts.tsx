@@ -167,9 +167,9 @@ export default class Contacts extends React.Component<
                         alignItems: 'center'
                     }}
                 >
-                    {item.photo && (
+                    {contact.photo && (
                         <Image
-                            source={{ uri: item.photo }}
+                            source={{ uri: contact.getPhoto }}
                             style={{
                                 width: 40,
                                 height: 40,
