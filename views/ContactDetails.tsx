@@ -338,7 +338,7 @@ export default class ContactDetails extends React.Component<
                         >
                             {contact.banner && (
                                 <Image
-                                    source={{ uri: contact.banner }}
+                                    source={{ uri: contact.getBanner }}
                                     style={{
                                         width: '100%',
                                         height: 150,
@@ -348,7 +348,7 @@ export default class ContactDetails extends React.Component<
                             )}
                             {contact.photo && (
                                 <Image
-                                    source={{ uri: contact.photo }}
+                                    source={{ uri: contact.getPhoto }}
                                     style={{
                                         width: 150,
                                         height: 150,
