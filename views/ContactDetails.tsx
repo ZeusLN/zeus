@@ -360,7 +360,7 @@ export default class ContactDetails extends React.Component<
                             )}
                             <Text
                                 style={{
-                                    fontSize: 44,
+                                    fontSize: 40,
                                     fontWeight: 'bold',
                                     marginBottom: 10,
                                     color: 'white'
