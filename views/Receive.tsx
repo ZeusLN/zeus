@@ -97,6 +97,7 @@ interface ReceiveProps {
 
 interface ReceiveState {
     selectedIndex: number;
+    expirationIndex: number;
     addressType: string;
     memo: string;
     value: string;
@@ -138,6 +139,7 @@ export default class Receive extends React.Component<
     onChainInterval: any;
     state = {
         selectedIndex: 0,
+        expirationIndex: 1,
         addressType: '0',
         memo: '',
         value: '',
@@ -837,6 +839,30 @@ export default class Receive extends React.Component<
         InvoicesStore.getNewAddress(params);
     };
 
+    updateExpirationIndex = (expirationIndex: number) => {
+        if (expirationIndex === 0) {
+            this.setState({
+                expiry: '600',
+                expirationIndex: 0
+            });
+        } else if (expirationIndex === 1) {
+            this.setState({
+                expiry: '3600',
+                expirationIndex: 1
+            });
+        } else if (expirationIndex === 2) {
+            this.setState({
+                expiry: '86400',
+                expirationIndex: 2
+            });
+        } else if (expirationIndex === 3) {
+            this.setState({
+                expiry: '604800',
+                expirationIndex: 3
+            });
+        }
+    };
+
     updateIndex = (selectedIndex: number) => {
         this.setState({
             selectedIndex
@@ -855,6 +881,7 @@ export default class Receive extends React.Component<
         } = this.props;
         const {
             selectedIndex,
+            expirationIndex,
             addressType,
             memo,
             value,
@@ -1119,6 +1146,66 @@ export default class Receive extends React.Component<
             Number(satAmount) !== 0 && Number(satAmount) < 546;
 
         const windowSize = Dimensions.get('window');
+
+        const tenMButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        expirationIndex === 0
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                10M
+            </Text>
+        );
+        const oneHButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        expirationIndex === 1
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                1H
+            </Text>
+        );
+        const oneDButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        expirationIndex === 2
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                1D
+            </Text>
+        );
+        const oneWButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        expirationIndex === 3
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                1W
+            </Text>
+        );
+
+        const expirationButtons = [
+            { element: tenMButton },
+            { element: oneHButton },
+            { element: oneDButton },
+            { element: oneWButton }
+        ];
 
         return (
             <Screen>
@@ -1753,11 +1840,71 @@ export default class Receive extends React.Component<
                                                     value={expiry}
                                                     onChangeText={(
                                                         text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            expiry: text
-                                                        })
+                                                    ) => {
+                                                        if (text == '600') {
+                                                            this.setState({
+                                                                expiry: text,
+                                                                expirationIndex: 0
+                                                            });
+                                                        } else if (
+                                                            text == '3600'
+                                                        ) {
+                                                            this.setState({
+                                                                expiry: text,
+                                                                expirationIndex: 1
+                                                            });
+                                                        } else if (
+                                                            text == '86400'
+                                                        ) {
+                                                            this.setState({
+                                                                expiry: text,
+                                                                expirationIndex: 2
+                                                            });
+                                                        } else if (
+                                                            text == '604800'
+                                                        ) {
+                                                            this.setState({
+                                                                expiry: text,
+                                                                expirationIndex: 3
+                                                            });
+                                                        } else {
+                                                            this.setState({
+                                                                expiry: text,
+                                                                expirationIndex: 5
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+                                                <ButtonGroup
+                                                    onPress={
+                                                        this
+                                                            .updateExpirationIndex
                                                     }
+                                                    selectedIndex={
+                                                        expirationIndex
+                                                    }
+                                                    buttons={expirationButtons}
+                                                    selectedButtonStyle={{
+                                                        backgroundColor:
+                                                            themeColor(
+                                                                'highlight'
+                                                            ),
+                                                        borderRadius: 12
+                                                    }}
+                                                    containerStyle={{
+                                                        backgroundColor:
+                                                            themeColor(
+                                                                'secondary'
+                                                            ),
+                                                        borderRadius: 12,
+                                                        borderWidth: 0,
+                                                        height: 30
+                                                    }}
+                                                    innerBorderStyle={{
+                                                        color: themeColor(
+                                                            'secondary'
+                                                        )
+                                                    }}
                                                 />
                                             </>
                                         )}
