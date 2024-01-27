@@ -494,6 +494,7 @@ export default class PointOfSale extends React.Component<
                                     </Text>
                                     <TextInput
                                         value={taxPercentage}
+                                        keyboardType="numeric"
                                         onChangeText={async (text: string) => {
                                             this.setState({
                                                 taxPercentage: text
