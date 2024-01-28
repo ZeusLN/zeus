@@ -57,8 +57,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const { settings } = SettingsStore;
         const disableTips: boolean =
             settings && settings.pos && settings.pos.disableTips;
-        const disablePrinter: boolean =
-            settings && settings.pos && settings.pos.disablePrinter;
 
         this.state = {
             order,
