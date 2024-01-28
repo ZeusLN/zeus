@@ -80,6 +80,7 @@ import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
 import Gear from '../assets/images/SVG/Gear.svg';
+import Order from '../models/Order';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -1120,6 +1121,20 @@ export default class Receive extends React.Component<
 
         const windowSize = Dimensions.get('window');
 
+        const disablePrinter: boolean = settings?.pos?.disablePrinter || false;
+
+        let order: Order | undefined;
+        if (
+            posStatus === 'active' &&
+            Platform.OS === 'android' &&
+            !disablePrinter
+        ) {
+            const { PosStore } = this.props;
+            order = this.state.orderId
+                ? PosStore.getOrderById(this.state.orderId)
+                : undefined;
+        }
+
         return (
             <Screen>
                 <Header
@@ -1198,6 +1213,21 @@ export default class Receive extends React.Component<
                                     </Text>
                                 </>
                             </View>
+                            {order && (
+                                <Button
+                                    title={localeString(
+                                        'pos.views.Order.printReceipt'
+                                    )}
+                                    secondary
+                                    icon={{ name: 'print', size: 25 }}
+                                    onPress={() =>
+                                        navigation.navigate('Order', {
+                                            order,
+                                            print: true
+                                        })
+                                    }
+                                />
+                            )}
                             <Button
                                 title={
                                     posStatus === 'active'

@@ -543,6 +543,14 @@ export default class PosStore {
             });
     };
 
+    @action
+    public getOrderById = (orderId: string): Order | undefined => {
+        return (
+            this.openOrders.find((order) => order.id === orderId) ||
+            this.paidOrders.find((order) => order.id === orderId)
+        );
+    };
+
     resetOrders = () => {
         this.openOrders = [];
         this.paidOrders = [];
