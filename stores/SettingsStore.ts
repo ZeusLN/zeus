@@ -59,6 +59,7 @@ interface PosSettings {
     squareDevMode?: boolean;
     showKeypad?: boolean;
     taxPercentage?: string;
+    disablePrinter?: boolean;
 }
 
 interface PaymentsSettings {
@@ -763,7 +764,8 @@ export default class SettingsStore {
             disableTips: false,
             squareDevMode: false,
             showKeypad: true,
-            taxPercentage: '0'
+            taxPercentage: '0',
+            disablePrinter: false
         },
         payments: {
             defaultFeeMethod: 'fixed', // deprecated

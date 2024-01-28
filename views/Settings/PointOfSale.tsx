@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -38,6 +38,7 @@ interface PointOfSaleState {
     squareDevMode: boolean;
     showKeypad: boolean;
     taxPercentage: string;
+    disablePrinter: boolean;
 }
 
 @inject('SettingsStore')
@@ -55,7 +56,8 @@ export default class PointOfSale extends React.Component<
         disableTips: false,
         squareDevMode: false,
         showKeypad: true,
-        taxPercentage: '0'
+        taxPercentage: '0',
+        disablePrinter: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -73,7 +75,8 @@ export default class PointOfSale extends React.Component<
             disableTips: settings?.pos?.disableTips || false,
             squareDevMode: settings?.pos?.squareDevMode || false,
             showKeypad: settings?.pos?.showKeypad || false,
-            taxPercentage: settings?.pos?.taxPercentage || '0'
+            taxPercentage: settings?.pos?.taxPercentage || '0',
+            disablePrinter: settings?.pos?.disablePrinter || false
         });
     }
 
@@ -97,7 +100,8 @@ export default class PointOfSale extends React.Component<
             disableTips,
             squareDevMode,
             showKeypad,
-            taxPercentage
+            taxPercentage,
+            disablePrinter
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { passphrase, pin, fiatEnabled } = settings;
@@ -180,7 +184,8 @@ export default class PointOfSale extends React.Component<
                                             disableTips,
                                             squareDevMode,
                                             showKeypad,
-                                            taxPercentage
+                                            taxPercentage,
+                                            disablePrinter
                                         }
                                     });
                                 }}
@@ -216,7 +221,8 @@ export default class PointOfSale extends React.Component<
                                                     disableTips,
                                                     squareDevMode,
                                                     showKeypad,
-                                                    taxPercentage
+                                                    taxPercentage,
+                                                    disablePrinter
                                                 }
                                             });
                                         }}
@@ -249,7 +255,8 @@ export default class PointOfSale extends React.Component<
                                                     disableTips,
                                                     squareDevMode,
                                                     showKeypad,
-                                                    taxPercentage
+                                                    taxPercentage,
+                                                    disablePrinter
                                                 }
                                             });
                                         }}
@@ -282,7 +289,8 @@ export default class PointOfSale extends React.Component<
                                                     disableTips,
                                                     squareDevMode,
                                                     showKeypad,
-                                                    taxPercentage
+                                                    taxPercentage,
+                                                    disablePrinter
                                                 }
                                             });
                                         }}
@@ -333,7 +341,8 @@ export default class PointOfSale extends React.Component<
                                                             squareDevMode:
                                                                 !squareDevMode,
                                                             showKeypad,
-                                                            taxPercentage
+                                                            taxPercentage,
+                                                            disablePrinter
                                                         }
                                                     });
                                                 }}
@@ -417,13 +426,69 @@ export default class PointOfSale extends React.Component<
                                                             disableTips:
                                                                 !disableTips,
                                                             squareDevMode,
-                                                            taxPercentage
+                                                            taxPercentage,
+                                                            disablePrinter
                                                         }
                                                     });
                                                 }}
                                             />
                                         </View>
                                     </ListItem>
+
+                                    {Platform.OS === 'android' && (
+                                        <ListItem
+                                            containerStyle={{
+                                                borderBottomWidth: 0,
+                                                backgroundColor: 'transparent'
+                                            }}
+                                        >
+                                            <ListItem.Title
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    left: -10
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.POS.disablePrinter'
+                                                )}
+                                            </ListItem.Title>
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'flex-end'
+                                                }}
+                                            >
+                                                <Switch
+                                                    value={disablePrinter}
+                                                    onValueChange={async () => {
+                                                        this.setState({
+                                                            disablePrinter:
+                                                                !disablePrinter
+                                                        });
+                                                        await updateSettings({
+                                                            pos: {
+                                                                squareAccessToken,
+                                                                squareLocationId,
+                                                                posEnabled,
+                                                                merchantName,
+                                                                confirmationPreference,
+                                                                disableTips,
+                                                                squareDevMode,
+                                                                taxPercentage,
+                                                                disablePrinter:
+                                                                    !disablePrinter
+                                                            }
+                                                        });
+                                                    }}
+                                                />
+                                            </View>
+                                        </ListItem>
+                                    )}
                                 </>
                             )}
 
