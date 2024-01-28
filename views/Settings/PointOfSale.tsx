@@ -375,6 +375,7 @@ export default class PointOfSale extends React.Component<
                                                         value,
                                                     disableTips,
                                                     squareDevMode,
+                                                    showKeypad,
                                                     taxPercentage
                                                 }
                                             });
@@ -426,6 +427,7 @@ export default class PointOfSale extends React.Component<
                                                             disableTips:
                                                                 !disableTips,
                                                             squareDevMode,
+                                                            showKeypad,
                                                             taxPercentage,
                                                             disablePrinter
                                                         }
@@ -536,9 +538,9 @@ export default class PointOfSale extends React.Component<
                                                             confirmationPreference,
                                                             disableTips,
                                                             squareDevMode,
+                                                            taxPercentage,
                                                             showKeypad:
-                                                                !showKeypad,
-                                                            taxPercentage
+                                                                !showKeypad
                                                         }
                                                     });
                                                 }}
@@ -557,6 +559,7 @@ export default class PointOfSale extends React.Component<
                                     </Text>
                                     <TextInput
                                         value={taxPercentage}
+                                        keyboardType="numeric"
                                         onChangeText={async (text: string) => {
                                             this.setState({
                                                 taxPercentage: text
@@ -571,7 +574,8 @@ export default class PointOfSale extends React.Component<
                                                     confirmationPreference,
                                                     disableTips,
                                                     squareDevMode,
-                                                    taxPercentage: text
+                                                    taxPercentage: text,
+                                                    showKeypad
                                                 }
                                             });
                                         }}
