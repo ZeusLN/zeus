@@ -118,6 +118,7 @@ import LspExplanationFees from './views/Explanations/LspExplanationFees';
 import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
 import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
+import CurrencyConverter from './views/Settings/CurrencyConverter';
 
 const AppScenes = {
     Wallet: {
@@ -419,6 +420,9 @@ const AppScenes = {
     },
     ContactQR: {
         screen: ContactQR
+    },
+    CurrencyConverter: {
+        screen: CurrencyConverter
     }
 };
 
