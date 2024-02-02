@@ -1,10 +1,12 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
+
+import Globe from '../../assets/images/SVG/Globe.svg';
 
 import SettingsStore, {
     CURRENCY_KEYS,
@@ -79,11 +81,25 @@ export default class Currency extends React.Component<
         const { fiatEnabled, selectedCurrency, fiatRatesSource } = this.state;
         const { updateSettings }: any = SettingsStore;
 
+        const CurrencyConverterButton = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('CurrencyConverter')}
+            >
+                <Globe
+                    fill={themeColor('text')}
+                    style={{ alignSelf: 'center', marginTop: -10 }}
+                    height="40"
+                    width="40"
+                />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
                         leftComponent="Back"
+                        rightComponent={<CurrencyConverterButton />}
                         centerComponent={{
                             text: localeString('views.Settings.Currency.title'),
                             style: {
