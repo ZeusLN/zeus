@@ -317,19 +317,19 @@ export default class SendingLightning extends React.Component<
                                     />
                                 </View>
                             )}
-                        {!!payment_hash && !error && !payment_error && (
+                        {!!payment_preimage && !error && !payment_error && (
                             <View style={{ width: '90%' }}>
                                 <CopyBox
                                     heading={localeString(
-                                        'views.SendingLightning.paymentHash'
+                                        'views.Payment.paymentPreimage'
                                     )}
                                     headingCopied={`${localeString(
-                                        'views.SendingLightning.paymentHash'
+                                        'views.Payment.paymentPreimage'
                                     )} ${localeString(
                                         'components.ExternalLinkModal.copied'
                                     )}`}
                                     theme="dark"
-                                    URL={payment_hash}
+                                    URL={payment_preimage}
                                 />
                             </View>
                         )}
