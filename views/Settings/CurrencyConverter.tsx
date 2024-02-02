@@ -6,11 +6,15 @@ import DropdownSetting from '../../components/DropdownSetting';
 import { themeColor } from '../../utils/ThemeUtils';
 import { ScrollView, View } from 'react-native';
 import FiatStore from '../../stores/FiatStore';
+import SettingsStore from '../../stores/SettingsStore';
 import { observer, inject } from 'mobx-react';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import { localeString } from '../../utils/LocaleUtils';
 
 interface CurrencyConverterProps {
     navigation: any;
     FiatStore?: FiatStore;
+    SettingsStore?: SettingsStore;
 }
 
 interface CurrencyConverterState {
@@ -18,7 +22,7 @@ interface CurrencyConverterState {
     selectedCurrency: string;
 }
 
-@inject('FiatStore')
+@inject('FiatStore', 'SettingsStore')
 @observer
 export default class CurrencyConverter extends React.Component<
     CurrencyConverterProps,
@@ -163,16 +167,18 @@ export default class CurrencyConverter extends React.Component<
     };
 
     render() {
-        const { navigation, FiatStore } = this.props;
+        const { navigation, FiatStore, SettingsStore } = this.props;
         const fiatRates = FiatStore?.fiatRates || [];
         const { inputValues, selectedCurrency } = this.state;
+        const { settings }: any = SettingsStore;
+        const { fiatEnabled } = settings;
 
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: themeColor(
+                        text: localeString(
                             'views.Settings.CurrencyConverter.title'
                         ),
                         style: {
@@ -182,32 +188,42 @@ export default class CurrencyConverter extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                <ScrollView>
-                    <View style={{ marginHorizontal: 22 }}>
-                        {Object.keys(inputValues).map((currency) => (
-                            <TextInput
-                                suffix={currency}
-                                key={currency}
-                                placeholder={`Enter amount in ${currency}`}
-                                value={inputValues[currency]}
-                                onChangeText={(value) =>
-                                    this.handleInputChange(value, currency)
-                                }
-                                autoCapitalize="none"
-                            />
-                        ))}
-                        <DropdownSetting
-                            title="Select Currency"
-                            selectedValue={selectedCurrency}
-                            onValueChange={this.handleCurrencySelect}
-                            values={fiatRates.map((rate) => ({
-                                key: rate.code,
-                                translateKey: rate.name,
-                                value: rate.code
-                            }))}
+                {!fiatEnabled ? (
+                    <View style={{ flex: 1, padding: 15 }}>
+                        <ErrorMessage
+                            message={localeString(
+                                'pos.views.Settings.PointOfSale.currencyError'
+                            )}
                         />
                     </View>
-                </ScrollView>
+                ) : (
+                    <ScrollView>
+                        <View style={{ marginHorizontal: 22 }}>
+                            {Object.keys(inputValues).map((currency) => (
+                                <TextInput
+                                    suffix={currency}
+                                    key={currency}
+                                    placeholder={`Enter amount in ${currency}`}
+                                    value={inputValues[currency]}
+                                    onChangeText={(value) =>
+                                        this.handleInputChange(value, currency)
+                                    }
+                                    autoCapitalize="none"
+                                />
+                            ))}
+                            <DropdownSetting
+                                title="Select Currency"
+                                selectedValue={selectedCurrency}
+                                onValueChange={this.handleCurrencySelect}
+                                values={fiatRates.map((rate) => ({
+                                    key: rate.code,
+                                    translateKey: rate.name,
+                                    value: rate.code
+                                }))}
+                            />
+                        </View>
+                    </ScrollView>
+                )}
             </Screen>
         );
     }
