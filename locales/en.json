@@ -847,6 +847,8 @@
     "views.Transaction.timestamp": "Timestamp",
     "views.Transaction.destAddress": "Destination Address",
     "views.Transaction.destAddresses": "Destination Addresses",
+    "views.Transaction.rawTxHex": "Raw transaction hex",
+    "views.Transaction.copyRawTxHex": "Copy raw TX hex",
     "views.Activity.noActivity": "No activity yet",
     "views.Activity.expired": "Expired",
     "views.Activity.youSent": "You sent",
