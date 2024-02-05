@@ -27,12 +27,14 @@ import FiatStore from '../stores/FiatStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 
 import RNPrint from 'react-native-print';
+import PosStore from '../stores/PosStore';
 
 interface OrderProps {
     navigation: any;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
     UnitsStore: UnitsStore;
+    PosStore: PosStore;
 }
 
 interface OrderState {
@@ -45,7 +47,7 @@ interface OrderState {
     print: boolean;
 }
 
-@inject('FiatStore', 'SettingsStore', 'UnitsStore')
+@inject('FiatStore', 'SettingsStore', 'UnitsStore', 'PosStore')
 @observer
 export default class OrderView extends React.Component<OrderProps, OrderState> {
     constructor(props: any) {
@@ -70,19 +72,32 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
     }
 
     componentDidUpdate(prevProps: OrderProps) {
+        // print and order id are passed from the paid screen
+        // we update the order so it includes payment details
+        // which will enable the receipt printing
         if (
             this.props.navigation.getParam('print', false) !==
             prevProps.navigation.getParam('print', false)
         ) {
-            const order = this.props.navigation.getParam(
-                'order',
-                this.state.order
-            );
+            const orderId = this.props.navigation.getParam('orderId', null);
             const print = this.props.navigation.getParam('print', false);
-            this.setState({
-                order,
-                print
-            });
+
+            const { PosStore } = this.props;
+            if (orderId) {
+                PosStore.getOrderPaymentById(orderId).then(
+                    (payment: any | undefined) => {
+                        if (payment) {
+                            const order = this.state.order;
+                            order.payment = payment;
+
+                            this.setState({
+                                order,
+                                print
+                            });
+                        }
+                    }
+                );
+            }
         }
     }
 
@@ -346,6 +361,17 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             `;
         };
 
+        const receiptHtmlRows = (key: string, value: any) => {
+            return `
+            <tr>
+                <td style="text-align:left;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:5px" colspan="2">${key}</td>
+            </tr>
+            <tr>
+                <td style="text-align:right;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:20px;word-break: break-word" colspan="2">${value}</td>
+            </tr>
+            `;
+        };
+
         const receiptDivider = () => {
             return `
             <tr>
@@ -359,9 +385,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         };
 
         const printReceipt = () => {
+            const title =
+                merchantName && merchantName.length
+                    ? merchantName
+                    : isPaid
+                    ? 'Tax Receipt'
+                    : 'Invoice';
+
             let templateHtml = `<html>
                 <body style="margin-left:0px;margin-right:0px;padding-left:0px;padding-right:0px;">
-                    <h4 style="text-align:center;font-family:Garamond">Tax receipt</h4>
+                    <h4 style="text-align:center;font-family:Garamond">${title}</h4>
                     <table border="0" cellpadding="1" cellspacing="0" width="100%">`;
 
             lineItems.forEach((item: any) => {
@@ -419,19 +452,21 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                 );
             }
 
-            templateHtml += receiptHtmlRow(
-                localeString('pos.views.Order.paymentType'),
-                order.payment.type === 'ln'
-                    ? localeString('general.lightning')
-                    : localeString('general.onchain')
-            );
-            /*
-            templateHtml += receiptHtmlRow(
-                order.payment.type === 'ln'
-                    ? localeString('views.Send.lnPayment')
-                    : localeString('views.SendingOnChain.txid'),
-                order.payment.tx
-            );*/
+            if (isPaid) {
+                templateHtml += receiptHtmlRow(
+                    localeString('pos.views.Order.paymentType'),
+                    order.payment.type === 'ln'
+                        ? localeString('general.lightning')
+                        : localeString('general.onchain')
+                );
+
+                templateHtml += receiptHtmlRows(
+                    order.payment.type === 'ln'
+                        ? localeString('views.Send.rPreimage')
+                        : localeString('views.SendingOnChain.txid'),
+                    order.payment.preimage ?? order.payment.tx
+                );
+            }
 
             templateHtml += receiptHtmlRow(
                 `${localeString('pos.views.Order.tax')}${
@@ -876,9 +911,13 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         />
                     )}
 
-                    {isPaid && Platform.OS === 'android' && !disablePrinter && (
+                    {Platform.OS === 'android' && !disablePrinter && (
                         <Button
-                            title={localeString('pos.views.Order.printReceipt')}
+                            title={localeString(
+                                isPaid
+                                    ? 'pos.views.Order.printReceipt'
+                                    : 'pos.views.Order.printInvoice'
+                            )}
                             containerStyle={{ marginTop: 40 }}
                             icon={{ name: 'print', size: 25 }}
                             onPress={() => printReceipt()}

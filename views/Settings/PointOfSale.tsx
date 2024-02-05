@@ -262,40 +262,6 @@ export default class PointOfSale extends React.Component<
                                         }}
                                     />
 
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.POS.merchantName'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        value={merchantName}
-                                        onChangeText={async (text: string) => {
-                                            this.setState({
-                                                merchantName: text
-                                            });
-
-                                            await updateSettings({
-                                                pos: {
-                                                    posEnabled,
-                                                    squareAccessToken,
-                                                    squareLocationId,
-                                                    merchantName: text,
-                                                    confirmationPreference,
-                                                    disableTips,
-                                                    squareDevMode,
-                                                    showKeypad,
-                                                    taxPercentage,
-                                                    disablePrinter
-                                                }
-                                            });
-                                        }}
-                                    />
-
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
@@ -354,6 +320,39 @@ export default class PointOfSale extends React.Component<
 
                             {posEnabled !== PosEnabled.Disabled && (
                                 <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.merchantName'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={merchantName}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                merchantName: text
+                                            });
+
+                                            await updateSettings({
+                                                pos: {
+                                                    posEnabled,
+                                                    squareAccessToken,
+                                                    squareLocationId,
+                                                    merchantName: text,
+                                                    confirmationPreference,
+                                                    disableTips,
+                                                    squareDevMode,
+                                                    showKeypad,
+                                                    taxPercentage,
+                                                    disablePrinter
+                                                }
+                                            });
+                                        }}
+                                    />
                                     <DropdownSetting
                                         title={localeString(
                                             'views.Settings.POS.confPref'
