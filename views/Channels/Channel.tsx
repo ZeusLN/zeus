@@ -311,7 +311,7 @@ export default class ChannelView extends React.Component<
                         <KeyValue
                             keyValue={localeString('views.Channel.closeHeight')}
                             value={closeHeight}
-                            color={themeColor('chain')}
+                            color={themeColor('highlight')}
                             sensitive
                             mempoolLink={() =>
                                 UrlUtils.goToBlockExplorerBlockHeight(
@@ -351,7 +351,7 @@ export default class ChannelView extends React.Component<
                             keyValue={localeString('views.Channel.closingTxId')}
                             value={closing_txid}
                             sensitive
-                            color={themeColor('chain')}
+                            color={themeColor('highlight')}
                             mempoolLink={() =>
                                 UrlUtils.goToBlockExplorerTXID(
                                     closing_txid,
@@ -367,7 +367,7 @@ export default class ChannelView extends React.Component<
                             )}
                             value={closing_tx_hash}
                             sensitive
-                            color={themeColor('chain')}
+                            color={themeColor('highlight')}
                             mempoolLink={() =>
                                 UrlUtils.goToBlockExplorerTXID(
                                     closing_tx_hash,
