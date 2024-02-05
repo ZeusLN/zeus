@@ -113,7 +113,8 @@ export default class SendingLightning extends React.Component<
             error_msg,
             payment_hash,
             payment_preimage,
-            payment_error
+            payment_error,
+            isIncomplete
         } = TransactionsStore;
         const { storedNotes } = this.state;
 
@@ -317,22 +318,25 @@ export default class SendingLightning extends React.Component<
                                     />
                                 </View>
                             )}
-                        {!!payment_preimage && !error && !payment_error && (
-                            <View style={{ width: '90%' }}>
-                                <CopyBox
-                                    heading={localeString(
-                                        'views.Payment.paymentPreimage'
-                                    )}
-                                    headingCopied={`${localeString(
-                                        'views.Payment.paymentPreimage'
-                                    )} ${localeString(
-                                        'components.ExternalLinkModal.copied'
-                                    )}`}
-                                    theme="dark"
-                                    URL={payment_preimage}
-                                />
-                            </View>
-                        )}
+                        {!!payment_preimage &&
+                            !isIncomplete &&
+                            !error &&
+                            !payment_error && (
+                                <View style={{ width: '90%' }}>
+                                    <CopyBox
+                                        heading={localeString(
+                                            'views.Payment.paymentPreimage'
+                                        )}
+                                        headingCopied={`${localeString(
+                                            'views.Payment.paymentPreimage'
+                                        )} ${localeString(
+                                            'components.ExternalLinkModal.copied'
+                                        )}`}
+                                        theme="dark"
+                                        URL={payment_preimage}
+                                    />
+                                </View>
+                            )}
                         {
                             <View
                                 style={[

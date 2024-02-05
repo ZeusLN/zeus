@@ -39,6 +39,7 @@ export default class TransactionsStore {
     @observable transaction: Transaction | null;
     @observable payment_route: any; // Route
     @observable payment_preimage: string | null;
+    @observable isIncomplete: boolean | null;
     @observable payment_hash: any;
     @observable payment_error: any;
     @observable onchain_address: string;
@@ -70,6 +71,7 @@ export default class TransactionsStore {
         this.transaction = null;
         this.payment_route = null;
         this.payment_preimage = null;
+        this.isIncomplete = null;
         this.payment_hash = null;
         this.payment_error = null;
         this.onchain_address = '';
@@ -209,6 +211,7 @@ export default class TransactionsStore {
         this.error = false;
         this.payment_route = null;
         this.payment_preimage = null;
+        this.isIncomplete = null;
         this.payment_hash = null;
         this.payment_error = null;
         this.status = null;
@@ -306,8 +309,11 @@ export default class TransactionsStore {
     public handlePayment = (result: any) => {
         this.loading = false;
         this.payment_route = result.payment_route;
-        this.payment_preimage = result.payment_preimage;
-        this.payment_hash = new Payment(result).paymentHash;
+
+        const payment = new Payment(result);
+        this.payment_preimage = payment.getPreimage;
+        this.payment_hash = payment.paymentHash;
+        this.isIncomplete = payment.isIncomplete;
 
         const implementation = this.settingsStore.implementation;
 
