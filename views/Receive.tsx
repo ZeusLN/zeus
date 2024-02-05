@@ -80,7 +80,6 @@ import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
 import Gear from '../assets/images/SVG/Gear.svg';
-import Order from '../models/Order';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -555,16 +554,19 @@ export default class Receive extends React.Component<
                                 setWatchedInvoicePaid(
                                     Number(invoice.amt_paid_sat)
                                 );
-                                if (orderId)
-                                    PosStore.recordPayment({
-                                        orderId,
-                                        orderTotal,
-                                        orderTip,
-                                        exchangeRate,
-                                        rate,
-                                        type: 'ln',
-                                        tx: invoice.payment_request
-                                    });
+
+                                PosStore.recordPayment({
+                                    orderId,
+                                    orderTotal,
+                                    orderTip,
+                                    exchangeRate,
+                                    rate,
+                                    type: 'ln',
+                                    tx: invoice.payment_request,
+                                    preimage: Base64Utils.bytesToHex(
+                                        invoice.r_preimage
+                                    )
+                                });
                                 this.listener = null;
                             }
                         } catch (error) {
@@ -651,7 +653,8 @@ export default class Receive extends React.Component<
                                             exchangeRate,
                                             rate,
                                             type: 'ln',
-                                            tx: result.payment_request
+                                            tx: result.payment_request,
+                                            preimage: result.r_preimage
                                         });
                                     this.listener = null;
                                 }
@@ -820,7 +823,8 @@ export default class Receive extends React.Component<
                                             exchangeRate,
                                             rate,
                                             type: 'ln',
-                                            tx: result.payment_request
+                                            tx: result.payment_request,
+                                            preimage: result.r_preimage
                                         });
                                     this.clearIntervals();
                                     break;
@@ -1123,18 +1127,6 @@ export default class Receive extends React.Component<
 
         const disablePrinter: boolean = settings?.pos?.disablePrinter || false;
 
-        let order: Order | undefined;
-        if (
-            posStatus === 'active' &&
-            Platform.OS === 'android' &&
-            !disablePrinter
-        ) {
-            const { PosStore } = this.props;
-            order = this.state.orderId
-                ? PosStore.getOrderById(this.state.orderId)
-                : undefined;
-        }
-
         return (
             <Screen>
                 <Header
@@ -1213,21 +1205,23 @@ export default class Receive extends React.Component<
                                     </Text>
                                 </>
                             </View>
-                            {order && (
-                                <Button
-                                    title={localeString(
-                                        'pos.views.Order.printReceipt'
-                                    )}
-                                    secondary
-                                    icon={{ name: 'print', size: 25 }}
-                                    onPress={() =>
-                                        navigation.navigate('Order', {
-                                            order,
-                                            print: true
-                                        })
-                                    }
-                                />
-                            )}
+                            {posStatus === 'active' &&
+                                Platform.OS === 'android' &&
+                                !disablePrinter && (
+                                    <Button
+                                        title={localeString(
+                                            'pos.views.Order.printReceipt'
+                                        )}
+                                        secondary
+                                        icon={{ name: 'print', size: 25 }}
+                                        onPress={() =>
+                                            navigation.navigate('Order', {
+                                                orderId: this.state.orderId,
+                                                print: true
+                                            })
+                                        }
+                                    />
+                                )}
                             <Button
                                 title={
                                     posStatus === 'active'
