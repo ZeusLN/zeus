@@ -47,7 +47,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         return (
             <Screen>
                 <Header
-                    leftComponent="Close"
+                    leftComponent="Back"
                     centerComponent={{
                         text:
                             utxos.length > 0
