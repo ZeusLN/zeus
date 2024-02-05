@@ -489,6 +489,7 @@
     "views.Payment.fee": "Fee",
     "views.Payment.paymentHash": "Payment Hash",
     "views.Payment.paymentPreimage": "Payment Preimage",
+    "views.Payment.destination": "Destination",
     "views.Payment.creationDate": "Creation Date",
     "views.Payment.path": "Path",
     "views.Payment.paths": "Paths",
