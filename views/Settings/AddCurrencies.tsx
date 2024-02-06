@@ -9,7 +9,8 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Divider } from 'react-native-elements';
+
+import { CURRENCY_KEYS } from '../../stores/SettingsStore';
 
 interface AddCurrenciesProps {
     navigation: any;
@@ -62,13 +63,13 @@ export default class AddCurrencies extends React.Component<
                         navigation={navigation}
                     />
                     <FlatList
-                        data={fiatRates}
+                        data={CURRENCY_KEYS}
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 onPress={() => {
                                     // Navigate back to the CurrencyConverter view with the selected currency
                                     navigation.navigate('CurrencyConverter', {
-                                        selectedCurrency: item.code
+                                        selectedCurrency: item.value
                                     });
                                 }}
                             >
@@ -81,7 +82,7 @@ export default class AddCurrencies extends React.Component<
                                             margin: 16
                                         }}
                                     >
-                                        {item.name} ({item.code})
+                                        {item.key}
                                     </Text>
                                 </View>
                             </TouchableOpacity>

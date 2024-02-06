@@ -2,7 +2,7 @@ import * as React from 'react';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import TextInput from '../../components/TextInput';
-import DropdownSetting from '../../components/DropdownSetting';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import { themeColor } from '../../utils/ThemeUtils';
 import { ScrollView, TouchableOpacity, View, Text } from 'react-native';
 import FiatStore from '../../stores/FiatStore';
@@ -43,6 +43,7 @@ export default class CurrencyConverter extends React.Component<
 
     componentDidMount() {
         const { navigation } = this.props;
+        this.retrieveInputValues();
         const selectedCurrency = navigation.getParam('selectedCurrency', '');
         if (selectedCurrency) {
             this.handleCurrencySelect(selectedCurrency);
@@ -63,15 +64,45 @@ export default class CurrencyConverter extends React.Component<
         }
     }
 
+    saveInputValues = async () => {
+        try {
+            await EncryptedStorage.setItem(
+                'currency-codes',
+                JSON.stringify(this.state.inputValues)
+            );
+        } catch (error) {
+            console.error('Error saving input values:', error);
+        }
+    };
+
+    retrieveInputValues = async () => {
+        try {
+            const inputValuesString = await EncryptedStorage.getItem(
+                'currency-codes'
+            );
+            if (inputValuesString) {
+                const inputValues = JSON.parse(inputValuesString);
+                this.setState({ inputValues });
+            }
+        } catch (error) {
+            console.error('Error retrieving input values:', error);
+        }
+    };
+
     handleCurrencySelect = (currency: string) => {
         const { inputValues } = this.state;
 
         if (!inputValues.hasOwnProperty(currency)) {
             const updatedInputValues = { ...inputValues, [currency]: '' };
-            this.setState({
-                inputValues: updatedInputValues,
-                selectedCurrency: currency
-            });
+            this.setState(
+                {
+                    inputValues: updatedInputValues,
+                    selectedCurrency: currency
+                },
+                () => {
+                    this.saveInputValues();
+                }
+            );
         } else {
             this.setState({ selectedCurrency: currency });
         }
@@ -146,6 +177,23 @@ export default class CurrencyConverter extends React.Component<
         this.setState({ inputValues: convertedValues });
     };
 
+    renderInputFields = () => {
+        const { inputValues } = this.state;
+
+        return Object.keys(inputValues).map((currency) => (
+            <TextInput
+                suffix={currency}
+                key={currency}
+                placeholder={`Enter amount in ${currency}`}
+                value={inputValues[currency]}
+                onChangeText={(value) =>
+                    this.handleInputChange(value, currency)
+                }
+                autoCapitalize="none"
+            />
+        ));
+    };
+
     render() {
         const { navigation, FiatStore, SettingsStore } = this.props;
         const fiatRates = FiatStore?.fiatRates || [];
@@ -198,18 +246,7 @@ export default class CurrencyConverter extends React.Component<
                 ) : (
                     <ScrollView>
                         <View style={{ marginHorizontal: 22 }}>
-                            {Object.keys(inputValues).map((currency) => (
-                                <TextInput
-                                    suffix={currency}
-                                    key={currency}
-                                    placeholder={`Enter amount in ${currency}`}
-                                    value={inputValues[currency]}
-                                    onChangeText={(value) =>
-                                        this.handleInputChange(value, currency)
-                                    }
-                                    autoCapitalize="none"
-                                />
-                            ))}
+                            {this.renderInputFields()}
                         </View>
                     </ScrollView>
                 )}
