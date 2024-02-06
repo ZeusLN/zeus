@@ -6,8 +6,6 @@ import { inject, observer } from 'mobx-react';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 
-import Globe from '../../assets/images/SVG/Globe.svg';
-
 import SettingsStore, {
     CURRENCY_KEYS,
     DEFAULT_FIAT,
@@ -81,25 +79,11 @@ export default class Currency extends React.Component<
         const { fiatEnabled, selectedCurrency, fiatRatesSource } = this.state;
         const { updateSettings }: any = SettingsStore;
 
-        const CurrencyConverterButton = () => (
-            <TouchableOpacity
-                onPress={() => navigation.navigate('CurrencyConverter')}
-            >
-                <Globe
-                    fill={themeColor('text')}
-                    style={{ alignSelf: 'center', marginTop: -10 }}
-                    height="40"
-                    width="40"
-                />
-            </TouchableOpacity>
-        );
-
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
                         leftComponent="Back"
-                        rightComponent={<CurrencyConverterButton />}
                         centerComponent={{
                             text: localeString('views.Settings.Currency.title'),
                             style: {
@@ -192,6 +176,29 @@ export default class Currency extends React.Component<
                                 {localeString(
                                     'views.Settings.Currency.selectCurrency'
                                 ) + ` (${selectedCurrency})`}
+                            </ListItem.Title>
+                        </ListItem.Content>
+                        <Icon
+                            name="keyboard-arrow-right"
+                            color={themeColor('secondaryText')}
+                        />
+                    </ListItem>
+                    <ListItem
+                        containerStyle={{
+                            backgroundColor: 'transparent'
+                        }}
+                        onPress={() => navigation.navigate('CurrencyConverter')}
+                    >
+                        <ListItem.Content>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.CurrencyConverter.title'
+                                )}
                             </ListItem.Title>
                         </ListItem.Content>
                         <Icon
