@@ -14,7 +14,6 @@ import { inject, observer } from 'mobx-react';
 import { Row } from '../components/layout/Row';
 import Amount from '../components/Amount';
 import Button from '../components/Button';
-import CopyButton from '../components/CopyButton';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
@@ -25,32 +24,32 @@ import Transaction from '../models/Transaction';
 import UrlUtils from '../utils/UrlUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
+import TransactionsStore from '../stores/TransactionsStore';
+
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import EditNotes from '../assets/images/SVG/Pen.svg';
 
 interface TransactionProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
+    TransactionsStore: TransactionsStore;
 }
 
 interface TransactionState {
     storedNotes: string | null;
-    rawTxToggle: boolean;
 }
 
-@inject('NodeInfoStore')
+@inject('NodeInfoStore', 'TransactionsStore')
 @observer
 export default class TransactionView extends React.Component<
     TransactionProps,
     TransactionState
 > {
     state = {
-        storedNotes: '',
-        rawTxToggle: false
+        storedNotes: ''
     };
     async componentDidMount() {
         const { navigation } = this.props;
@@ -59,6 +58,7 @@ export default class TransactionView extends React.Component<
             null
         );
         navigation.addListener('didFocus', () => {
+            this.props.TransactionsStore.resetBroadcast();
             EncryptedStorage.getItem('note-' + transaction.tx)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
@@ -74,7 +74,7 @@ export default class TransactionView extends React.Component<
             'transaction',
             null
         );
-        const { storedNotes, rawTxToggle } = this.state;
+        const { storedNotes } = this.state;
         const { testnet } = NodeInfoStore;
 
         const {
@@ -318,11 +318,11 @@ export default class TransactionView extends React.Component<
                     {raw_tx_hex && (
                         <>
                             <TouchableOpacity
-                                onPress={() => {
-                                    this.setState({
-                                        rawTxToggle: !rawTxToggle
-                                    });
-                                }}
+                                onPress={() =>
+                                    navigation.navigate('RawTxHex', {
+                                        value: raw_tx_hex
+                                    })
+                                }
                             >
                                 <View
                                     style={{
@@ -338,45 +338,14 @@ export default class TransactionView extends React.Component<
                                                 )}
                                             />
                                         </View>
-                                        {rawTxToggle ? (
-                                            <CaretDown
-                                                fill={themeColor('text')}
-                                                width="20"
-                                                height="20"
-                                            />
-                                        ) : (
-                                            <CaretRight
-                                                fill={themeColor('text')}
-                                                width="20"
-                                                height="20"
-                                            />
-                                        )}
+                                        <CaretRight
+                                            fill={themeColor('text')}
+                                            width="20"
+                                            height="20"
+                                        />
                                     </Row>
                                 </View>
                             </TouchableOpacity>
-
-                            {rawTxToggle && (
-                                <>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {PrivacyUtils.sensitiveValue(
-                                            raw_tx_hex
-                                        )}
-                                    </Text>
-                                    <View style={{ marginTop: 20 }}>
-                                        <CopyButton
-                                            title={localeString(
-                                                'views.Transaction.copyRawTxHex'
-                                            )}
-                                            copyValue={raw_tx_hex}
-                                            noUppercase
-                                        />
-                                    </View>
-                                </>
-                            )}
                         </>
                     )}
 
