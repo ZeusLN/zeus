@@ -4,12 +4,13 @@ import Header from '../../components/Header';
 import TextInput from '../../components/TextInput';
 import DropdownSetting from '../../components/DropdownSetting';
 import { themeColor } from '../../utils/ThemeUtils';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View, Text } from 'react-native';
 import FiatStore from '../../stores/FiatStore';
 import SettingsStore from '../../stores/SettingsStore';
 import { observer, inject } from 'mobx-react';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { localeString } from '../../utils/LocaleUtils';
+import Add from '../../assets/images/SVG/Add.svg';
 
 interface CurrencyConverterProps {
     navigation: any;
@@ -40,6 +41,42 @@ export default class CurrencyConverter extends React.Component<
         };
     }
 
+    componentDidMount() {
+        const { navigation } = this.props;
+        const selectedCurrency = navigation.getParam('selectedCurrency', '');
+        if (selectedCurrency) {
+            this.handleCurrencySelect(selectedCurrency);
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        const { navigation } = this.props;
+        const selectedCurrency = navigation.getParam('selectedCurrency', '');
+        const prevSelectedCurrency = prevProps.navigation.getParam(
+            'selectedCurrency',
+            ''
+        );
+
+        // Check if the selected currency prop has changed
+        if (selectedCurrency !== prevSelectedCurrency) {
+            this.handleCurrencySelect(selectedCurrency);
+        }
+    }
+
+    handleCurrencySelect = (currency: string) => {
+        const { inputValues } = this.state;
+
+        if (!inputValues.hasOwnProperty(currency)) {
+            const updatedInputValues = { ...inputValues, [currency]: '' };
+            this.setState({
+                inputValues: updatedInputValues,
+                selectedCurrency: currency
+            });
+        } else {
+            this.setState({ selectedCurrency: currency });
+        }
+    };
+
     handleInputChange = (value: string, currency: string) => {
         const { inputValues } = this.state;
         const { FiatStore } = this.props;
@@ -66,7 +103,7 @@ export default class CurrencyConverter extends React.Component<
                     if (directRate) {
                         conversionRate = directRate.rate;
                     } else {
-                        // Check if there's a conversion rate from BTC
+                        // Conversion from currency to currency
                         const btcToRate = fiatRates.find(
                             (rate) => rate.currencyPair === `BTC_${key}`
                         )?.rate;
@@ -76,20 +113,6 @@ export default class CurrencyConverter extends React.Component<
 
                         if (btcToRate && btcFromRate) {
                             conversionRate = btcToRate / btcFromRate;
-                        } else {
-                            // Check if there's a conversion rate from the entered currency to BTC
-                            const btcRateFrom = fiatRates.find(
-                                (rate) =>
-                                    rate.currencyPair === `${currency}_BTC`
-                            )?.rate;
-                            const btcRateTo = fiatRates.find(
-                                (rate) =>
-                                    rate.currencyPair === `BTC_${currency}`
-                            )?.rate;
-
-                            if (btcRateFrom && btcRateTo) {
-                                conversionRate = 1 / btcRateFrom; // Invert the rate
-                            }
                         }
                     }
 
@@ -123,60 +146,36 @@ export default class CurrencyConverter extends React.Component<
         this.setState({ inputValues: convertedValues });
     };
 
-    handleCurrencySelect = (currency: string) => {
-        const { inputValues } = this.state;
-
-        if (!inputValues.hasOwnProperty(currency)) {
-            const updatedInputValues = { ...inputValues, [currency]: '' };
-            this.setState({
-                inputValues: updatedInputValues,
-                selectedCurrency: currency
-            });
-        } else {
-            this.setState({ selectedCurrency: currency });
-        }
-    };
-
-    getConversionRate = (
-        fromCurrency: string,
-        toCurrency: string,
-        fiatRates: any[]
-    ) => {
-        if (fromCurrency === toCurrency) return 1;
-
-        // Look for direct conversion rate
-        const directConversionRate = fiatRates.find(
-            (rate) => rate.currencyPair === `${fromCurrency}_${toCurrency}`
-        );
-
-        if (directConversionRate) return directConversionRate.rate;
-
-        // Look for BTC intermediary conversion
-        const btcRateFrom = fiatRates.find(
-            (rate) => rate.code === `BTC_${fromCurrency}`
-        )?.rate;
-        const btcRateTo = fiatRates.find(
-            (rate) => rate.code === `BTC_${toCurrency}`
-        )?.rate;
-
-        if (btcRateFrom && btcRateTo) {
-            return btcRateTo / btcRateFrom;
-        }
-
-        return null;
-    };
-
     render() {
         const { navigation, FiatStore, SettingsStore } = this.props;
         const fiatRates = FiatStore?.fiatRates || [];
-        const { inputValues, selectedCurrency } = this.state;
+        const { inputValues } = this.state;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
+
+        const AddButton = () => (
+            <TouchableOpacity
+                onPress={() =>
+                    navigation.navigate('AddCurrencies', {
+                        fiatRates: fiatRates
+                    })
+                }
+                accessibilityLabel={localeString('general.add')}
+            >
+                <Add
+                    fill={themeColor('text')}
+                    width="30"
+                    height="30"
+                    style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
+        );
 
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
+                    rightComponent={<AddButton />}
                     centerComponent={{
                         text: localeString(
                             'views.Settings.CurrencyConverter.title'
@@ -211,16 +210,6 @@ export default class CurrencyConverter extends React.Component<
                                     autoCapitalize="none"
                                 />
                             ))}
-                            <DropdownSetting
-                                title="Select Currency"
-                                selectedValue={selectedCurrency}
-                                onValueChange={this.handleCurrencySelect}
-                                values={fiatRates.map((rate) => ({
-                                    key: rate.code,
-                                    translateKey: rate.name,
-                                    value: rate.code
-                                }))}
-                            />
                         </View>
                     </ScrollView>
                 )}

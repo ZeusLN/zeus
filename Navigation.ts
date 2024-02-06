@@ -103,6 +103,9 @@ import AddNotes from './views/AddNotes';
 import Contacts from './views/Settings/Contacts';
 import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
+import CurrencyConverter from './views/Settings/CurrencyConverter';
+import AddCurrencies from './views/Settings/AddCurrencies';
+
 // POS
 import Order from './views/Order';
 
@@ -118,7 +121,6 @@ import LspExplanationFees from './views/Explanations/LspExplanationFees';
 import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
 import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
-import CurrencyConverter from './views/Settings/CurrencyConverter';
 
 const AppScenes = {
     Wallet: {
@@ -423,6 +425,9 @@ const AppScenes = {
     },
     CurrencyConverter: {
         screen: CurrencyConverter
+    },
+    AddCurrencies: {
+        screen: AddCurrencies
     }
 };
 
