@@ -1,16 +1,21 @@
 import { action, reaction, observable } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+
 import Transaction from '../models/Transaction';
 import TransactionRequest from '../models/TransactionRequest';
 import Payment from '../models/Payment';
+
 import SettingsStore from './SettingsStore';
+
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 import { lnrpc } from '../proto/lightning';
+import NodeInfoStore from './NodeInfoStore';
 
 const keySendPreimageType = '5482373484';
 const keySendMessageType = '34349334';
@@ -46,11 +51,15 @@ export default class TransactionsStore {
     @observable status: string | number | null;
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
+    @observable broadcast_txid: string;
+    @observable broadcast_err: string | null;
 
     settingsStore: SettingsStore;
+    nodeInfoStore: NodeInfoStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, nodeInfoStore: NodeInfoStore) {
         this.settingsStore = settingsStore;
+        this.nodeInfoStore = nodeInfoStore;
 
         reaction(
             () => this.settingsStore.settings,
@@ -76,6 +85,8 @@ export default class TransactionsStore {
         this.txid = null;
         this.publishSuccess = false;
         this.status = null;
+        this.broadcast_txid = '';
+        this.broadcast_err = null;
     };
 
     @action
@@ -352,5 +363,47 @@ export default class TransactionsStore {
                 ? errorToUserFriendly(err)
                 : errorToUserFriendly(err.message) ||
                   localeString('error.sendingPayment');
+    };
+
+    @action resetBroadcast = () => {
+        this.error = true;
+        this.loading = false;
+        this.broadcast_txid = '';
+        this.broadcast_err = null;
+    };
+
+    @action
+    public broadcastRawTxToMempoolSpace = (raw_tx_hex: string) => {
+        this.resetBroadcast();
+        const headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'text/plain'
+        };
+        return ReactNativeBlobUtil.fetch(
+            'POST',
+            `https://mempool.space/${
+                this.nodeInfoStore.nodeInfo.isTestNet ? 'testnet/' : ''
+            }api/tx`,
+            headers,
+            raw_tx_hex
+        )
+            .then((response: any) => {
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.data;
+                    this.loading = false;
+                    this.broadcast_txid = data;
+                    return data;
+                } else {
+                    const data = response.data;
+                    this.broadcast_err = data;
+                    this.loading = false;
+                    this.error = true;
+                }
+            })
+            .catch((err) => {
+                this.broadcast_err = err.error || err.toString();
+                this.loading = false;
+            });
     };
 }
