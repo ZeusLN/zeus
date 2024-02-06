@@ -8,9 +8,11 @@ import { ScrollView, TouchableOpacity, View, Text } from 'react-native';
 import FiatStore from '../../stores/FiatStore';
 import SettingsStore from '../../stores/SettingsStore';
 import { observer, inject } from 'mobx-react';
+import { StyleSheet } from 'react-native';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { localeString } from '../../utils/LocaleUtils';
 import Add from '../../assets/images/SVG/Add.svg';
+import { Icon } from 'react-native-elements';
 
 interface CurrencyConverterProps {
     navigation: any;
@@ -44,6 +46,7 @@ export default class CurrencyConverter extends React.Component<
     componentDidMount() {
         const { navigation } = this.props;
         this.retrieveInputValues();
+        this.addDefaultCurrenciesToStorage();
         const selectedCurrency = navigation.getParam('selectedCurrency', '');
         if (selectedCurrency) {
             this.handleCurrencySelect(selectedCurrency);
@@ -63,6 +66,37 @@ export default class CurrencyConverter extends React.Component<
             this.handleCurrencySelect(selectedCurrency);
         }
     }
+
+    addDefaultCurrenciesToStorage = async () => {
+        try {
+            const { inputValues } = this.state;
+
+            const inputValuesString = await EncryptedStorage.getItem(
+                'currency-codes'
+            );
+            const existingInputValues = inputValuesString
+                ? JSON.parse(inputValuesString)
+                : {};
+
+            // Add default currencies from state to existing inputValues
+            for (const currency of Object.keys(inputValues)) {
+                if (!existingInputValues.hasOwnProperty(currency)) {
+                    existingInputValues[currency] = '';
+                }
+            }
+
+            // Save updated inputValues to storage
+            await EncryptedStorage.setItem(
+                'currency-codes',
+                JSON.stringify(existingInputValues)
+            );
+
+            // Update the state with the updated inputValues
+            this.setState({ inputValues: existingInputValues });
+        } catch (error) {
+            console.error('Error adding default currencies:', error);
+        }
+    };
 
     saveInputValues = async () => {
         try {
@@ -181,17 +215,59 @@ export default class CurrencyConverter extends React.Component<
         const { inputValues } = this.state;
 
         return Object.keys(inputValues).map((currency) => (
-            <TextInput
-                suffix={currency}
-                key={currency}
-                placeholder={`Enter amount in ${currency}`}
-                value={inputValues[currency]}
-                onChangeText={(value) =>
-                    this.handleInputChange(value, currency)
-                }
-                autoCapitalize="none"
-            />
+            <View style={styles.inputContainer} key={currency}>
+                <TextInput
+                    style={styles.inputBox}
+                    suffix={currency}
+                    placeholder={`Enter amount in ${currency}`}
+                    value={inputValues[currency]}
+                    onChangeText={(value) =>
+                        this.handleInputChange(value, currency)
+                    }
+                    autoCapitalize="none"
+                />
+
+                <TouchableOpacity
+                    onPress={() => this.handleDeleteCurrency(currency)}
+                >
+                    <Icon
+                        name="delete"
+                        size={24}
+                        color="red"
+                        style={styles.deleteIcon}
+                    />
+                </TouchableOpacity>
+            </View>
         ));
+    };
+
+    handleDeleteCurrency = async (currency: string) => {
+        try {
+            // Retrieve inputValues from storage
+            const inputValuesString = await EncryptedStorage.getItem(
+                'currency-codes'
+            );
+            const existingInputValues = inputValuesString
+                ? JSON.parse(inputValuesString)
+                : {};
+
+            // Create a copy of the inputValues object
+            const updatedInputValues = { ...existingInputValues };
+
+            // Remove the currency code from the inputValues object
+            delete updatedInputValues[currency];
+
+            // Save updated inputValues to storage
+            await EncryptedStorage.setItem(
+                'currency-codes',
+                JSON.stringify(updatedInputValues)
+            );
+
+            // Update the component state with the updated inputValues
+            this.setState({ inputValues: updatedInputValues });
+        } catch (error) {
+            console.error('Error deleting currency:', error);
+        }
     };
 
     render() {
@@ -254,3 +330,18 @@ export default class CurrencyConverter extends React.Component<
         );
     }
 }
+
+const styles = StyleSheet.create({
+    inputContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10
+    },
+    inputBox: {
+        flex: 1
+    },
+    deleteIcon: {
+        marginLeft: 10
+    }
+});
