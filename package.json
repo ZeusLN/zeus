@@ -111,7 +111,7 @@
     "react-native-notifications": "5.1.0",
     "react-native-os": "aprock/react-native-os#5/head",
     "react-native-permissions": "3.8.0",
-    "react-native-print": "^0.11.0",
+    "react-native-print": "0.11.0",
     "react-native-qrcode-svg": "6.2.0",
     "react-native-randombytes": "3.5.3",
     "react-native-reanimated": "3.5.4",

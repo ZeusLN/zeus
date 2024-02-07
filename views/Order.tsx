@@ -389,8 +389,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                 merchantName && merchantName.length
                     ? merchantName
                     : isPaid
-                    ? 'Tax Receipt'
-                    : 'Invoice';
+                    ? localeString('pos.print.taxReceipt')
+                    : localeString('pos.print.invoice');
 
             let templateHtml = `<html>
                 <body style="margin-left:0px;margin-right:0px;padding-left:0px;padding-right:0px;">
