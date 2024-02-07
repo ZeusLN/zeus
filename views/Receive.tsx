@@ -1587,7 +1587,7 @@ export default class Receive extends React.Component<
                                             </>
                                         )}
 
-                                        {!lspIsActive && (
+                                        {!enableLSP && (
                                             <>
                                                 <Text
                                                     style={{
