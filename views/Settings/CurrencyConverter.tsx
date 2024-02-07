@@ -1,18 +1,22 @@
 import * as React from 'react';
+import { observer, inject } from 'mobx-react';
+import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
+import { Icon, ListItem } from 'react-native-elements';
+import EncryptedStorage from 'react-native-encrypted-storage';
+
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import TextInput from '../../components/TextInput';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+
 import { themeColor } from '../../utils/ThemeUtils';
-import { ScrollView, TouchableOpacity, View, Text } from 'react-native';
+import { localeString } from '../../utils/LocaleUtils';
 import FiatStore from '../../stores/FiatStore';
 import SettingsStore from '../../stores/SettingsStore';
-import { observer, inject } from 'mobx-react';
-import { StyleSheet } from 'react-native';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
-import { localeString } from '../../utils/LocaleUtils';
+
 import Add from '../../assets/images/SVG/Add.svg';
-import { Icon } from 'react-native-elements';
+import DragDots from '../../assets/images/SVG/DragDots.svg';
 
 interface CurrencyConverterProps {
     navigation: any;
@@ -270,6 +274,31 @@ export default class CurrencyConverter extends React.Component<
         }
     };
 
+    onReordered = (fromIndex: number, toIndex: number) => {
+        const { inputValues } = this.state;
+        const keys = Object.keys(inputValues);
+        const copy: { [key: string]: string } = {};
+
+        // Create a copy of inputValues object
+        keys.forEach((key) => {
+            copy[key] = inputValues[key];
+        });
+
+        // Reorder keys array
+        keys.splice(toIndex, 0, keys.splice(fromIndex, 1)[0]);
+
+        // Create a new object with reordered inputValues
+        const reorderedValues: { [key: string]: string } = {};
+        keys.forEach((key) => {
+            reorderedValues[key] = copy[key];
+        });
+
+        // Update state with reordered inputValues
+        this.setState({
+            inputValues: reorderedValues
+        });
+    };
+
     render() {
         const { navigation, FiatStore, SettingsStore } = this.props;
         const fiatRates = FiatStore?.fiatRates || [];
@@ -320,11 +349,74 @@ export default class CurrencyConverter extends React.Component<
                         />
                     </View>
                 ) : (
-                    <ScrollView>
-                        <View style={{ marginHorizontal: 22 }}>
-                            {this.renderInputFields()}
-                        </View>
-                    </ScrollView>
+                    <View style={{ marginHorizontal: 22 }}>
+                        <DragList
+                            onReordered={this.onReordered}
+                            data={Object.keys(inputValues)}
+                            keyExtractor={(item: any) => item}
+                            renderItem={({
+                                item,
+                                index,
+                                onDragStart,
+                                onDragEnd
+                            }: DragListRenderItemInfo<any>) => {
+                                const { inputValues } = this.state;
+                                return (
+                                    <View style={styles.draggableItem}>
+                                        <View
+                                            style={styles.inputContainer}
+                                            key={item}
+                                        >
+                                            <TextInput
+                                                style={styles.inputBox}
+                                                suffix={item}
+                                                placeholder={`Enter amount in ${item}`}
+                                                value={inputValues[item]}
+                                                onChangeText={(value) =>
+                                                    this.handleInputChange(
+                                                        value,
+                                                        item
+                                                    )
+                                                }
+                                                autoCapitalize="none"
+                                            />
+
+                                            <TouchableOpacity
+                                                onPress={() =>
+                                                    this.handleDeleteCurrency(
+                                                        item
+                                                    )
+                                                }
+                                            >
+                                                <Icon
+                                                    name="delete"
+                                                    size={24}
+                                                    color="red"
+                                                    style={styles.deleteIcon}
+                                                />
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                onPressIn={onDragStart}
+                                                onPressOut={onDragEnd}
+                                                accessibilityLabel={'Reorder'}
+                                                style={styles.dragHandle}
+                                            >
+                                                <DragDots
+                                                    fill={themeColor('text')}
+                                                    width="30"
+                                                    height="30"
+                                                    style={{
+                                                        alignSelf: 'center'
+                                                    }}
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                );
+                            }}
+                        />
+                    </View>
                 )}
             </Screen>
         );
@@ -342,6 +434,15 @@ const styles = StyleSheet.create({
         flex: 1
     },
     deleteIcon: {
+        marginLeft: 10
+    },
+    draggableItem: {
+        flexDirection: 'row', // Arrange items horizontally
+        alignItems: 'center', // Center items vertically
+        justifyContent: 'space-between', // Add space between input fields and drag handle
+        marginBottom: 10 // Adjust margin bottom as per your layout
+    },
+    dragHandle: {
         marginLeft: 10
     }
 });
