@@ -1,15 +1,18 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 import _map from 'lodash/map';
 
+import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
 import ModalBox from '../../components/ModalBox';
+import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, { TIME_PERIOD_KEYS } from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -26,6 +29,8 @@ interface InvoicesSettingsState {
     addressType: string;
     memo: string;
     expiry: string;
+    timePeriod: string;
+    expirySeconds: string;
     routeHints: boolean;
     ampInvoice: boolean;
     showCustomPreimageField: boolean;
@@ -41,6 +46,8 @@ export default class InvoicesSettings extends React.Component<
         addressType: '0',
         memo: '',
         expiry: '3600',
+        timePeriod: 'Seconds',
+        expirySeconds: '3600',
         routeHints: false,
         ampInvoice: false,
         showCustomPreimageField: false
@@ -55,6 +62,8 @@ export default class InvoicesSettings extends React.Component<
             addressType: settings?.invoices?.addressType || '0',
             memo: settings?.invoices?.memo || '',
             expiry: settings?.invoices?.expiry || '3600',
+            timePeriod: settings?.invoices?.timePeriod || 'Seconds',
+            expirySeconds: settings?.invoices?.expirySeconds || '3600',
             routeHints: settings?.invoices?.routeHints || false,
             ampInvoice: settings?.invoices?.ampInvoice || false,
             showCustomPreimageField:
@@ -77,6 +86,8 @@ export default class InvoicesSettings extends React.Component<
             addressType,
             memo,
             expiry,
+            timePeriod,
+            expirySeconds,
             routeHints,
             ampInvoice,
             showCustomPreimageField
@@ -174,6 +185,8 @@ export default class InvoicesSettings extends React.Component<
                                     addressType,
                                     memo: text,
                                     expiry,
+                                    timePeriod,
+                                    expirySeconds,
                                     routeHints,
                                     ampInvoice,
                                     showCustomPreimageField
@@ -193,26 +206,119 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 {localeString('views.Receive.expiration')}
                             </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={'3600 (one hour)'}
-                                value={expiry}
-                                onChangeText={async (text: string) => {
-                                    this.setState({
-                                        expiry: text
-                                    });
-                                    await updateSettings({
-                                        invoices: {
-                                            addressType,
-                                            memo,
-                                            expiry: text,
-                                            routeHints,
-                                            ampInvoice,
-                                            showCustomPreimageField
+                            <Row style={{ width: '100%' }}>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={expiry}
+                                    style={{
+                                        width: '65%'
+                                    }}
+                                    onChangeText={async (text: string) => {
+                                        let expirySeconds = '3600';
+                                        if (timePeriod === 'Seconds') {
+                                            expirySeconds = text;
+                                        } else if (timePeriod === 'Minutes') {
+                                            expirySeconds = new BigNumber(text)
+                                                .multipliedBy(60)
+                                                .toString();
+                                        } else if (timePeriod === 'Hours') {
+                                            expirySeconds = new BigNumber(text)
+                                                .multipliedBy(60 * 60)
+                                                .toString();
+                                        } else if (timePeriod === 'Days') {
+                                            expirySeconds = new BigNumber(text)
+                                                .multipliedBy(60 * 60 * 24)
+                                                .toString();
+                                        } else if (timePeriod === 'Weeks') {
+                                            expirySeconds = new BigNumber(text)
+                                                .multipliedBy(60 * 60 * 24 * 7)
+                                                .toString();
                                         }
-                                    });
-                                }}
-                            />
+
+                                        this.setState({
+                                            expiry: text,
+                                            expirySeconds
+                                        });
+                                        await updateSettings({
+                                            invoices: {
+                                                addressType,
+                                                memo,
+                                                expiry: text,
+                                                timePeriod,
+                                                expirySeconds,
+                                                routeHints,
+                                                ampInvoice,
+                                                showCustomPreimageField
+                                            }
+                                        });
+                                    }}
+                                />
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        // TODO
+                                        top: -10,
+                                        height: 100
+                                    }}
+                                >
+                                    <DropdownSetting
+                                        selectedValue={timePeriod}
+                                        values={TIME_PERIOD_KEYS}
+                                        onValueChange={async (
+                                            value: string
+                                        ) => {
+                                            let expirySeconds;
+                                            if (value === 'Seconds') {
+                                                expirySeconds = expiry;
+                                            } else if (value === 'Minutes') {
+                                                expirySeconds = new BigNumber(
+                                                    expiry
+                                                )
+                                                    .multipliedBy(60)
+                                                    .toString();
+                                            } else if (value === 'Hours') {
+                                                expirySeconds = new BigNumber(
+                                                    expiry
+                                                )
+                                                    .multipliedBy(60 * 60)
+                                                    .toString();
+                                            } else if (value === 'Days') {
+                                                expirySeconds = new BigNumber(
+                                                    expiry
+                                                )
+                                                    .multipliedBy(60 * 60 * 24)
+                                                    .toString();
+                                            } else if (value === 'Weeks') {
+                                                expirySeconds = new BigNumber(
+                                                    expiry
+                                                )
+                                                    .multipliedBy(
+                                                        60 * 60 * 24 * 7
+                                                    )
+                                                    .toString();
+                                            }
+
+                                            this.setState({
+                                                timePeriod: value,
+                                                expirySeconds
+                                            });
+
+                                            await updateSettings({
+                                                invoices: {
+                                                    addressType,
+                                                    memo,
+                                                    expiry,
+                                                    timePeriod: value,
+                                                    expirySeconds,
+                                                    routeHints,
+                                                    ampInvoice,
+                                                    showCustomPreimageField
+                                                }
+                                            });
+                                        }}
+                                    />
+                                </View>
+                            </Row>
                         </>
                     )}
 
@@ -238,6 +344,8 @@ export default class InvoicesSettings extends React.Component<
                                             addressType,
                                             memo,
                                             expiry,
+                                            timePeriod,
+                                            expirySeconds,
                                             routeHints: !routeHints,
                                             ampInvoice,
                                             showCustomPreimageField
@@ -270,6 +378,8 @@ export default class InvoicesSettings extends React.Component<
                                             addressType,
                                             memo,
                                             expiry,
+                                            timePeriod,
+                                            expirySeconds,
                                             routeHints,
                                             ampInvoice: !ampInvoice,
                                             showCustomPreimageField
@@ -306,6 +416,8 @@ export default class InvoicesSettings extends React.Component<
                                             addressType,
                                             memo,
                                             expiry,
+                                            timePeriod,
+                                            expirySeconds,
                                             routeHints,
                                             ampInvoice,
                                             showCustomPreimageField:
@@ -352,6 +464,8 @@ export default class InvoicesSettings extends React.Component<
                                         addressType: d.value,
                                         memo,
                                         expiry,
+                                        timePeriod,
+                                        expirySeconds,
                                         routeHints,
                                         ampInvoice,
                                         showCustomPreimageField
