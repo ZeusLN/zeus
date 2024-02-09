@@ -176,38 +176,58 @@ export default class CurrencyConverter extends React.Component<
                 if (value === '') {
                     convertedValues[key] = ''; // Set the converted value to empty string
                 } else {
-                    // Check if there's a direct conversion rate
-                    const directRate = fiatRates.find(
-                        (rate) => rate.currencyPair === `${currency}_${key}`
-                    );
-                    if (directRate) {
-                        conversionRate = directRate.rate;
-                    } else {
-                        // Conversion from currency to currency
-                        const btcToRate = fiatRates.find(
+                    // Check if the input currency is SAT
+                    if (currency === 'SAT') {
+                        // Convert SAT to BTC first
+                        const btcValue = (
+                            parseFloat(value) / 100000000
+                        ).toFixed(8);
+
+                        // Then convert BTC to the target currency
+                        const btcConversionRate = fiatRates.find(
                             (rate) => rate.currencyPair === `BTC_${key}`
                         )?.rate;
-                        const btcFromRate = fiatRates.find(
-                            (rate) => rate.currencyPair === `BTC_${currency}`
-                        )?.rate;
 
-                        if (btcToRate && btcFromRate) {
-                            conversionRate = btcToRate / btcFromRate;
+                        if (btcConversionRate) {
+                            const convertedValue =
+                                parseFloat(btcValue) * btcConversionRate;
+                            convertedValues[key] = convertedValue.toFixed(2);
                         }
-                    }
+                    } else {
+                        // If the input currency is not SAT, proceed with normal conversion
+                        const directRate = fiatRates.find(
+                            (rate) => rate.currencyPair === `${currency}_${key}`
+                        );
+                        if (directRate) {
+                            conversionRate = directRate.rate;
+                        } else {
+                            // Conversion from currency to currency
+                            const btcToRate = fiatRates.find(
+                                (rate) => rate.currencyPair === `BTC_${key}`
+                            )?.rate;
+                            const btcFromRate = fiatRates.find(
+                                (rate) =>
+                                    rate.currencyPair === `BTC_${currency}`
+                            )?.rate;
 
-                    if (conversionRate !== null) {
-                        const convertedValue =
-                            parseFloat(convertedValues[currency]) *
-                            conversionRate;
-                        convertedValues[key] = convertedValue.toFixed(2);
+                            if (btcToRate && btcFromRate) {
+                                conversionRate = btcToRate / btcFromRate;
+                            }
+                        }
+
+                        if (conversionRate !== null) {
+                            const convertedValue =
+                                parseFloat(convertedValues[currency]) *
+                                conversionRate;
+                            convertedValues[key] = convertedValue.toFixed(2);
+                        }
                     }
                 }
             }
         });
 
-        // Update the BTC value based on the entered currency
-        if (currency !== 'BTC') {
+        // Update the BTC and SAT values based on the entered currency
+        if (currency !== 'BTC' && currency !== 'SAT') {
             const btcConversionRate = fiatRates.find(
                 (rate) => rate.currencyPair === `BTC_${currency}`
             )?.rate;
@@ -215,11 +235,35 @@ export default class CurrencyConverter extends React.Component<
                 const btcValue = (
                     parseFloat(value) / btcConversionRate
                 ).toFixed(8);
-                convertedValues['BTC'] = value === '' ? '' : btcValue; // Set to empty string if value is empty
+                convertedValues['BTC'] = value === '' ? '' : btcValue; // Set to an empty string if the value is empty or convert to BTC
+                if (inputValues['SAT'] !== undefined) {
+                    convertedValues['SAT'] =
+                        value === ''
+                            ? ''
+                            : (parseFloat(btcValue) * 100000000).toFixed(0); // Convert BTC to SAT if SAT is present
+                }
             }
-        } else {
+        } else if (currency === 'BTC') {
             // Check if the value is empty
-            convertedValues['BTC'] = value === '' ? '' : convertedValues['BTC']; // Preserve current BTC value if value is empty
+            convertedValues['BTC'] = value === '' ? '' : convertedValues['BTC']; // Preserve the current BTC value if the value is empty
+            if (inputValues['SAT'] !== undefined) {
+                convertedValues['SAT'] =
+                    value === ''
+                        ? ''
+                        : (
+                              parseFloat(convertedValues['BTC']) * 100000000
+                          ).toFixed(0); // Convert BTC to SAT if SAT is present
+            }
+        } else if (currency === 'SAT') {
+            if (inputValues['SAT'] !== undefined) {
+                if (value === '') {
+                    convertedValues['BTC'] = ''; // Set the BTC value to an empty string if the value in SAT is empty
+                } else {
+                    // Convert SAT to BTC
+                    const btcValue = (parseFloat(value) / 100000000).toFixed(8);
+                    convertedValues['BTC'] = btcValue; // Update the BTC value directly
+                }
+            }
         }
 
         // Update the state with the converted values

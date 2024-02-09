@@ -48,6 +48,19 @@ export default class AddCurrencies extends React.Component<
         const { navigation } = this.props;
         const { fiatRates } = this.state;
 
+        // Prepend BTC and SAT to the currency list
+        const updatedCurrencyList = [
+            {
+                key: '฿ Bitcoin (BTC)',
+                value: 'BTC'
+            },
+            {
+                key: '฿ Satoshis (SAT)',
+                value: 'SAT'
+            },
+            ...CURRENCY_KEYS
+        ];
+
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
@@ -63,7 +76,7 @@ export default class AddCurrencies extends React.Component<
                         navigation={navigation}
                     />
                     <FlatList
-                        data={CURRENCY_KEYS}
+                        data={updatedCurrencyList}
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 onPress={() => {
