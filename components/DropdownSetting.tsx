@@ -125,7 +125,7 @@ export default class DropdownSetting extends React.Component<
                                 style={{
                                     position: 'absolute',
                                     right: 10,
-                                    top: '33%'
+                                    top: '40%'
                                 }}
                             >
                                 <CaretDown
@@ -148,12 +148,11 @@ const styles = StyleSheet.create({
     field: {
         fontSize: 20,
         width: '100%',
-        height: 55,
-        top: 10,
-        paddingTop: 15,
+        top: 16,
         borderRadius: 6,
-        borderBottomWidth: 20,
         marginBottom: 20,
+        paddingTop: 15,
+        borderBottomWidth: 20,
         paddingLeft: 10,
         overflow: 'hidden',
         fontFamily: 'PPNeueMontreal-Book'
