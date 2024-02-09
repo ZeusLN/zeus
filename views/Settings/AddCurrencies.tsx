@@ -1,23 +1,21 @@
 import * as React from 'react';
+import { SearchBar } from 'react-native-elements';
+
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import { themeColor } from '../../utils/ThemeUtils';
-import {
-    FlatList,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 
 import { CURRENCY_KEYS } from '../../stores/SettingsStore';
+import { localeString } from '../../utils/LocaleUtils';
 
 interface AddCurrenciesProps {
     navigation: any;
 }
 
 interface AddCurrenciesState {
-    fiatRates: any[];
+    search: string;
 }
 
 export default class AddCurrencies extends React.Component<
@@ -26,14 +24,14 @@ export default class AddCurrencies extends React.Component<
 > {
     constructor(props: AddCurrenciesProps) {
         super(props);
-        const fiatRates: any = this.props.navigation.getParam(
-            'fiatRates',
-            null
-        );
         this.state = {
-            fiatRates
+            search: ''
         };
     }
+
+    updateSearch = (query: string) => {
+        this.setState({ search: query });
+    };
 
     renderSeparator = () => (
         <View
@@ -46,9 +44,7 @@ export default class AddCurrencies extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { fiatRates } = this.state;
 
-        // Prepend BTC and SAT to the currency list
         const updatedCurrencyList = [
             {
                 key: '฿ Bitcoin (BTC)',
@@ -60,6 +56,11 @@ export default class AddCurrencies extends React.Component<
             },
             ...CURRENCY_KEYS
         ];
+
+        const { search } = this.state;
+        const filteredCurrencies = updatedCurrencyList.filter((currency) =>
+            currency.key.toLowerCase().includes(search.toLowerCase())
+        );
 
         return (
             <Screen>
@@ -75,8 +76,27 @@ export default class AddCurrencies extends React.Component<
                         }}
                         navigation={navigation}
                     />
+                    <SearchBar
+                        placeholder={localeString('general.search')}
+                        onChangeText={this.updateSearch}
+                        value={this.state.search}
+                        inputStyle={{
+                            color: themeColor('text')
+                        }}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        containerStyle={{
+                            backgroundColor: 'transparent',
+                            borderTopWidth: 0,
+                            borderBottomWidth: 0
+                        }}
+                        inputContainerStyle={{
+                            borderRadius: 15,
+                            backgroundColor: themeColor('secondary')
+                        }}
+                    />
+
                     <FlatList
-                        data={updatedCurrencyList}
+                        data={filteredCurrencies}
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 onPress={() => {

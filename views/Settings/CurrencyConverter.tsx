@@ -339,19 +339,14 @@ export default class CurrencyConverter extends React.Component<
     };
 
     render() {
-        const { navigation, FiatStore, SettingsStore } = this.props;
-        const fiatRates = FiatStore?.fiatRates || [];
+        const { navigation, SettingsStore } = this.props;
         const { inputValues, editMode, fadeAnim } = this.state;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
 
         const AddButton = () => (
             <TouchableOpacity
-                onPress={() =>
-                    navigation.navigate('AddCurrencies', {
-                        fiatRates: fiatRates
-                    })
-                }
+                onPress={() => navigation.navigate('AddCurrencies')}
                 accessibilityLabel={localeString('general.add')}
             >
                 <Add
@@ -428,7 +423,6 @@ export default class CurrencyConverter extends React.Component<
                             keyExtractor={(item: any) => item}
                             renderItem={({
                                 item,
-                                index,
                                 onDragStart,
                                 onDragEnd
                             }: DragListRenderItemInfo<any>) => {
@@ -485,7 +479,9 @@ export default class CurrencyConverter extends React.Component<
                                             >
                                                 <TextInput
                                                     suffix={item}
-                                                    placeholder={`Enter amount in ${item}`}
+                                                    placeholder={`${localeString(
+                                                        'views.Settings.CurrencyConverter.enterAmountIn'
+                                                    )} ${item}`}
                                                     value={inputValues[item]}
                                                     onChangeText={(value) =>
                                                         this.handleInputChange(
