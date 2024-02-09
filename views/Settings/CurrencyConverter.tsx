@@ -1,14 +1,21 @@
 import * as React from 'react';
 import { observer, inject } from 'mobx-react';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import {
+    TouchableOpacity,
+    View,
+    StyleSheet,
+    Animated,
+    Easing
+} from 'react-native';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
-import { Icon, ListItem } from 'react-native-elements';
+import { Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import TextInput from '../../components/TextInput';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import { Row } from '../../components/layout/Row';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -16,6 +23,7 @@ import FiatStore from '../../stores/FiatStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
+import Edit from '../../assets/images/SVG/Pen.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 
 interface CurrencyConverterProps {
@@ -27,6 +35,8 @@ interface CurrencyConverterProps {
 interface CurrencyConverterState {
     inputValues: { [key: string]: string };
     selectedCurrency: string;
+    editMode: boolean;
+    fadeAnim: Animated.Value;
 }
 
 @inject('FiatStore', 'SettingsStore')
@@ -41,9 +51,10 @@ export default class CurrencyConverter extends React.Component<
             inputValues: {
                 BTC: '',
                 USD: ''
-                // Here we can add other default currencies as well
             },
-            selectedCurrency: ''
+            selectedCurrency: '',
+            editMode: false,
+            fadeAnim: new Animated.Value(0)
         };
     }
 
@@ -215,36 +226,6 @@ export default class CurrencyConverter extends React.Component<
         this.setState({ inputValues: convertedValues });
     };
 
-    renderInputFields = () => {
-        const { inputValues } = this.state;
-
-        return Object.keys(inputValues).map((currency) => (
-            <View style={styles.inputContainer} key={currency}>
-                <TextInput
-                    style={styles.inputBox}
-                    suffix={currency}
-                    placeholder={`Enter amount in ${currency}`}
-                    value={inputValues[currency]}
-                    onChangeText={(value) =>
-                        this.handleInputChange(value, currency)
-                    }
-                    autoCapitalize="none"
-                />
-
-                <TouchableOpacity
-                    onPress={() => this.handleDeleteCurrency(currency)}
-                >
-                    <Icon
-                        name="delete"
-                        size={24}
-                        color="red"
-                        style={styles.deleteIcon}
-                    />
-                </TouchableOpacity>
-            </View>
-        ));
-    };
-
     handleDeleteCurrency = async (currency: string) => {
         try {
             // Retrieve inputValues from storage
@@ -299,10 +280,24 @@ export default class CurrencyConverter extends React.Component<
         });
     };
 
+    toggleEditMode = () => {
+        const { editMode, fadeAnim } = this.state;
+        this.setState({ editMode: !editMode });
+
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: editMode ? 0 : 1,
+                duration: 350,
+                easing: Easing.ease,
+                useNativeDriver: false
+            })
+        ]).start();
+    };
+
     render() {
         const { navigation, FiatStore, SettingsStore } = this.props;
         const fiatRates = FiatStore?.fiatRates || [];
-        const { inputValues } = this.state;
+        const { inputValues, editMode, fadeAnim } = this.state;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
 
@@ -319,16 +314,49 @@ export default class CurrencyConverter extends React.Component<
                     fill={themeColor('text')}
                     width="30"
                     height="30"
-                    style={{ alignSelf: 'center' }}
+                    style={{
+                        alignSelf: 'center',
+                        marginLeft: 10,
+                        marginTop: -8
+                    }}
                 />
             </TouchableOpacity>
         );
+
+        const EditButton = () => (
+            <TouchableOpacity onPress={this.toggleEditMode}>
+                <Edit
+                    fill={themeColor('text')}
+                    style={{ alignSelf: 'center', marginTop: -8 }}
+                />
+            </TouchableOpacity>
+        );
+
+        const inputBoxWidth = fadeAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, editMode ? 1 : 0.8]
+        });
+
+        const slideInLeft = fadeAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [editMode ? -50 : 0, 0]
+        });
+
+        const slideInRight = fadeAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [editMode ? 50 : 0, 0]
+        });
 
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
-                    rightComponent={<AddButton />}
+                    rightComponent={
+                        <Row>
+                            <EditButton />
+                            <AddButton />
+                        </Row>
+                    }
                     centerComponent={{
                         text: localeString(
                             'views.Settings.CurrencyConverter.title'
@@ -367,50 +395,95 @@ export default class CurrencyConverter extends React.Component<
                                             style={styles.inputContainer}
                                             key={item}
                                         >
-                                            <TextInput
-                                                style={styles.inputBox}
-                                                suffix={item}
-                                                placeholder={`Enter amount in ${item}`}
-                                                value={inputValues[item]}
-                                                onChangeText={(value) =>
-                                                    this.handleInputChange(
-                                                        value,
-                                                        item
-                                                    )
-                                                }
-                                                autoCapitalize="none"
-                                            />
+                                            {editMode && (
+                                                <TouchableOpacity
+                                                    onPress={() =>
+                                                        this.handleDeleteCurrency(
+                                                            item
+                                                        )
+                                                    }
+                                                >
+                                                    <Animated.View
+                                                        style={[
+                                                            styles.deleteIcon,
+                                                            {
+                                                                transform: [
+                                                                    {
+                                                                        translateX:
+                                                                            slideInLeft
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]}
+                                                    >
+                                                        <Icon
+                                                            name="delete"
+                                                            size={28}
+                                                            color={themeColor(
+                                                                'delete'
+                                                            )}
+                                                        />
+                                                    </Animated.View>
+                                                </TouchableOpacity>
+                                            )}
 
-                                            <TouchableOpacity
-                                                onPress={() =>
-                                                    this.handleDeleteCurrency(
-                                                        item
-                                                    )
-                                                }
+                                            <Animated.View
+                                                style={[
+                                                    styles.inputBox,
+                                                    {
+                                                        transform: [
+                                                            {
+                                                                scaleX: inputBoxWidth
+                                                            }
+                                                        ]
+                                                    }
+                                                ]}
                                             >
-                                                <Icon
-                                                    name="delete"
-                                                    size={24}
-                                                    color="red"
-                                                    style={styles.deleteIcon}
+                                                <TextInput
+                                                    suffix={item}
+                                                    placeholder={`Enter amount in ${item}`}
+                                                    value={inputValues[item]}
+                                                    onChangeText={(value) =>
+                                                        this.handleInputChange(
+                                                            value,
+                                                            item
+                                                        )
+                                                    }
+                                                    autoCapitalize="none"
                                                 />
-                                            </TouchableOpacity>
+                                            </Animated.View>
 
-                                            <TouchableOpacity
-                                                onPressIn={onDragStart}
-                                                onPressOut={onDragEnd}
-                                                accessibilityLabel={'Reorder'}
-                                                style={styles.dragHandle}
-                                            >
-                                                <DragDots
-                                                    fill={themeColor('text')}
-                                                    width="30"
-                                                    height="30"
-                                                    style={{
-                                                        alignSelf: 'center'
-                                                    }}
-                                                />
-                                            </TouchableOpacity>
+                                            {editMode && (
+                                                <TouchableOpacity
+                                                    onPressIn={onDragStart}
+                                                    onPressOut={onDragEnd}
+                                                    accessibilityLabel={
+                                                        'Reorder'
+                                                    }
+                                                >
+                                                    <Animated.View
+                                                        style={[
+                                                            styles.dragHandle,
+                                                            {
+                                                                transform: [
+                                                                    {
+                                                                        translateX:
+                                                                            slideInRight
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]}
+                                                    >
+                                                        <DragDots
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="30"
+                                                            height="30"
+                                                        />
+                                                    </Animated.View>
+                                                </TouchableOpacity>
+                                            )}
                                         </View>
                                     </View>
                                 );
@@ -427,22 +500,22 @@ const styles = StyleSheet.create({
     inputContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10
+        alignItems: 'center'
     },
     inputBox: {
         flex: 1
     },
     deleteIcon: {
-        marginLeft: 10
+        marginRight: 16,
+        marginLeft: -6
     },
     draggableItem: {
-        flexDirection: 'row', // Arrange items horizontally
-        alignItems: 'center', // Center items vertically
-        justifyContent: 'space-between', // Add space between input fields and drag handle
-        marginBottom: 10 // Adjust margin bottom as per your layout
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between'
     },
     dragHandle: {
-        marginLeft: 10
+        marginLeft: 16,
+        marginRight: -6
     }
 });
