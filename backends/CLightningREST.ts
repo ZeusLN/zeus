@@ -288,6 +288,9 @@ export default class CLightningREST extends LND {
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
     isLNDBased = () => false;
-    // TODO: Check if experimental option set to enable offers
-    supportsOffers = () => true;
+    supportsOffers = async () => {
+        const res = await this.getRequest('/v1/utility/listConfigs');
+        const supportsOffers: boolean = res['experimental-offers'] || false;
+        return supportsOffers;
+    };
 }
