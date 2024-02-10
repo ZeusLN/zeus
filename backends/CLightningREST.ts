@@ -265,6 +265,7 @@ export default class CLightningREST extends LND {
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
+    supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => false;

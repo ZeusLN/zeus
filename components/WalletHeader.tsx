@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Badge } from 'react-native-elements';
 import {
     Animated,
+    Dimensions,
     Easing,
     Image,
+    StyleSheet,
     Text,
     TouchableOpacity,
     View
@@ -13,7 +15,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
@@ -24,7 +26,9 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
+import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { protectedNavigation } from '../utils/NavigationUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -46,23 +50,38 @@ const Contact = require('../assets/images/Mascot.png');
 
 const TorIcon = require('../assets/images/tor.png');
 
-const protectedNavigation = async (
-    navigation: any,
-    route: string,
-    disactivatePOS?: boolean
-) => {
-    const { posStatus, settings, setPosStatus } = stores.settingsStore;
-    const loginRequired = settings && (settings.passphrase || settings.pin);
-    const posEnabled = posStatus === 'active';
+const Mailbox = () => (
+    <MailboxFlagUp fill={themeColor('highlight')} width={34.29} height={30} />
+);
 
-    if (posEnabled && loginRequired) {
-        navigation.navigate('Lockscreen', {
-            attemptAdminLogin: true
-        });
-    } else {
-        if (disactivatePOS) setPosStatus('inactive');
-        navigation.navigate(route);
-    }
+const MailboxAnimated = () => {
+    let state = new Animated.Value(1);
+    Animated.loop(
+        Animated.sequence([
+            Animated.timing(state, {
+                toValue: 0,
+                duration: 500,
+                delay: 1000,
+                useNativeDriver: true
+            }),
+            Animated.timing(state, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true
+            })
+        ])
+    ).start();
+
+    return (
+        <Animated.View
+            style={{
+                alignSelf: 'center',
+                opacity: state
+            }}
+        >
+            <Mailbox />
+        </Animated.View>
+    );
 };
 
 const ActivityButton = ({ navigation }: { navigation: any }) => (
@@ -204,7 +223,7 @@ export default class WalletHeader extends React.Component<
         } = this.props;
         const { filteredPendingChannels } = ChannelsStore!;
         const { settings, posStatus, setPosStatus } = SettingsStore!;
-        const { paid } = LightningAddressStore!;
+        const { paid, redeemingAll } = LightningAddressStore!;
         const laLoading = LightningAddressStore?.loading;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
@@ -212,12 +231,13 @@ export default class WalletHeader extends React.Component<
             (settings && settings.nodes && settings.nodes.length > 1) || false;
         const selectedNode: any =
             (settings &&
-                settings.nodes &&
+                settings.nodes?.length &&
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
-        const squareEnabled: boolean =
-            (settings && settings.pos && settings.pos.squareEnabled) || false;
+        const posEnabled: PosEnabled =
+            (settings && settings.pos && settings.pos.posEnabled) ||
+            PosEnabled.Disabled;
 
         const SettingsButton = () => (
             <TouchableOpacity
@@ -247,17 +267,20 @@ export default class WalletHeader extends React.Component<
             infoValue = localeString('views.Wallet.MainPane.regnet');
         }
 
+        const { fontScale } = Dimensions.get('window');
+
         const NetworkBadge = () => {
             return infoValue ? (
                 <Badge
                     onPress={() => navigation.navigate('NodeInfo')}
                     value={infoValue}
                     badgeStyle={{
+                        ...styles.badgeStyle,
                         backgroundColor: 'gray',
-                        borderWidth: 0,
-                        marginLeft: 8,
-                        marginRight: 8
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale
                     }}
+                    textStyle={styles.badgeTextStyle}
                 />
             ) : null;
         };
@@ -284,6 +307,21 @@ export default class WalletHeader extends React.Component<
                 ) : null}
             </>
         );
+
+        const ReadOnlyBadge = () => {
+            return !BackendUtils.supportsLightningSends() ? (
+                <Badge
+                    value={localeString('general.readOnlyWallet')}
+                    badgeStyle={{
+                        ...styles.badgeStyle,
+                        backgroundColor: themeColor('error'),
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale
+                    }}
+                    textStyle={styles.badgeTextStyle}
+                />
+            ) : null;
+        };
 
         const SearchButton = () => (
             <TouchableOpacity
@@ -355,7 +393,12 @@ export default class WalletHeader extends React.Component<
             <Header
                 leftComponent={
                     loading ? undefined : (
-                        <Row>
+                        <Row
+                            style={{
+                                flexGrow: 1,
+                                alignItems: 'center'
+                            }}
+                        >
                             <SettingsButton />
                             {paid && paid.length > 0 && (
                                 <TouchableOpacity
@@ -367,11 +410,11 @@ export default class WalletHeader extends React.Component<
                                     }
                                     style={{ left: 18 }}
                                 >
-                                    <MailboxFlagUp
-                                        fill={themeColor('highlight')}
-                                        width={34.29}
-                                        height={30}
-                                    />
+                                    {redeemingAll ? (
+                                        <MailboxAnimated />
+                                    ) : (
+                                        <Mailbox />
+                                    )}
                                 </TouchableOpacity>
                             )}
                         </Row>
@@ -426,12 +469,14 @@ export default class WalletHeader extends React.Component<
                                     )?.toString()}
                                 </Text>
                                 <NetworkBadge />
+                                <ReadOnlyBadge />
                                 <TorBadge />
                             </Row>
                         </View>
                     ) : (
-                        <Row>
+                        <Row style={{ alignItems: 'center', flexGrow: 1 }}>
                             <NetworkBadge />
+                            <ReadOnlyBadge />
                             <TorBadge />
                         </Row>
                     )
@@ -450,7 +495,7 @@ export default class WalletHeader extends React.Component<
                     ) : (
                         <View
                             style={{
-                                flex: 1,
+                                flexGrow: 1,
                                 flexDirection: 'row',
                                 alignItems: 'center'
                             }}
@@ -482,8 +527,12 @@ export default class WalletHeader extends React.Component<
                             <View>
                                 <ScanBadge navigation={navigation} />
                             </View>
-                            {squareEnabled && (
-                                <View style={{ marginLeft: 15 }}>
+                            {posEnabled !== PosEnabled.Disabled && (
+                                <View
+                                    style={{
+                                        marginLeft: 15
+                                    }}
+                                >
                                     <POSBadge
                                         setPosStatus={setPosStatus}
                                         getOrders={getOrders}
@@ -497,3 +546,15 @@ export default class WalletHeader extends React.Component<
         );
     }
 }
+
+const styles = StyleSheet.create({
+    badgeStyle: {
+        borderWidth: 0,
+        marginHorizontal: 8,
+        height: undefined
+    },
+    badgeTextStyle: {
+        fontWeight: 'normal',
+        textAlign: 'center'
+    }
+});

@@ -23,7 +23,7 @@ interface KeyValueProps {
     sensitive?: boolean;
     mempoolLink?: () => void;
     disableCopy?: boolean;
-    SettingsStore: SettingsStore;
+    SettingsStore?: SettingsStore;
 }
 
 @inject('SettingsStore')
@@ -64,16 +64,19 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                 </Text>
             </Body>
         );
-        const Value = (
-            <Text
-                style={{
-                    color: color || themeColor('text'),
-                    fontFamily: 'PPNeueMontreal-Book'
-                }}
-            >
-                {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-            </Text>
-        );
+        const Value =
+            typeof value === 'object' ? (
+                value
+            ) : (
+                <Text
+                    style={{
+                        color: color || themeColor('text'),
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+                </Text>
+            );
 
         const copyText = () => {
             Clipboard.setString(value);
@@ -116,7 +119,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
 const styles = StyleSheet.create({
     key: {
         paddingRight: 35,
-        maxWidth: '50%'
+        maxWidth: '70%'
     },
     value: {
         flex: 1,
@@ -132,7 +135,6 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end'
     },
     rtlValue: {
-        paddingRight: 10,
-        maxWidth: '50%'
+        paddingRight: 10
     }
 });

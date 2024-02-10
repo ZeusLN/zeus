@@ -119,6 +119,7 @@ class BackendUtils {
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsOnchainReceiving = () => this.call('supportsOnchainReceiving');
+    supportsLightningSends = () => this.call('supportsLightningSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     supportsPendingChannels = () => this.call('supportsPendingChannels');

@@ -126,6 +126,12 @@ export default class LndHub extends LND {
             // LNBits
             stores?.settingsStore?.lndhubUrl?.includes('/lndhub/ext/')
         );
+    supportsLightningSends = () => {
+        return !(
+            stores?.settingsStore?.lndhubUrl?.includes('/lndhub/ext/') &&
+            stores.settingsStore.username === 'invoice'
+        );
+    };
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsPendingChannels = () => false;

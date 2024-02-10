@@ -145,4 +145,16 @@ describe('Base64Utils', () => {
             );
         });
     });
+
+    describe('bytesToUtf8', () => {
+        it('converts a byte array to utf-8', () => {
+            const input = Uint8Array.from([
+                84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 116, 101, 115, 116
+            ]);
+
+            const utf8 = Base64Utils.bytesToUtf8(input);
+
+            expect(utf8).toBe('This is a test');
+        });
+    });
 });

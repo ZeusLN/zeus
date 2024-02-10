@@ -25,6 +25,8 @@ import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
 import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
+import NostrContacts from './views/NostrContacts';
+import ContactQR from './views/ContactQR';
 
 // Settings views
 import Settings from './views/Settings/Settings';
@@ -52,6 +54,10 @@ import Mortals from './views/Settings/Mortals';
 import PointOfSale from './views/Settings/PointOfSale';
 import PointOfSaleRecon from './views/Settings/PointOfSaleRecon';
 import PointOfSaleReconExport from './views/Settings/PointOfSaleReconExport';
+import Categories from './views/POS/Categories';
+import ProductCategoryDetails from './views/POS/ProductCategoryDetails';
+import Products from './views/POS/Products';
+import ProductDetails from './views/POS/ProductDetails';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
@@ -77,6 +83,7 @@ import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
 import Peers from './views/Settings/EmbeddedNode/Peers';
 import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
 import ZeroConfPeers from './views/Settings/EmbeddedNode/Peers/ZeroConfPeers';
+import Advanced from './views/Settings/EmbeddedNode/Advanced';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -294,6 +301,18 @@ const AppScenes = {
     PointOfSaleReconExport: {
         screen: PointOfSaleReconExport
     },
+    Categories: {
+        screen: Categories
+    },
+    ProductCategoryDetails: {
+        screen: ProductCategoryDetails
+    },
+    Products: {
+        screen: Products
+    },
+    ProductDetails: {
+        screen: ProductDetails
+    },
     PaymentsSettings: {
         screen: PaymentsSettings
     },
@@ -354,6 +373,9 @@ const AppScenes = {
     ZeroConfPeers: {
         screen: ZeroConfPeers
     },
+    EmbeddedNodeSettingsAdvanced: {
+        screen: Advanced
+    },
     LSPSettings: {
         screen: LSP
     },
@@ -395,6 +417,12 @@ const AppScenes = {
     },
     SocialMedia: {
         screen: SocialMedia
+    },
+    NostrContacts: {
+        screen: NostrContacts
+    },
+    ContactQR: {
+        screen: ContactQR
     }
 };
 

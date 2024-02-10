@@ -40,6 +40,13 @@ export default class NodeInfoStore {
     };
 
     @action
+    getNetworkInfoError = () => {
+        this.error = true;
+        this.loading = false;
+        this.networkInfo = {};
+    };
+
+    @action
     setLoading = () => {
         this.loading = true;
     };
@@ -51,31 +58,37 @@ export default class NodeInfoStore {
         this.errorMsg = '';
         this.loading = true;
         const currentRequest = (this.currentRequest = {});
-        return BackendUtils.getMyNodeInfo()
-            .then((data: any) => {
-                if (this.currentRequest !== currentRequest) {
-                    return;
-                }
-                const nodeInfo = new NodeInfo(data);
-                this.nodeInfo = nodeInfo;
-                this.testnet = nodeInfo.isTestNet;
-                this.regtest = nodeInfo.isRegTest;
-                this.loading = false;
-                this.error = false;
-                return nodeInfo;
-            })
-            .catch((error: any) => {
-                // handle error
-                this.errorMsg = errorToUserFriendly(error.toString());
-                this.getNodeInfoError();
-            });
+        return new Promise((resolve) => {
+            BackendUtils.getMyNodeInfo()
+                .then((data: any) => {
+                    if (this.currentRequest !== currentRequest) {
+                        return;
+                    }
+                    const nodeInfo = new NodeInfo(data);
+                    this.nodeInfo = nodeInfo;
+                    this.testnet = nodeInfo.isTestNet;
+                    this.regtest = nodeInfo.isRegTest;
+                    this.loading = false;
+                    this.error = false;
+                    resolve(nodeInfo);
+                })
+                .catch((error: any) => {
+                    if (this.currentRequest !== currentRequest) {
+                        resolve('Old getNodeInfo call');
+                        return;
+                    }
+                    // handle error
+                    this.errorMsg = errorToUserFriendly(error.toString());
+                    this.getNodeInfoError();
+                    resolve(error);
+                });
+        });
     };
 
     @action
     public getNetworkInfo = () => {
         this.errorMsg = '';
         this.loading = true;
-        const currentRequest = (this.currentRequest = {});
         return BackendUtils.getNetworkInfo()
             .then((data: any) => {
                 this.networkInfo = data;
@@ -84,12 +97,9 @@ export default class NodeInfoStore {
                 return this.networkInfo;
             })
             .catch((error: any) => {
-                if (this.currentRequest !== currentRequest) {
-                    return;
-                }
                 // handle error
                 this.errorMsg = errorToUserFriendly(error.toString());
-                this.getNodeInfoError();
+                this.getNetworkInfoError();
             });
     };
 

@@ -114,6 +114,7 @@ interface ReceiveState {
     // LSP
     needInbound: boolean;
     enableLSP: boolean;
+    lspIsActive: boolean;
 }
 
 @inject(
@@ -153,7 +154,8 @@ export default class Receive extends React.Component<
         rate: 0,
         // LSP
         needInbound: false,
-        enableLSP: true
+        enableLSP: true,
+        lspIsActive: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -179,7 +181,8 @@ export default class Receive extends React.Component<
             expiry: settings?.invoices?.expiry || '3600',
             routeHints: settings?.invoices?.routeHints || false,
             ampInvoice: settings?.invoices?.ampInvoice || false,
-            enableLSP: settings?.enableLSP
+            enableLSP: settings?.enableLSP,
+            lspIsActive: settings?.enableLSP && BackendUtils.supportsLSPs()
         });
 
         const lnOnly =
@@ -231,8 +234,7 @@ export default class Receive extends React.Component<
             this.props.UnitsStore.resetUnits();
             let needInbound = false;
             if (
-                BackendUtils.supportsLSPs() &&
-                settings?.enableLSP &&
+                this.state.lspIsActive &&
                 new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
                     this.props.ChannelsStore.totalInbound
                 )
@@ -250,8 +252,7 @@ export default class Receive extends React.Component<
         if (amount) {
             let needInbound = false;
             if (
-                BackendUtils.supportsLSPs() &&
-                settings?.enableLSP &&
+                this.state.lspIsActive &&
                 getSatAmount(amount) != '0' &&
                 new BigNumber(getSatAmount(amount)).gt(
                     this.props.ChannelsStore.totalInbound
@@ -289,9 +290,8 @@ export default class Receive extends React.Component<
     }
 
     async UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation, InvoicesStore, SettingsStore } = nextProps;
+        const { navigation, InvoicesStore } = nextProps;
         const { reset } = InvoicesStore;
-        const { settings } = SettingsStore;
 
         reset();
         const amount: string = navigation.getParam('amount');
@@ -301,8 +301,7 @@ export default class Receive extends React.Component<
         if (amount) {
             let needInbound = false;
             if (
-                BackendUtils.supportsLSPs() &&
-                settings?.enableLSP &&
+                this.state.lspIsActive &&
                 getSatAmount(amount) != '0' &&
                 new BigNumber(getSatAmount(amount)).gt(
                     this.props.ChannelsStore.totalInbound
@@ -320,8 +319,7 @@ export default class Receive extends React.Component<
         if (lnurl) {
             let needInbound = false;
             if (
-                BackendUtils.supportsLSPs() &&
-                settings?.enableLSP &&
+                this.state.lspIsActive &&
                 new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
                     this.props.ChannelsStore.totalInbound
                 )
@@ -368,16 +366,16 @@ export default class Receive extends React.Component<
         addressType?: string
     ) => {
         const { InvoicesStore } = this.props;
-        const { enableLSP } = this.state;
+        const { lspIsActive } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
 
         createUnifiedInvoice(
-            BackendUtils.supportsLSPs() && enableLSP ? '' : memo || '',
+            lspIsActive ? '' : memo || '',
             amount || '0',
             expiry || '3600',
             undefined,
-            enableLSP ? false : ampInvoice || false,
-            enableLSP ? false : routeHints || false,
+            lspIsActive ? false : ampInvoice || false,
+            lspIsActive ? false : routeHints || false,
             BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
                 : undefined
@@ -462,7 +460,7 @@ export default class Receive extends React.Component<
 
     validateAddress = (text: string) => {
         const { navigation, InvoicesStore } = this.props;
-        const { enableLSP } = this.state;
+        const { lspIsActive } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
         const amount = getSatAmount(navigation.getParam('amount'));
 
@@ -478,9 +476,7 @@ export default class Receive extends React.Component<
                     // otherwise we present the user with the create invoice screen
                     if (Number(amount) > 0) {
                         createUnifiedInvoice(
-                            BackendUtils.supportsLSPs() && enableLSP
-                                ? ''
-                                : memo,
+                            lspIsActive ? '' : memo,
                             amount.toString(),
                             '3600',
                             lnurlParams
@@ -868,13 +864,14 @@ export default class Receive extends React.Component<
             ampInvoice,
             routeHints,
             needInbound,
-            enableLSP
+            enableLSP,
+            lspIsActive
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
 
         const { zeroConfFee, showLspSettings } = LSPStore;
-        const { getAmount } = UnitsStore;
+        const { getAmountFromSats } = UnitsStore;
 
         const {
             createUnifiedInvoice,
@@ -1194,7 +1191,7 @@ export default class Receive extends React.Component<
                                               )
                                             : `${localeString(
                                                   'views.Receive.youReceived'
-                                              )} ${getAmount(
+                                              )} ${getAmountFromSats(
                                                   watchedInvoicePaidAmt ||
                                                       payment_request_amt
                                               )}`}
@@ -1276,8 +1273,7 @@ export default class Receive extends React.Component<
                                     </View>
                                 )}
                                 {haveInvoice &&
-                                    BackendUtils.supportsLSPs() &&
-                                    enableLSP &&
+                                    lspIsActive &&
                                     satAmount === '0' &&
                                     (selectedIndex === 0 ||
                                         selectedIndex === 1) && (
@@ -1481,7 +1477,7 @@ export default class Receive extends React.Component<
                                             !lightningAddressLoading &&
                                             lightningAddress && (
                                                 <CollapsedQR
-                                                    value={lightningAddress}
+                                                    value={`lightning:${lightningAddress}`}
                                                     copyText={localeString(
                                                         'views.Receive.copyAddress'
                                                     )}
@@ -1591,10 +1587,7 @@ export default class Receive extends React.Component<
                                             </>
                                         )}
 
-                                        {!(
-                                            BackendUtils.supportsLSPs() &&
-                                            enableLSP
-                                        ) && (
+                                        {!enableLSP && (
                                             <>
                                                 <Text
                                                     style={{
@@ -1655,8 +1648,7 @@ export default class Receive extends React.Component<
                                             ) => {
                                                 let needInbound = false;
                                                 if (
-                                                    BackendUtils.supportsLSPs() &&
-                                                    enableLSP &&
+                                                    lspIsActive &&
                                                     satAmount != '0' &&
                                                     new BigNumber(satAmount).gt(
                                                         this.props.ChannelsStore
@@ -1800,10 +1792,7 @@ export default class Receive extends React.Component<
                                             )}
 
                                         {BackendUtils.isLNDBased() &&
-                                            !(
-                                                BackendUtils.supportsLSPs() &&
-                                                enableLSP
-                                            ) && (
+                                            !lspIsActive && (
                                                 <>
                                                     <Text
                                                         style={{
@@ -1839,10 +1828,7 @@ export default class Receive extends React.Component<
                                             )}
 
                                         {BackendUtils.supportsAMP() &&
-                                            !(
-                                                BackendUtils.supportsLSPs() &&
-                                                enableLSP
-                                            ) && (
+                                            !lspIsActive && (
                                                 <>
                                                     <Text
                                                         style={{
@@ -1892,16 +1878,12 @@ export default class Receive extends React.Component<
                                                 }
                                                 onPress={() => {
                                                     createUnifiedInvoice(
-                                                        BackendUtils.supportsLSPs() &&
-                                                            enableLSP
-                                                            ? ''
-                                                            : memo,
+                                                        lspIsActive ? '' : memo,
                                                         satAmount.toString() ||
                                                             '0',
                                                         expiry,
                                                         lnurl,
-                                                        BackendUtils.supportsLSPs() &&
-                                                            enableLSP
+                                                        lspIsActive
                                                             ? false
                                                             : ampInvoice ||
                                                                   false,

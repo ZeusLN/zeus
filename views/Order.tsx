@@ -21,7 +21,7 @@ import TextInput from '../components/TextInput';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import FiatStore from '../stores/FiatStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 
@@ -76,10 +76,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const { settings } = SettingsStore;
         const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
-        const disableTips: boolean =
-            (settings && settings.pos && settings.pos.disableTips) || false;
-        const merchantName =
-            settings && settings.pos && settings.pos.merchantName;
+        const disableTips: boolean = settings?.pos?.disableTips || false;
+        const merchantName = settings?.pos?.merchantName;
+        const taxPercentage = settings?.pos?.taxPercentage;
 
         const fiatEntry =
             fiat && fiatRates
@@ -103,12 +102,25 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             : `ZEUS POS - Order ${order.id}`;
 
         // round to nearest sat
-        const subTotalSats = new BigNumber(order.total_money.amount)
-            .minus(order.total_tax_money.amount)
-            .div(100)
-            .div(rate)
-            .multipliedBy(SATS_PER_BTC)
-            .toFixed(0);
+        let subTotalSats;
+        if (settings.pos.posEnabled === PosEnabled.Square) {
+            subTotalSats = new BigNumber(order.total_money.amount)
+                // subtract tax for subtotal if using Square
+                .minus(order.total_tax_money.amount)
+                .div(100)
+                .div(rate)
+                .multipliedBy(SATS_PER_BTC)
+                .toFixed(0);
+        } else {
+            subTotalSats =
+                order.total_money.sats > 0
+                    ? order.total_money.sats
+                    : new BigNumber(order.total_money.amount)
+                          .div(100)
+                          .div(rate)
+                          .multipliedBy(SATS_PER_BTC)
+                          .toFixed(0);
+        }
 
         const subTotalFiat: string = new BigNumber(subTotalSats)
             .multipliedBy(rate)
@@ -319,17 +331,43 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     keyboardShouldPersistTaps="handled"
                 >
                     {lineItems.map((item: any, index: number) => {
+                        const fiatPriced = item.base_price_money.amount > 0;
+
+                        const unitPrice = fiatPriced
+                            ? item.base_price_money.amount
+                            : item.base_price_money.sats;
+
+                        let unitDisplayValue, totalDisplayValue;
+                        if (fiatPriced) {
+                            unitDisplayValue = UnitsStore.getFormattedAmount(
+                                unitPrice,
+                                'fiat'
+                            );
+                            totalDisplayValue = UnitsStore.getFormattedAmount(
+                                unitPrice * item.quantity,
+                                'fiat'
+                            );
+                        } else {
+                            unitDisplayValue = UnitsStore.getFormattedAmount(
+                                unitPrice,
+                                'sats'
+                            );
+                            totalDisplayValue = UnitsStore.getFormattedAmount(
+                                unitPrice * item.quantity,
+                                'sats'
+                            );
+                        }
+
                         const keyValue =
                             item.quantity > 1
-                                ? `${item.name} (x${item.quantity})`
+                                ? `${item.name} (x${item.quantity} @ ${unitDisplayValue})`
                                 : item.name;
+
                         return (
                             <KeyValue
                                 key={index}
                                 keyValue={keyValue}
-                                value={`$${Number(
-                                    item.base_price_money.amount / 100
-                                ).toFixed(2)}`}
+                                value={totalDisplayValue}
                             />
                         );
                     })}
@@ -343,7 +381,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                     <KeyValue
                         keyValue={localeString('pos.views.Order.subtotalFiat')}
-                        value={`${getSymbol().symbol}${subTotalFiat}`}
+                        value={FiatStore.formatAmountForDisplay(subTotalFiat)}
                     />
 
                     <TouchableOpacity
@@ -520,7 +558,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyValue={localeString(
                                     'pos.views.Order.tipFiat'
                                 )}
-                                value={`${getSymbol().symbol}${tipFiat}`}
+                                value={FiatStore.formatAmountForDisplay(
+                                    tipFiat
+                                )}
                             />
 
                             <TouchableOpacity
@@ -563,7 +603,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyValue={localeString(
                                     'pos.views.Order.tipFiat'
                                 )}
-                                value={`${getSymbol().symbol}${tipFiat}`}
+                                value={FiatStore.formatAmountForDisplay(
+                                    tipFiat
+                                )}
                             />
 
                             <TouchableOpacity
@@ -620,13 +662,17 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     )}
 
                     <KeyValue
-                        keyValue={localeString('pos.views.Order.tax')}
+                        keyValue={`${localeString('pos.views.Order.tax')}${
+                            taxPercentage && Number(taxPercentage) > 0
+                                ? ` (${taxPercentage}%)`
+                                : ''
+                        }`}
                         value={order.getTaxMoneyDisplay}
                     />
 
                     <KeyValue
                         keyValue={localeString('pos.views.Order.totalFiat')}
-                        value={`${getSymbol().symbol}${totalFiat}`}
+                        value={FiatStore.formatAmountForDisplay(totalFiat)}
                     />
 
                     <TouchableOpacity

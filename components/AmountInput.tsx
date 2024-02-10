@@ -25,10 +25,6 @@ interface AmountInputProps {
     FiatStore?: FiatStore;
     SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
-    // Quick fix for ZEUS-1580
-    // Prevents unit reset when Keysend is initiated from Keypad
-    // since unit depends on user selection and is not necessarily sats
-    preventUnitReset?: boolean;
 }
 
 interface AmountInputState {
@@ -85,13 +81,9 @@ export default class AmountInput extends React.Component<
     constructor(props: any) {
         super(props);
 
-        const { amount, onAmountChange, preventUnitReset } = props;
+        const { amount, onAmountChange } = props;
         let satAmount = '0';
-        if (amount && !preventUnitReset) {
-            // reset units to sats if amount is passed in
-            this.props.UnitsStore?.resetUnits();
-            satAmount = getSatAmount(amount).toString();
-        }
+        if (amount) satAmount = getSatAmount(amount).toString();
 
         onAmountChange(amount, satAmount);
         this.state = {
@@ -143,14 +135,16 @@ export default class AmountInput extends React.Component<
 
         return (
             <React.Fragment>
-                <Text
-                    style={{
-                        fontFamily: 'PPNeueMontreal-Book',
-                        color: themeColor('secondaryText')
-                    }}
-                >
-                    {title}
-                </Text>
+                {title && (
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {title}
+                    </Text>
+                )}
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                     <TextInput
                         keyboardType="numeric"

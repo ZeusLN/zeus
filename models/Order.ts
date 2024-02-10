@@ -2,12 +2,18 @@ import { computed } from 'mobx';
 import moment from 'moment';
 
 import BaseModel from './BaseModel';
-import { localeString } from './../utils/LocaleUtils';
-import { orderPaymentInfo } from './../stores/PosStore';
+import { localeString } from '../utils/LocaleUtils';
+import { orderPaymentInfo } from '../stores/PosStore';
+import stores from '../stores/Stores';
 
-interface LineItem {
+interface BasePriceMoney {
+    amount: number;
+    sats?: number;
+}
+export interface LineItem {
     name: string;
     quantity: number;
+    base_price_money: BasePriceMoney;
 }
 
 export default class Order extends BaseModel {
@@ -21,6 +27,7 @@ export default class Order extends BaseModel {
     total_money: {
         amount: number;
         currency: string;
+        sats?: number;
     };
     line_items: Array<LineItem>;
     payment?: orderPaymentInfo;
@@ -72,7 +79,7 @@ export default class Order extends BaseModel {
     }
 
     @computed public get getTotalMoneyDisplay(): string {
-        return `$${this.getTotalMoney}`;
+        return stores.fiatStore.formatAmountForDisplay(this.getTotalMoney);
     }
 
     @computed public get getTaxMoney(): string {
@@ -82,6 +89,6 @@ export default class Order extends BaseModel {
     }
 
     @computed public get getTaxMoneyDisplay(): string {
-        return `$${this.getTaxMoney}`;
+        return stores.fiatStore.formatAmountForDisplay(this.getTaxMoney);
     }
 }

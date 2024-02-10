@@ -2,6 +2,9 @@ import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
+import { inject } from 'mobx-react';
+
+import SettingsStore from '../stores/SettingsStore';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
@@ -21,8 +24,10 @@ import QR from '../assets/images/SVG/QR.svg';
 
 interface InvoiceProps {
     navigation: any;
+    SettingsStore?: SettingsStore;
 }
 
+@inject('SettingsStore')
 export default class InvoiceView extends React.Component<InvoiceProps> {
     state = {
         storedNotes: ''
@@ -43,9 +48,12 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { storedNotes } = this.state;
         const invoice: Invoice = navigation.getParam('invoice', null);
+        const locale = SettingsStore?.settings.locale;
+        invoice.determineFormattedOriginalTimeUntilExpiry(locale);
+        invoice.determineFormattedRemainingTimeUntilExpiry(locale);
         const {
             fallback_addr,
             getRHash,
@@ -57,7 +65,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             payment_hash,
             getRPreimage,
             cltv_expiry,
-            expirationDate,
+            formattedOriginalTimeUntilExpiry,
+            formattedTimeUntilExpiry,
             getPaymentRequest,
             getKeysendMessage
         } = invoice;
@@ -67,7 +76,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const QRButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('QR', { value: getPaymentRequest })
+                    navigation.navigate('QR', {
+                        value: `lightning:${getPaymentRequest}`
+                    })
                 }
             >
                 <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
@@ -175,20 +186,30 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
-                        {!!expirationDate && (
+                        {!!formattedOriginalTimeUntilExpiry && (
                             <KeyValue
                                 keyValue={localeString(
-                                    'views.Invoice.expiration'
+                                    'views.Invoice.originalExpiration'
                                 )}
-                                value={expirationDate}
+                                value={formattedOriginalTimeUntilExpiry}
                                 sensitive
                             />
                         )}
 
-                        {!!privateInvoice && (
+                        {!!formattedTimeUntilExpiry && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.expiration'
+                                )}
+                                value={formattedTimeUntilExpiry}
+                                sensitive
+                            />
+                        )}
+
+                        {privateInvoice && (
                             <KeyValue
                                 keyValue={localeString('views.Invoice.private')}
-                                value={privateInvoice}
+                                value={localeString('general.true')}
                             />
                         )}
 

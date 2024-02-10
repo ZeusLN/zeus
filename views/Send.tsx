@@ -1,5 +1,7 @@
 import * as React from 'react';
 import {
+    FlatList,
+    Image,
     Platform,
     NativeModules,
     NativeEventEmitter,
@@ -10,6 +12,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { Chip, Icon } from 'react-native-elements';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
@@ -50,9 +53,12 @@ import NFCUtils from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import Sweep from '../assets/images/SVG/Sweep.svg';
+
+import Contact from '../models/Contact';
 
 interface SendProps {
     exitSetup: any;
@@ -85,8 +91,8 @@ interface SendState {
     enableAtomicMultiPathPayment: boolean;
     clipboard: string;
     loading: boolean;
-    preventUnitReset: boolean;
     contactName: string;
+    contacts: Contact[];
 }
 
 @inject(
@@ -108,7 +114,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
         const isValid = navigation.getParam('isValid', false);
-        const preventUnitReset = navigation.getParam('preventUnitReset', false);
         const contactName = navigation.getParam('contactName', null);
         const bolt12 = navigation.getParam('bolt12', null);
         if (transactionType === 'Lightning') {
@@ -134,8 +139,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             enableAtomicMultiPathPayment: false,
             clipboard: '',
             loading: false,
-            preventUnitReset,
-            contactName
+            contactName,
+            contacts: []
         };
     }
 
@@ -186,7 +191,28 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
         }
+
+        this.loadContacts();
     }
+
+    loadContacts = async () => {
+        this.props.navigation.addListener('didFocus', async () => {
+            try {
+                const contactsString = await EncryptedStorage.getItem(
+                    'zeus-contacts'
+                );
+                if (contactsString) {
+                    const contacts: Contact[] = JSON.parse(contactsString);
+                    this.setState({ contacts, loading: false });
+                } else {
+                    this.setState({ loading: false });
+                }
+            } catch (error) {
+                console.log('Error loading contacts:', error);
+                this.setState({ loading: false });
+            }
+        });
+    };
 
     subscribePayment = (streamingCall: string) => {
         const { handlePayment, handlePaymentError } =
@@ -425,6 +451,117 @@ export default class Send extends React.Component<SendProps, SendState> {
         });
     };
 
+    displayAddress = (item: any) => {
+        const contact = new Contact(item);
+        const {
+            hasLnAddress,
+            hasBolt12Address,
+            hasOnchainAddress,
+            hasPubkey,
+            hasMultiplePayableAddresses
+        } = contact;
+
+        if (hasMultiplePayableAddresses) {
+            return localeString('views.Settings.Contacts.multipleAddresses');
+        }
+
+        if (hasLnAddress) {
+            return item.lnAddress[0].length > 23
+                ? `${item.lnAddress[0].slice(
+                      0,
+                      10
+                  )}...${item.lnAddress[0].slice(-10)}`
+                : item.lnAddress[0];
+        }
+
+        if (hasBolt12Address) {
+            return item.bolt12Address[0].length > 23
+                ? `${item.bolt12Address[0].slice(
+                      0,
+                      10
+                  )}...${item.bolt12Address[0].slice(-10)}`
+                : item.bolt12Address[0];
+        }
+
+        if (hasOnchainAddress) {
+            return item.onchainAddress[0].length > 23
+                ? `${item.onchainAddress[0].slice(
+                      0,
+                      12
+                  )}...${item.onchainAddress[0].slice(-8)}`
+                : item.onchainAddress[0];
+        }
+
+        if (hasPubkey) {
+            return item.pubkey[0].length > 23
+                ? `${item.pubkey[0].slice(0, 12)}...${item.pubkey[0].slice(-8)}`
+                : item.pubkey[0];
+        }
+
+        return localeString('views.Settings.Contacts.noAddress');
+    };
+
+    renderContactItem = ({ item }: { item: Contact }) => {
+        const { navigation } = this.props;
+        const contact = new Contact(item);
+        return (
+            <TouchableOpacity
+                onPress={() => {
+                    if (contact.isSingleLnAddress) {
+                        this.validateAddress(item.lnAddress[0]);
+                    } else if (contact.isSingleBolt12Address) {
+                        this.validateAddress(item.bolt12Address[0]);
+                    } else if (contact.isSingleOnchainAddress) {
+                        this.validateAddress(item.onchainAddress[0]);
+                    } else if (contact.isSinglePubkey) {
+                        this.validateAddress(item.pubkey[0]);
+                    } else {
+                        navigation.navigate('ContactDetails', {
+                            contactId: contact.getContactId,
+                            isNostrContact: false
+                        });
+                    }
+                }}
+            >
+                <View
+                    style={{
+                        marginHorizontal: 28,
+                        paddingBottom: 20,
+                        flexDirection: 'row',
+                        alignItems: 'center'
+                    }}
+                >
+                    {contact.photo && (
+                        <Image
+                            source={{ uri: contact.getPhoto }}
+                            style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 20,
+                                marginRight: 10
+                            }}
+                        />
+                    )}
+                    <View>
+                        <Text
+                            style={{ fontSize: 16, color: themeColor('text') }}
+                        >
+                            {item.name}
+                        </Text>
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {this.displayAddress(item)}
+                        </Text>
+                    </View>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
     render() {
         const { SettingsStore, BalanceStore, UTXOsStore, navigation } =
             this.props;
@@ -445,8 +582,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             enableAtomicMultiPathPayment,
             clipboard,
             loading,
-            preventUnitReset,
-            contactName
+            contactName,
+            contacts
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -463,6 +600,11 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (BackendUtils.supportsKeysend()) {
             paymentOptions.push(localeString('views.Send.keysendAddress'));
         }
+
+        const favoriteContacts = contacts.filter(
+            (contact: Contact) => contact.isFavourite
+        );
+
         return (
             <Screen>
                 <Header
@@ -506,6 +648,17 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </TouchableOpacity>
                                     </View>
                                 )}
+                            <View style={{ marginTop: 3, marginRight: 15 }}>
+                                <TouchableOpacity
+                                    onPress={() => this.enableNfc()}
+                                >
+                                    <NFC
+                                        fill={themeColor('text')}
+                                        width={30}
+                                        height={30}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                             <View style={{ marginTop: 3 }}>
                                 <TouchableOpacity
                                     onPress={() =>
@@ -544,7 +697,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                         )}
                     {!!destination &&
                         (transactionType === 'Lightning' ||
-                            transactionType === 'Keysend') &&
+                            transactionType === 'Keysend' ||
+                            transactionType === 'Bolt12') &&
                         lightningBalance === 0 && (
                             <View style={{ paddingTop: 10, paddingBottom: 10 }}>
                                 <WarningMessage
@@ -576,7 +730,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                             style={{
                                 flex: 1,
-                                paddingVertical: 10,
                                 paddingHorizontal: 15,
                                 paddingRight: 40
                             }}
@@ -611,7 +764,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     onPress={() => {
                                         this.setState({
                                             contactName: '',
-                                            destination: ''
+                                            destination: '',
+                                            transactionType: ''
                                         });
                                     }}
                                     style={{
@@ -764,7 +918,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <AmountInput
                                     amount={amount}
-                                    preventUnitReset={preventUnitReset}
                                     title={localeString('views.Send.amount')}
                                     onAmountChange={(
                                         amount: string,
@@ -783,7 +936,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <AmountInput
                                     amount={amount}
-                                    preventUnitReset={preventUnitReset}
                                     title={localeString('views.Send.amount')}
                                     onAmountChange={(
                                         amount: string,
@@ -1002,6 +1154,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
+                    {destination && transactionType === 'Bolt12' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.proceed')}
+                                onPress={async () => await this.payBolt12()}
+                            />
+                        </View>
+                    )}
+
                     {!!clipboard && !destination && (
                         <View style={styles.button}>
                             <Button
@@ -1012,39 +1173,45 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {destination && transactionType === 'Bolt12' && (
+                    {destination && !transactionType && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('general.proceed')}
-                                onPress={async () => await this.payBolt12()}
+                                onPress={() =>
+                                    this.validateAddress(destination)
+                                }
                             />
                         </View>
                     )}
 
-                    {destination &&
-                        transactionType !== 'On-chain' &&
-                        transactionType !== 'Bolt12' && (
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString('general.proceed')}
-                                    onPress={() =>
-                                        this.validateAddress(destination)
+                    {!transactionType && favoriteContacts.length > 0 && (
+                        <>
+                            <View style={{ marginTop: 18 }}>
+                                <Text
+                                    style={{
+                                        fontSize: 16,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {`${localeString(
+                                        'views.Settings.Contacts.favorites'
+                                    ).toUpperCase()} (${
+                                        favoriteContacts.length
+                                    })`}
+                                </Text>
+                            </View>
+                            <View style={{ marginTop: 20, marginLeft: -24 }}>
+                                <FlatList
+                                    data={favoriteContacts}
+                                    renderItem={this.renderContactItem}
+                                    keyExtractor={(_, index) =>
+                                        index.toString()
                                     }
+                                    scrollEnabled={false}
                                 />
                             </View>
-                        )}
-
-                    <View style={{ ...styles.button, paddingTop: 20 }}>
-                        <Button
-                            title={localeString('general.enableNfc')}
-                            icon={{
-                                name: 'nfc',
-                                size: 25
-                            }}
-                            onPress={() => this.enableNfc()}
-                            secondary
-                        />
-                    </View>
+                        </>
+                    )}
 
                     {transactionType === 'On-chain' &&
                         implementation === 'eclair' && (

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import {
+    Alert,
     Animated,
     StyleSheet,
     Text,
@@ -7,6 +8,7 @@ import {
     I18nManager,
     TouchableOpacity
 } from 'react-native';
+import { getParams as getlnurlParams } from 'js-lnurl';
 
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -114,32 +116,43 @@ export default class LightningSwipeableRow extends Component<
         );
     };
 
-    private renderActions = (progress: Animated.AnimatedInterpolation) => (
-        <View
-            style={{
-                marginLeft: 15,
-                width: BackendUtils.supportsRouting() ? 210 : 140,
-                flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
-            }}
-        >
-            {this.renderAction(
-                localeString('general.receive'),
-                BackendUtils.supportsRouting() ? 210 : 140,
-                progress
-            )}
-            {BackendUtils.supportsRouting() &&
-                this.renderAction(
-                    localeString('general.routing'),
-                    200,
+    private renderActions = (progress: Animated.AnimatedInterpolation) => {
+        const width =
+            BackendUtils.supportsRouting() &&
+            BackendUtils.supportsLightningSends()
+                ? 210
+                : BackendUtils.supportsRouting() ||
+                  BackendUtils.supportsLightningSends()
+                ? 140
+                : 70;
+        return (
+            <View
+                style={{
+                    marginLeft: 15,
+                    width,
+                    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
+                }}
+            >
+                {this.renderAction(
+                    localeString('general.receive'),
+                    width,
                     progress
                 )}
-            {this.renderAction(
-                localeString('general.send'),
-                BackendUtils.supportsRouting() ? 210 : 140,
-                progress
-            )}
-        </View>
-    );
+                {BackendUtils.supportsRouting() &&
+                    this.renderAction(
+                        localeString('general.routing'),
+                        width,
+                        progress
+                    )}
+                {BackendUtils.supportsLightningSends() &&
+                    this.renderAction(
+                        localeString('general.send'),
+                        width,
+                        progress
+                    )}
+            </View>
+        );
+    };
 
     private swipeableRow?: Swipeable;
 
@@ -156,8 +169,56 @@ export default class LightningSwipeableRow extends Component<
     };
 
     private fetchLnInvoice = () => {
-        invoicesStore.getPayReq(this.props.lightning);
-        this.props.navigation.navigate('PaymentRequest', {});
+        const { lightning } = this.props;
+        if (lightning?.toLowerCase().startsWith('lnurl')) {
+            return getlnurlParams(lightning)
+                .then((params: any) => {
+                    if (
+                        params.status === 'ERROR' &&
+                        params.domain.endsWith('.onion')
+                    ) {
+                        // TODO handle fetching of params with internal Tor
+                        throw new Error(
+                            `${params.domain} says: ${params.reason}`
+                        );
+                    }
+
+                    switch (params.tag) {
+                        case 'payRequest':
+                            params.lnurlText = lightning;
+                            return [
+                                'LnurlPay',
+                                {
+                                    lnurlParams: params
+                                }
+                            ];
+                        default:
+                            Alert.alert(
+                                localeString('general.error'),
+                                params.status === 'ERROR'
+                                    ? `${params.domain} says: ${params.reason}`
+                                    : `${localeString(
+                                          'utils.handleAnything.unsupportedLnurlType'
+                                      )}: ${params.tag}`,
+                                [
+                                    {
+                                        text: localeString('general.ok'),
+                                        onPress: () => void 0
+                                    }
+                                ],
+                                { cancelable: false }
+                            );
+                    }
+                })
+                .catch(() => {
+                    throw new Error(
+                        localeString('utils.handleAnything.invalidLnurlParams')
+                    );
+                });
+        } else {
+            invoicesStore.getPayReq(this.props.lightning);
+            this.props.navigation.navigate('PaymentRequest', {});
+        }
     };
 
     render() {

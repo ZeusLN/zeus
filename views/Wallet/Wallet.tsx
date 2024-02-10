@@ -25,7 +25,9 @@ import RNRestart from 'react-native-restart';
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
 import KeypadPane from './KeypadPane';
-import PosPane from './PosPane';
+import SquarePosPane from './SquarePosPane';
+import StandalonePosPane from './StandalonePosPane';
+import StandalonePosKeypadPane from './StandalonePosKeypadPane';
 
 import Button from '../../components/Button';
 import LayerBalances from '../../components/LayerBalances';
@@ -36,35 +38,38 @@ import Screen from '../../components/Screen';
 import BackendUtils from '../../utils/BackendUtils';
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
+import {
+    initializeLnd,
+    startLnd,
+    expressGraphSync
+} from '../../utils/LndMobileUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import BalanceStore from '../../stores/BalanceStore';
+import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import FiatStore from '../../stores/FiatStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
-import PosStore from '../../stores/PosStore';
-import SettingsStore, { Settings } from '../../stores/SettingsStore';
-import UnitsStore from '../../stores/UnitsStore';
-import UTXOsStore from '../../stores/UTXOsStore';
-import ModalStore from '../../stores/ModalStore';
-import SyncStore from '../../stores/SyncStore';
-import LSPStore from '../../stores/LSPStore';
-import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
+import LSPStore from '../../stores/LSPStore';
+import ModalStore from '../../stores/ModalStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import PosStore from '../../stores/PosStore';
+import SettingsStore, {
+    PosEnabled,
+    Settings
+} from '../../stores/SettingsStore';
+import SyncStore from '../../stores/SyncStore';
+import UnitsStore from '../../stores/UnitsStore';
+import UTXOsStore from '../../stores/UTXOsStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
-
-import {
-    initializeLnd,
-    startLnd,
-    expressGraphSync
-} from '../../utils/LndMobileUtils';
 
 interface WalletProps {
     enterSetup: any;
@@ -242,7 +247,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         await SettingsStore.getSettings().then(async (settings: Settings) => {
             const loginRequired = SettingsStore.loginRequired();
             const posEnabled =
-                settings && settings.pos && settings.pos.squareEnabled;
+                settings?.pos?.posEnabled &&
+                settings.pos.posEnabled !== PosEnabled.Disabled;
 
             if (!loginRequired) SettingsStore.setLoginStatus(true);
 
@@ -307,8 +313,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             fiatEnabled,
             pos,
             rescan,
+            compactDb,
             recovery,
             lightningAddress,
+            embeddedTor,
             initialLoad
         } = settings;
         const expressGraphSyncEnabled = settings.expressGraphSync;
@@ -325,8 +333,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         LnurlPayStore.reset();
 
-        if (pos && pos.squareEnabled && posStatus === 'active')
+        if (
+            pos?.posEnabled &&
+            pos.posEnabled !== PosEnabled.Disabled &&
+            posStatus === 'active'
+        ) {
             PosStore.getOrders();
+        }
 
         if (fiatEnabled) {
             FiatStore.getFiatRates();
@@ -334,7 +347,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
-                await initializeLnd(embeddedLndNetwork === 'Testnet', rescan);
+                await initializeLnd(
+                    embeddedLndNetwork === 'Testnet',
+                    rescan,
+                    compactDb
+                );
 
                 // on initial load, do not run EGS
                 if (initialLoad) {
@@ -345,7 +362,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     if (expressGraphSyncEnabled) await expressGraphSync();
                 }
 
-                await startLnd(walletPassword);
+                await startLnd(
+                    walletPassword,
+                    embeddedTor,
+                    embeddedLndNetwork === 'Testnet'
+                );
             }
             if (BackendUtils.supportsLSPs()) {
                 if (SettingsStore.settings.enableLSP) {
@@ -353,7 +374,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 }
                 LSPStore.initChannelAcceptor();
             }
-            NodeInfoStore.getNodeInfo();
+            await NodeInfoStore.getNodeInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
             if (BackendUtils.supportsChannelManagement())
@@ -396,14 +417,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
             if (!error) {
                 await BackendUtils.checkPerms();
-                NodeInfoStore.getNodeInfo();
+                await NodeInfoStore.getNodeInfo();
                 if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
                 await BalanceStore.getCombinedBalance();
                 if (BackendUtils.supportsChannelManagement())
                     ChannelsStore.getChannels();
             }
         } else {
-            NodeInfoStore.getNodeInfo();
+            await NodeInfoStore.getNodeInfo();
             if (BackendUtils.supportsAccounts()) {
                 UTXOsStore.listAccounts();
             }
@@ -418,17 +439,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             !NodeInfoStore.testnet
         ) {
             if (connecting) {
-                LightningAddressStore.status();
+                try {
+                    await LightningAddressStore.status();
 
-                if (lightningAddress.automaticallyAccept) {
-                    LightningAddressStore.prepareToAutomaticallyAccept();
-                }
+                    if (lightningAddress.automaticallyAccept) {
+                        LightningAddressStore.prepareToAutomaticallyAccept();
+                    }
 
-                if (
-                    // TODO add enum
-                    SettingsStore.settings.lightningAddress?.notifications === 1
-                ) {
-                    LightningAddressStore.updatePushCredentials();
+                    if (
+                        // TODO add enum
+                        SettingsStore.settings.lightningAddress
+                            ?.notifications === 1
+                    ) {
+                        LightningAddressStore.updatePushCredentials();
+                    }
+                } catch (e) {
+                    console.error('Lightning address error', e);
                 }
             }
         }
@@ -476,8 +502,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } = SettingsStore;
         const loginRequired = !settings || SettingsStore.loginRequired();
 
-        const squareEnabled: boolean =
-            (settings && settings.pos && settings.pos.squareEnabled) || false;
+        const posEnabled: PosEnabled =
+            settings?.pos?.posEnabled || PosEnabled.Disabled;
+
+        const showKeypad: boolean = settings?.pos?.showKeypad || false;
 
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
@@ -558,7 +586,20 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const PosScreen = () => {
             return (
                 <Screen>
-                    <PosPane navigation={navigation} />
+                    {posEnabled === PosEnabled.Square && (
+                        <SquarePosPane navigation={navigation} />
+                    )}
+                    {posEnabled === PosEnabled.Standalone && (
+                        <StandalonePosPane navigation={navigation} />
+                    )}
+                </Screen>
+            );
+        };
+
+        const PosKeypadScreen = () => {
+            return (
+                <Screen>
+                    <StandalonePosKeypadPane navigation={navigation} />
                 </Screen>
             );
         };
@@ -590,139 +631,163 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         return (
             <View style={{ flex: 1 }}>
-                {!connecting && (!loginRequired || squareEnabled) && (
-                    <NavigationContainer
-                        theme={Theme}
-                        ref={this.tabNavigationRef}
-                    >
-                        <Tab.Navigator
-                            initialRouteName={
-                                squareEnabled && posStatus === 'active'
-                                    ? 'POS'
-                                    : isSyncing
-                                    ? 'Balance'
-                                    : (settings.display &&
-                                          settings.display.defaultView) ||
-                                      'Keypad'
-                            }
-                            backBehavior="none"
-                            screenOptions={({ route }) => ({
-                                tabBarIcon: ({ color }) => {
-                                    if (isSyncing && route.name === 'Keypad') {
-                                        return;
-                                    }
-                                    if (route.name === 'Keypad') {
-                                        return <Bitcoin fill={color} />;
-                                    }
-                                    if (route.name === 'Balance') {
-                                        return <Temple fill={color} />;
-                                    }
-                                    if (route.name === 'POS') {
-                                        return (
-                                            <POS stroke={themeColor('text')} />
-                                        );
-                                    }
-                                    if (
-                                        BackendUtils.supportsChannelManagement()
-                                    ) {
-                                        return <ChannelsIcon fill={color} />;
-                                    }
+                {!connecting &&
+                    (!loginRequired || posEnabled !== PosEnabled.Disabled) && (
+                        <NavigationContainer
+                            theme={Theme}
+                            ref={this.tabNavigationRef}
+                        >
+                            <Tab.Navigator
+                                initialRouteName={
+                                    posEnabled !== PosEnabled.Disabled &&
+                                    posStatus === 'active'
+                                        ? 'POS'
+                                        : isSyncing
+                                        ? 'Balance'
+                                        : (settings.display &&
+                                              settings.display.defaultView) ||
+                                          'Keypad'
                                 }
-                            })}
-                            tabBarOptions={{
-                                activeTintColor: error
-                                    ? themeColor('error')
-                                    : themeColor('text'),
-                                inactiveTintColor: error
-                                    ? themeColor('error')
-                                    : 'gray',
-                                showLabel: false
-                            }}
-                        >
-                            {squareEnabled && posStatus === 'active' ? (
-                                <Tab.Screen name="POS" component={PosScreen} />
-                            ) : (
-                                <Tab.Screen
-                                    name="Balance"
-                                    component={BalanceScreen}
-                                />
-                            )}
-                            {posStatus !== 'active' && (
-                                <>
-                                    {!error && !isSyncing && (
-                                        <Tab.Screen
-                                            name="Keypad"
-                                            component={KeypadScreen}
-                                        />
-                                    )}
-                                    {BackendUtils.supportsChannelManagement() &&
-                                        !error &&
-                                        !isSyncing && (
-                                            <Tab.Screen
-                                                name={localeString(
-                                                    'views.Wallet.Wallet.channels'
-                                                )}
-                                                component={ChannelsScreen}
-                                            />
-                                        )}
-                                </>
-                            )}
-                        </Tab.Navigator>
-                    </NavigationContainer>
-                )}
-                {connecting && (!loginRequired || squareEnabled) && (
-                    <Screen>
-                        <View
-                            style={{
-                                flex: 1,
-                                justifyContent: 'center',
-                                alignItems: 'center'
-                            }}
-                        >
-                            <LoadingColumns />
-                            <View
-                                style={{
-                                    position: 'absolute',
-                                    bottom: 130
+                                backBehavior="none"
+                                screenOptions={({ route }) => ({
+                                    tabBarIcon: ({ color }) => {
+                                        if (
+                                            isSyncing &&
+                                            route.name === 'Keypad'
+                                        ) {
+                                            return;
+                                        }
+                                        if (route.name === 'Keypad') {
+                                            return <Bitcoin fill={color} />;
+                                        }
+                                        if (route.name === 'Balance') {
+                                            return <Temple fill={color} />;
+                                        }
+                                        if (route.name === 'POS') {
+                                            return <POS stroke={color} />;
+                                        }
+                                        if (route.name === 'POS Keypad') {
+                                            return <Bitcoin fill={color} />;
+                                        }
+                                        if (
+                                            BackendUtils.supportsChannelManagement()
+                                        ) {
+                                            return (
+                                                <ChannelsIcon
+                                                    height={26}
+                                                    width={26}
+                                                    fill={color}
+                                                />
+                                            );
+                                        }
+                                    }
+                                })}
+                                tabBarOptions={{
+                                    activeTintColor: error
+                                        ? themeColor('error')
+                                        : themeColor('text'),
+                                    inactiveTintColor: error
+                                        ? themeColor('error')
+                                        : 'gray',
+                                    showLabel: false
                                 }}
                             >
-                                <Text
+                                {posEnabled !== PosEnabled.Disabled &&
+                                posStatus === 'active' ? (
+                                    <Tab.Screen
+                                        name="POS"
+                                        component={PosScreen}
+                                    />
+                                ) : (
+                                    <Tab.Screen
+                                        name="Balance"
+                                        component={BalanceScreen}
+                                    />
+                                )}
+                                {posEnabled === PosEnabled.Standalone &&
+                                    posStatus === 'active' &&
+                                    showKeypad && (
+                                        <Tab.Screen
+                                            name="POS Keypad"
+                                            component={PosKeypadScreen}
+                                        />
+                                    )}
+                                {posStatus !== 'active' && (
+                                    <>
+                                        {!error && !isSyncing && (
+                                            <Tab.Screen
+                                                name="Keypad"
+                                                component={KeypadScreen}
+                                            />
+                                        )}
+                                        {BackendUtils.supportsChannelManagement() &&
+                                            !error &&
+                                            !isSyncing && (
+                                                <Tab.Screen
+                                                    name={localeString(
+                                                        'views.Wallet.Wallet.channels'
+                                                    )}
+                                                    component={ChannelsScreen}
+                                                />
+                                            )}
+                                    </>
+                                )}
+                            </Tab.Navigator>
+                        </NavigationContainer>
+                    )}
+                {connecting &&
+                    (!loginRequired || posEnabled !== PosEnabled.Disabled) && (
+                        <Screen>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    justifyContent: 'center',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <LoadingColumns />
+                                <View
                                     style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        alignSelf: 'center',
-                                        fontSize: 15,
-                                        padding: 8
+                                        position: 'absolute',
+                                        bottom: 130
                                     }}
                                 >
-                                    {settings.nodes &&
-                                    loggedIn &&
-                                    implementation
-                                        ? implementation === 'embedded-lnd'
-                                            ? isInExpressGraphSync
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            alignSelf: 'center',
+                                            fontSize: 15,
+                                            padding: 8
+                                        }}
+                                    >
+                                        {settings.nodes &&
+                                        loggedIn &&
+                                        implementation
+                                            ? implementation === 'embedded-lnd'
+                                                ? isInExpressGraphSync
+                                                    ? localeString(
+                                                          'views.Wallet.Wallet.expressGraphSync'
+                                                      ).replace('Zeus', 'ZEUS')
+                                                    : localeString(
+                                                          'views.Wallet.Wallet.startingNode'
+                                                      ).replace('Zeus', 'ZEUS')
+                                                : implementation === 'lndhub'
                                                 ? localeString(
-                                                      'views.Wallet.Wallet.expressGraphSync'
+                                                      'views.Wallet.Wallet.loadingAccount'
                                                   ).replace('Zeus', 'ZEUS')
                                                 : localeString(
-                                                      'views.Wallet.Wallet.startingNode'
+                                                      'views.Wallet.Wallet.connecting'
                                                   ).replace('Zeus', 'ZEUS')
-                                            : implementation === 'lndhub'
-                                            ? localeString(
-                                                  'views.Wallet.Wallet.loadingAccount'
-                                              ).replace('Zeus', 'ZEUS')
                                             : localeString(
-                                                  'views.Wallet.Wallet.connecting'
-                                              ).replace('Zeus', 'ZEUS')
-                                        : localeString(
-                                              'views.Wallet.Wallet.startingUp'
-                                          ).replace('Zeus', 'ZEUS')}
-                                </Text>
-                                <View style={{ marginTop: 40 }}>
-                                    <LoadingIndicator />
+                                                  'views.Wallet.Wallet.startingUp'
+                                              ).replace('Zeus', 'ZEUS')}
+                                    </Text>
+                                    <View style={{ marginTop: 40 }}>
+                                        <LoadingIndicator />
+                                    </View>
                                 </View>
                             </View>
-                        </View>
-                        {posStatus !== 'active' && (
                             <View
                                 style={{
                                     bottom: 56,
@@ -746,15 +811,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     }}
                                     onPress={() => {
                                         if (settings.nodes)
-                                            navigation.navigate('Settings');
+                                            protectedNavigation(
+                                                navigation,
+                                                'Settings'
+                                            );
                                     }}
                                     adaptiveWidth
                                     iconOnly
                                 />
                             </View>
-                        )}
-                    </Screen>
-                )}
+                        </Screen>
+                    )}
             </View>
         );
     }

@@ -59,7 +59,7 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
                                             `https://${
                                                 item.type === 'Twitter'
                                                     ? 'twitter.com/'
-                                                    : 'iris.to/#/profile/'
+                                                    : 'iris.to/'
                                             }${item.handle}`
                                         )
                                     }

@@ -32,23 +32,25 @@ export default class LnurlPayHistorical extends React.Component<
             'No metadata available';
         return (
             <View>
-                <TouchableOpacity
-                    onPress={() =>
-                        navigation.navigate('Send', {
-                            destination: lnurlpaytx.lnurl
-                        })
-                    }
-                >
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Medium',
-                            marginBottom: 20
-                        }}
+                {lnurl && (
+                    <TouchableOpacity
+                        onPress={() =>
+                            navigation.navigate('Send', {
+                                destination: lnurlpaytx.lnurl
+                            })
+                        }
                     >
-                        {lnurl}
-                    </Text>
-                </TouchableOpacity>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Medium',
+                                marginBottom: 20
+                            }}
+                        >
+                            {lnurl}
+                        </Text>
+                    </TouchableOpacity>
+                )}
                 <TouchableOpacity
                     onPress={() => {
                         this.setState({

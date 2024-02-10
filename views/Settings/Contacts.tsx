@@ -8,39 +8,31 @@ import {
     ScrollView
 } from 'react-native';
 import { SearchBar, Divider } from 'react-native-elements';
-import Add from '../../assets/images/SVG/Add.svg';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
-import { themeColor } from '../../utils/ThemeUtils';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Header from '../../components/Header';
+
 import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+
+import Contact from '../../models/Contact';
+
+import Add from '../../assets/images/SVG/Add.svg';
+import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 interface ContactsSettingsProps {
     navigation: any;
 }
 
-interface ContactItem {
-    lnAddress: string;
-    bolt12Address: string;
-    onchainAddress: string;
-    pubkey: string;
-    nip05: string;
-    nostrNpub: string;
-    name: string;
-    description: string;
-    photo: string | null;
-    isFavourite: boolean;
-    id: string;
-}
-
 interface ContactsSettingsState {
-    contacts: ContactItem[];
+    contacts: Contact[];
     search: string;
     SendScreen: boolean;
     loading: boolean;
+    deletionAwaitingConfirmation: boolean;
 }
 
 export default class Contacts extends React.Component<
@@ -57,52 +49,58 @@ export default class Contacts extends React.Component<
             contacts: [],
             search: '',
             SendScreen,
-            loading: true
+            loading: true,
+            deletionAwaitingConfirmation: false
         };
     }
 
     componentDidMount() {
-        this.loadContacts();
+        this.props.navigation.addListener('didFocus', async () => {
+            this.loadContacts();
+        });
+    }
+
+    UNSAFE_componentWillReceiveProps(
+        nextProps: Readonly<ContactsSettingsProps>
+    ): void {
+        const loading: boolean = nextProps.navigation.getParam('loading', null);
+
+        if (loading) {
+            this.setState({
+                loading
+            });
+        }
     }
 
     loadContacts = async () => {
-        this.props.navigation.addListener('didFocus', async () => {
-            try {
-                const contactsString = await EncryptedStorage.getItem(
-                    'zeus-contacts'
-                );
-                if (contactsString) {
-                    const contacts: ContactItem[] = JSON.parse(contactsString);
-                    this.setState({ contacts, loading: false });
-                } else {
-                    this.setState({ loading: false });
-                }
-            } catch (error) {
-                console.log('Error loading contacts:', error);
+        try {
+            this.setState({ loading: true });
+            const contactsString = await EncryptedStorage.getItem(
+                'zeus-contacts'
+            );
+            if (contactsString) {
+                const contacts: Contact[] = JSON.parse(contactsString);
+                this.setState({ contacts, loading: false });
+            } else {
                 this.setState({ loading: false });
             }
-        });
+        } catch (error) {
+            console.log('Error loading contacts:', error);
+            this.setState({ loading: false });
+        }
     };
-    displayAddress = (item) => {
-        const hasLnAddress =
-            item.lnAddress &&
-            item.lnAddress.length === 1 &&
-            item.lnAddress[0] !== '';
-        const hasBolt12Address =
-            item.bolt12Address &&
-            item.bolt12Address.length === 1 &&
-            item.bolt12Address[0] !== '';
-        const hasOnchainAddress =
-            item.onchainAddress &&
-            item.onchainAddress.length === 1 &&
-            item.onchainAddress[0] !== '';
-        const hasPubkey =
-            item.pubkey && item.pubkey.length === 1 && item.pubkey[0] !== '';
 
-        if (
-            hasLnAddress + hasBolt12Address + hasOnchainAddress + hasPubkey >=
-            2
-        ) {
+    displayAddress = (item) => {
+        const contact = new Contact(item);
+        const {
+            hasLnAddress,
+            hasBolt12Address,
+            hasOnchainAddress,
+            hasPubkey,
+            hasMultiplePayableAddresses
+        } = contact;
+
+        if (hasMultiplePayableAddresses) {
             return localeString('views.Settings.Contacts.multipleAddresses');
         }
 
@@ -139,92 +137,82 @@ export default class Contacts extends React.Component<
                 : item.pubkey[0];
         }
 
-        return localeString('views.Settings.Contacts.multipleAddresses');
+        return localeString('views.Settings.Contacts.noAddress');
     };
 
-    renderContactItem = ({ item }: { item: ContactItem }) => (
-        <TouchableOpacity
-            onPress={() => {
-                (item.lnAddress &&
-                    item.lnAddress.length === 1 &&
-                    item.lnAddress[0] !== '' &&
-                    item.onchainAddress[0] === '' &&
-                    item.pubkey[0] === '' &&
-                    this.state.SendScreen &&
-                    this.props.navigation.navigate('Send', {
-                        destination: item.lnAddress[0],
-                        contactName: item.name
-                    })) ||
-                    (item.bolt12Address &&
-                        item.bolt12Address.length === 1 &&
-                        item.bolt12Address[0] !== '' &&
-                        item.onchainAddress[0] === '' &&
-                        item.pubkey[0] === '' &&
+    renderContactItem = ({ item }: { item: Contact }) => {
+        const contact = new Contact(item);
+        return (
+            <TouchableOpacity
+                onPress={() => {
+                    (contact.isSingleLnAddress &&
                         this.state.SendScreen &&
                         this.props.navigation.navigate('Send', {
-                            destination: item.bolt12Address[0],
+                            destination: item.lnAddress[0],
                             contactName: item.name
                         })) ||
-                    (item.onchainAddress &&
-                        item.onchainAddress.length === 1 &&
-                        item.onchainAddress[0] !== '' &&
-                        item.lnAddress[0] === '' &&
-                        item.pubkey[0] === '' &&
-                        this.state.SendScreen &&
-                        this.props.navigation.navigate('Send', {
-                            destination: item.onchainAddress[0],
-                            contactName: item.name
-                        })) ||
-                    (item.pubkey &&
-                        item.pubkey.length === 1 &&
-                        item.pubkey[0] !== '' &&
-                        item.lnAddress[0] === '' &&
-                        item.onchainAddress[0] === '' &&
-                        this.state.SendScreen &&
-                        this.props.navigation.navigate('Send', {
-                            destination: item.pubkey[0],
-                            contactName: item.name
-                        })) ||
-                    this.props.navigation.navigate('ContactDetails', {
-                        contactId: item.id
-                    });
-            }}
-        >
-            <View
-                style={{
-                    marginHorizontal: 24,
-                    paddingBottom: 20,
-                    flexDirection: 'row',
-                    alignItems: 'center'
+                        (contact.isSingleBolt12Address &&
+                            this.state.SendScreen &&
+                            this.props.navigation.navigate('Send', {
+                                destination: item.bolt12Address[0],
+                                contactName: item.name
+                            })) ||
+                        (contact.isSingleOnchainAddress &&
+                            this.state.SendScreen &&
+                            this.props.navigation.navigate('Send', {
+                                destination: item.onchainAddress[0],
+                                contactName: item.name
+                            })) ||
+                        (contact.isSinglePubkey &&
+                            this.state.SendScreen &&
+                            this.props.navigation.navigate('Send', {
+                                destination: item.pubkey[0],
+                                contactName: item.name
+                            })) ||
+                        this.props.navigation.navigate('ContactDetails', {
+                            contactId: item.contactId || item.id,
+                            isNostrContact: false
+                        });
                 }}
             >
-                {item.photo && (
-                    <Image
-                        source={{ uri: item.photo }}
-                        style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            marginRight: 10
-                        }}
-                    />
-                )}
-                <View>
-                    <Text style={{ fontSize: 16, color: themeColor('text') }}>
-                        {item.name}
-                    </Text>
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {this.displayAddress(item)}
-                    </Text>
+                <View
+                    style={{
+                        marginHorizontal: 28,
+                        paddingBottom: 20,
+                        flexDirection: 'row',
+                        alignItems: 'center'
+                    }}
+                >
+                    {contact.photo && (
+                        <Image
+                            source={{ uri: contact.getPhoto }}
+                            style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 20,
+                                marginRight: 10
+                            }}
+                        />
+                    )}
+                    <View>
+                        <Text
+                            style={{ fontSize: 16, color: themeColor('text') }}
+                        >
+                            {item.name}
+                        </Text>
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {this.displayAddress(item)}
+                        </Text>
+                    </View>
                 </View>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        );
+    };
 
     updateSearch = (query: string) => {
         this.setState({ search: query });
@@ -232,7 +220,13 @@ export default class Contacts extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { search, contacts, SendScreen, loading } = this.state;
+        const {
+            search,
+            contacts,
+            SendScreen,
+            loading,
+            deletionAwaitingConfirmation
+        } = this.state;
         const filteredContacts = contacts.filter((contact) => {
             const hasMatch = (field: string) =>
                 Array.isArray(contact[field])
@@ -240,7 +234,7 @@ export default class Contacts extends React.Component<
                           input.toLowerCase().includes(search.toLowerCase())
                       )
                     : contact[field]
-                          .toLowerCase()
+                          ?.toLowerCase()
                           .includes(search.toLowerCase());
 
             return (
@@ -286,7 +280,20 @@ export default class Contacts extends React.Component<
                 <Header
                     leftComponent="Back"
                     containerStyle={{ borderBottomWidth: 0 }}
+                    centerComponent={
+                        SendScreen ? undefined : (
+                            <NostrichIcon
+                                onPress={() =>
+                                    navigation.navigate('NostrContacts')
+                                }
+                                fill={themeColor('text')}
+                                width={30}
+                                height={30}
+                            />
+                        )
+                    }
                     rightComponent={SendScreen ? undefined : <AddButton />}
+                    placement="right"
                     navigation={navigation}
                 />
                 {contacts.length > 0 && (
@@ -325,13 +332,17 @@ export default class Contacts extends React.Component<
                                                 fontWeight: 'bold'
                                             }}
                                         >
-                                            To
+                                            {localeString(
+                                                'views.Settings.Contacts.to'
+                                            )}
                                         </Text>
                                     }
                                     leftIconContainerStyle={{
                                         marginLeft: 18,
-                                        marginRight: -8
+                                        marginRight: -8,
+                                        marginBottom: 6
                                     }}
+                                    multiline={true}
                                 />
                                 <Divider orientation="horizontal" />
                             </View>
@@ -413,6 +424,42 @@ export default class Contacts extends React.Component<
                         keyExtractor={(item, index) => index.toString()}
                         scrollEnabled={false}
                     />
+                    {!loading && contacts.length > 1 && (
+                        <Button
+                            title={
+                                deletionAwaitingConfirmation
+                                    ? localeString(
+                                          'views.Settings.AddEditNode.tapToConfirm'
+                                      )
+                                    : localeString(
+                                          'views.Settings.Contacts.deleteAllContacts'
+                                      )
+                            }
+                            onPress={async () => {
+                                if (!deletionAwaitingConfirmation) {
+                                    this.setState({
+                                        deletionAwaitingConfirmation: true
+                                    });
+                                } else {
+                                    await EncryptedStorage.setItem(
+                                        'zeus-contacts',
+                                        JSON.stringify([])
+                                    );
+                                    this.setState({
+                                        deletionAwaitingConfirmation: false
+                                    });
+                                    this.loadContacts();
+                                }
+                            }}
+                            containerStyle={{
+                                borderColor: themeColor('delete')
+                            }}
+                            titleStyle={{
+                                color: themeColor('delete')
+                            }}
+                            secondary
+                        />
+                    )}
                     {loading ? (
                         <LoadingIndicator />
                     ) : (

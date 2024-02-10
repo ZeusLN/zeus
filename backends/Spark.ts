@@ -357,6 +357,7 @@ export default class Spark {
     supportsLnurlAuth = () => false;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
+    supportsLightningSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => false;

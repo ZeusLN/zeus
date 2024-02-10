@@ -31,6 +31,7 @@ import SettingsStore, {
 } from '../../../stores/SettingsStore';
 import UnitsStore from '../../../stores/UnitsStore';
 
+import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import UrlUtils from '../../../utils/UrlUtils';
@@ -158,6 +159,7 @@ export default class LightningAddress extends React.Component<
             error_msg,
             loading,
             redeeming,
+            redeemingAll,
             readyToAutomaticallyAccept,
             prepareToAutomaticallyAcceptStart
         } = LightningAddressStore;
@@ -202,21 +204,28 @@ export default class LightningAddress extends React.Component<
             </TouchableOpacity>
         );
 
-        const QRButton = () => (
-            <TouchableOpacity
-                onPress={() =>
-                    navigation.navigate('QR', {
-                        value: `${lightningAddressHandle}@${lightningAddressDomain}`,
-                        hideText: true,
-                        jumboLabel: true,
-                        logo: require('../../../assets/images/pay-z-black.png')
-                    })
-                }
-                style={{ marginTop: 10 }}
-            >
-                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
-            </TouchableOpacity>
-        );
+        const QRButton = () => {
+            const address = `${lightningAddressHandle}@${lightningAddressDomain}`;
+            return (
+                <TouchableOpacity
+                    onPress={() =>
+                        navigation.navigate('QR', {
+                            value: `lightning:${address}`,
+                            label: address,
+                            hideText: true,
+                            jumboLabel: true,
+                            logo: require('../../../assets/images/pay-z-black.png')
+                        })
+                    }
+                    style={{ marginTop: 10 }}
+                >
+                    <QR
+                        fill={themeColor('text')}
+                        style={{ alignSelf: 'center' }}
+                    />
+                </TouchableOpacity>
+            );
+        };
 
         const statusGood = availableHashes > 50;
 
@@ -233,7 +242,7 @@ export default class LightningAddress extends React.Component<
                             }
                         }}
                         rightComponent={
-                            !loading && !redeeming ? (
+                            !loading && !redeeming && !redeemingAll ? (
                                 <Row>
                                     {fees && !error && <InfoButton />}
                                     {lightningAddressHandle && !error && (
@@ -245,90 +254,103 @@ export default class LightningAddress extends React.Component<
                         navigation={navigation}
                     />
                     {redeeming && <LightningLoadingPattern />}
+                    {redeemingAll && !redeeming && (
+                        <LightningLoadingPattern color={themeColor('text')} />
+                    )}
                     <View style={{ flex: 1, margin: 5 }}>
                         {loading && <LoadingIndicator />}
                         {!loading && !redeeming && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
-                        {!loading && !redeeming && lightningAddressHandle && (
-                            <View
-                                style={{
-                                    alignSelf: 'center',
-                                    marginTop: 30,
-                                    marginBottom: 30
-                                }}
-                            >
-                                <Row
-                                    style={{
-                                        alignSelf: 'center'
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 26 / fontScale,
-                                            color: themeColor('text'),
-                                            textAlign: 'center'
-                                        }}
-                                    >
-                                        {`${lightningAddressHandle}@${lightningAddressDomain}`}
-                                    </Text>
-                                </Row>
-                                <Row
+                        {!loading &&
+                            !redeemingAll &&
+                            !redeeming &&
+                            lightningAddressHandle && (
+                                <View
                                     style={{
                                         alignSelf: 'center',
-                                        marginTop: 4
+                                        marginTop: 30,
+                                        marginBottom: 30
                                     }}
                                 >
-                                    <Text
+                                    <Row
                                         style={{
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            alignSelf: 'center'
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize: 26 / fontScale,
+                                                color: themeColor('text'),
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            {`${lightningAddressHandle}@${lightningAddressDomain}`}
+                                        </Text>
+                                    </Row>
+                                    <Row
+                                        style={{
+                                            alignSelf: 'center',
+                                            marginTop: 4
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
 
-                                            color: themeColor('text'),
-                                            textAlign: 'center'
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.Transaction.status'
-                                        )}: `}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            color: statusGood
-                                                ? themeColor('success')
-                                                : themeColor('error'),
-                                            textAlign: 'center'
-                                        }}
-                                    >
-                                        {statusGood
-                                            ? localeString('general.good')
-                                            : localeString('general.bad')}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 11,
-                                            color: themeColor('secondaryText'),
-                                            left: 5
-                                        }}
-                                        infoText={[
-                                            localeString(
-                                                'views.Settings.LightningAddress.statusExplainer1'
-                                            ),
-                                            localeString(
-                                                'views.Settings.LightningAddress.statusExplainer2'
-                                            )
-                                        ]}
-                                    >
-                                        {` (${availableHashes})`}
-                                    </Text>
-                                </Row>
-                                <QRButton />
-                            </View>
-                        )}
+                                                color: themeColor('text'),
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            {`${localeString(
+                                                'views.Transaction.status'
+                                            )}: `}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: statusGood
+                                                    ? themeColor('success')
+                                                    : themeColor('error'),
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            {statusGood
+                                                ? localeString('general.good')
+                                                : localeString('general.bad')}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize: 11,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                left: 5
+                                            }}
+                                            infoText={[
+                                                localeString(
+                                                    'views.Settings.LightningAddress.statusExplainer1'
+                                                ),
+                                                localeString(
+                                                    'views.Settings.LightningAddress.statusExplainer2'
+                                                )
+                                            ]}
+                                        >
+                                            {` (${availableHashes})`}
+                                        </Text>
+                                    </Row>
+                                    <QRButton />
+                                </View>
+                            )}
                         {!loading &&
                             !redeeming &&
+                            !redeemingAll &&
                             !lightningAddressHandle &&
                             hasChannels && (
                                 <>
@@ -517,6 +539,7 @@ export default class LightningAddress extends React.Component<
                             )}
                         {!loading &&
                             !redeeming &&
+                            !redeemingAll &&
                             !lightningAddressHandle &&
                             !hasChannels && (
                                 <>
@@ -537,26 +560,42 @@ export default class LightningAddress extends React.Component<
                                                 'views.Settings.LightningAddress.explainer1'
                                             )}
                                         </Text>
-                                        <Text
-                                            style={{
-                                                ...styles.explainer,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.LightningAddress.explainer2'
-                                            )}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                ...styles.explainer,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Wallet.KeypadPane.lspExplainerFirstChannel'
-                                            )}
-                                        </Text>
+                                        {BackendUtils.supportsLSPs() && (
+                                            <Text
+                                                style={{
+                                                    ...styles.explainer,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.explainer2'
+                                                )}
+                                            </Text>
+                                        )}
+                                        {BackendUtils.supportsLSPs() && (
+                                            <Text
+                                                style={{
+                                                    ...styles.explainer,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+                                                )}
+                                            </Text>
+                                        )}
+                                        {!BackendUtils.supportsLSPs() && (
+                                            <Text
+                                                style={{
+                                                    ...styles.explainer,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.explainer3'
+                                                )}
+                                            </Text>
+                                        )}
                                     </View>
                                     <View>
                                         <View
@@ -564,34 +603,49 @@ export default class LightningAddress extends React.Component<
                                         >
                                             <Button
                                                 title={localeString(
-                                                    'views.Settings.LightningAddress.get0ConfChan'
+                                                    BackendUtils.supportsLSPs()
+                                                        ? 'views.Settings.LightningAddress.get0ConfChan'
+                                                        : 'views.Wallet.Channels.open'
                                                 )}
                                                 onPress={() => {
-                                                    UnitsStore.resetUnits();
-                                                    navigation.navigate(
-                                                        'Receive',
-                                                        {
-                                                            amount: '100000'
-                                                        }
-                                                    );
+                                                    if (
+                                                        BackendUtils.supportsLSPs()
+                                                    ) {
+                                                        UnitsStore.resetUnits();
+                                                        navigation.navigate(
+                                                            'Receive',
+                                                            {
+                                                                amount: '100000'
+                                                            }
+                                                        );
+                                                    } else {
+                                                        navigation.navigate(
+                                                            'OpenChannel'
+                                                        );
+                                                    }
                                                 }}
                                             />
                                         </View>
-                                        <View
-                                            style={{ bottom: 15, margin: 10 }}
-                                        >
-                                            <Button
-                                                title={localeString(
-                                                    'views.LspExplanation.buttonText2'
-                                                )}
-                                                onPress={() =>
-                                                    navigation.navigate(
-                                                        'LspExplanationOverview'
-                                                    )
-                                                }
-                                                tertiary
-                                            />
-                                        </View>
+                                        {BackendUtils.supportsLSPs() && (
+                                            <View
+                                                style={{
+                                                    bottom: 15,
+                                                    margin: 10
+                                                }}
+                                            >
+                                                <Button
+                                                    title={localeString(
+                                                        'views.LspExplanation.buttonText2'
+                                                    )}
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'LspExplanationOverview'
+                                                        )
+                                                    }
+                                                    tertiary
+                                                />
+                                            </View>
+                                        )}
                                         <View
                                             style={{ bottom: 15, margin: 10 }}
                                         >
@@ -630,6 +684,7 @@ export default class LightningAddress extends React.Component<
                                 {!isReady &&
                                     !loading &&
                                     !redeeming &&
+                                    !redeemingAll &&
                                     paid &&
                                     paid.length > 0 && (
                                         <>
@@ -659,29 +714,32 @@ export default class LightningAddress extends React.Component<
                                             </View>
                                         </>
                                     )}
-                                {!loading && !redeeming && paid.length === 0 && (
-                                    <TouchableOpacity
-                                        style={{
-                                            marginTop: 15,
-                                            alignItems: 'center'
-                                        }}
-                                        onPress={() => status()}
-                                    >
-                                        <Text
+                                {!loading &&
+                                    !redeeming &&
+                                    !redeemingAll &&
+                                    paid.length === 0 && (
+                                        <TouchableOpacity
                                             style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
+                                                marginTop: 15,
+                                                alignItems: 'center'
                                             }}
+                                            onPress={() => status()}
                                         >
-                                            {localeString(
-                                                'views.Settings.LightningAddress.noPaymentsToRedeem'
-                                            )}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.noPaymentsToRedeem'
+                                                )}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
 
-                                {!loading && !redeeming && (
+                                {!loading && !redeeming && !redeemingAll && (
                                     <>
                                         <FlatList
                                             data={paid}

@@ -242,6 +242,7 @@ export default class LnurlPay extends React.Component<
                                                 sats={Math.ceil(
                                                     lnurl.minSendable / 1000
                                                 )}
+                                                defaultTextSize={true}
                                             />
                                             <Text
                                                 style={{
@@ -258,6 +259,7 @@ export default class LnurlPay extends React.Component<
                                                 sats={Math.floor(
                                                     lnurl.maxSendable / 1000
                                                 )}
+                                                defaultTextSize={true}
                                             />
                                             <Text
                                                 style={{
@@ -273,10 +275,9 @@ export default class LnurlPay extends React.Component<
                                     )}
                             </Row>
                         </View>
-                        <View style={{ marginTop: -20 }}>
+                        <View style={{ marginTop: 0 }}>
                             <AmountInput
                                 amount={amount}
-                                preventUnitReset={true}
                                 locked={
                                     lnurl &&
                                     lnurl.minSendable === lnurl.maxSendable
@@ -354,7 +355,6 @@ const styles = StyleSheet.create({
     text: {
         fontFamily: 'PPNeueMontreal-Book'
     },
-    textInput: { paddingVertical: 10 },
     content: { paddingHorizontal: 20 },
     button: { paddingVertical: 15 },
     metadata: { padding: 20 }

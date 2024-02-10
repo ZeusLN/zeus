@@ -1,36 +1,37 @@
 import stores from '../stores/Stores';
-import * as EN from './../locales/en.json';
-import * as CS from './../locales/cs.json';
-import * as DE from './../locales/de.json';
-import * as ES from './../locales/es.json';
-import * as PTBR from './../locales/pt_br.json';
-import * as SK from './../locales/sk.json';
-import * as TR from './../locales/tr.json';
-import * as HU from './../locales/hu.json';
-import * as ZHCN from './../locales/zh_cn.json';
-import * as FR from './../locales/fr.json';
-import * as NL from './../locales/nl.json';
+import * as EN from '../locales/en.json';
+import * as CS from '../locales/cs.json';
+import * as DE from '../locales/de.json';
+import * as ES from '../locales/es.json';
+import * as PTBR from '../locales/pt_br.json';
+import * as SK from '../locales/sk.json';
+import * as TR from '../locales/tr.json';
+import * as HU from '../locales/hu.json';
+import * as ZHCN from '../locales/zh_cn.json';
+import * as FR from '../locales/fr.json';
+import * as NL from '../locales/nl.json';
 
-import * as NB from './../locales/nb.json';
-import * as SV from './../locales/sv.json';
-import * as TH from './../locales/th.json';
-import * as UK from './../locales/uk.json';
-import * as RO from './../locales/ro.json';
-import * as PL from './../locales/pl.json';
+import * as NB from '../locales/nb.json';
+import * as SV from '../locales/sv.json';
+import * as TH from '../locales/th.json';
+import * as UK from '../locales/uk.json';
+import * as RO from '../locales/ro.json';
+import * as PL from '../locales/pl.json';
 
-import * as HE from './../locales/he.json';
-import * as HR from './../locales/hr.json';
+import * as HE from '../locales/he.json';
+import * as HR from '../locales/hr.json';
+import * as SW from '../locales/sw.json';
 
 // in progress
-import * as FA from './../locales/fa.json';
-import * as EL from './../locales/el.json';
-import * as SL from './../locales/sl.json';
-import * as RU from './../locales/ru.json';
-import * as FI from './../locales/fi.json';
-import * as IT from './../locales/it.json';
-import * as VI from './../locales/vi.json';
-import * as JA from './../locales/ja.json';
-import * as KO from './../locales/ko.json';
+import * as FA from '../locales/fa.json';
+import * as EL from '../locales/el.json';
+import * as SL from '../locales/sl.json';
+import * as RU from '../locales/ru.json';
+import * as FI from '../locales/fi.json';
+import * as IT from '../locales/it.json';
+import * as VI from '../locales/vi.json';
+import * as JA from '../locales/ja.json';
+import * as KO from '../locales/ko.json';
 
 const English: any = EN;
 const Czech: any = CS;
@@ -44,6 +45,7 @@ const Greek: any = EL;
 const French: any = FR;
 const Dutch: any = NL;
 const Hungarian: any = HU;
+const Swahili: any = SW;
 const SimplifiedChinese: any = ZHCN;
 
 const NorwegianBokmal: any = NB;
@@ -101,6 +103,8 @@ export function localeString(localeString: string): any {
             return Dutch[localeString] || English[localeString];
         case 'hu':
             return Hungarian[localeString] || English[localeString];
+        case 'sw':
+            return Swahili[localeString] || English[localeString];
         case 'zh':
             return SimplifiedChinese[localeString] || English[localeString];
         case 'sl':

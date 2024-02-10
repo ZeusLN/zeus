@@ -66,4 +66,8 @@ export default class NodeInfo extends BaseModel {
             });
         return uris;
     }
+
+    @computed public get getPubkey(): string {
+        return this.pubkey || this.identity_pubkey || '';
+    }
 }

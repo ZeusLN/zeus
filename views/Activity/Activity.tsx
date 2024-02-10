@@ -5,7 +5,8 @@ import {
     NativeEventEmitter,
     Text,
     TouchableOpacity,
-    View
+    View,
+    StyleSheet
 } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
@@ -14,7 +15,6 @@ import BigNumber from 'bignumber.js';
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
-import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -28,6 +28,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
+import Invoice from '../../models/Invoice';
 
 interface ActivityProps {
     navigation: any;
@@ -58,16 +59,16 @@ export default class Activity extends React.PureComponent<
         const { ActivityStore, SettingsStore } = this.props;
         const { getActivityAndFilter, getFilters } = ActivityStore;
         const filters = await getFilters();
-        await getActivityAndFilter(filters);
+        await getActivityAndFilter(SettingsStore.settings.locale, filters);
         if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribeEvents();
         }
     }
 
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
-        const { ActivityStore } = newProps;
+        const { ActivityStore, SettingsStore } = newProps;
         const { getActivityAndFilter } = ActivityStore;
-        getActivityAndFilter();
+        getActivityAndFilter(SettingsStore.settings.locale);
     };
 
     componentWillUnmount() {
@@ -78,21 +79,18 @@ export default class Activity extends React.PureComponent<
     }
 
     subscribeEvents = () => {
-        const { ActivityStore } = this.props;
+        const { ActivityStore, SettingsStore } = this.props;
         const { LncModule } = NativeModules;
+        const locale = SettingsStore.settings.locale;
         const eventEmitter = new NativeEventEmitter(LncModule);
         this.transactionListener = eventEmitter.addListener(
             BackendUtils.subscribeTransactions(),
-            () => {
-                ActivityStore.updateTransactions();
-            }
+            () => ActivityStore.updateTransactions(locale)
         );
 
         this.invoicesListener = eventEmitter.addListener(
             BackendUtils.subscribeInvoices(),
-            () => {
-                ActivityStore.updateInvoices();
-            }
+            () => ActivityStore.updateInvoices(locale)
         );
     };
 
@@ -140,6 +138,7 @@ export default class Activity extends React.PureComponent<
             SettingsStore
         } = this.props;
         const { selectedPaymentForOrder } = this.state;
+
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
         const { recordPayment } = PosStore;
@@ -250,47 +249,65 @@ export default class Activity extends React.PureComponent<
                         renderItem={({ item }: { item: any }) => {
                             let displayName = item.model;
                             let subTitle = item.model;
-                            if (
-                                item.model ===
-                                localeString('views.Invoice.title')
-                            ) {
+
+                            if (item instanceof Invoice) {
                                 displayName = item.isPaid
                                     ? localeString('views.Activity.youReceived')
+                                    : item.isExpired
+                                    ? localeString(
+                                          'views.Activity.expiredRequested'
+                                      )
                                     : localeString(
                                           'views.Activity.requestedPayment'
                                       );
-                                subTitle = `${
-                                    item.isPaid
-                                        ? localeString('general.lightning')
-                                        : `${localeString(
-                                              'views.PaymentRequest.title'
-                                          )}: ${
-                                              item.isExpired
-                                                  ? localeString(
-                                                        'views.Activity.expired'
-                                                    )
-                                                  : item.expirationDate
-                                          }`
-                                }${item.memo ? `: ${item.memo}` : ''}`;
-                            }
-
-                            if (
+                                subTitle = (
+                                    <Text>
+                                        {item.isPaid
+                                            ? localeString('general.lightning')
+                                            : localeString(
+                                                  'views.PaymentRequest.title'
+                                              )}
+                                        {item.memo ? ': ' : ''}
+                                        {item.memo ? (
+                                            <Text
+                                                style={{ fontStyle: 'italic' }}
+                                            >
+                                                {item.memo}
+                                            </Text>
+                                        ) : (
+                                            ''
+                                        )}
+                                    </Text>
+                                );
+                            } else if (
                                 item.model ===
                                 localeString('views.Payment.title')
                             ) {
-                                displayName = item.isInTransit
+                                displayName = item.isFailed
+                                    ? localeString(
+                                          'views.Payment.failedPayment'
+                                      )
+                                    : item.isInTransit
                                     ? localeString(
                                           'views.Payment.inTransitPayment'
                                       )
                                     : localeString('views.Activity.youSent');
-                                subTitle = item.memo
-                                    ? `${localeString('general.lightning')}: ${
-                                          item.memo
-                                      }`
-                                    : localeString('general.lightning');
-                            }
-
-                            if (
+                                subTitle = (
+                                    <Text>
+                                        {localeString('general.lightning')}
+                                        {item.memo ? ': ' : ''}
+                                        {item.memo ? (
+                                            <Text
+                                                style={{ fontStyle: 'italic' }}
+                                            >
+                                                {item.memo}
+                                            </Text>
+                                        ) : (
+                                            ''
+                                        )}
+                                    </Text>
+                                );
+                            } else if (
                                 item.model ===
                                 localeString('general.transaction')
                             ) {
@@ -381,93 +398,153 @@ export default class Activity extends React.PureComponent<
                                         }}
                                     >
                                         <ListItem.Content>
-                                            <ListItem.Title
-                                                right
-                                                style={{
-                                                    fontWeight: '600',
-                                                    color:
-                                                        item ===
-                                                        selectedPaymentForOrder
-                                                            ? themeColor(
-                                                                  'highlight'
-                                                              )
-                                                            : themeColor(
-                                                                  'text'
-                                                              ),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {displayName}
-                                            </ListItem.Title>
-                                            <ListItem.Subtitle
-                                                right
-                                                style={{
-                                                    color:
-                                                        item ===
-                                                        selectedPaymentForOrder
-                                                            ? themeColor(
-                                                                  'highlight'
-                                                              )
-                                                            : themeColor(
-                                                                  'secondaryText'
-                                                              ),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {subTitle}
-                                            </ListItem.Subtitle>
-                                        </ListItem.Content>
-                                        <ListItem.Content right>
-                                            <Row>
-                                                <Amount
-                                                    sats={item.getAmount}
-                                                    sensitive
-                                                    color={this.getRightTitleTheme(
-                                                        item
-                                                    )}
-                                                />
-                                                {!!item.getFee &&
-                                                    item.getFee != 0 && (
-                                                        <>
-                                                            <Text
-                                                                style={{
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    )
-                                                                }}
-                                                            >
-                                                                {' '}
-                                                                +{' '}
-                                                            </Text>
-                                                            <Amount
-                                                                sats={
-                                                                    item.getFee
+                                            <View style={styles.row}>
+                                                <ListItem.Title
+                                                    style={{
+                                                        ...styles.leftCell,
+                                                        fontWeight: '600',
+                                                        color:
+                                                            item ===
+                                                            selectedPaymentForOrder
+                                                                ? themeColor(
+                                                                      'highlight'
+                                                                  )
+                                                                : themeColor(
+                                                                      'text'
+                                                                  ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {displayName}
+                                                </ListItem.Title>
+
+                                                <View
+                                                    style={{
+                                                        ...styles.rightCell,
+                                                        flexDirection: 'row',
+                                                        flexWrap: 'wrap',
+                                                        columnGap: 5,
+                                                        rowGap: -5,
+                                                        justifyContent:
+                                                            'flex-end'
+                                                    }}
+                                                >
+                                                    <Amount
+                                                        sats={item.getAmount}
+                                                        sensitive
+                                                        color={this.getRightTitleTheme(
+                                                            item
+                                                        )}
+                                                    />
+                                                    {!!item.getFee &&
+                                                        item.getFee != 0 && (
+                                                            <>
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'text'
+                                                                        ),
+                                                                        fontSize: 16
+                                                                    }}
+                                                                >
+                                                                    +
+                                                                </Text>
+                                                                <Amount
+                                                                    sats={
+                                                                        item.getFee
+                                                                    }
+                                                                    sensitive
+                                                                    color={this.getRightTitleTheme(
+                                                                        item
+                                                                    )}
+                                                                    fee
+                                                                />
+                                                            </>
+                                                        )}
+                                                </View>
+                                            </View>
+
+                                            <View style={styles.row}>
+                                                <ListItem.Subtitle
+                                                    right
+                                                    style={{
+                                                        ...styles.leftCell,
+                                                        color:
+                                                            item ===
+                                                            selectedPaymentForOrder
+                                                                ? themeColor(
+                                                                      'highlight'
+                                                                  )
+                                                                : themeColor(
+                                                                      'secondaryText'
+                                                                  ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {subTitle}
+                                                </ListItem.Subtitle>
+
+                                                <ListItem.Subtitle
+                                                    style={{
+                                                        ...styles.rightCell,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {order
+                                                        ? item.getDisplayTimeOrder
+                                                        : item.getDisplayTimeShort}
+                                                </ListItem.Subtitle>
+                                            </View>
+
+                                            {!item.isPaid &&
+                                                !item.isExpired &&
+                                                item.formattedTimeUntilExpiry && (
+                                                    <View style={styles.row}>
+                                                        <ListItem.Subtitle
+                                                            style={{
+                                                                ...styles.leftCell,
+                                                                color:
+                                                                    item ===
+                                                                    selectedPaymentForOrder
+                                                                        ? themeColor(
+                                                                              'highlight'
+                                                                          )
+                                                                        : themeColor(
+                                                                              'secondaryText'
+                                                                          ),
+                                                                fontFamily:
+                                                                    'Lato-Regular'
+                                                            }}
+                                                        >
+                                                            {localeString(
+                                                                'views.Invoice.expiration'
+                                                            )}
+                                                        </ListItem.Subtitle>
+
+                                                        <ListItem.Subtitle
+                                                            style={{
+                                                                ...styles.rightCell,
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                ),
+                                                                fontFamily:
+                                                                    'Lato-Regular'
+                                                            }}
+                                                        >
+                                                            <Text textBreakStrategy="highQuality">
+                                                                {
+                                                                    item.formattedTimeUntilExpiry
                                                                 }
-                                                                sensitive
-                                                                color={this.getRightTitleTheme(
-                                                                    item
-                                                                )}
-                                                                fee
-                                                            />
-                                                        </>
-                                                    )}
-                                            </Row>
-                                            <ListItem.Subtitle
-                                                right
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {order
-                                                    ? item.getDisplayTimeOrder
-                                                    : item.getDisplayTimeShort}
-                                            </ListItem.Subtitle>
+                                                            </Text>
+                                                        </ListItem.Subtitle>
+                                                    </View>
+                                                )}
                                         </ListItem.Content>
                                     </ListItem>
                                 </React.Fragment>
@@ -477,7 +554,9 @@ export default class Activity extends React.PureComponent<
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => getActivityAndFilter()}
+                        onRefresh={() =>
+                            getActivityAndFilter(SettingsStore.settings.locale)
+                        }
                         initialNumToRender={10}
                         maxToRenderPerBatch={5}
                         windowSize={10}
@@ -490,7 +569,9 @@ export default class Activity extends React.PureComponent<
                             size: 25,
                             color: themeColor('text')
                         }}
-                        onPress={() => getActivityAndFilter()}
+                        onPress={() =>
+                            getActivityAndFilter(SettingsStore.settings.locale)
+                        }
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30
@@ -505,3 +586,21 @@ export default class Activity extends React.PureComponent<
         );
     }
 }
+
+const styles = StyleSheet.create({
+    row: {
+        flexDirection: 'row',
+        width: '100%',
+        justifyContent: 'space-between',
+        columnGap: 10
+    },
+    leftCell: {
+        flexGrow: 0,
+        flexShrink: 1
+    },
+    rightCell: {
+        flexGrow: 0,
+        flexShrink: 1,
+        textAlign: 'right'
+    }
+});

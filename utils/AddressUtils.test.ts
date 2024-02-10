@@ -1,3 +1,10 @@
+jest.mock('react-native-encrypted-storage', () => ({
+    setItem: jest.fn(() => Promise.resolve()),
+    getItem: jest.fn(() => Promise.resolve()),
+    removeItem: jest.fn(() => Promise.resolve()),
+    clear: jest.fn(() => Promise.resolve())
+}));
+
 import AddressUtils from './AddressUtils';
 
 describe('AddressUtils', () => {
@@ -218,7 +225,7 @@ describe('AddressUtils', () => {
             ).toBeTruthy();
         });
 
-        it('validates capitalized Lightning public keys properly', () => {
+        it('validates Lightning public keys properly', () => {
             expect(AddressUtils.isValidLightningPubKey('B')).toBeFalsy();
             expect(
                 AddressUtils.isValidLightningPubKey(
@@ -235,6 +242,12 @@ describe('AddressUtils', () => {
                     '02f26071c249ea5cd7c346afda799d58f113852f7ab6c80f6f7f2bedd7c52cd01a'
                 )
             ).toBeTruthy();
+            // Nostr pubkeys aren't valid
+            expect(
+                AddressUtils.isValidLightningPubKey(
+                    '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832'
+                )
+            ).toBeFalsy();
         });
 
         describe('processSendAddress', () => {

@@ -42,7 +42,14 @@ interface DisplaySettings {
     showAllDecimalPlaces?: boolean;
 }
 
+export enum PosEnabled {
+    Disabled = 'disabled',
+    Square = 'square',
+    Standalone = 'standalone'
+}
+
 interface PosSettings {
+    posEnabled?: PosEnabled;
     squareEnabled?: boolean;
     squareAccessToken?: string;
     squareLocationId?: string;
@@ -50,6 +57,8 @@ interface PosSettings {
     confirmationPreference?: string;
     disableTips?: boolean;
     squareDevMode?: boolean;
+    showKeypad?: boolean;
+    taxPercentage?: string;
 }
 
 interface PaymentsSettings {
@@ -116,8 +125,10 @@ export interface Settings {
     neutrinoPeers: Array<string>;
     zeroConfPeers: Array<string>;
     rescan: boolean;
+    compactDb: boolean;
     recovery: boolean;
     initialLoad: boolean;
+    embeddedTor: boolean;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -217,7 +228,8 @@ export const LOCALE_KEYS = [
     { key: 'jp', value: '日本語' },
     { key: 'he', value: 'עִבְרִית' },
     { key: 'hr', value: 'Hrvatski' },
-    { key: 'ko', value: '한국어' }
+    { key: 'ko', value: '한국어' },
+    { key: 'sw', value: 'Kiswahili' }
 ];
 
 // this mapping is only for migration and does not need to be updated when new languages are added
@@ -546,6 +558,171 @@ export const CURRENCY_KEYS = [
         key: '🇲🇷 Mauritanian Ouguiya (MRU)',
         value: 'MRU',
         supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇦🇱 Albanian Lek (ALL)',
+        value: 'ALL',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇳🇱 Netherlands Antillean Guilder (ANG)',
+        value: 'ANG',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇦🇴 Angolan Kwanza (AOA)',
+        value: 'AOA',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇩 Bangladeshi Takka (BDT)',
+        value: 'BDT',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇬 Bulgarian Lev (BGN)',
+        value: 'BGN',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇭 Bahraini Dinar (BHD)',
+        value: 'BHD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇮 Burundian Franc (BIF)',
+        value: 'BIF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇲 Bermudan Dollar (BMD)',
+        value: 'BMD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇼 Botswanan Pula (BWP)',
+        value: 'BWP',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇩🇯 Djiboutian Franc (DJF)',
+        value: 'DJF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇩🇿 Algerian Dinar (DZD)',
+        value: 'DZD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇪🇬 Egyptian Pound (EGP)',
+        value: 'EGP',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇪🇹 Ethiopian Birr (ETB)',
+        value: 'ETB',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇬🇪 Georgian Lari (GEL)',
+        value: 'GEL',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇬🇭 Ghanaian Cedi (GHS)',
+        value: 'GHS',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇬🇳 Guinean Franc (GNF)',
+        value: 'GNF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇭🇳 Honduran Lempira (HNL)',
+        value: 'HNL',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇮🇷 Iranian Rial (IRR)',
+        value: 'IRR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇯🇴 Jordanian Dinar (JOD)',
+        value: 'JOD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇰🇬 Kyrgystani Som (KGS)',
+        value: 'KGS',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇰🇿 Kazakhstani Tenge (KZT)',
+        value: 'KZT',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇱🇰 Sri Lankan Rupee (LKR)',
+        value: 'LKR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇲🇦 Moroccan Dirham (MAD)',
+        value: 'MAD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇲🇬 Malagasy Ariar (MGA)',
+        value: 'MGA',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇳🇦 Namibian Dollar (NAD)',
+        value: 'NAD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇳🇵 Nepalese Rupee (NPR)',
+        value: 'NPR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇵🇦 Panamanian Balboa (PAB)',
+        value: 'PAB',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇵🇪 Peruvian Sol (PEN)',
+        value: 'PEN',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇵🇰 Pakistani Rupee (PKR)',
+        value: 'PKR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇷🇸 Serbian Dinar (RSD)',
+        value: 'RSD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇷🇼 Rwandan Franc (RWF)',
+        value: 'RWF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇺🇿 Uzbekistan Sum (UZS)',
+        value: 'UZS',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇻🇳 Vietnamese Dong (VND)',
+        value: 'VND',
+        supportedSources: ['Zeus', 'Yadio']
     }
 ];
 
@@ -661,9 +838,27 @@ export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
 export const DEFAULT_LOCALE = 'English';
 
 export const POS_CONF_PREF_KEYS = [
-    { key: '0 conf', value: '0conf' },
-    { key: '1 conf', value: '1conf' },
-    { key: 'LN only', value: 'lnOnly' }
+    { key: '0 conf', translateKey: 'views.Settings.POS.0conf', value: '0conf' },
+    { key: '1 conf', translateKey: 'views.Settings.POS.1conf', value: '1conf' },
+    {
+        key: 'LN only',
+        translateKey: 'views.Settings.POS.lnOnly',
+        value: 'lnOnly'
+    }
+];
+
+export const POS_ENABLED_KEYS = [
+    {
+        key: 'Disabled',
+        translateKey: 'views.Settings.disabled',
+        value: PosEnabled.Disabled
+    },
+    {
+        key: 'Standalone',
+        tanslateKey: 'views.Settings.POS.standalone',
+        value: PosEnabled.Standalone
+    },
+    { key: 'Square', value: PosEnabled.Square }
 ];
 
 export const LNDHUB_AUTH_MODES = [
@@ -729,13 +924,16 @@ export default class SettingsStore {
             showAllDecimalPlaces: false
         },
         pos: {
-            squareEnabled: false,
+            posEnabled: PosEnabled.Disabled,
+            squareEnabled: false, // deprecated
             squareAccessToken: '',
             squareLocationId: '',
             merchantName: '',
             confirmationPreference: 'lnOnly',
             disableTips: false,
-            squareDevMode: false
+            squareDevMode: false,
+            showKeypad: true,
+            taxPercentage: '0'
         },
         payments: {
             defaultFeeMethod: 'fixed', // deprecated
@@ -768,8 +966,10 @@ export default class SettingsStore {
         neutrinoPeers: [],
         zeroConfPeers: [],
         rescan: false,
+        compactDb: false,
         recovery: false,
         initialLoad: true,
+        embeddedTor: false,
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
@@ -1036,8 +1236,14 @@ export default class SettingsStore {
                     await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
 
+                // migrate old POS squareEnabled setting to posEnabled
+                if (this.settings?.pos?.squareEnabled) {
+                    this.settings.pos.posEnabled = PosEnabled.Square;
+                    this.settings.pos.squareEnabled = false;
+                }
+
                 const node: any =
-                    this.settings.nodes &&
+                    this.settings.nodes?.length &&
                     this.settings.nodes[this.settings.selectedNode || 0];
                 if (node) {
                     this.host = node.host;
@@ -1084,7 +1290,6 @@ export default class SettingsStore {
     @action
     public updateSettings = async (newSetting: any) => {
         const existingSettings = await this.getSettings();
-
         const newSettings = {
             ...existingSettings,
             ...newSetting

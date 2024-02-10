@@ -27,12 +27,13 @@ import PosStore from '../../stores/PosStore';
 import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
-import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { protectedNavigation } from '../../utils/NavigationUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import { version } from './../../package.json';
 
-interface PosPaneProps {
+interface SquarePosPaneProps {
     navigation: any;
     ActivityStore?: ActivityStore;
     FiatStore?: FiatStore;
@@ -42,7 +43,7 @@ interface PosPaneProps {
     SettingsStore?: SettingsStore;
 }
 
-interface PosPaneState {
+interface SquarePosPaneState {
     selectedIndex: number;
     search: string;
     fadeAnimation: any;
@@ -57,9 +58,9 @@ interface PosPaneState {
     'SettingsStore'
 )
 @observer
-export default class PosPane extends React.PureComponent<
-    PosPaneProps,
-    PosPaneState
+export default class SquarePosPane extends React.PureComponent<
+    SquarePosPaneProps,
+    SquarePosPaneState
 > {
     constructor(props: any) {
         super(props);
@@ -294,20 +295,7 @@ export default class PosPane extends React.PureComponent<
                             alignItems: 'center'
                         }}
                         onPress={() => {
-                            const { posStatus, settings } =
-                                this.props.SettingsStore!;
-                            const loginRequired =
-                                settings &&
-                                (settings.passphrase || settings.pin);
-                            const posEnabled = posStatus === 'active';
-
-                            if (posEnabled && loginRequired) {
-                                navigation.navigate('Lockscreen', {
-                                    attemptAdminLogin: true
-                                });
-                            } else {
-                                navigation.navigate('Settings');
-                            }
+                            protectedNavigation(navigation, 'Settings');
                         }}
                         adaptiveWidth
                     />

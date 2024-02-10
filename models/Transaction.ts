@@ -53,7 +53,7 @@ export default class Transaction extends BaseModel {
     @computed public get getFeePercentage(): string {
         const amount = this.getAmount;
         const fee = this.getFee;
-        if (!fee || !amount || fee == '0') return '';
+        if (!fee || !amount || fee == '0' || amount == '0') return '';
 
         // use at most 3 decimal places and remove trailing 0s
         return (
@@ -91,7 +91,7 @@ export default class Transaction extends BaseModel {
         return this.num_confirmations > 0 || this.status === 'confirmed';
     }
 
-    @computed public get getAmount(): number | string {
+    @computed public get getAmount(): string {
         const amount = this.value || this.amount || 0;
         const fee = this.getFee;
 

@@ -68,6 +68,9 @@
 		6ACB3216EC1B40A190B0A268 /* Channels.svg in Resources */ = {isa = PBXBuildFile; fileRef = 289689C09C974491A933737A /* Channels.svg */; };
 		6E1874218F2145A891E74677 /* loader.json in Resources */ = {isa = PBXBuildFile; fileRef = E30C8201B5B64E99A22BBCE0 /* loader.json */; };
 		70F9098AB09C49D6860BB45E /* Mascot.png in Resources */ = {isa = PBXBuildFile; fileRef = 9C94FFE5DB3C4080AB711D66 /* Mascot.png */; };
+		7410AA132B35345600A5AA98 /* Marlide-Display-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7410AA102B35345500A5AA98 /* Marlide-Display-Bold.ttf */; };
+		7410AA142B35345600A5AA98 /* Marlide-Display.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7410AA112B35345500A5AA98 /* Marlide-Display.ttf */; };
+		7410AA152B35345600A5AA98 /* ppneuemontreal-medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 7410AA122B35345600A5AA98 /* ppneuemontreal-medium.otf */; };
 		745388442A54C2B6000927CE /* lightning.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 745388382A54C2B6000927CE /* lightning.pb.swift */; };
 		745388452A54C2B6000927CE /* LndMobileScheduledSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 745388392A54C2B6000927CE /* LndMobileScheduledSync.swift */; };
 		745388462A54C2B6000927CE /* LndMobile.m in Sources */ = {isa = PBXBuildFile; fileRef = 7453883A2A54C2B6000927CE /* LndMobile.m */; };
@@ -78,8 +81,6 @@
 		7453884B2A54C2B6000927CE /* Lnd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 745388402A54C2B6000927CE /* Lnd.swift */; };
 		7453884C2A54C2B6000927CE /* LndMobileTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 745388412A54C2B6000927CE /* LndMobileTools.swift */; };
 		745E06AA295CB0E500597EE8 /* Caret Down.svg in Resources */ = {isa = PBXBuildFile; fileRef = 745E06A9295CB0E500597EE8 /* Caret Down.svg */; };
-		74668A542AE3CA570023695A /* Marlide-Display.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74668A502AE3CA570023695A /* Marlide-Display.ttf */; };
-		74668A552AE3CA570023695A /* Marlide-Display-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74668A532AE3CA570023695A /* Marlide-Display-Bold.ttf */; };
 		74668A582AE3CBB90023695A /* Marlide-Display-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74668A562AE3CBB90023695A /* Marlide-Display-Bold.ttf */; };
 		74668A592AE3CBB90023695A /* Marlide-Display.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74668A572AE3CBB90023695A /* Marlide-Display.ttf */; };
 		74B637822A5A350B00750202 /* LncModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B637792A5A350A00750202 /* LncModule.mm */; };
@@ -401,6 +402,9 @@
 		6F7490ECB1F7403FB5236410 /* FontAwesome5_Solid.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Solid.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Solid.ttf"; sourceTree = "<group>"; };
 		7407D2CD274E076D00850BAB /* zeus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = zeus.entitlements; path = zeus/zeus.entitlements; sourceTree = "<group>"; };
 		7407D2CE274E079100850BAB /* zeusRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = zeusRelease.entitlements; path = zeus/zeusRelease.entitlements; sourceTree = "<group>"; };
+		7410AA102B35345500A5AA98 /* Marlide-Display-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Marlide-Display-Bold.ttf"; path = "../../../assets/fonts/Marlide-Display-Bold.ttf"; sourceTree = "<group>"; };
+		7410AA112B35345500A5AA98 /* Marlide-Display.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Marlide-Display.ttf"; path = "../../../assets/fonts/Marlide-Display.ttf"; sourceTree = "<group>"; };
+		7410AA122B35345600A5AA98 /* ppneuemontreal-medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ppneuemontreal-medium.otf"; path = "../../../assets/fonts/ppneuemontreal-medium.otf"; sourceTree = "<group>"; };
 		745388382A54C2B6000927CE /* lightning.pb.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = lightning.pb.swift; sourceTree = "<group>"; };
 		745388392A54C2B6000927CE /* LndMobileScheduledSync.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LndMobileScheduledSync.swift; sourceTree = "<group>"; };
 		7453883A2A54C2B6000927CE /* LndMobile.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LndMobile.m; sourceTree = "<group>"; };
@@ -411,8 +415,6 @@
 		745388402A54C2B6000927CE /* Lnd.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Lnd.swift; sourceTree = "<group>"; };
 		745388412A54C2B6000927CE /* LndMobileTools.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LndMobileTools.swift; sourceTree = "<group>"; };
 		745E06A9295CB0E500597EE8 /* Caret Down.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "Caret Down.svg"; path = "../assets/images/SVG/Caret Down.svg"; sourceTree = "<group>"; };
-		74668A502AE3CA570023695A /* Marlide-Display.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Marlide-Display.ttf"; path = "../../../assets/fonts/Marlide-Display.ttf"; sourceTree = "<group>"; };
-		74668A532AE3CA570023695A /* Marlide-Display-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Marlide-Display-Bold.ttf"; path = "../../../assets/fonts/Marlide-Display-Bold.ttf"; sourceTree = "<group>"; };
 		74668A562AE3CBB90023695A /* Marlide-Display-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Marlide-Display-Bold.ttf"; path = "../assets/fonts/Marlide-Display-Bold.ttf"; sourceTree = "<group>"; };
 		74668A572AE3CBB90023695A /* Marlide-Display.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Marlide-Display.ttf"; path = "../assets/fonts/Marlide-Display.ttf"; sourceTree = "<group>"; };
 		74A116702A55DEE600F7078C /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
@@ -423,8 +425,7 @@
 		74B6377E2A5A350A00750202 /* Callback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Callback.h; sourceTree = "<group>"; };
 		74B6377F2A5A350A00750202 /* LncModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LncModule.h; sourceTree = "<group>"; };
 		74B637862A5A35B600750202 /* Lndmobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Lndmobile.xcframework; path = LncMobile/Lndmobile.xcframework; sourceTree = "<group>"; };
-		74F9D7E92AF33137007D44BF /* ppneuemontreal-medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ppneuemontreal-medium.otf"; path = "../../../../zeus/assets/fonts/ppneuemontreal-medium.otf"; sourceTree = "<group>"; };
-		74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ppneuemontreal-medium.otf"; path = "../../zeus/assets/fonts/ppneuemontreal-medium.otf"; sourceTree = "<group>"; };
+		74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ppneuemontreal-medium.otf"; path = "../assets/fonts/ppneuemontreal-medium.otf"; sourceTree = "<group>"; };
 		77EC666A91C04742A050DEF4 /* Help Icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Help Icon.svg"; path = "../assets/images/SVG/Help Icon.svg"; sourceTree = "<group>"; };
 		788BB1C90868496CA6F03853 /* Network.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Network.svg; path = ../assets/images/SVG/Network.svg; sourceTree = "<group>"; };
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
@@ -802,9 +803,9 @@
 		97F6D46822054E640030F13B /* Fonts */ = {
 			isa = PBXGroup;
 			children = (
-				74F9D7E92AF33137007D44BF /* ppneuemontreal-medium.otf */,
-				74668A532AE3CA570023695A /* Marlide-Display-Bold.ttf */,
-				74668A502AE3CA570023695A /* Marlide-Display.ttf */,
+				7410AA102B35345500A5AA98 /* Marlide-Display-Bold.ttf */,
+				7410AA112B35345500A5AA98 /* Marlide-Display.ttf */,
+				7410AA122B35345600A5AA98 /* ppneuemontreal-medium.otf */,
 				97F6D46922054E640030F13B /* Octicons.ttf */,
 				97F6D46A22054E640030F13B /* Feather.ttf */,
 				97F6D46B22054E640030F13B /* Entypo.ttf */,
@@ -1311,7 +1312,6 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				97D6EBB726C487DC002ADC8C /* ioslauncher.png in Resources */,
 				13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */,
-				74668A552AE3CA570023695A /* Marlide-Display-Bold.ttf in Resources */,
 				74F9D7F22AF33324007D44BF /* ppneuemontreal-medium.otf in Resources */,
 				2F59AB02206B4761AB921130 /* Mempool.svg in Resources */,
 				5ECDD76F848B4802B0B5D3C1 /* Loading.gif in Resources */,
@@ -1345,10 +1345,12 @@
 				5373AAA9A29A4603B7C121F6 /* Globe.svg in Resources */,
 				5BC6B338F0044B6CA0D45C97 /* Help Icon.svg in Resources */,
 				0A7D9EFFF994475C9E89AD34 /* Lock.svg in Resources */,
+				7410AA142B35345600A5AA98 /* Marlide-Display.ttf in Resources */,
 				74668A582AE3CBB90023695A /* Marlide-Display-Bold.ttf in Resources */,
 				43264510AFC64A6E89EC9BDA /* Menu.svg in Resources */,
 				A2AAB31AF9804954A6AD6625 /* Node Off.svg in Resources */,
 				7C9A1A0DC41A4B56BC555750 /* Node On.svg in Resources */,
+				7410AA152B35345600A5AA98 /* ppneuemontreal-medium.otf in Resources */,
 				692A2B7E895144DDB6D5813C /* PeersContact.svg in Resources */,
 				364E53F72FBA457F91578D06 /* Pen.svg in Resources */,
 				BC43A928A3C3466390D20200 /* Pie.svg in Resources */,
@@ -1362,9 +1364,9 @@
 				0EB04476647C460EA1358028 /* Switch.svg in Resources */,
 				745E06AA295CB0E500597EE8 /* Caret Down.svg in Resources */,
 				659C049013BD4A618AA4275C /* Temple.svg in Resources */,
-				74668A542AE3CA570023695A /* Marlide-Display.ttf in Resources */,
 				F6BA97FE98FB4D8890855BEC /* Wallet.svg in Resources */,
 				395880B8BA0647E3908DBD6A /* Wallet2.svg in Resources */,
+				7410AA132B35345600A5AA98 /* Marlide-Display-Bold.ttf in Resources */,
 				D66A263DF39F48088A0F8784 /* tor.png in Resources */,
 				2E994829C4BA49738466EA86 /* PinFilled.svg in Resources */,
 				E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */,
@@ -1817,7 +1819,7 @@
 				CODE_SIGN_ENTITLEMENTS = zeus/zeus.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 83;
+				CURRENT_PROJECT_VERSION = 22;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
@@ -1835,7 +1837,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.8.0;
+				MARKETING_VERSION = 0.8.1;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -1866,7 +1868,7 @@
 				CODE_SIGN_ENTITLEMENTS = zeus/zeusRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 83;
+				CURRENT_PROJECT_VERSION = 22;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
@@ -1884,7 +1886,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.8.0;
+				MARKETING_VERSION = 0.8.1;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -2107,7 +2109,10 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "$(inherited)";
 				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
-				OTHER_LDFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 			};
@@ -2162,7 +2167,10 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "$(inherited)";
 				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
-				OTHER_LDFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;

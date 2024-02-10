@@ -14,9 +14,10 @@ import KeyValue from '../../../components/KeyValue';
 import SettingsStore from '../../../stores/SettingsStore';
 import stores from '../../../stores/Stores';
 
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
 import Base64Utils from '../../../utils/Base64Utils';
+import { localeString } from '../../../utils/LocaleUtils';
+import { restartNeeded } from '../../../utils/RestartUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
 
 import { exportAllChannelBackups } from '../../../lndmobile/channel';
 
@@ -208,6 +209,7 @@ export default class DisasterRecovery extends React.Component<
                                                 automaticDisasterRecoveryBackup:
                                                     !automaticDisasterRecoveryBackup
                                             });
+                                            restartNeeded();
                                         }}
                                     />
                                 </View>

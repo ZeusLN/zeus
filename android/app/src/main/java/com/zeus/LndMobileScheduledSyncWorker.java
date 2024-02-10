@@ -15,41 +15,48 @@ import android.os.Messenger;
 import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.concurrent.futures.ResolvableFuture;
-import androidx.work.ListenableWorker;
-import androidx.work.WorkerParameters;
-
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.protobuf.ByteString;
-
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
+import com.google.common.util.concurrent.ListenableFuture;
+import androidx.work.ListenableWorker;
+import androidx.work.WorkerParameters;
+
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
+import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.ReadableMap;
 
 import com.oblador.keychain.KeychainModule;
+import com.google.protobuf.ByteString;
+// import com.hypertrack.Hyperlog.Hyperlog;
+
+// import org.torproject.jni.TorService;
 
 public class LndMobileScheduledSyncWorker extends ListenableWorker {
   private final String TAG = "LndScheduledSyncWorker";
   private final String HANDLERTHREAD_NAME = "zeus_lndmobile_sync";
-  private ResolvableFuture future = ResolvableFuture.create();
   private Handler incomingHandler;
   private boolean lndMobileServiceBound = false;
   private Messenger messengerService; // The service
   private Messenger messenger; // Me
   private ReactDatabaseSupplier dbSupplier;
   private boolean lndStarted = false;
+  private boolean torEnabled = false;
+  private int torSocksPort = -1;
+  private boolean torStarted = false;
+  private boolean persistentServicesEnabled = false;
   // Keeps track of how many times we've tried to get info
   // If this keeps going without `syncedToChain` flipping to `true`
   // we'll close down lnd and the worker
   private int numGetInfoCalls = 0;
+
+  // ZeusTor zeusTor;
 
   // private enum WorkState {
   //   NOT_STARTED, BOUND, WALLET_UNLOCKED, WAITING_FOR_SYNC, DONE;
@@ -65,48 +72,93 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
   public LndMobileScheduledSyncWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
     super(context, workerParams);
     dbSupplier = ReactDatabaseSupplier.getInstance(getApplicationContext());
+    // zeusTor = new ZeusTor(new ReactApplicationContext(getApplicationContext()));
   }
 
   @Override
   public ListenableFuture<Result> startWork() {
-    writeLastScheduledSyncAttemptToDb();
+    torEnabled = getTorEnabled();
+    persistentServicesEnabled = getPersistentServicesEnabled();
 
-    if (MainActivity.started) {
-      future.set(Result.success());
-      return future;
-    }
+    return CallbackToFutureAdapter.getFuture(completer -> {
+      // Hyperlog.i(TAG, "------------------------------------");
+      // Hyperlog.i(TAG, "Starting scheduled sync work");
+      // Hyperlog.i(TAG, "I am " + getApplicationContext().getPackageName());
+      writeLastScheduledSyncAttemptToDb();
 
-    KeychainModule keychain = new KeychainModule(new ReactApplicationContext(getApplicationContext()));
-
-    WritableMap keychainOptions = Arguments.createMap();
-    WritableMap keychainOptionsAuthenticationPrompt = Arguments.createMap();
-    keychainOptionsAuthenticationPrompt.putString("title", "Authenticate to retrieve secret");
-    keychainOptionsAuthenticationPrompt.putString("cancel", "Cancel");
-    keychainOptions.putMap("authenticationPrompt", keychainOptionsAuthenticationPrompt);
-
-    keychain.getInternetCredentialsForServer("password", keychainOptions, new PromiseWrapper() {
-      @Override
-      public void onSuccess(@Nullable Object value) {
-        if (value == null) {
-          future.set(Result.failure());
-          return;
-        }
-        else {
-          final String password = ((ReadableMap) value).getString("password");
-          startLndWorkThread(future, password);
-        }
+      // Hyperlog.i(TAG, "MainActivity.started = " + MainActivity.started);
+      if (persistentServicesEnabled || MainActivity.started) {
+        // Hyperlog.i(TAG, "MainActivity is started or persistentServicesEnabled = " + persistentServicesEnabled + ", quitting job");
+        completer.set(Result.success());
+        return null;
       }
 
-      @Override
-      public void onFail(Throwable throwable) {
-        future.set(Result.failure());
-      }
+      KeychainModule keychain = new KeychainModule(new ReactApplicationContext(getApplicationContext()));
+
+      WritableMap keychainOptions = Arguments.createMap();
+      WritableMap keychainOptionsAuthenticationPrompt = Arguments.createMap();
+      keychainOptionsAuthenticationPrompt.putString("title", "Authenticate to retrieve secret");
+      keychainOptionsAuthenticationPrompt.putString("cancel", "Cancel");
+      keychainOptions.putMap("authenticationPrompt", keychainOptionsAuthenticationPrompt);
+
+      keychain.getInternetCredentialsForServer("password", keychainOptions, new PromiseWrapper() {
+        @Override
+        public void onSuccess(@Nullable Object value) {
+          // Hyperlog.d(TAG, "onSuccess");
+
+          if (value == null) {
+            // Hyperlog.e(TAG, "Failed to get wallet password, got null from keychain provider");
+            completer.set(Result.failure());
+            return;
+          } else {
+            // Hyperlog.d(TAG, "Password data retrieved from keychain");
+            final String password = ((ReadableMap) value).getString("password");
+            // Hyperlog.d(TAG, "Password retrieved");
+
+            if (torEnabled) {
+              // zeusTor.startTor(new PromiseWrapper() {
+              //   @Override
+              //   void onSuccess(@Nullable Object value) {
+              //     // Hyperlog.i(TAG, "Tor started");
+              //     // Hyperlog.i(TAG, "torSocksPort: " + (int) value);
+              //     torStarted = true;
+              //     torSocksPort = (int) value;
+
+              //     startLndWorkThread(completer, password);
+              //   }
+
+              //   @Override
+              //   void onFail(Throwable throwable) {
+              //     // Hyperlog.e(TAG, "Failed to start Tor", throwable);
+              //     zeusTor.stopTor(new PromiseWrapper() {
+              //       @Override
+              //       void onSuccess(@Nullable Object value) {
+              //       }
+
+              //       @Override
+              //       void onFail(Throwable throwable) {
+              //       }
+              //     });
+              //     completer.set(Result.failure());
+              //   }
+              // });
+            } else {
+              startLndWorkThread(completer, password);
+            }
+          }
+        }
+
+        @Override
+        public void onFail(Throwable throwable) {
+          // Hyperlog.d(TAG, "Failed to get wallet password " + throwable.getMessage(), throwable);
+          completer.set(Result.failure());
+        }
+      });
+      return null;
     });
-
-    return future;
   }
 
-  private void startLndWorkThread(ResolvableFuture future, String password) {
+  private void startLndWorkThread(CallbackToFutureAdapter.Completer<Result> completer, String password) {
     // Make sure we don't attempt to start lnd twice.
     // A better fix in the future would be to actually
     // use MSG_CHECKSTATUS in the future
@@ -117,6 +169,8 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
         incomingHandler = new Handler() {
           @Override
           public void handleMessage(Message msg) {
+            // Hyperlog.d(TAG, "Handling new incoming message from LndMobileService, msg id: " + msg.what);
+            // Hyperlog.v(TAG, msg.toString());
             Bundle bundle;
 
             try {
@@ -124,11 +178,13 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                 case LndMobileService.MSG_REGISTER_CLIENT_ACK: {
                   try {
                     if (!lndStarted) {
+                      // Hyperlog.i(TAG, "Sending MSG_START_LND request");
                       startLnd();
                     } else {
                       // Just exit if we reach this scenario
+                      // Hyperlog.w(TAG, "WARNING, Got MSG_REGISTER_CLIENT_ACK when lnd should already be started, quitting work.");
                       unbindLndMobileService();
-                      future.set(Result.success());
+                      completer.set(Result.success());
                       return;
                     }
                   } catch (Throwable t) {
@@ -152,13 +208,27 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                       lnrpc.Stateservice.SubscribeStateResponse state = lnrpc.Stateservice.SubscribeStateResponse.parseFrom(response);
                       lnrpc.Stateservice.WalletState currentState = state.getState();
                       if (currentState == lnrpc.Stateservice.WalletState.LOCKED) {
+                        // Hyperlog.i(TAG, "Got WalletState.LOCKED");
+                        // Hyperlog.i(TAG, "SubscribeState reports wallet is locked. Sending UnlockWallet request");
                         unlockWalletRequest(password);
+                      } else if (currentState == lnrpc.Stateservice.WalletState.UNLOCKED) {
+                        // Hyperlog.i(TAG, "Got WalletState.UNLOCKED");
+                        // Hyperlog.i(TAG, "Waiting for WalletState.RPC_ACTIVE");
                       } else if (currentState == lnrpc.Stateservice.WalletState.RPC_ACTIVE) {
+                        // Hyperlog.i(TAG, "Got WalletState.RPC_ACTIVE");
+                        // Hyperlog.i(TAG, "LndMobileService reports RPC server ready. Sending GetInfo request");
                         getInfoRequest();
+                      } else if (currentState == lnrpc.Stateservice.WalletState.SERVER_ACTIVE) {
+                        // Hyperlog.i(TAG, "Got WalletState.SERVER_ACTIVE");
+                        // Hyperlog.i(TAG, "We do not care about that.");
+                      } else  {
+                        // Hyperlog.w(TAG, "SubscribeState got unknown state " + currentState);
                       }
                     } catch (Throwable t) {
                       t.printStackTrace();
                     }
+                  } else {
+                    // Hyperlog.w(TAG, "Warning: Got unknown MSG_GRPC_STREAM_RESULT for method: " + method);
                   }
                   break;
                 }
@@ -167,24 +237,34 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                   final byte[] response = bundle.getByteArray("response");
                   final String method = bundle.getString("method");
 
-                  if (method.equals("GetInfo")) {
+                  if (method.equals("UnlockWallet")) {
+                    // Hyperlog.i(TAG, "Got MSG_GRPC_COMMAND_RESULT for UnlockWallet. Waiting for SubscribeState to send event before doing anything");
+                  } else if (method.equals("GetInfo")) {
                     try {
                       lnrpc.LightningOuterClass.GetInfoResponse res = lnrpc.LightningOuterClass.GetInfoResponse.parseFrom(response);
+                      // Hyperlog.d(TAG, "GetInfo response");
+                      // Hyperlog.v(TAG, "blockHash:     " + res.getBlockHash());
+                      // Hyperlog.d(TAG, "blockHeight:   " + Integer.toString(res.getBlockHeight()));
+                      // Hyperlog.i(TAG, "syncedToChain: " + Boolean.toString(res.getSyncedToChain()));
+                      // Hyperlog.i(TAG, "syncedToGraph: " + Boolean.toString(res.getSyncedToGraph()));
 
                       if (res.getSyncedToChain() && res.getSyncedToGraph()) {
+                        // Hyperlog.i(TAG, "Syncs are done, letting lnd work for 10s before quitting");
                         writeLastScheduledSyncToDb();
 
                         Handler handler = new Handler();
                         handler.postDelayed(new Runnable() {
                           public void run() {
-                            stopWorker(true);
+                            stopWorker(true, completer);
                           }
                         }, 10000);
                       }
                       else {
                         if (++numGetInfoCalls == 20) {
-                          stopWorker(false);
+                          // Hyperlog.e(TAG, "GetInfo was called " + numGetInfoCalls + " times and still no syncedToChain = true. shutting down worker.");
+                          stopWorker(false, completer);
                         } else{
+                          // Hyperlog.i(TAG, "Sleeping 10s then checking again");
                           Handler handler = new Handler();
                           handler.postDelayed(new Runnable() {
                             public void run() {
@@ -192,7 +272,8 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                                 getInfoRequest();
                               }
                               catch (Throwable t) {
-                                stopWorker(false);
+                                // Hyperlog.e(TAG, "Job handler got an exception, shutting down worker.", t);
+                                stopWorker(false, completer);
                               }
                             }
                           }, 10000);
@@ -212,7 +293,8 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                   super.handleMessage(msg);
               }
             } catch (Throwable t) {
-              stopWorker(false);
+              // Hyperlog.e(TAG, "Job handler got an exception, shutting down worker.", t);
+              stopWorker(false, completer);
             }
           }
         };
@@ -229,15 +311,75 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     thread.run();
   }
 
-  private void stopWorker(boolean success) {
+  private void stopWorker(boolean success, CallbackToFutureAdapter.Completer<Result> completer) {
+    // Hyperlog.i(TAG, "Job is done. Quitting");
     unbindLndMobileService();
+
+    if (torStarted) {
+        //  zeusTor.stopTor(new PromiseWrapper() {
+        //    @Override
+        //    void onSuccess(@Nullable Object value) {
+        //      // Hyperlog.i(TAG,"Tor stopped");
+        //    }
+
+        //   @Override
+        //   void onFail(Throwable throwable) {
+        //     // Hyperlog.e(TAG, "Fail while stopping Tor", throwable);
+        //   }
+        // });
+//      } else {
+//        // Hyperlog.w(TAG, "MainActivity was started when shutting down sync work. I will not stop Tor");
+//      }
+    }
 
     new Handler().postDelayed(new Runnable() {
       @Override
       public void run() {
-        future.set(success ? Result.success() : Result.failure());
+        // Hyperlog.i(TAG, "Calling future.set(Result.success());");
+        completer.set(success ? Result.success() : Result.failure());
       }
     }, 1500);
+  }
+
+  private boolean startTor(CallbackToFutureAdapter.Completer<Result> completer) {
+    // Hyperlog.i(TAG, "Starting Tor");
+    // zeusTor.startTor(new PromiseWrapper() {
+    //   @Override
+    //   void onSuccess(@Nullable Object value) {
+    //     // Hyperlog.i(TAG, "Tor started");
+    //     // Hyperlog.i(TAG, "torSocksPort: " + (int) value);
+    //     torStarted = true;
+    //     torSocksPort = (int) value;
+    //   }
+
+    //   @Override
+    //   void onFail(Throwable throwable) {
+    //     // Hyperlog.e(TAG, "Failed to start Tor", throwable);
+    //     zeusTor.stopTor(new PromiseWrapper() {
+    //       @Override
+    //       void onSuccess(@Nullable Object value) {}
+
+    //       @Override
+    //       void onFail(Throwable throwable) {}
+    //     });
+    //     completer.set(Result.failure());
+    //   }
+    // });
+    int torTries = 0;
+    while (!torStarted) {
+      if (torTries++ > 40) {
+        // Hyperlog.e(TAG, "Couldn't start Tor.");
+        completer.set(Result.failure());
+        return false;
+      }
+      // Hyperlog.i(TAG, "Waiting for Tor to start");
+      try {
+        Thread.sleep(1500);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+    return true;
   }
 
   private void startLnd() throws RemoteException {
@@ -245,7 +387,17 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     message.replyTo = messenger;
     Bundle bundle = new Bundle();
     String params = "--lnddir=" + getApplicationContext().getFilesDir().getPath();
-    params += " --nolisten";
+    if (torEnabled) {
+      // String controlSocket = "unix://" + getApplicationContext().getDir(TorService.class.getSimpleName(), Context.MODE_PRIVATE).getAbsolutePath() + "/data/ControlSocket";
+      // Hyperlog.d(TAG, "Adding Tor params for starting lnd, torSocksPort: " + torSocksPort + ", controlSocket: " + controlSocket);
+      // params += " --tor.active --tor.socks=127.0.0.1:" + torSocksPort + " --tor.control=" + controlSocket;
+      // params += " --nolisten";
+    }
+    else {
+      // If Tor isn't active, make sure we aren't
+      // listening at all
+      params += " --nolisten";
+    }
     bundle.putString("args", params);
     message.setData(bundle);
     messengerService.send(message);
@@ -298,13 +450,34 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
           message.replyTo = messenger;
           messengerService.send(message);
         } catch (RemoteException e) {
-          // ignore
+          // Hyperlog.e(TAG, "Unable to send unbind request to LndMobileService", e);
         }
       }
 
       getApplicationContext().unbindService(serviceConnection);
       lndMobileServiceBound = false;
+      // Hyperlog.i(TAG, "Unbinding LndMobileService");
     }
+  }
+
+  private boolean getPersistentServicesEnabled() {
+    SQLiteDatabase db = dbSupplier.get();
+    String persistentServicesEnabled = AsyncLocalStorageUtil.getItemImpl(db, "persistentServicesEnabled");
+    if (persistentServicesEnabled != null) {
+      return persistentServicesEnabled.equals("true");
+    }
+    // Hyperlog.w(TAG, "Could not find persistentServicesEnabled in asyncStorage");
+    return false;
+  }
+
+  private boolean getTorEnabled() {
+    SQLiteDatabase db = dbSupplier.get();
+    String torEnabled = AsyncLocalStorageUtil.getItemImpl(db, "torEnabled");
+    if (torEnabled != null) {
+      return torEnabled.equals("true");
+    }
+    // Hyperlog.w(TAG, "Could not find torEnabled in asyncStorage");
+    return false;
   }
 
   private void writeLastScheduledSyncAttemptToDb() {
@@ -322,12 +495,12 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
       statement.execute();
       db.setTransactionSuccessful();
     } catch (Exception e) {
-      // ignore
+      // Hyperlog.w(TAG, e.getMessage(), e);
     } finally {
       try {
         db.endTransaction();
       } catch (Exception e) {
-        // ignore
+        // Hyperlog.w(TAG, e.getMessage(), e);
       }
     }
   }
@@ -347,12 +520,12 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
       statement.execute();
       db.setTransactionSuccessful();
     } catch (Exception e) {
-      // ignore
+      // Hyperlog.w(TAG, e.getMessage(), e);
     } finally {
       try {
         db.endTransaction();
       } catch (Exception e) {
-        // ignore
+        // Hyperlog.w(TAG, e.getMessage(), e);
       }
     }
   }
@@ -361,7 +534,9 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     String packageName = getApplicationContext().getPackageName();
     ActivityManager am = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
+      // Hyperlog.d(TAG, "Process " + p.processName);
       if (p.processName.equals(packageName + ":zeusLndMobile")) {
+        // Hyperlog.d(TAG, "Found " + packageName + ":zeusLndMobile pid: " + String.valueOf(p.pid));
         return true;
       }
     }
@@ -373,6 +548,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     ActivityManager am = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
       if (p.processName.equals(packageName + ":zeusLndMobile")) {
+        // Hyperlog.i(TAG, "Killing " + packageName + ":zeusLndMobile with pid: " + String.valueOf(p.pid));
         Process.killProcess(p.pid);
         return true;
       }
@@ -383,16 +559,17 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
   private ServiceConnection serviceConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-      lndMobileServiceBound = true;
-      messengerService = new Messenger(service);
+        lndMobileServiceBound = true;
+        messengerService = new Messenger(service);
 
-      try {
-        Message msg = Message.obtain(null, LndMobileService.MSG_REGISTER_CLIENT);
-        msg.replyTo = messenger;
-        messengerService.send(msg);
-      } catch (RemoteException e) {
-        // ignore
-      }
+        try {
+            Message msg = Message.obtain(null,
+                    LndMobileService.MSG_REGISTER_CLIENT);
+            msg.replyTo = messenger;
+            messengerService.send(msg);
+        } catch (RemoteException e) {
+          // Hyperlog.e(TAG, "Unable to send MSG_REGISTER_CLIENT to LndMobileService", e);
+        }
     }
 
     @Override

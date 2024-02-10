@@ -60,7 +60,11 @@ export function checkLndStreamErrorResponse(
     return null;
 }
 
-const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
+const writeLndConfig = async (
+    isTestnet?: boolean,
+    rescan?: boolean,
+    compactDb?: boolean
+) => {
     const { writeConfig } = lndMobile.index;
 
     const peerMode = stores.settingsStore?.settings?.dontAllowOtherPeers
@@ -86,10 +90,15 @@ const writeLndConfig = async (isTestnet?: boolean, rescan?: boolean) => {
     accept-keysend=1
     tlsdisableautofill=1
     maxpendingchannels=1000
+    max-commit-fee-rate-anchors=100
     ${rescan ? 'reset-wallet-transactions=true' : ''}
     
     [db]
     db.no-graph-cache=false
+
+    [bolt]
+    db.bolt.auto-compact=${compactDb ? 'true' : 'false'}
+    ${compactDb ? 'db.bolt.auto-compact-min-age=0' : ''}
     
     [Routing]
     routing.assumechanvalid=1
@@ -180,14 +189,27 @@ export async function expressGraphSync() {
     return;
 }
 
-export async function initializeLnd(isTestnet?: boolean, rescan?: boolean) {
+export async function initializeLnd(
+    isTestnet?: boolean,
+    rescan?: boolean,
+    compactDb?: boolean
+) {
     const { initialize } = lndMobile.index;
 
-    await writeLndConfig(isTestnet, rescan);
+    await writeLndConfig(isTestnet, rescan, compactDb);
     await initialize();
 }
 
-export async function startLnd(walletPassword: string) {
+export async function stopLnd() {
+    const { stopLnd } = lndMobile.index;
+    return await stopLnd();
+}
+
+export async function startLnd(
+    walletPassword: string,
+    isTorEnabled: boolean = false,
+    isTestnet: boolean = false
+) {
     const { checkStatus, startLnd, decodeState, subscribeState } =
         lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
@@ -197,7 +219,7 @@ export async function startLnd(walletPassword: string) {
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
-        await startLnd('');
+        await startLnd('', isTorEnabled, isTestnet);
     }
 
     await new Promise(async (res) => {
@@ -242,6 +264,7 @@ export async function startLnd(walletPassword: string) {
 export async function createLndWallet(
     seedMnemonic?: string,
     walletPassphrase?: string,
+    isTorEnabled?: boolean,
     isTestnet?: boolean,
     channelBackupsBase64?: string
 ) {
@@ -267,7 +290,7 @@ export async function createLndWallet(
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
-        await startLnd('');
+        await startLnd('', isTorEnabled, isTestnet);
     }
     await sleep(2000);
 

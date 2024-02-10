@@ -10,7 +10,7 @@ import NodeUriUtils from './NodeUriUtils';
 import { localeString } from './LocaleUtils';
 import BackendUtils from './BackendUtils';
 
-const { nodeInfoStore, invoicesStore, settingsStore } = stores;
+const { nodeInfoStore, invoicesStore, unitsStore, settingsStore } = stores;
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
@@ -56,6 +56,7 @@ const handleAnything = async (
         AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
     ) {
         if (isClipboardValue) return true;
+        if (amount) unitsStore?.resetUnits();
         return [
             'Send',
             {
@@ -235,6 +236,9 @@ const handleAnything = async (
         if (settingsStore.enableTor && domain.includes('.onion')) {
             await doTorRequest(url, RequestMethod.GET)
                 .then((response: any) => {
+                    if (!response.callback) {
+                        throw new Error(error);
+                    }
                     return [
                         'LnurlPay',
                         {
@@ -252,6 +256,9 @@ const handleAnything = async (
                     const status = response.info().status;
                     if (status == 200) {
                         const data = response.json();
+                        if (!data.callback) {
+                            throw new Error(error);
+                        }
                         return [
                             'LnurlPay',
                             {
@@ -398,6 +405,19 @@ const handleAnything = async (
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
             });
+    } else if (data.startsWith('zeuscontact:')) {
+        const zeusContactData = data.replace('zeuscontact:', '');
+        const contact = JSON.parse(zeusContactData);
+
+        if (contact?.contactId) {
+            return [
+                'ContactDetails',
+                {
+                    nostrContact: contact,
+                    isNostrContact: true
+                }
+            ];
+        }
     } else {
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));

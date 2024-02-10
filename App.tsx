@@ -30,6 +30,7 @@ export default class App extends React.PureComponent {
                 MessageSignStore={Stores.messageSignStore}
                 ActivityStore={Stores.activityStore}
                 PosStore={Stores.posStore}
+                InventoryStore={Stores.inventoryStore}
                 ModalStore={Stores.modalStore}
                 NotesStore={Stores.notesStore}
                 SyncStore={Stores.syncStore}

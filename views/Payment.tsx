@@ -12,27 +12,33 @@ import { inject, observer } from 'mobx-react';
 
 import { Row } from '../components/layout/Row';
 import Amount from '../components/Amount';
+import Button from '../components/Button';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
 
-import Payment from '../models/Payment';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import UrlUtils from '../utils/UrlUtils';
+
+import Payment from '../models/Payment';
 
 import LnurlPayStore from '../stores/LnurlPayStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import LnurlPayHistorical from './LnurlPay/Historical';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
-import Button from '../components/Button';
 
 interface PaymentProps {
     navigation: any;
-    LnurlPayStore: LnurlPayStore;
+    LnurlPayStore?: LnurlPayStore;
+    NodeInfoStore?: NodeInfoStore;
+    SettingsStore?: SettingsStore;
 }
 
-@inject('LnurlPayStore')
+@inject('LnurlPayStore', 'NodeInfoStore', 'SettingsStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     state = {
@@ -43,15 +49,15 @@ export default class PaymentView extends React.Component<PaymentProps> {
     async componentDidMount() {
         const { navigation, LnurlPayStore } = this.props;
         const payment: Payment = navigation.getParam('payment', null);
-        const lnurlpaytx = await LnurlPayStore.load(payment.payment_hash);
+        const lnurlpaytx = payment.paymentHash
+            ? await LnurlPayStore!.load(payment.paymentHash)
+            : undefined;
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
         navigation.addListener('didFocus', () => {
             const noteKey =
-                typeof payment.payment_hash === 'string'
-                    ? payment.payment_hash
-                    : typeof payment.getPreimage === 'string'
+                payment.paymentHash ?? typeof payment.getPreimage === 'string'
                     ? payment.getPreimage
                     : null;
 
@@ -66,27 +72,31 @@ export default class PaymentView extends React.Component<PaymentProps> {
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore, NodeInfoStore } = this.props;
         const { storedNotes, lnurlpaytx } = this.state;
+        const { testnet } = NodeInfoStore;
 
         const payment: Payment = navigation.getParam('payment', null);
+        const formattedOriginalTimeUntilExpiry =
+            payment.getFormattedOriginalTimeUntilExpiry(
+                SettingsStore!.settings.locale
+            );
         const {
             getDisplayTime,
             getFee,
             getFeePercentage,
-            payment_hash,
+            paymentHash,
             getPreimage,
+            getDestination,
             enhancedPath,
             getMemo,
-            isInTransit
+            isIncomplete,
+            isInTransit,
+            isFailed
         } = payment;
         const date = getDisplayTime;
         const noteKey =
-            typeof payment_hash === 'string'
-                ? payment_hash
-                : typeof getPreimage === 'string'
-                ? getPreimage
-                : null;
+            paymentHash ?? typeof getPreimage === 'string' ? getPreimage : null;
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
@@ -105,7 +115,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: isInTransit
+                        text: isFailed
+                            ? localeString('views.Payment.failedPayment')
+                            : isInTransit
                             ? localeString('views.Payment.inTransitPayment')
                             : localeString('views.Payment.title'),
                         style: {
@@ -175,17 +187,34 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             />
                         )}
 
-                        {typeof payment_hash === 'string' && (
+                        {getDestination && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.destination'
+                                )}
+                                value={getDestination}
+                                sensitive
+                                color={themeColor('highlight')}
+                                mempoolLink={() =>
+                                    UrlUtils.goToBlockExplorerPubkey(
+                                        getDestination,
+                                        testnet
+                                    )
+                                }
+                            />
+                        )}
+
+                        {paymentHash && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Payment.paymentHash'
                                 )}
-                                value={payment_hash}
+                                value={paymentHash}
                                 sensitive
                             />
                         )}
 
-                        {getPreimage && !isInTransit && (
+                        {getPreimage && !isIncomplete && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Payment.paymentPreimage'
@@ -201,6 +230,16 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     'views.Payment.creationDate'
                                 )}
                                 value={date}
+                                sensitive
+                            />
+                        )}
+
+                        {formattedOriginalTimeUntilExpiry && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.originalExpiration'
+                                )}
+                                value={formattedOriginalTimeUntilExpiry}
                                 sensitive
                             />
                         )}

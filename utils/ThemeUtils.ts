@@ -94,9 +94,13 @@ export function themeColor(themeString: string): any {
         secondary: '#f0f0f0',
         text: '#2b74b4',
         secondaryText: '#8a8999',
-        highlight: '#2b74b4',
+        highlight: 'orange',
         error: '#cc3300',
-        separator: '#CED0CE'
+        separator: '#CED0CE',
+        bolt: '#2b74b4',
+        chain: '#2b74b4',
+        inbound: 'lightblue',
+        outbound: '#2b74b4'
     };
 
     const Orange: { [key: string]: any } = {
@@ -122,7 +126,7 @@ export function themeColor(themeString: string): any {
         background: '#56042c',
         secondary: '#8A1538',
         separator: '#8A1538',
-        highlight: '#fff'
+        highlight: '#ffd24b'
     };
 
     const Purple: { [key: string]: any } = {
@@ -131,7 +135,7 @@ export function themeColor(themeString: string): any {
         secondary: '#ba9cbf',
         text: '#776d86',
         secondaryText: '#6f7286',
-        highlight: '#575062',
+        highlight: '#ffd24b',
         error: '#C9592D',
         separator: '##9fa3bf',
         outbound: '#FFD93F',
@@ -146,7 +150,7 @@ export function themeColor(themeString: string): any {
         background: '#04235A',
         secondary: '#064490',
         separator: '#064490',
-        highlight: '#fff'
+        highlight: '#ffd24b'
     };
 
     const DeepPurple: { [key: string]: any } = {
@@ -154,7 +158,7 @@ export function themeColor(themeString: string): any {
         background: '#0a0612',
         secondary: '#150c25',
         separator: '#150c25',
-        highlight: '#fff'
+        highlight: '#ffd24b'
     };
 
     const Deadpool: { [key: string]: any } = {
@@ -163,7 +167,7 @@ export function themeColor(themeString: string): any {
         secondary: '#D12531',
         text: '#F4F9FF',
         secondaryText: '#F4F9FF',
-        highlight: '#e5e4e2',
+        highlight: '#ffd24b',
         error: '#D12531',
         separator: '#D12531',
         outbound: '#D12531',
@@ -193,7 +197,7 @@ export function themeColor(themeString: string): any {
         text: '#fff',
         secondary: '#204c39',
         separator: '#204c39',
-        highlight: '#fff',
+        highlight: '#ffd24b',
         bolt: '#fff',
         chain: '#fff'
     };
@@ -269,7 +273,7 @@ export function themeColor(themeString: string): any {
         background: '#46B48A',
         secondaryText: '#FFFDF2',
         separator: '#141414',
-        highlight: '#fff',
+        highlight: '#ffd24b',
         bolt: '#fff',
         chain: '#fff'
     };
@@ -287,7 +291,7 @@ export function themeColor(themeString: string): any {
         generalStyle: 'dark',
         background: 'green',
         separator: '#141414',
-        highlight: '#fff',
+        highlight: '#ffd24b',
         bolt: '#fff',
         chain: '#fff',
         secondaryText: 'lightgray'
