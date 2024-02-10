@@ -116,7 +116,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
         const disableTips: boolean = settings?.pos?.disableTips || false;
-        const disablePrinter: boolean = settings?.pos?.disablePrinter || false;
+        const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
         const merchantName = settings?.pos?.merchantName;
         const taxPercentage = settings?.pos?.taxPercentage;
 
@@ -494,7 +494,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             });
         };
 
-        if (this.state.print && isPaid && !disablePrinter) {
+        if (this.state.print && isPaid && enablePrinter) {
             printReceipt();
         }
 
@@ -911,7 +911,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         />
                     )}
 
-                    {Platform.OS === 'android' && !disablePrinter && (
+                    {Platform.OS === 'android' && enablePrinter && (
                         <Button
                             title={localeString(
                                 isPaid

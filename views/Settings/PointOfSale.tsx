@@ -38,7 +38,7 @@ interface PointOfSaleState {
     squareDevMode: boolean;
     showKeypad: boolean;
     taxPercentage: string;
-    disablePrinter: boolean;
+    enablePrinter: boolean;
 }
 
 @inject('SettingsStore')
@@ -57,7 +57,7 @@ export default class PointOfSale extends React.Component<
         squareDevMode: false,
         showKeypad: true,
         taxPercentage: '0',
-        disablePrinter: false
+        enablePrinter: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -76,7 +76,7 @@ export default class PointOfSale extends React.Component<
             squareDevMode: settings?.pos?.squareDevMode || false,
             showKeypad: settings?.pos?.showKeypad || false,
             taxPercentage: settings?.pos?.taxPercentage || '0',
-            disablePrinter: settings?.pos?.disablePrinter || false
+            enablePrinter: settings?.pos?.enablePrinter || false
         });
     }
 
@@ -101,7 +101,7 @@ export default class PointOfSale extends React.Component<
             squareDevMode,
             showKeypad,
             taxPercentage,
-            disablePrinter
+            enablePrinter
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { passphrase, pin, fiatEnabled } = settings;
@@ -185,7 +185,7 @@ export default class PointOfSale extends React.Component<
                                             squareDevMode,
                                             showKeypad,
                                             taxPercentage,
-                                            disablePrinter
+                                            enablePrinter
                                         }
                                     });
                                 }}
@@ -222,7 +222,7 @@ export default class PointOfSale extends React.Component<
                                                     squareDevMode,
                                                     showKeypad,
                                                     taxPercentage,
-                                                    disablePrinter
+                                                    enablePrinter
                                                 }
                                             });
                                         }}
@@ -256,7 +256,7 @@ export default class PointOfSale extends React.Component<
                                                     squareDevMode,
                                                     showKeypad,
                                                     taxPercentage,
-                                                    disablePrinter
+                                                    enablePrinter
                                                 }
                                             });
                                         }}
@@ -308,7 +308,7 @@ export default class PointOfSale extends React.Component<
                                                                 !squareDevMode,
                                                             showKeypad,
                                                             taxPercentage,
-                                                            disablePrinter
+                                                            enablePrinter
                                                         }
                                                     });
                                                 }}
@@ -348,7 +348,7 @@ export default class PointOfSale extends React.Component<
                                                     squareDevMode,
                                                     showKeypad,
                                                     taxPercentage,
-                                                    disablePrinter
+                                                    enablePrinter
                                                 }
                                             });
                                         }}
@@ -428,7 +428,7 @@ export default class PointOfSale extends React.Component<
                                                             squareDevMode,
                                                             showKeypad,
                                                             taxPercentage,
-                                                            disablePrinter
+                                                            enablePrinter
                                                         }
                                                     });
                                                 }}
@@ -454,7 +454,7 @@ export default class PointOfSale extends React.Component<
                                                 }}
                                             >
                                                 {localeString(
-                                                    'views.Settings.POS.disablePrinter'
+                                                    'views.Settings.POS.enablePrinter'
                                                 )}
                                             </ListItem.Title>
                                             <View
@@ -465,11 +465,11 @@ export default class PointOfSale extends React.Component<
                                                 }}
                                             >
                                                 <Switch
-                                                    value={disablePrinter}
+                                                    value={enablePrinter}
                                                     onValueChange={async () => {
                                                         this.setState({
-                                                            disablePrinter:
-                                                                !disablePrinter
+                                                            enablePrinter:
+                                                                !enablePrinter
                                                         });
                                                         await updateSettings({
                                                             pos: {
@@ -481,8 +481,8 @@ export default class PointOfSale extends React.Component<
                                                                 disableTips,
                                                                 squareDevMode,
                                                                 taxPercentage,
-                                                                disablePrinter:
-                                                                    !disablePrinter
+                                                                enablePrinter:
+                                                                    !enablePrinter
                                                             }
                                                         });
                                                     }}

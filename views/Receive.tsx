@@ -1125,7 +1125,7 @@ export default class Receive extends React.Component<
 
         const windowSize = Dimensions.get('window');
 
-        const disablePrinter: boolean = settings?.pos?.disablePrinter || false;
+        const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
 
         return (
             <Screen>
@@ -1207,7 +1207,7 @@ export default class Receive extends React.Component<
                             </View>
                             {posStatus === 'active' &&
                                 Platform.OS === 'android' &&
-                                !disablePrinter && (
+                                enablePrinter && (
                                     <Button
                                         title={localeString(
                                             'pos.views.Order.printReceipt'
