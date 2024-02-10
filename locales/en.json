@@ -567,6 +567,7 @@
     "views.Receive.createLightningAddress": "Create lightning address",
     "views.Send.title": "Send",
     "views.Send.lnPayment": "Lightning payment request",
+    "views.Send.bolt12Address": "Bolt 12 address",
     "views.Send.btcAddress": "Bitcoin address",
     "views.Send.keysendAddress": "keysend address (if enabled)",
     "views.Send.mustBeValid": "Must be a valid",

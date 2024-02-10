@@ -594,6 +594,9 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
+        if (BackendUtils.supportsOffers()) {
+            paymentOptions.push(localeString('views.Send.bolt12Address'));
+        }
         if (BackendUtils.supportsOnchainSends()) {
             paymentOptions.push(localeString('views.Send.btcAddress'));
         }
