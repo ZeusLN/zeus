@@ -190,43 +190,40 @@ const handleAnything = async (
                 host
             }
         ];
-    } else if (hasAt && AddressUtils.isValidBolt12Address(value)) {
-        if (!BackendUtils.supportsOffers()) {
-            // err
-            return;
-        }
-        const [localPart, domain] = value.split('@');
-        const dnsUrl = 'https://cloudflare-dns.com/dns-query';
-        const name = `${localPart}.${domain}`;
-        const url = `${dnsUrl}?name=${name}&type=TXT`;
-        let bolt12: string;
-        try {
-            const res = await fetch(url, {
-                headers: {
-                    accept: 'application/dns-json'
-                }
-            });
-            const json = await res.json();
-            console.debug('json', json);
-            if (!json.Answer && !json.Answer[0]) throw 'Bad';
-            bolt12 = json.Answer[0].data;
-            bolt12 = bolt12.replace(/("|\\)/g, '');
-            console.debug('bolt12 offer from dns', bolt12);
-
-            return [
-                'Send',
-                {
-                    destination: value,
-                    bolt12: bolt12,
-                    transactionType: 'Bolt12',
-                    isValid: true
-                }
-            ];
-        } catch (error: any) {
-            throw new Error(error);
-        }
     } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
         if (isClipboardValue) return true;
+
+        if (BackendUtils.supportsOffers()) {
+            const [localPart, domain] = value.split('@');
+            const dnsUrl = 'https://cloudflare-dns.com/dns-query';
+            const name = `${localPart}.${domain}`;
+            const url = `${dnsUrl}?name=${name}&type=TXT`;
+            let bolt12: string;
+            try {
+                const res = await fetch(url, {
+                    headers: {
+                        accept: 'application/dns-json'
+                    }
+                });
+                const json = await res.json();
+                console.debug('json', json);
+                if (!json.Answer && !json.Answer[0]) throw 'Bad';
+                bolt12 = json.Answer[0].data;
+                bolt12 = bolt12.replace(/("|\\)/g, '');
+                console.debug('bolt12 offer from dns', bolt12);
+
+                return [
+                    'Send',
+                    {
+                        destination: value,
+                        bolt12: bolt12,
+                        transactionType: 'Bolt12',
+                        isValid: true
+                    }
+                ];
+            } catch (e: any) {}
+        }
+
         const [username, domain] = value.split('@');
         const url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
         const error = localeString(
