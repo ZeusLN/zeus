@@ -728,7 +728,7 @@
     "views.Settings.POS.taxPercentage": "Tax percentage",
     "views.Settings.POS.devMode": "Developer mode",
     "views.Settings.POS.showKeypad": "Show keypad",
-    "views.Settings.POS.disablePrinter": "Disable printer",
+    "views.Settings.POS.enablePrinter": "Enable printer",
     "views.Settings.POS.recon": "Reconciliation",
     "views.Settings.POS.reconExport": "Reconciliation Export",
     "views.Settings.POS.Categories": "Categories",
