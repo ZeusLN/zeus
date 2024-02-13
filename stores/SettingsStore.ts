@@ -78,6 +78,13 @@ interface InvoicesSettings {
     showCustomPreimageField?: boolean;
 }
 
+interface ChannelsSettings {
+    min_confs: number;
+    privateChannel: boolean;
+    scidAlias: boolean;
+    simpleTaprootChannel: boolean;
+}
+
 interface LightningAddressSettings {
     enabled: boolean;
     automaticallyAccept: boolean;
@@ -109,6 +116,7 @@ export interface Settings {
     pos: PosSettings;
     payments: PaymentsSettings;
     invoices: InvoicesSettings;
+    channels: ChannelsSettings;
     isBiometryEnabled: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
@@ -944,6 +952,12 @@ export default class SettingsStore {
             routeHints: false,
             ampInvoice: false,
             showCustomPreimageField: false
+        },
+        channels: {
+            min_confs: 1,
+            privateChannel: true,
+            scidAlias: true,
+            simpleTaprootChannel: false
         },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
