@@ -1870,7 +1870,7 @@ export default class Receive extends React.Component<
                                                         keyboardType="numeric"
                                                         value={expiry}
                                                         style={{
-                                                            width: '65%'
+                                                            width: '58%'
                                                         }}
                                                         onChangeText={(
                                                             text: string
@@ -1988,8 +1988,7 @@ export default class Receive extends React.Component<
                                                         style={{
                                                             flex: 1,
                                                             // TODO
-                                                            top: -10,
-                                                            height: 100
+                                                            top: -5
                                                         }}
                                                     >
                                                         <DropdownSetting
