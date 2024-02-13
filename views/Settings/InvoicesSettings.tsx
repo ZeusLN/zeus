@@ -211,7 +211,7 @@ export default class InvoicesSettings extends React.Component<
                                     keyboardType="numeric"
                                     value={expiry}
                                     style={{
-                                        width: '65%'
+                                        width: '58%'
                                     }}
                                     onChangeText={async (text: string) => {
                                         let expirySeconds = '3600';
@@ -257,8 +257,7 @@ export default class InvoicesSettings extends React.Component<
                                     style={{
                                         flex: 1,
                                         // TODO
-                                        top: -10,
-                                        height: 100
+                                        top: -5
                                     }}
                                 >
                                     <DropdownSetting

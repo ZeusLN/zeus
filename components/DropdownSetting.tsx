@@ -73,7 +73,9 @@ export default class DropdownSetting extends React.Component<
                                 color: themeColor('text'),
                                 backgroundColor: themeColor('secondary'),
                                 ...styles.field,
-                                opacity: disabled ? 0.25 : 1
+                                opacity: disabled ? 0.25 : 1,
+                                top: 5,
+                                height: 60
                             }}
                             dropdownIconColor={themeColor('text')}
                             enabled={!disabled}
@@ -125,7 +127,7 @@ export default class DropdownSetting extends React.Component<
                                 style={{
                                     position: 'absolute',
                                     right: 10,
-                                    top: '40%'
+                                    top: '30%'
                                 }}
                             >
                                 <CaretDown
@@ -148,7 +150,7 @@ const styles = StyleSheet.create({
     field: {
         fontSize: 20,
         width: '100%',
-        top: 16,
+        top: 8,
         borderRadius: 6,
         marginBottom: 20,
         paddingTop: 15,
