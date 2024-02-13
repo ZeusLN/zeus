@@ -10,6 +10,8 @@ import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { CURRENCY_KEYS } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 
+import Bitcoin from '../../assets/images/SVG/bitcoin-icon.svg';
+
 interface AddCurrenciesProps {
     navigation: any;
 }
@@ -47,12 +49,14 @@ export default class AddCurrencies extends React.Component<
 
         const updatedCurrencyList = [
             {
-                key: '฿ Bitcoin (BTC)',
-                value: 'BTC'
+                key: 'Bitcoin (BTC)',
+                value: 'BTC',
+                svg: <Bitcoin width={20} height={20} />
             },
             {
-                key: '฿ Satoshis (SAT)',
-                value: 'SAT'
+                key: 'Satoshis (SAT)',
+                value: 'SAT',
+                svg: <Bitcoin width={20} height={20} />
             },
             ...CURRENCY_KEYS
         ];
@@ -100,23 +104,45 @@ export default class AddCurrencies extends React.Component<
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 onPress={() => {
-                                    // Navigate back to the CurrencyConverter view with the selected currency
                                     navigation.navigate('CurrencyConverter', {
                                         selectedCurrency: item.value
                                     });
                                 }}
                             >
                                 <View>
-                                    <Text
+                                    <View
                                         style={{
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 16,
-                                            margin: 16
+                                            margin: 16,
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            alignItems: 'center'
                                         }}
                                     >
-                                        {item.key}
-                                    </Text>
+                                        {['BTC', 'SAT'].includes(
+                                            item.value
+                                        ) && (
+                                            <View
+                                                style={{
+                                                    marginRight: 6,
+                                                    paddingLeft: 1
+                                                }}
+                                            >
+                                                {item.svg}
+                                            </View>
+                                        )}
+                                        <View>
+                                            <Text
+                                                style={{
+                                                    color: themeColor('text'),
+                                                    fontSize: 16,
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                {item.key}
+                                            </Text>
+                                        </View>
+                                    </View>
                                 </View>
                             </TouchableOpacity>
                         )}
