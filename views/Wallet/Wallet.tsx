@@ -458,30 +458,32 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 await LSPStore.getLSPInfo();
             }
             
-            if (implementation === 'lightning-node-connect' && !this.channelAcceptor) {
+            if (implementation === 'lightning-node-connect') {
+                // if (this.channelAcceptor) return;
                 const { LncModule } = NativeModules;
                     const eventEmitter = new NativeEventEmitter(LncModule);
-                    console.log('hERE~~2', eventEmitter);
+                    console.log('hERE~~3', eventEmitter);
                     const call = BackendUtils.channelAcceptor();
                     console.log('call', call)
                     this.channelAcceptor = eventEmitter.addListener(
-                        'lnrpc.Lightning.SubscribePeerEvents',
+                        call,
                         (event: any) => {
+                            console.log('>>event', event);
                             if (event.result) {
                                 try {
                                     const result = JSON.parse(event.result);
                                     console.log('~~RESULT', result);
                                     // // only allow zero conf chans from the LSP
-                                    // const isZeroConfAllowed =
-                                    //     result.node_pubkey === this.info.pub_key;
+                                    const isZeroConfAllowed =
+                                        result.node_pubkey === LSPStore.info.pub_key;
         
-                                    // BackendUtils.channelAcceptorAnswer({
-                                    //     pending_chan_id: result.pending_chan_id,
-                                    //     zero_conf:
-                                    //         !result.wants_zero_conf ||
-                                    //         isZeroConfAllowed,
-                                    //     accept: isZeroConfAllowed
-                                    // });
+                                    BackendUtils.channelAcceptorAnswer({
+                                        pending_chan_id: result.pending_chan_id,
+                                        zero_conf:
+                                            !result.wants_zero_conf ||
+                                            isZeroConfAllowed,
+                                        accept: isZeroConfAllowed
+                                    });
                                 } catch (error: any) {
                                     console.error(
                                         'channelAcceptorEvent lightning-node-connect error:',

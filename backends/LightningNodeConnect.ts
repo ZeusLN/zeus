@@ -354,10 +354,11 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .lookupInvoice({ r_hash: Base64Utils.hexToBase64(data.r_hash) })
             .then((data: lnrpc.Invoice) => snakeize(data));
-    channelAcceptor = (data: lnrpc.channelAcceptRequest) => this.lnc.lnd.lightning.channelAcceptor(data);
+    channelAcceptor = (data: lnrpc.channelAcceptRequest) =>
+        this.lnc.lnd.lightning.channelAcceptor(data);
     channelAcceptorAnswer = (data: lnrpc.channelAcceptorResponse) => {
-        console.log('backend', data);
-        return this.lnc.lnd.lightning.channelAcceptor({
+        console.log('^^^backend', data);
+        return this.lnc.call('lnrpc.Lightning.ChannelAcceptor', {
             pending_chan_id: data.pending_chan_id,
             zero_conf: data.zero_conf,
             accept: data.accept
