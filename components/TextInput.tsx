@@ -31,10 +31,11 @@ interface TextInputProps {
     toggleUnits?: any;
     onPressIn?: any;
     right?: number;
+    ref?: React.Ref<TextInputRN>;
 }
 
-export default function TextInput(props: TextInputProps) {
-    const {
+const TextInput: React.FC<TextInputProps> = (
+    {
         placeholder,
         value,
         onChangeText,
@@ -54,8 +55,9 @@ export default function TextInput(props: TextInputProps) {
         toggleUnits,
         onPressIn,
         right
-    } = props;
-
+    },
+    ref
+) => {
     const defaultStyle = numberOfLines
         ? {
               paddingTop: 10
@@ -154,6 +156,7 @@ export default function TextInput(props: TextInputProps) {
                 autoFocus={autoFocus}
                 secureTextEntry={secureTextEntry}
                 onPressIn={onPressIn}
+                ref={ref}
             />
             {suffix ? (
                 toggleUnits ? (
@@ -168,7 +171,7 @@ export default function TextInput(props: TextInputProps) {
             ) : null}
         </View>
     );
-}
+};
 
 const styles = StyleSheet.create({
     wrapper: {
@@ -191,3 +194,5 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     }
 });
+
+export default React.forwardRef(TextInput);

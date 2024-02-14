@@ -38,6 +38,7 @@ import TextInput from '../../components/TextInput';
 import SettingsStore, {
     INTERFACE_KEYS,
     LNC_MAILBOX_KEYS,
+    EMBEDDED_NODE_NETWORK_KEYS,
     Settings
 } from '../../stores/SettingsStore';
 
@@ -134,7 +135,7 @@ export default class NodeConfiguration extends React.Component<
         seedPhrase: [],
         walletPassword: '',
         adminMacaroon: '',
-        embeddedLndNetwork: '',
+        embeddedLndNetwork: 'mainnet',
         interfaceKeys: [],
         recoveryCipherSeed: '',
         channelBackupsBase64: '',
@@ -237,7 +238,7 @@ export default class NodeConfiguration extends React.Component<
         // remove option to add a new embedded node if initialized already
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { embeddedLndNetwork, newEntry } = this.state;
+        const { adminMacaroon, newEntry } = this.state;
         if (settings.nodes && newEntry) {
             const result = settings?.nodes?.filter(
                 (node) => node.implementation === 'embedded-lnd'
@@ -246,7 +247,7 @@ export default class NodeConfiguration extends React.Component<
                 interfaceKeys = interfaceKeys.filter(
                     (item) => item.value !== 'embedded-lnd'
                 );
-                if (!embeddedLndNetwork) {
+                if (!adminMacaroon) {
                     this.setState({
                         implementation: 'lnd'
                     });
@@ -951,35 +952,50 @@ export default class NodeConfiguration extends React.Component<
 
                         {!adminMacaroon && <NodeInterface />}
 
-                        {!embeddedLndNetwork &&
-                            implementation === 'embedded-lnd' && (
-                                <View>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.Settings.AddEditNode.recoveryCipherSeed'
-                                        )} (${localeString(
-                                            'general.optional'
-                                        )})`}
-                                    </Text>
-                                    <TextInput
-                                        placeholder="ship yellow box resource scan pelican..."
-                                        value={recoveryCipherSeed}
-                                        onChangeText={(text: string) =>
+                        {!adminMacaroon && implementation === 'embedded-lnd' && (
+                            <View>
+                                {!adminMacaroon && (
+                                    <DropdownSetting
+                                        title={localeString('general.network')}
+                                        selectedValue={embeddedLndNetwork}
+                                        onValueChange={(value: string) => {
                                             this.setState({
-                                                recoveryCipherSeed: text
-                                            })
-                                        }
-                                        locked={loading}
+                                                embeddedLndNetwork: value
+                                            });
+                                        }}
+                                        values={EMBEDDED_NODE_NETWORK_KEYS}
                                     />
-                                </View>
-                            )}
+                                )}
+                                {false && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {`${localeString(
+                                                'views.Settings.AddEditNode.recoveryCipherSeed'
+                                            )} (${localeString(
+                                                'general.optional'
+                                            )})`}
+                                        </Text>
+                                        <TextInput
+                                            placeholder="ship yellow box resource scan pelican..."
+                                            value={recoveryCipherSeed}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    recoveryCipherSeed: text
+                                                })
+                                            }
+                                            locked={loading}
+                                        />
+                                    </>
+                                )}
+                            </View>
+                        )}
 
-                        {!embeddedLndNetwork &&
+                        {!adminMacaroon &&
                             implementation === 'embedded-lnd' &&
                             recoveryCipherSeed && (
                                 <View>
@@ -1453,13 +1469,12 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {implementation === 'embedded-lnd' &&
-                        embeddedLndNetwork && (
-                            <KeyValue
-                                keyValue={localeString('general.network')}
-                                value={embeddedLndNetwork}
-                            />
-                        )}
+                    {implementation === 'embedded-lnd' && adminMacaroon && (
+                        <KeyValue
+                            keyValue={localeString('general.network')}
+                            value={embeddedLndNetwork}
+                        />
+                    )}
 
                     {implementation === 'embedded-lnd' &&
                         recoveryCipherSeed && (
@@ -1477,26 +1492,9 @@ export default class NodeConfiguration extends React.Component<
                                     <View style={styles.button}>
                                         <Button
                                             title={
-                                                recoveryCipherSeed
+                                                embeddedLndNetwork === 'mainnet'
                                                     ? localeString(
-                                                          'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                                      )
-                                                    : localeString(
                                                           'views.Settings.NodeConfiguration.createMainnetWallet'
-                                                      )
-                                            }
-                                            onPress={async () => {
-                                                await this.createNewWallet();
-                                            }}
-                                            tertiary
-                                        />
-                                    </View>
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={
-                                                recoveryCipherSeed
-                                                    ? localeString(
-                                                          'views.Settings.NodeConfiguration.restoreTestnetWallet'
                                                       )
                                                     : localeString(
                                                           'views.Settings.NodeConfiguration.createTestnetWallet'
@@ -1504,10 +1502,36 @@ export default class NodeConfiguration extends React.Component<
                                             }
                                             onPress={async () => {
                                                 await this.createNewWallet(
-                                                    'Testnet'
+                                                    embeddedLndNetwork ===
+                                                        'mainnet'
+                                                        ? undefined
+                                                        : 'Testnet'
                                                 );
                                             }}
                                             tertiary
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={
+                                                embeddedLndNetwork === 'mainnet'
+                                                    ? localeString(
+                                                          'views.Settings.NodeConfiguration.restoreMainnetWallet'
+                                                      )
+                                                    : localeString(
+                                                          'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                                      )
+                                            }
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'SeedRecovery',
+                                                    {
+                                                        network:
+                                                            embeddedLndNetwork
+                                                    }
+                                                )
+                                            }
+                                            secondary
                                         />
                                     </View>
                                 </>
@@ -1526,8 +1550,7 @@ export default class NodeConfiguration extends React.Component<
 
                     {!creatingWallet &&
                         !(
-                            implementation === 'embedded-lnd' &&
-                            !embeddedLndNetwork
+                            implementation === 'embedded-lnd' && !adminMacaroon
                         ) && (
                             <View style={{ ...styles.button, marginTop: 20 }}>
                                 <Button

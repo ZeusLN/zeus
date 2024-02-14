@@ -183,6 +183,11 @@ export const INTERFACE_KEYS = [
     { key: '[DEPRECATED] Eclair', value: 'eclair' }
 ];
 
+export const EMBEDDED_NODE_NETWORK_KEYS = [
+    { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
+    { key: 'Testnet', translateKey: 'network.testnet', value: 'testnet' }
+];
+
 export const LNC_MAILBOX_KEYS = [
     {
         key: 'mailbox.terminal.lightning.today:443',
