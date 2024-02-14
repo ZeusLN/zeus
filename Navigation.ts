@@ -119,6 +119,8 @@ import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
 import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
 
+import RawTxHex from './views/RawTxHex';
+
 const AppScenes = {
     Wallet: {
         screen: Wallet
@@ -419,6 +421,9 @@ const AppScenes = {
     },
     ContactQR: {
         screen: ContactQR
+    },
+    RawTxHex: {
+        screen: RawTxHex
     }
 };
 
