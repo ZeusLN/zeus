@@ -78,6 +78,11 @@ export default class SelectCurrency extends React.Component<
             this.state;
         const { updateSettings, getSettings }: any = SettingsStore;
 
+        const currencyConverter = navigation.getParam(
+            'currencyConverter',
+            null
+        );
+
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
@@ -128,22 +133,32 @@ export default class SelectCurrency extends React.Component<
                                     backgroundColor: 'transparent'
                                 }}
                                 onPress={async () => {
-                                    await updateSettings({
-                                        fiat: item.value
-                                    }).then(() => {
-                                        getSettings();
-                                        navigation.navigate('Currency', {
-                                            refresh: true
+                                    if (currencyConverter) {
+                                        navigation.navigate(
+                                            'CurrencyConverter',
+                                            {
+                                                selectedCurrency: item.value
+                                            }
+                                        );
+                                    } else {
+                                        await updateSettings({
+                                            fiat: item.value
+                                        }).then(() => {
+                                            getSettings();
+                                            navigation.navigate('Currency', {
+                                                refresh: true
+                                            });
                                         });
-                                    });
+                                    }
                                 }}
                             >
                                 <ListItem.Content>
                                     <ListItem.Title
                                         style={{
                                             color:
-                                                selectedCurrency ===
-                                                    item.value ||
+                                                (!currencyConverter &&
+                                                    selectedCurrency ===
+                                                        item.value) ||
                                                 (!selectedCurrency &&
                                                     item.value === DEFAULT_FIAT)
                                                     ? themeColor('highlight')
@@ -156,14 +171,15 @@ export default class SelectCurrency extends React.Component<
                                 </ListItem.Content>
                                 {(selectedCurrency === item.value ||
                                     (!selectedCurrency &&
-                                        item.value === DEFAULT_FIAT)) && (
-                                    <View style={{ textAlign: 'right' }}>
-                                        <Icon
-                                            name="check"
-                                            color={themeColor('highlight')}
-                                        />
-                                    </View>
-                                )}
+                                        item.value === DEFAULT_FIAT)) &&
+                                    !currencyConverter && (
+                                        <View style={{ textAlign: 'right' }}>
+                                            <Icon
+                                                name="check"
+                                                color={themeColor('highlight')}
+                                            />
+                                        </View>
+                                    )}
                             </ListItem>
                         )}
                         keyExtractor={(item, index) => `${item.host}-${index}`}
