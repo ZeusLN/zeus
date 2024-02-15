@@ -941,7 +941,7 @@
     "pos.views.Settings.PointOfSale.authWarning": "Warning: no password or PIN set",
     "pos.views.Settings.PointOfSale.backendWarning": "Warning: currently only LND nodes are able to mark orders as paid",
     "pos.views.Settings.PointOfSale.currencyError": "Error: currency must be set first",
-    "pos.print.taxReceipt": "Tax Receipt",
+    "pos.print.taxReceipt": "Receipt",
     "pos.print.invoice": "Invoice",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Create mainnet wallet",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Create testnet wallet",
