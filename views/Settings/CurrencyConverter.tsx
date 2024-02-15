@@ -346,7 +346,11 @@ export default class CurrencyConverter extends React.Component<
 
         const AddButton = () => (
             <TouchableOpacity
-                onPress={() => navigation.navigate('AddCurrencies')}
+                onPress={() =>
+                    navigation.navigate('SelectCurrency', {
+                        currencyConverter: true
+                    })
+                }
                 accessibilityLabel={localeString('general.add')}
             >
                 <Add
@@ -405,10 +409,12 @@ export default class CurrencyConverter extends React.Component<
                 <Header
                     leftComponent="Back"
                     rightComponent={
-                        <Row>
-                            <EditButton />
-                            <AddButton />
-                        </Row>
+                        fiatEnabled && (
+                            <Row>
+                                <EditButton />
+                                <AddButton />
+                            </Row>
+                        )
                     }
                     centerComponent={{
                         text: localeString(
