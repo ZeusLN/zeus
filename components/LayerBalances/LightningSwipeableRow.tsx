@@ -186,12 +186,10 @@ export default class LightningSwipeableRow extends Component<
                     switch (params.tag) {
                         case 'payRequest':
                             params.lnurlText = lightning;
-                            return [
-                                'LnurlPay',
-                                {
-                                    lnurlParams: params
-                                }
-                            ];
+                            this.props.navigation.navigate('LnurlPay', {
+                                lnurlParams: params
+                            });
+                            return;
                         default:
                             Alert.alert(
                                 localeString('general.error'),
