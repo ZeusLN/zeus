@@ -220,7 +220,7 @@ export default class Activity extends React.PureComponent<
         return (
             <Screen>
                 <Header
-                    leftComponent="Close"
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('general.activity'),
                         style: {

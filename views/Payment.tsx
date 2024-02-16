@@ -12,29 +12,33 @@ import { inject, observer } from 'mobx-react';
 
 import { Row } from '../components/layout/Row';
 import Amount from '../components/Amount';
+import Button from '../components/Button';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
 
-import Payment from '../models/Payment';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import UrlUtils from '../utils/UrlUtils';
+
+import Payment from '../models/Payment';
 
 import LnurlPayStore from '../stores/LnurlPayStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 
 import LnurlPayHistorical from './LnurlPay/Historical';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
-import Button from '../components/Button';
 
 interface PaymentProps {
     navigation: any;
     LnurlPayStore?: LnurlPayStore;
+    NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
 }
 
-@inject('LnurlPayStore', 'SettingsStore')
+@inject('LnurlPayStore', 'NodeInfoStore', 'SettingsStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     state = {
@@ -68,8 +72,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, NodeInfoStore } = this.props;
         const { storedNotes, lnurlpaytx } = this.state;
+        const { testnet } = NodeInfoStore;
 
         const payment: Payment = navigation.getParam('payment', null);
         const formattedOriginalTimeUntilExpiry =
@@ -82,6 +87,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getFeePercentage,
             paymentHash,
             getPreimage,
+            getDestination,
             enhancedPath,
             getMemo,
             isIncomplete,
@@ -178,6 +184,23 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 keyValue={localeString('views.Receive.memo')}
                                 value={getMemo}
                                 sensitive
+                            />
+                        )}
+
+                        {getDestination && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.destination'
+                                )}
+                                value={getDestination}
+                                sensitive
+                                color={themeColor('highlight')}
+                                mempoolLink={() =>
+                                    UrlUtils.goToBlockExplorerPubkey(
+                                        getDestination,
+                                        testnet
+                                    )
+                                }
                             />
                         )}
 

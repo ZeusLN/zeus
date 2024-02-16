@@ -68,7 +68,10 @@ class Stores {
             this.lspStore,
             this.channelsStore
         );
-        this.transactionsStore = new TransactionsStore(this.settingsStore);
+        this.transactionsStore = new TransactionsStore(
+            this.settingsStore,
+            this.nodeInfoStore
+        );
         this.balanceStore = new BalanceStore(this.settingsStore);
         this.unitsStore = new UnitsStore(this.settingsStore, this.fiatStore);
         this.paymentsStore = new PaymentsStore(
