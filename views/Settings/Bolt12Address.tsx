@@ -105,6 +105,15 @@ export default class Bolt12AddressSettings extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
+                    centerComponent={{
+                        text: localeString(
+                            'views.Settings.Bolt12Address.bolt12Address'
+                        ),
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }
+                    }}
                     containerStyle={{ borderBottomWidth: 0 }}
                     navigation={navigation}
                 />
@@ -122,9 +131,9 @@ export default class Bolt12AddressSettings extends React.Component<
                         {localeString('views.Settings.AddContact.name')}
                     </Text>
                     <TextInput
-                        placeholder={`${localeString(
+                        placeholder={`<${localeString(
                             'views.Settings.AddContact.name'
-                        )}@twelve.cash`}
+                        )}>@twelve.cash`}
                         autoCapitalize="none"
                         value={bolt12AddressLocalPart}
                         onChangeText={(text: string) => {
