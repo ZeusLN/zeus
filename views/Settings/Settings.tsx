@@ -1027,42 +1027,44 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() =>
-                                navigation.navigate('PointOfSaleSettings')
-                            }
+                    {selectedNode && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
                         >
-                            <View style={styles.icon}>
-                                <POS
-                                    stroke={themeColor('text')}
-                                    fill={themeColor('secondary')}
-                                    width={23}
-                                    height={23}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('PointOfSaleSettings')
+                                }
                             >
-                                {localeString('general.pos')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                                <View style={styles.icon}>
+                                    <POS
+                                        stroke={themeColor('text')}
+                                        fill={themeColor('secondary')}
+                                        width={23}
+                                        height={23}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('general.pos')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     <View
                         style={{

@@ -8,6 +8,7 @@ interface MessageProps {
     link?: string;
     mainStyle?: any;
     dismissable?: boolean;
+    onPress?: () => void;
 }
 
 const Message = ({
@@ -15,12 +16,24 @@ const Message = ({
     fontSize,
     link,
     mainStyle,
-    dismissable
+    dismissable,
+    onPress
 }: MessageProps) => {
     const [isDismissed, setDismissed] = useState(false);
     if (isDismissed) return;
-    return dismissable ? (
-        <TouchableOpacity onPress={() => setDismissed(true)}>
+    return onPress ? (
+        <TouchableOpacity style={[styles.field]} onPress={onPress}>
+            <Text
+                style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}
+            >
+                {message}
+            </Text>
+        </TouchableOpacity>
+    ) : dismissable ? (
+        <TouchableOpacity
+            style={[styles.field]}
+            onPress={() => setDismissed(true)}
+        >
             <Text
                 style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}
             >
@@ -28,7 +41,10 @@ const Message = ({
             </Text>
         </TouchableOpacity>
     ) : link ? (
-        <TouchableOpacity onPress={() => UrlUtils.goToUrl(link)}>
+        <TouchableOpacity
+            style={[styles.field]}
+            onPress={() => UrlUtils.goToUrl(link)}
+        >
             <Text
                 style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}
             >
@@ -46,7 +62,8 @@ const SuccessMessage = ({
     message,
     fontSize,
     link,
-    dismissable
+    dismissable,
+    onPress
 }: MessageProps) => (
     <Message
         message={message}
@@ -54,6 +71,7 @@ const SuccessMessage = ({
         link={link}
         mainStyle={styles.successField}
         dismissable={dismissable}
+        onPress={onPress}
     />
 );
 
@@ -61,7 +79,8 @@ const WarningMessage = ({
     message,
     fontSize,
     link,
-    dismissable
+    dismissable,
+    onPress
 }: MessageProps) => (
     <Message
         message={message}
@@ -69,6 +88,7 @@ const WarningMessage = ({
         link={link}
         mainStyle={styles.warningField}
         dismissable={dismissable}
+        onPress={onPress}
     />
 );
 
@@ -76,7 +96,8 @@ const ErrorMessage = ({
     message,
     fontSize,
     link,
-    dismissable
+    dismissable,
+    onPress
 }: MessageProps) => (
     <Message
         message={message}
@@ -84,6 +105,7 @@ const ErrorMessage = ({
         link={link}
         mainStyle={styles.errorField}
         dismissable={dismissable}
+        onPress={onPress}
     />
 );
 
