@@ -314,11 +314,7 @@ export default class AddContact extends React.Component<
     };
 
     onChangeBolt12Address = (text: string) => {
-        const isValid = true;
-        // TODO: Validate properly
-        // AddressUtils.isValidLightningPaymentRequest(text) ||
-        // AddressUtils.isValidLightningAddress(text) ||
-        // AddressUtils.isValidBitcoinAddress(text, true);
+        const isValid = AddressUtils.isValidBolt12Address(text);
         this.setState({
             isValidBolt12Address: isValid
         });
@@ -771,10 +767,9 @@ export default class AddContact extends React.Component<
                                     }
                                 }}
                                 value={bolt12Address && bolt12Address[0]}
-                                // placeholder={localeString(
-                                //     'views.Settings.AddContact.lnAddress'
-                                // )}
-                                placeholder="Bolt12 Address"
+                                placeholder={localeString(
+                                    'views.Settings.Bolt12Address.bolt12Address'
+                                )}
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
                                 )}

@@ -167,14 +167,6 @@ export default class CLightningREST extends LND {
             payments: data.pays
         }));
     getNewAddress = () => this.getRequest('/v1/newaddr?addrType=bech32');
-    // returns
-    // offer_id (hash): the id of this offer (merkle hash of non-signature fields)
-    // active (boolean): whether this can still be used (always true)
-    // single_use (boolean): whether this expires as soon as it's paid (reflects the single_use parameter)
-    // bolt12 (string): the bolt12 encoding of the offer
-    // used (boolean): True if an associated invoice has been paid
-    // created (boolean): false if the offer already existed
-    // label (string, optional): the (optional) user-specified label
     getNewOffer = () =>
         this.postRequest('/v1/offers/offer', {
             amount: 'any',

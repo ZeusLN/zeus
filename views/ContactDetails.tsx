@@ -32,20 +32,6 @@ interface ContactDetailsProps {
     navigation: any;
 }
 
-// interface ContactItem {
-//     lnAddress: string;
-//     bolt12Address: string;
-//     onchainAddress: string;
-//     pubkey: string;
-//     nip05: string;
-//     nostrNpub: string;
-//     name: string;
-//     description: string;
-//     photo: string | null;
-//     isFavourite: boolean;
-//     id: string;
-// }
-
 interface ContactDetailsState {
     contact: Contact | any;
     isLoading: boolean;

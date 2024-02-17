@@ -345,13 +345,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     payBolt12 = async () => {
-        if (this.state.amount === '0') {
-            // TODO: Set min amount error
-            // disable button until valid amount (balance check too)
-            return;
-        }
-        if (!this.state.bolt12) {
-            // show error, make sure we can't get to this point
+        if (this.state.amount === '0' || !this.state.bolt12) {
             return;
         }
         try {
@@ -365,7 +359,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.props.InvoicesStore.getPayReq(res.invoice);
             this.props.navigation.navigate('PaymentRequest');
         } catch (e) {
-            // show error
             console.error(e);
             return;
         }
