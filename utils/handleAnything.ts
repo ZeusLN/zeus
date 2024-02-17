@@ -206,11 +206,9 @@ const handleAnything = async (
                     }
                 });
                 const json = await res.json();
-                console.debug('json', json);
                 if (!json.Answer && !json.Answer[0]) throw 'Bad';
                 bolt12 = json.Answer[0].data;
                 bolt12 = bolt12.replace(/("|\\)/g, '');
-                console.debug('bolt12 offer from dns', bolt12);
 
                 return [
                     'Send',

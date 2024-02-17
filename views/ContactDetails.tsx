@@ -132,15 +132,6 @@ export default class ContactDetails extends React.Component<
     sendAddress = (address: string) => {
         const { navigation } = this.props;
         const { contact } = this.state;
-        console.debug(
-            'sending',
-            'navigation',
-            navigation,
-            'contact',
-            contact,
-            'address',
-            address
-        );
         navigation.navigate('Send', {
             destination: address,
             contactName: contact.name

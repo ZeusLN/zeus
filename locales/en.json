@@ -250,6 +250,7 @@
     "views.Settings.Security.deleteDuressPIN": "Delete Duress PIN",
     "views.Settings.Security.scramblePIN": "Scramble PIN numbers",
     "views.Settings.Security.loginBackground": "Require login after app returns from background",
+    "views.Settings.Bolt12Address.button": "Request Paycode",
     "views.SparkQRScanner.text": "Scan a Spark QR code",
     "views.SparkQRScanner.error": "Error fetching Spark config",
     "views.ImportAccount.title": "Import account",

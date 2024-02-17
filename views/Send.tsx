@@ -324,12 +324,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                     });
                     if (response) {
                         const [route, props] = response;
-                        console.debug(
-                            'handle anything, route',
-                            route,
-                            'props',
-                            props
-                        );
                         navigation.navigate(route, props);
                     }
                 } catch {
@@ -351,8 +345,6 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     payBolt12 = async () => {
-        console.debug('bolt12', this.state.bolt12);
-        console.debug('amount', this.state.amount);
         if (this.state.amount === '0') {
             // TODO: Set min amount error
             // disable button until valid amount (balance check too)
@@ -370,7 +362,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             if (!res.invoice) {
                 return;
             }
-            console.debug('res.invoice', res.invoice);
             this.props.InvoicesStore.getPayReq(res.invoice);
             this.props.navigation.navigate('PaymentRequest');
         } catch (e) {

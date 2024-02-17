@@ -124,17 +124,6 @@ export default class PaymentRequest extends React.Component<
         const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
 
-        // const { navigation } = this.props;
-        // const bolt12 = navigation.getParam('bolt12');
-        // console.debug('bolt12 PAYMENT REQUEST', bolt12);
-        // // TODO: Need to get invoice from this? how to specify amount?
-        // // need to either use e
-        // if (bolt12) {
-        //   pay_req = ""
-        // }
-
-        // can't fetch an invoice from offer with first specifiying an amount...
-
         let feeOption = 'fixed';
         const { pay_req } = InvoicesStore;
         const requestAmount = pay_req && pay_req.getRequestAmount;

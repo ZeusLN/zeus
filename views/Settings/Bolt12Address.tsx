@@ -19,6 +19,7 @@ interface Bolt12AddressSettingsProps {
 interface Bolt12AddressSettingsState {
     bolt12AddressLocalPart: string;
     loading: boolean;
+    error: string;
 }
 
 type CreateOfferResponse = {
@@ -38,7 +39,8 @@ export default class Bolt12AddressSettings extends React.Component<
 > {
     state = {
         bolt12AddressLocalPart: '',
-        loading: true
+        loading: true,
+        error: ''
     };
 
     async UNSAFE_componentWillMount() {
@@ -51,21 +53,7 @@ export default class Bolt12AddressSettings extends React.Component<
         });
     }
 
-    componentDidMount() {
-        // this.loadContacts();
-        console.debug('HELLO TEST');
-        // console.debug(SendScreen)
-    }
-
     async requestPaymentAddress() {
-        // make sure name is clean (filter characters in input)
-        // verify not taken (skip for now... zeus backend route)
-
-        console.debug(
-            `requesting ${this.state.bolt12AddressLocalPart}@bolt12.me`
-        );
-        // fetch an offer from cln (visible/configureable to user? maybe later)
-
         let data: CreateOfferResponse;
         try {
             data = await BackendUtils.getNewOffer();
@@ -75,9 +63,8 @@ export default class Bolt12AddressSettings extends React.Component<
             return;
         }
 
-        console.debug('data', data);
-
-        // post request to digital ocean (would normally hit zeus backend route)
+        // TODO: Use twelve.cash server
+        // validate/parse string input
         try {
             const res = await fetch('http://localhost:3000/record', {
                 method: 'POST',
@@ -86,17 +73,23 @@ export default class Bolt12AddressSettings extends React.Component<
                     bolt12: data.bolt12
                 })
             });
-            const json = await res.json();
-            console.debug('json', json);
+
+            if (res.status === 409) {
+                this.setState({ error: 'Name is taken' });
+                return;
+            } else if (res.status !== 201) {
+                this.setState({ error: 'Failed to create Paycode' });
+                return;
+            }
         } catch (e) {
-            console.error('Error posting dns record', e);
+            console.error(e);
+            this.setState({ error: 'Failed to create Paycode' });
             return;
         }
 
         const { SettingsStore } = this.props;
         const { updateSettings } = SettingsStore;
 
-        // save to settings
         await updateSettings({
             bolt12Address: {
                 localPart: this.state.bolt12AddressLocalPart
@@ -105,23 +98,14 @@ export default class Bolt12AddressSettings extends React.Component<
     }
 
     render() {
-        // const { navigation } = this.props
-        const { navigation, SettingsStore } = this.props;
-        const { bolt12AddressLocalPart } = this.state;
-        const { implementation, updateSettings }: any = SettingsStore;
-        // const { bolt12AddressLocalPart, loading } = this.state;
+        const { navigation } = this.props;
+        const { bolt12AddressLocalPart, error } = this.state;
 
         return (
             <Screen>
-                {/* style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            > */}
                 <Header
                     leftComponent="Back"
                     containerStyle={{ borderBottomWidth: 0 }}
-                    // rightComponent={SendScreen ? undefined : <AddButton />}
                     navigation={navigation}
                 />
                 <View
@@ -135,42 +119,35 @@ export default class Bolt12AddressSettings extends React.Component<
                             color: themeColor('secondaryText')
                         }}
                     >
-                        {/* {localeString('views.Receive.memo')} */}
-                        Name
+                        {localeString('views.Settings.AddContact.name')}
                     </Text>
                     <TextInput
-                        // TODO: character filtering, localeStrings
-                        // placeholder={localeString(
-                        //     'views.Receive.memoPlaceholder'
-                        // )}
-                        placeholder="<name>@bolt12.me"
+                        placeholder={`${localeString(
+                            'views.Settings.AddContact.name'
+                        )}@twelve.cash`}
                         autoCapitalize="none"
                         value={bolt12AddressLocalPart}
-                        onChangeText={async (text: string) => {
-                            this.setState({ bolt12AddressLocalPart: text });
-                            // TODO: Only update settings if it worked
-                            // await updateSettings({
-                            //     invoices: {
-                            //         addressType,
-                            //         memo: text,
-                            //         expiry,
-                            //         routeHints,
-                            //         ampInvoice,
-                            //         showCustomPreimageField
-                            //     }
-                            // });
+                        onChangeText={(text: string) => {
+                            this.setState({
+                                bolt12AddressLocalPart: text.trim(),
+                                error: ''
+                            });
                         }}
                     />
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color: themeColor('warning')
+                        }}
+                    >
+                        {error}
+                    </Text>
                     <View style={styles.button}>
                         <Button
-                            // title={localeString(
-                            //     'views.Settings.signMessage.button'
-                            // )}
-                            title="Submit"
+                            title={localeString(
+                                'views.Settings.Bolt12Address.button'
+                            )}
                             disabled={!this.state.bolt12AddressLocalPart}
-                            icon={{
-                                name: 'create'
-                            }}
                             onPress={async () => this.requestPaymentAddress()}
                         />
                     </View>
