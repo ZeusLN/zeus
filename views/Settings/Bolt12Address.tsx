@@ -17,7 +17,8 @@ interface Bolt12AddressSettingsProps {
 }
 
 interface Bolt12AddressSettingsState {
-    bolt12AddressLocalPart: string;
+    newLocalPart: string;
+    existingLocalPart: string;
     loading: boolean;
     error: string;
 }
@@ -38,7 +39,8 @@ export default class Bolt12AddressSettings extends React.Component<
     Bolt12AddressSettingsState
 > {
     state = {
-        bolt12AddressLocalPart: '',
+        newLocalPart: '',
+        existingLocalPart: '',
         loading: true,
         error: ''
     };
@@ -49,7 +51,8 @@ export default class Bolt12AddressSettings extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            bolt12AddressLocalPart: settings?.bolt12Address?.localPart || ''
+            newLocalPart: '',
+            existingLocalPart: settings?.bolt12Address?.localPart || ''
         });
     }
 
@@ -63,13 +66,11 @@ export default class Bolt12AddressSettings extends React.Component<
             return;
         }
 
-        // TODO: Use twelve.cash server
-        // validate/parse string input
         try {
-            const res = await fetch('http://localhost:3000/record', {
+            const res = await fetch('https://twelve.cash/record', {
                 method: 'POST',
                 body: JSON.stringify({
-                    localPart: this.state.bolt12AddressLocalPart,
+                    localPart: this.state.newLocalPart,
                     bolt12: data.bolt12
                 })
             });
@@ -92,14 +93,19 @@ export default class Bolt12AddressSettings extends React.Component<
 
         await updateSettings({
             bolt12Address: {
-                localPart: this.state.bolt12AddressLocalPart
+                localPart: this.state.newLocalPart
             }
+        });
+        this.setState({
+            newLocalPart: '',
+            existingLocalPart: this.state.newLocalPart
         });
     }
 
     render() {
-        const { navigation } = this.props;
-        const { bolt12AddressLocalPart, error } = this.state;
+        const { navigation, SettingsStore } = this.props;
+        const { updateSettings } = SettingsStore;
+        const { newLocalPart, existingLocalPart, error } = this.state;
 
         return (
             <Screen>
@@ -110,63 +116,109 @@ export default class Bolt12AddressSettings extends React.Component<
                             'views.Settings.Bolt12Address.bolt12Address'
                         ),
                         style: {
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            ...styles.secondaryText,
+                            color: themeColor('text')
                         }
                     }}
                     containerStyle={{ borderBottomWidth: 0 }}
                     navigation={navigation}
                 />
-                <View
-                    style={{
-                        padding: 20
-                    }}
-                >
-                    <Text
-                        style={{
-                            ...styles.secondaryText,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.Settings.AddContact.name')}
-                    </Text>
-                    <TextInput
-                        placeholder={`<${localeString(
-                            'views.Settings.AddContact.name'
-                        )}>@twelve.cash`}
-                        autoCapitalize="none"
-                        value={bolt12AddressLocalPart}
-                        onChangeText={(text: string) => {
-                            this.setState({
-                                bolt12AddressLocalPart: text.trim(),
-                                error: ''
-                            });
-                        }}
-                    />
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: themeColor('warning')
-                        }}
-                    >
-                        {error}
-                    </Text>
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString(
-                                'views.Settings.Bolt12Address.button'
-                            )}
-                            disabled={!this.state.bolt12AddressLocalPart}
-                            onPress={async () => this.requestPaymentAddress()}
-                        />
+                {existingLocalPart ? (
+                    <View style={{ padding: 20 }}>
+                        <Text
+                            style={{
+                                ...styles.handle,
+                                color: themeColor('text'),
+                                paddingBottom: 10
+                            }}
+                        >
+                            {existingLocalPart + '@twelve.cash'}
+                        </Text>
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.Bolt12Address.changeButton'
+                                )}
+                                onPress={async () => {
+                                    await updateSettings({
+                                        bolt12Address: {
+                                            localPart: ''
+                                        }
+                                    });
+                                    this.setState({
+                                        existingLocalPart: '',
+                                        newLocalPart: ''
+                                    });
+                                }}
+                            />
+                        </View>
                     </View>
-                </View>
+                ) : (
+                    <View
+                        style={{
+                            padding: 20
+                        }}
+                    >
+                        <Text
+                            style={{
+                                ...styles.secondaryText,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Bolt12Address.handle'
+                            )}
+                        </Text>
+                        <TextInput
+                            autoCapitalize="none"
+                            value={newLocalPart}
+                            onChangeText={(text: string) => {
+                                this.setState({
+                                    newLocalPart: text.trim(),
+                                    error: ''
+                                });
+                            }}
+                        />
+                        <Text
+                            style={{
+                                ...styles.secondaryText,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {newLocalPart + '@twelve.cash'}
+                        </Text>
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('warning')
+                            }}
+                        >
+                            {error}
+                        </Text>
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.Bolt12Address.requestButton'
+                                )}
+                                disabled={!this.state.newLocalPart}
+                                onPress={async () =>
+                                    this.requestPaymentAddress()
+                                }
+                            />
+                        </View>
+                    </View>
+                )}
             </Screen>
         );
     }
 }
 
 const styles = StyleSheet.create({
+    handle: {
+        fontSize: 20,
+        alignSelf: 'center',
+        fontFamily: 'PPNeueMontreal-Book'
+    },
     secondaryText: {
         fontFamily: 'PPNeueMontreal-Book'
     },

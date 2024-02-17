@@ -505,7 +505,7 @@ export default class Eclair {
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
     isLNDBased = () => false;
-    supportsOffers = () => true;
+    supportsOffers = () => false;
 }
 
 const mapInvoice =
