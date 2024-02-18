@@ -89,7 +89,21 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getPreimage(): string {
-        return this.preimage || this.payment_preimage;
+        if (this.preimage) {
+            if (this.preimage?.type === 'Buffer') {
+                this.preimage = Base64Utils.bytesToHex(this.preimage.data);
+            }
+            return this.preimage;
+        }
+        if (this.payment_preimage) {
+            if (this.payment_preimage?.type === 'Buffer') {
+                this.payment_preimage = Base64Utils.bytesToHex(
+                    this.payment_preimage.data
+                );
+            }
+            return this.payment_preimage;
+        }
+        return '';
     }
 
     @computed public get isIncomplete(): boolean {
