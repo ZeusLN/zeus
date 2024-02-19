@@ -196,7 +196,7 @@ const handleAnything = async (
         if (BackendUtils.supportsOffers()) {
             const [localPart, domain] = value.split('@');
             const dnsUrl = 'https://cloudflare-dns.com/dns-query';
-            const name = `${localPart}.${domain}`;
+            const name = `${localPart}.user._bitcoin-payment.${domain}`;
             const url = `${dnsUrl}?name=${name}&type=TXT`;
             let bolt12: string;
             try {
