@@ -74,9 +74,18 @@ interface InvoicesSettings {
     addressType?: string;
     memo?: string;
     expiry?: string;
+    timePeriod?: string;
+    expirySeconds?: string;
     routeHints?: boolean;
     ampInvoice?: boolean;
     showCustomPreimageField?: boolean;
+}
+
+interface ChannelsSettings {
+    min_confs: number;
+    privateChannel: boolean;
+    scidAlias: boolean;
+    simpleTaprootChannel: boolean;
 }
 
 interface LightningAddressSettings {
@@ -103,13 +112,14 @@ export interface Settings {
     authenticationAttempts?: number;
     fiatEnabled?: boolean;
     fiat?: string;
-    fiatRatesSource: 'Zeus' | 'Yadio';
+    fiatRatesSource: 'ZEUS' | 'Yadio';
     locale?: string;
     privacy: PrivacySettings;
     display: DisplaySettings;
     pos: PosSettings;
     payments: PaymentsSettings;
     invoices: InvoicesSettings;
+    channels: ChannelsSettings;
     isBiometryEnabled: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
@@ -137,7 +147,7 @@ export interface Settings {
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
-    { key: 'Zeus', value: 'Zeus' },
+    { key: 'ZEUS', value: 'Zeus' },
     { key: 'Yadio', value: 'Yadio' }
 ];
 
@@ -554,6 +564,171 @@ export const CURRENCY_KEYS = [
         key: '🇲🇷 Mauritanian Ouguiya (MRU)',
         value: 'MRU',
         supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇦🇱 Albanian Lek (ALL)',
+        value: 'ALL',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇳🇱 Netherlands Antillean Guilder (ANG)',
+        value: 'ANG',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇦🇴 Angolan Kwanza (AOA)',
+        value: 'AOA',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇩 Bangladeshi Takka (BDT)',
+        value: 'BDT',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇬 Bulgarian Lev (BGN)',
+        value: 'BGN',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇭 Bahraini Dinar (BHD)',
+        value: 'BHD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇮 Burundian Franc (BIF)',
+        value: 'BIF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇲 Bermudan Dollar (BMD)',
+        value: 'BMD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇧🇼 Botswanan Pula (BWP)',
+        value: 'BWP',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇩🇯 Djiboutian Franc (DJF)',
+        value: 'DJF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇩🇿 Algerian Dinar (DZD)',
+        value: 'DZD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇪🇬 Egyptian Pound (EGP)',
+        value: 'EGP',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇪🇹 Ethiopian Birr (ETB)',
+        value: 'ETB',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇬🇪 Georgian Lari (GEL)',
+        value: 'GEL',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇬🇭 Ghanaian Cedi (GHS)',
+        value: 'GHS',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇬🇳 Guinean Franc (GNF)',
+        value: 'GNF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇭🇳 Honduran Lempira (HNL)',
+        value: 'HNL',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇮🇷 Iranian Rial (IRR)',
+        value: 'IRR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇯🇴 Jordanian Dinar (JOD)',
+        value: 'JOD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇰🇬 Kyrgystani Som (KGS)',
+        value: 'KGS',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇰🇿 Kazakhstani Tenge (KZT)',
+        value: 'KZT',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇱🇰 Sri Lankan Rupee (LKR)',
+        value: 'LKR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇲🇦 Moroccan Dirham (MAD)',
+        value: 'MAD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇲🇬 Malagasy Ariar (MGA)',
+        value: 'MGA',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇳🇦 Namibian Dollar (NAD)',
+        value: 'NAD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇳🇵 Nepalese Rupee (NPR)',
+        value: 'NPR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇵🇦 Panamanian Balboa (PAB)',
+        value: 'PAB',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇵🇪 Peruvian Sol (PEN)',
+        value: 'PEN',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇵🇰 Pakistani Rupee (PKR)',
+        value: 'PKR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇷🇸 Serbian Dinar (RSD)',
+        value: 'RSD',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇷🇼 Rwandan Franc (RWF)',
+        value: 'RWF',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇺🇿 Uzbekistan Sum (UZS)',
+        value: 'UZS',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: '🇻🇳 Vietnamese Dong (VND)',
+        value: 'VND',
+        supportedSources: ['Zeus', 'Yadio']
     }
 ];
 
@@ -665,7 +840,7 @@ export const DEFAULT_VIEW_KEYS = [
 
 export const DEFAULT_THEME = 'kyriaki';
 export const DEFAULT_FIAT = 'USD';
-export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
+export const DEFAULT_FIAT_RATES_SOURCE = 'ZEUS';
 export const DEFAULT_LOCALE = 'English';
 
 export const POS_CONF_PREF_KEYS = [
@@ -736,6 +911,14 @@ export const AUTOMATIC_ATTESTATION_KEYS = [
     }
 ];
 
+export const TIME_PERIOD_KEYS = [
+    { key: 'Seconds', translateKey: 'time.seconds', value: 'Seconds' },
+    { key: 'Minutes', translateKey: 'time.minutes', value: 'Minutes' },
+    { key: 'Hours', translateKey: 'time.hours', value: 'Hours' },
+    { key: 'Days', translateKey: 'time.days', value: 'Days' },
+    { key: 'Weeks', translateKey: 'time.weeks', value: 'Weeks' }
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -778,9 +961,17 @@ export default class SettingsStore {
             addressType: '0',
             memo: '',
             expiry: '3600',
+            timePeriod: 'Seconds',
+            expirySeconds: '3600',
             routeHints: false,
             ampInvoice: false,
             showCustomPreimageField: false
+        },
+        channels: {
+            min_confs: 1,
+            privateChannel: true,
+            scidAlias: true,
+            simpleTaprootChannel: false
         },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
