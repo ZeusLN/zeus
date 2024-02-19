@@ -55,6 +55,21 @@ export default class Payment extends BaseModel {
         return this.payment_request || this.bolt11;
     }
 
+    @computed public get getDestination(): string | undefined {
+        if (this.destination) return this.destination;
+        const pay_req = this.getPaymentRequest;
+        if (pay_req) {
+            try {
+                const decoded = bolt11.decode(pay_req);
+                return decoded.payeeNodeKey;
+            } catch {
+                return undefined;
+            }
+        } else {
+            return undefined;
+        }
+    }
+
     @computed public get getMemo(): string | undefined {
         if (this.getPaymentRequest) {
             const decoded: any = bolt11.decode(this.getPaymentRequest);
@@ -74,7 +89,21 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getPreimage(): string {
-        return this.preimage || this.payment_preimage;
+        if (this.preimage) {
+            if (this.preimage?.type === 'Buffer') {
+                this.preimage = Base64Utils.bytesToHex(this.preimage.data);
+            }
+            return this.preimage;
+        }
+        if (this.payment_preimage) {
+            if (this.payment_preimage?.type === 'Buffer') {
+                this.payment_preimage = Base64Utils.bytesToHex(
+                    this.payment_preimage.data
+                );
+            }
+            return this.payment_preimage;
+        }
+        return '';
     }
 
     @computed public get isIncomplete(): boolean {

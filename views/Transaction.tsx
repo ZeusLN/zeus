@@ -24,19 +24,30 @@ import Transaction from '../models/Transaction';
 import UrlUtils from '../utils/UrlUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
+import TransactionsStore from '../stores/TransactionsStore';
+
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import EditNotes from '../assets/images/SVG/Pen.svg';
 
 interface TransactionProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
+    TransactionsStore: TransactionsStore;
 }
 
-@inject('NodeInfoStore')
+interface TransactionState {
+    storedNotes: string | null;
+}
+
+@inject('NodeInfoStore', 'TransactionsStore')
 @observer
-export default class TransactionView extends React.Component<TransactionProps> {
+export default class TransactionView extends React.Component<
+    TransactionProps,
+    TransactionState
+> {
     state = {
         storedNotes: ''
     };
@@ -47,6 +58,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
             null
         );
         navigation.addListener('didFocus', () => {
+            this.props.TransactionsStore.resetBroadcast();
             EncryptedStorage.getItem('note-' + transaction.tx)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
@@ -76,7 +88,8 @@ export default class TransactionView extends React.Component<TransactionProps> {
             getFee,
             getFeePercentage,
             status,
-            getOutpoint
+            getOutpoint,
+            raw_tx_hex
         } = transaction;
         const amount = transaction.getAmount;
         const date = time_stamp && new Date(Number(time_stamp) * 1000);
@@ -301,6 +314,41 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     {!!destAddresses && (
                         <React.Fragment>{addresses}</React.Fragment>
                     )}
+
+                    {raw_tx_hex && (
+                        <>
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('RawTxHex', {
+                                        value: raw_tx_hex
+                                    })
+                                }
+                            >
+                                <View
+                                    style={{
+                                        marginTop: 10,
+                                        marginBottom: 10
+                                    }}
+                                >
+                                    <Row justify="space-between">
+                                        <View style={{ width: '95%' }}>
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Transaction.rawTxHex'
+                                                )}
+                                            />
+                                        </View>
+                                        <CaretRight
+                                            fill={themeColor('text')}
+                                            width="20"
+                                            height="20"
+                                        />
+                                    </Row>
+                                </View>
+                            </TouchableOpacity>
+                        </>
+                    )}
+
                     {storedNotes && (
                         <TouchableOpacity
                             onPress={() =>
@@ -328,6 +376,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             />
                         </View>
                     )}
+
                     {tx && (
                         <Button
                             title={
@@ -343,7 +392,6 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 navigation.navigate('AddNotes', { txid: tx })
                             }
                             containerStyle={{ marginTop: 20 }}
-                            secondary
                             noUppercase
                         />
                     )}

@@ -8,6 +8,7 @@ interface CopyButtonProps {
     title?: string;
     copyValue: string;
     icon?: any;
+    noUppercase?: boolean;
 }
 
 interface CopyButtonState {
@@ -51,7 +52,7 @@ export default class CopyButton extends React.Component<
 
     render() {
         const { copied } = this.state;
-        const { title, icon } = this.props;
+        const { title, icon, noUppercase } = this.props;
 
         const buttonTitle = copied
             ? localeString('components.CopyButton.copied')
@@ -74,6 +75,7 @@ export default class CopyButton extends React.Component<
                 }}
                 onPress={() => this.copyToClipboard()}
                 secondary
+                noUppercase={noUppercase}
             />
         );
     }

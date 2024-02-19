@@ -58,8 +58,66 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: false
             },
-            ARS: { symbol: '$', space: true, rtl: false, separatorSwap: true },
-            AUD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            ARS: {
+                symbol: '$',
+                space: true,
+                rtl: false,
+                separatorSwap: true
+            },
+            ALL: {
+                symbol: 'L',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            ANG: {
+                symbol: 'f',
+                space: false,
+                rtl: false,
+                separatorSwap: true
+            },
+            AOA: {
+                symbol: 'Kz',
+                space: true,
+                rtl: false,
+                separatorSwap: true
+            },
+            AUD: {
+                symbol: '$',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            BDT: {
+                symbol: '৳',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            BGN: {
+                symbol: 'лв',
+                space: true,
+                rtl: false,
+                separatorSwap: true
+            },
+            BHD: {
+                symbol: 'BD',
+                space: true,
+                rtl: false,
+                separatorSwap: true
+            },
+            BIF: {
+                symbol: 'FBu',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            BMD: {
+                symbol: 'BD$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             BOB: {
                 symbol: 'Bs',
                 space: false,
@@ -68,6 +126,12 @@ export default class FiatStore {
             },
             BRL: {
                 symbol: 'R$',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            BWP: {
+                symbol: 'P',
                 space: true,
                 rtl: false,
                 separatorSwap: false
@@ -112,6 +176,12 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: true
             },
+            DJF: {
+                symbol: 'Fdj',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
             DKK: {
                 symbol: 'kr.',
                 space: true,
@@ -122,6 +192,24 @@ export default class FiatStore {
                 symbol: 'RD$',
                 space: false,
                 rtl: false,
+                separatorSwap: false
+            },
+            DZD: {
+                symbol: 'دج',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            EGP: {
+                symbol: '.ج.م',
+                space: true,
+                rtl: true,
+                separatorSwap: false
+            },
+            ETB: {
+                symbol: 'Br',
+                space: true,
+                rtl: true,
                 separatorSwap: false
             },
             EUR: {
@@ -136,6 +224,24 @@ export default class FiatStore {
                 rtl: false,
                 separatorSwap: false
             },
+            GEL: {
+                symbol: '₾',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            GHS: {
+                symbol: 'GH₵',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            GNF: {
+                symbol: 'FG',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
             GTQ: {
                 symbol: 'Q',
                 space: false,
@@ -145,6 +251,12 @@ export default class FiatStore {
             HKD: {
                 symbol: 'HK$',
                 space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            HNL: {
+                symbol: 'L',
+                space: false,
                 rtl: false,
                 separatorSwap: false
             },
@@ -162,9 +274,21 @@ export default class FiatStore {
             },
             ILS: { symbol: '₪', space: true, rtl: false, separatorSwap: false },
             INR: { symbol: '₹', space: true, rtl: false, separatorSwap: false },
+            IRR: {
+                symbol: '﷼',
+                space: true,
+                rtl: true,
+                separatorSwap: false
+            },
             ISK: { symbol: 'kr', space: true, rtl: true, separatorSwap: true },
             JMD: {
                 symbol: '$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            JOD: {
+                symbol: 'JD',
                 space: false,
                 rtl: false,
                 separatorSwap: false
@@ -176,12 +300,36 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: false
             },
+            KGS: {
+                symbol: 'сом',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
             KRW: { symbol: '₩', space: true, rtl: false, separatorSwap: false },
+            KZT: {
+                symbol: '₸',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
             LBP: {
                 symbol: 'LL',
                 space: true,
                 rtl: false,
                 separatorSwap: false
+            },
+            LKR: {
+                symbol: 'Rs',
+                space: false,
+                rtl: true,
+                separatorSwap: false
+            },
+            MAD: {
+                symbol: 'DH',
+                space: true,
+                rtl: true,
+                separatorSwap: true
             },
             MRU: {
                 symbol: 'UM',
@@ -189,9 +337,21 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: false
             },
+            MGA: {
+                symbol: 'Ar',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
             MXN: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             MYR: {
                 symbol: 'RM',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            NAD: {
+                symbol: 'N$',
                 space: false,
                 rtl: false,
                 separatorSwap: false
@@ -214,8 +374,32 @@ export default class FiatStore {
                 rtl: false,
                 separatorSwap: false
             },
+            NPR: {
+                symbol: 'रु',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             NZD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            PAB: {
+                symbol: 'B/',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            PEN: {
+                symbol: 'S/',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             PHP: { symbol: '₱', space: true, rtl: false, separatorSwap: false },
+            PKR: {
+                symbol: 'Rs',
+                space: true,
+                rtl: true,
+                separatorSwap: false
+            },
             PLN: { symbol: 'zł', space: true, rtl: true, separatorSwap: false },
             PYG: {
                 symbol: '₲',
@@ -229,11 +413,23 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: false
             },
+            RSD: {
+                symbol: 'дин',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
             RUB: {
                 symbol: 'p.',
                 space: true,
                 rtl: true,
                 separatorSwap: true
+            },
+            RWF: {
+                symbol: 'FRw',
+                space: true,
+                rtl: true,
+                separatorSwap: false
             },
             SAR: { symbol: '﷼', space: true, rtl: true, separatorSwap: false },
             SEK: {
@@ -275,6 +471,12 @@ export default class FiatStore {
                 separatorSwap: false
             },
             UAH: { symbol: '₴', space: false, rtl: false, separatorSwap: true },
+            UGS: {
+                symbol: 'soʻm',
+                space: true,
+                rtl: true,
+                separatorSwap: false
+            },
             UGX: {
                 symbol: '/=',
                 space: false,
@@ -286,6 +488,12 @@ export default class FiatStore {
                 space: true,
                 rtl: false,
                 separatorSwap: false
+            },
+            VND: {
+                symbol: '₫',
+                space: true,
+                rtl: true,
+                separatorSwap: true
             },
             QAR: {
                 symbol: 'QR',
@@ -386,7 +594,7 @@ export default class FiatStore {
 
     // as of March 13, 2023
     // BTCPAY rates string:
-    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN,BTC_VES,BTC_TZS,BTC_QAR,BTC_TND,BTC_NOK,BTC_AED,BTC_TTD,BTC_PHP,BTC_CDF,BTC_XAF,BTC_KES,BTC_UGX,BTC_ZAR,BTC_CUP,BTC_DOP,BTC_BZD,BTC_BOB,BTC_CRC,BTC_GTQ,BTC_NIO,BTC_PYG,BTC_UYU,BTC_MRU
+    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN,BTC_VES,BTC_TZS,BTC_QAR,BTC_TND,BTC_NOK,BTC_AED,BTC_TTD,BTC_PHP,BTC_CDF,BTC_XAF,BTC_KES,BTC_UGX,BTC_ZAR,BTC_CUP,BTC_DOP,BTC_BZD,BTC_BOB,BTC_CRC,BTC_GTQ,BTC_NIO,BTC_PYG,BTC_UYU,BTC_MRU,BTC_ALL,BTC_ANG,BTC_AOA,BTC_BDT,BTC_BGN,BTC_BHD,BTC_BIF,BTC_BMD,BTC_BWP,BTC_DJF,BTC_DZD,BTC_EGP,BTC_ETB,BTC_GEL,BTC_GHS,BTC_GNF,BTC_HNL,BTC_IRR,BTC_JOD,BTC_KGS,BTC_KZT,BTC_LKR,BTC_MAD,BTC_MGA,BTC_NAD,BTC_NPR,BTC_PAB,BTC_PEN,BTC_PKR,BTC_RSD,BTC_RWF,BTC_UGS,BTC_VND
     // BTCPAY custom scripting :
     // BTC_USD = coingecko(BTC_USD);
     // BTC_BZD = 2 * coingecko(BTC_USD);
@@ -446,6 +654,40 @@ export default class FiatStore {
     // BTC_PYG = yadio(BTC_PYG);
     // BTC_UYU = yadio(BTC_UYU);
     // BTC_MRU = yadio(BTC_MRU);
+    // BTC_ALL = yadio(BTC_ALL);
+    // BTC_ANG = yadio(BTC_ANG);
+    // BTC_AOA = yadio(BTC_AOA);
+    // BTC_BDT = yadio(BTC_BDT);
+    // BTC_BGN = yadio(BTC_BGN);
+    // BTC_BHD = yadio(BTC_BHD);
+    // BTC_BIF = yadio(BTC_BIF);
+    // BTC_BMD = yadio(BTC_BMD);
+    // BTC_BWP = yadio(BTC_BWP);
+    // BTC_DJF = yadio(BTC_DJF);
+    // BTC_DZD = yadio(BTC_DZD);
+    // BTC_EGP = yadio(BTC_EGP);
+    // BTC_ETB = yadio(BTC_ETB);
+    // BTC_GEL = yadio(BTC_GEL);
+    // BTC_GHS = yadio(BTC_GHS);
+    // BTC_GNF = yadio(BTC_GNF);
+    // BTC_HNL = yadio(BTC_HNL);
+    // BTC_IRR = yadio(BTC_IRR);
+    // BTC_JOD = yadio(BTC_JOD);
+    // BTC_KGS = yadio(BTC_KGS);
+    // BTC_KZT = yadio(BTC_KZT);
+    // BTC_LKR = yadio(BTC_LKR);
+    // BTC_MAD = yadio(BTC_MAD);
+    // BTC_MGA = yadio(BTC_MGA);
+    // BTC_NAD = yadio(BTC_NAD);
+    // BTC_NPR = yadio(BTC_NPR);
+    // BTC_PAB = yadio(BTC_PAB);
+    // BTC_PEN = yadio(BTC_PEN);
+    // BTC_PKR = yadio(BTC_PKR);
+    // BTC_RSD = yadio(BTC_RSD);
+    // BTC_RWF = yadio(BTC_RWF);
+    // BTC_UGS = yadio(BTC_UGS);
+    // BTC_VND = yadio(BTC_VND);
+
     @action
     public getFiatRates = async () => {
         // try not to slam endpoint
@@ -463,7 +705,7 @@ export default class FiatStore {
                 this.fiatRates = undefined;
             }
 
-            if (settings.fiatRatesSource === 'Zeus') {
+            if (settings.fiatRatesSource.toLowerCase() === 'zeus') {
                 this.fiatRates = await this.getFiatRatesFromZeus();
             } else if (settings.fiat != null) {
                 const rate = await this.getSelectedFiatRateFromYadio(
