@@ -255,7 +255,7 @@ export default class ActivityFilter extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent="Close"
+                    leftComponent="Back"
                     centerComponent={{
                         text: localeString('views.ActivityFilter.title'),
                         style: {

@@ -331,35 +331,43 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     keyboardShouldPersistTaps="handled"
                 >
                     {lineItems.map((item: any, index: number) => {
-                        const keyValue =
-                            item.quantity > 1
-                                ? `${item.name} (x${item.quantity})`
-                                : item.name;
-
                         const fiatPriced = item.base_price_money.amount > 0;
 
                         const unitPrice = fiatPriced
                             ? item.base_price_money.amount
                             : item.base_price_money.sats;
 
-                        let displayValue;
+                        let unitDisplayValue, totalDisplayValue;
                         if (fiatPriced) {
-                            displayValue = UnitsStore.getFormattedAmount(
+                            unitDisplayValue = UnitsStore.getFormattedAmount(
                                 unitPrice,
                                 'fiat'
                             );
+                            totalDisplayValue = UnitsStore.getFormattedAmount(
+                                unitPrice * item.quantity,
+                                'fiat'
+                            );
                         } else {
-                            displayValue = UnitsStore.getFormattedAmount(
+                            unitDisplayValue = UnitsStore.getFormattedAmount(
                                 unitPrice,
                                 'sats'
                             );
+                            totalDisplayValue = UnitsStore.getFormattedAmount(
+                                unitPrice * item.quantity,
+                                'sats'
+                            );
                         }
+
+                        const keyValue =
+                            item.quantity > 1
+                                ? `${item.name} (x${item.quantity} @ ${unitDisplayValue})`
+                                : item.name;
 
                         return (
                             <KeyValue
                                 key={index}
                                 keyValue={keyValue}
-                                value={displayValue}
+                                value={totalDisplayValue}
                             />
                         );
                     })}

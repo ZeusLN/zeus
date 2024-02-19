@@ -61,6 +61,7 @@ import ProductDetails from './views/POS/ProductDetails';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
+import ChannelsSettings from './views/Settings/ChannelsSettings';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -118,6 +119,8 @@ import LspExplanationFees from './views/Explanations/LspExplanationFees';
 import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
 import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
+
+import RawTxHex from './views/RawTxHex';
 
 const AppScenes = {
     Wallet: {
@@ -419,6 +422,12 @@ const AppScenes = {
     },
     ContactQR: {
         screen: ContactQR
+    },
+    ChannelsSettings: {
+        screen: ChannelsSettings
+    },
+    RawTxHex: {
+        screen: RawTxHex
     }
 };
 
