@@ -299,7 +299,7 @@ export default class CurrencyConverter extends React.Component<
         }
     };
 
-    onReordered = (fromIndex: number, toIndex: number) => {
+    onReordered = async (fromIndex: number, toIndex: number) => {
         const { inputValues } = this.state;
         const keys = Object.keys(inputValues);
         const copy: { [key: string]: string } = {};
@@ -319,6 +319,14 @@ export default class CurrencyConverter extends React.Component<
         });
 
         // Update state with reordered inputValues
+        try {
+            await EncryptedStorage.setItem(
+                'currency-codes',
+                JSON.stringify(reorderedValues)
+            );
+        } catch (error) {
+            console.error('Error saving input values:', error);
+        }
         this.setState({
             inputValues: reorderedValues
         });
@@ -411,7 +419,9 @@ export default class CurrencyConverter extends React.Component<
                     rightComponent={
                         fiatEnabled && (
                             <Row>
-                                <EditButton />
+                                {Object.keys(inputValues).length > 2 && (
+                                    <EditButton />
+                                )}
                                 <AddButton />
                             </Row>
                         )
