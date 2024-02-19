@@ -812,6 +812,8 @@
     "views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus.subtitle2": "Note that this will close out all your channels and recover their balances to your on-chain wallet once settled.",
     "views.Settings.EmbeddedNode.initiateAdvancedDisasterRecoveryOlympus": "Initiate advanced disaster recovery from Olympus",
     "views.Settings.EmbeddedNode.initiateAdvancedDisasterRecoveryOlympus.subtitle": "Manually download older recovery data from the Olympus backup service and trigger a recovery.",
+    "views.Settings.EmbeddedNode.initiateDisasterRecoveryClipboard": "Initiate disaster recovery from clipboard",
+    "views.Settings.EmbeddedNode.initiateDisasterRecoveryClipboard.subtitle": "Manually restore recovery data from the clipboard.",
     "views.Settings.EmbeddedNode.AdvancedDisasterRecovery.title": "Advanced disaster recovery",
     "views.Settings.EmbeddedNode.AdvancedDisasterRecovery.startRecovery": "Start recovery",
     "views.Settings.EmbeddedNode.AdvancedDisasterRecovery.select": "Select a backup below",
