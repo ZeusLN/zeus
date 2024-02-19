@@ -535,7 +535,7 @@
     "views.Receive.memoPlaceholder": "A tribute to the gods",
     "views.Receive.amount": "Amount",
     "views.Receive.satoshis": "satoshis",
-    "views.Receive.expiration": "Expiration (in seconds)",
+    "views.Receive.expiration": "Expiration",
     "views.Receive.customPreimage": "Custom preimage",
     "views.Receive.createInvoice": "Create invoice",
     "views.Receive.andSubmitTo": "and submit to",
@@ -1025,5 +1025,14 @@
     "views.LspExplanationOverview.buttonText": "Learn more about wrapped invoices",
     "views.Sweep.title": "Sweep on-chain wallet",
     "views.Sweep.explainer": "Sweeping the on-chain wallet will send both the confirmed and unconfirmed balance to the destination address specified above.",
-    "pos.customItem": "Custom item"
+    "pos.customItem": "Custom item",
+    "time.seconds": "Seconds",
+    "time.minutes": "Minutes",
+    "time.hours": "Hours",
+    "time.days": "Days",
+    "time.weeks": "Weeks",
+    "time.10min": "10 min",
+    "time.1H": "1H",
+    "time.1D": "1D",
+    "time.1W": "1W"
 }

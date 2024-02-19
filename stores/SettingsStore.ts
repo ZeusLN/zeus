@@ -73,6 +73,8 @@ interface InvoicesSettings {
     addressType?: string;
     memo?: string;
     expiry?: string;
+    timePeriod?: string;
+    expirySeconds?: string;
     routeHints?: boolean;
     ampInvoice?: boolean;
     showCustomPreimageField?: boolean;
@@ -908,6 +910,14 @@ export const AUTOMATIC_ATTESTATION_KEYS = [
     }
 ];
 
+export const TIME_PERIOD_KEYS = [
+    { key: 'Seconds', translateKey: 'time.seconds', value: 'Seconds' },
+    { key: 'Minutes', translateKey: 'time.minutes', value: 'Minutes' },
+    { key: 'Hours', translateKey: 'time.hours', value: 'Hours' },
+    { key: 'Days', translateKey: 'time.days', value: 'Days' },
+    { key: 'Weeks', translateKey: 'time.weeks', value: 'Weeks' }
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -949,6 +959,8 @@ export default class SettingsStore {
             addressType: '0',
             memo: '',
             expiry: '3600',
+            timePeriod: 'Seconds',
+            expirySeconds: '3600',
             routeHints: false,
             ampInvoice: false,
             showCustomPreimageField: false
