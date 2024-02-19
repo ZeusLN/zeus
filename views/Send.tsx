@@ -123,7 +123,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.state = {
             isValid: isValid || false,
             transactionType,
-            bolt12: bolt12,
+            bolt12,
             destination: destination || '',
             amount: amount || '',
             satAmount: '',
