@@ -354,31 +354,6 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                 </Text>
                             </View>
                         </>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('RestoreChannelBackups')
-                            }
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.restoreChannelBackups'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
                         <>
                             <View style={{ marginTop: 20 }}>
                                 <Button
