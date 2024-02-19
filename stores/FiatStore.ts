@@ -705,7 +705,7 @@ export default class FiatStore {
                 this.fiatRates = undefined;
             }
 
-            if (settings.fiatRatesSource === 'Zeus') {
+            if (settings.fiatRatesSource.toLowerCase() === 'zeus') {
                 this.fiatRates = await this.getFiatRatesFromZeus();
             } else if (settings.fiat != null) {
                 const rate = await this.getSelectedFiatRateFromYadio(
