@@ -61,6 +61,7 @@ import ProductDetails from './views/POS/ProductDetails';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
+import ChannelsSettings from './views/Settings/ChannelsSettings';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -421,6 +422,9 @@ const AppScenes = {
     },
     ContactQR: {
         screen: ContactQR
+    },
+    ChannelsSettings: {
+        screen: ChannelsSettings
     },
     RawTxHex: {
         screen: RawTxHex
