@@ -61,6 +61,7 @@ import ProductDetails from './views/POS/ProductDetails';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
+import ChannelsSettings from './views/Settings/ChannelsSettings';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -426,6 +427,9 @@ const AppScenes = {
     },
     CurrencyConverter: {
         screen: CurrencyConverter
+    },
+    ChannelsSettings: {
+        screen: ChannelsSettings
     },
     RawTxHex: {
         screen: RawTxHex
