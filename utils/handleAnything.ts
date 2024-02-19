@@ -209,6 +209,7 @@ const handleAnything = async (
                 if (!json.Answer && !json.Answer[0]) throw 'Bad';
                 bolt12 = json.Answer[0].data;
                 bolt12 = bolt12.replace(/("|\\)/g, '');
+                bolt12 = bolt12.replace(/bitcoin:b12=/, '');
 
                 return [
                     'Send',
