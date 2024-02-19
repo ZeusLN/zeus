@@ -78,8 +78,6 @@ export default class SelectCurrency extends React.Component<
             this.state;
         const { updateSettings, getSettings }: any = SettingsStore;
 
-
-
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
