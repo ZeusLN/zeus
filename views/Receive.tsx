@@ -182,7 +182,7 @@ export default class Receive extends React.Component<
             status();
         }
 
-        const newExpirySeconds = settings?.invoices?.expirySeconds;
+        const newExpirySeconds = settings?.invoices?.expirySeconds || '3600';
         let expirationIndex;
         if (newExpirySeconds === '600') {
             expirationIndex = 0;
@@ -202,7 +202,7 @@ export default class Receive extends React.Component<
             memo: settings?.invoices?.memo || '',
             expiry: settings?.invoices?.expiry || '3600',
             timePeriod: settings?.invoices?.timePeriod || 'Seconds',
-            expirySeconds: newExpirySeconds || '3600',
+            expirySeconds: newExpirySeconds,
             routeHints: settings?.invoices?.routeHints || false,
             ampInvoice: settings?.invoices?.ampInvoice || false,
             enableLSP: settings?.enableLSP,
