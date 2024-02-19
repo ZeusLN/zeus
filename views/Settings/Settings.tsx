@@ -14,7 +14,7 @@ import AddIcon from '../../assets/images/SVG/Add.svg';
 import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
-import Bolt12Icon from '../../assets/images/SVG/Lightning Bolt.svg';
+import Bolt12Icon from '../../assets/images/SVG/AtSign.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
 import SecurityIcon from '../../assets/images/SVG/Lock.svg';
 import SignIcon from '../../assets/images/SVG/Pen.svg';
@@ -400,9 +400,10 @@ export default class Settings extends React.Component<
                                         <Bolt12Icon
                                             fill={themeColor('text')}
                                             style={{
-                                                marginLeft: 4,
-                                                marginTop: 2
+                                                marginLeft: 4
                                             }}
+                                            width={48}
+                                            height={30}
                                         />
                                     </View>
                                     <Text
