@@ -126,6 +126,22 @@ export default class OpenChannel extends React.Component<
                 });
             }
         }
+
+        this.setState({
+            min_confs: settings?.channels?.min_confs || 1,
+            privateChannel:
+                settings?.channels?.privateChannel !== null
+                    ? settings.channels.privateChannel
+                    : true,
+            scidAlias:
+                settings?.channels?.scidAlias !== null
+                    ? settings.channels.scidAlias
+                    : true,
+            simpleTaprootChannel:
+                settings?.channels?.simpleTaprootChannel !== null
+                    ? settings.channels.simpleTaprootChannel
+                    : false
+        });
     }
 
     async componentDidMount() {

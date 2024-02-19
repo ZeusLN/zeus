@@ -27,8 +27,9 @@ import PosStore from '../../stores/PosStore';
 import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
-import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { protectedNavigation } from '../../utils/NavigationUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import { version } from './../../package.json';
 
@@ -294,20 +295,7 @@ export default class SquarePosPane extends React.PureComponent<
                             alignItems: 'center'
                         }}
                         onPress={() => {
-                            const { posStatus, settings } =
-                                this.props.SettingsStore!;
-                            const loginRequired =
-                                settings &&
-                                (settings.passphrase || settings.pin);
-                            const posEnabled = posStatus === 'active';
-
-                            if (posEnabled && loginRequired) {
-                                navigation.navigate('Lockscreen', {
-                                    attemptAdminLogin: true
-                                });
-                            } else {
-                                navigation.navigate('Settings');
-                            }
+                            protectedNavigation(navigation, 'Settings');
                         }}
                         adaptiveWidth
                     />

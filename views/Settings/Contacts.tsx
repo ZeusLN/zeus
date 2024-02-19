@@ -49,7 +49,7 @@ export default class Contacts extends React.Component<
             contacts: [],
             search: '',
             SendScreen,
-            loading: false,
+            loading: true,
             deletionAwaitingConfirmation: false
         };
     }
@@ -58,6 +58,18 @@ export default class Contacts extends React.Component<
         this.props.navigation.addListener('didFocus', async () => {
             this.loadContacts();
         });
+    }
+
+    UNSAFE_componentWillReceiveProps(
+        nextProps: Readonly<ContactsSettingsProps>
+    ): void {
+        const loading: boolean = nextProps.navigation.getParam('loading', null);
+
+        if (loading) {
+            this.setState({
+                loading
+            });
+        }
     }
 
     loadContacts = async () => {
@@ -155,9 +167,9 @@ export default class Contacts extends React.Component<
                         alignItems: 'center'
                     }}
                 >
-                    {item.photo && (
+                    {contact.photo && (
                         <Image
-                            source={{ uri: item.photo }}
+                            source={{ uri: contact.getPhoto }}
                             style={{
                                 width: 40,
                                 height: 40,
@@ -395,7 +407,7 @@ export default class Contacts extends React.Component<
                         keyExtractor={(item, index) => index.toString()}
                         scrollEnabled={false}
                     />
-                    {!loading && contacts.length !== 0 && (
+                    {!loading && contacts.length > 1 && (
                         <Button
                             title={
                                 deletionAwaitingConfirmation
@@ -416,7 +428,9 @@ export default class Contacts extends React.Component<
                                         'zeus-contacts',
                                         JSON.stringify([])
                                     );
-
+                                    this.setState({
+                                        deletionAwaitingConfirmation: false
+                                    });
                                     this.loadContacts();
                                 }
                             }}

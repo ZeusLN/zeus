@@ -119,7 +119,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
 const styles = StyleSheet.create({
     key: {
         paddingRight: 35,
-        maxWidth: '50%'
+        maxWidth: '70%'
     },
     value: {
         flex: 1,
@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end'
     },
     rtlValue: {
-        paddingRight: 10,
-        maxWidth: '50%'
+        paddingRight: 10
     }
 });

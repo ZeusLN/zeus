@@ -12,14 +12,16 @@ import BigNumber from 'bignumber.js';
 import { ButtonGroup, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
+import moment from 'moment';
 
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
 import { Row } from '../../components/layout/Row';
-
 import { Spacer } from '../../components/layout/Spacer';
+
 import OrderItem from './OrderItem';
+import Product, { PricedIn, ProductStatus } from '../../models/Product';
 
 import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
@@ -29,12 +31,11 @@ import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import InventoryStore from '../../stores/InventoryStore';
 
-import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { protectedNavigation } from '../../utils/NavigationUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import { version } from './../../package.json';
-import Product, { PricedIn, ProductStatus } from '../../models/Product';
-import moment from 'moment';
 
 interface StandalonePosPaneProps {
     navigation: any;
@@ -135,7 +136,7 @@ export default class StandalonePosPane extends React.PureComponent<
 
             const uncategorized: Array<Product> = [];
             const productsList: Array<ProductSectionList> = [];
-            products.forEach((product) => {
+            products?.forEach((product) => {
                 if (product.status !== ProductStatus.Active) return;
                 if (product.category === '') {
                     uncategorized.push(product);
@@ -564,20 +565,7 @@ export default class StandalonePosPane extends React.PureComponent<
                             alignItems: 'center'
                         }}
                         onPress={() => {
-                            const { posStatus, settings } =
-                                this.props.SettingsStore;
-                            const loginRequired =
-                                settings &&
-                                (settings.passphrase || settings.pin);
-                            const posEnabled = posStatus === 'active';
-
-                            if (posEnabled && loginRequired) {
-                                navigation.navigate('Lockscreen', {
-                                    attemptAdminLogin: true
-                                });
-                            } else {
-                                navigation.navigate('Settings');
-                            }
+                            protectedNavigation(navigation, 'Settings');
                         }}
                         adaptiveWidth
                     />

@@ -479,9 +479,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                         alignItems: 'center'
                     }}
                 >
-                    {item.photo && (
+                    {contact.photo && (
                         <Image
-                            source={{ uri: item.photo }}
+                            source={{ uri: contact.getPhoto }}
                             style={{
                                 width: 40,
                                 height: 40,

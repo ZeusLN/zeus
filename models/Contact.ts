@@ -1,5 +1,6 @@
 import { computed } from 'mobx';
 import BaseModel from './BaseModel';
+import RNFS from 'react-native-fs';
 
 export default class Contact extends BaseModel {
     id: string; // deprecated
@@ -82,5 +83,21 @@ export default class Contact extends BaseModel {
 
     @computed public get hasNpub(): boolean {
         return this.nostrNpub?.length > 0 && this.nostrNpub[0] !== '';
+    }
+
+    @computed public get getPhoto(): string {
+        if (this.photo?.includes('rnfs://')) {
+            const fileName = this.photo.replace('rnfs://', '');
+            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
+        }
+        return this.photo || '';
+    }
+
+    @computed public get getBanner(): string {
+        if (this.banner?.includes('rnfs://')) {
+            const fileName = this.banner.replace('rnfs://', '');
+            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
+        }
+        return this.banner || '';
     }
 }
