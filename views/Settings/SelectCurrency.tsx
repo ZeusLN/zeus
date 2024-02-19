@@ -78,15 +78,17 @@ export default class SelectCurrency extends React.Component<
             this.state;
         const { updateSettings, getSettings }: any = SettingsStore;
 
+
+
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
                     <Header
                         leftComponent="Back"
                         centerComponent={{
-                            text: localeString(
+                            text: `${localeString(
                                 'views.Settings.SelectCurrency.title'
-                            ),
+                            )} (${currencies?.length || 0})`,
                             style: {
                                 color: themeColor('text'),
                                 fontFamily: 'PPNeueMontreal-Book'
