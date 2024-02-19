@@ -1,10 +1,10 @@
 apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 apply plugin: "com.google.protobuf"
 
 apply plugin: "kotlin-android"
-apply plugin: "kotlin-android-extensions"
 
 // LN address notifications
 apply plugin: "com.google.gms.google-services"
@@ -94,6 +94,7 @@ def enableSeparateBuildPerCPUArchitecture = true
 def nativeArchitectures = project.getProperties().get("reactNativeDebugArchitectures")
 
 android {
+    namespace "app.zeusln.zeus"
     defaultConfig {
         compileSdk rootProject.ext.compileSdkVersion
         applicationId "app.zeusln.zeus"
@@ -179,10 +180,12 @@ android {
 }
 
 dependencies {
+    // The version of react-native is set by the React Native Gradle Plugin
+    implementation("com.facebook.react:react-android")
+
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation project(':react-native-randombytes')
-    implementation "com.facebook.react:react-native:0.70.6!!"  // From node_modules
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-alpha01'

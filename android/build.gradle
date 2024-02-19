@@ -1,12 +1,11 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 buildscript {
     ext {
         buildToolsVersion = "34.0.0"
         minSdkVersion = 28
         compileSdkVersion = 34
         targetSdkVersion = 34
-        ndkVersion = "23.1.7779620"
+        ndkVersion = "25.1.8937393"
+        kotlinVersion = "1.8.0"
     }
     subprojects { subproject ->
         afterEvaluate{
@@ -25,9 +24,9 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
 
         // Needed for react-native-camera-kit
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
         classpath("com.google.protobuf:protobuf-gradle-plugin:0.9.3")
 
         // LN address notifications
@@ -46,3 +45,5 @@ allprojects {
         }
     }
 }
+
+apply plugin: "com.facebook.react.rootproject"
