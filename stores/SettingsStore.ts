@@ -73,9 +73,18 @@ interface InvoicesSettings {
     addressType?: string;
     memo?: string;
     expiry?: string;
+    timePeriod?: string;
+    expirySeconds?: string;
     routeHints?: boolean;
     ampInvoice?: boolean;
     showCustomPreimageField?: boolean;
+}
+
+interface ChannelsSettings {
+    min_confs: number;
+    privateChannel: boolean;
+    scidAlias: boolean;
+    simpleTaprootChannel: boolean;
 }
 
 interface LightningAddressSettings {
@@ -102,13 +111,14 @@ export interface Settings {
     authenticationAttempts?: number;
     fiatEnabled?: boolean;
     fiat?: string;
-    fiatRatesSource: 'Zeus' | 'Yadio';
+    fiatRatesSource: 'ZEUS' | 'Yadio';
     locale?: string;
     privacy: PrivacySettings;
     display: DisplaySettings;
     pos: PosSettings;
     payments: PaymentsSettings;
     invoices: InvoicesSettings;
+    channels: ChannelsSettings;
     isBiometryEnabled: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
@@ -136,7 +146,7 @@ export interface Settings {
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
-    { key: 'Zeus', value: 'Zeus' },
+    { key: 'ZEUS', value: 'Zeus' },
     { key: 'Yadio', value: 'Yadio' }
 ];
 
@@ -829,7 +839,7 @@ export const DEFAULT_VIEW_KEYS = [
 
 export const DEFAULT_THEME = 'kyriaki';
 export const DEFAULT_FIAT = 'USD';
-export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
+export const DEFAULT_FIAT_RATES_SOURCE = 'ZEUS';
 export const DEFAULT_LOCALE = 'English';
 
 export const POS_CONF_PREF_KEYS = [
@@ -900,6 +910,14 @@ export const AUTOMATIC_ATTESTATION_KEYS = [
     }
 ];
 
+export const TIME_PERIOD_KEYS = [
+    { key: 'Seconds', translateKey: 'time.seconds', value: 'Seconds' },
+    { key: 'Minutes', translateKey: 'time.minutes', value: 'Minutes' },
+    { key: 'Hours', translateKey: 'time.hours', value: 'Hours' },
+    { key: 'Days', translateKey: 'time.days', value: 'Days' },
+    { key: 'Weeks', translateKey: 'time.weeks', value: 'Weeks' }
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -941,9 +959,17 @@ export default class SettingsStore {
             addressType: '0',
             memo: '',
             expiry: '3600',
+            timePeriod: 'Seconds',
+            expirySeconds: '3600',
             routeHints: false,
             ampInvoice: false,
             showCustomPreimageField: false
+        },
+        channels: {
+            min_confs: 1,
+            privateChannel: true,
+            scidAlias: true,
+            simpleTaprootChannel: false
         },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
