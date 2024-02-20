@@ -50,7 +50,7 @@ export default class CurrencyConverter extends React.Component<
         this.state = {
             inputValues: {
                 BTC: '',
-                SAT: ''
+                sats: ''
             },
             selectedCurrency: '',
             editMode: false,
@@ -157,10 +157,32 @@ export default class CurrencyConverter extends React.Component<
         }
     };
 
+    getSymbol = (currency: string) => {
+        const FiatStore = this.props.FiatStore!;
+        if (currency) {
+            return FiatStore.symbolLookup(currency);
+        } else {
+            return {
+                symbol: currency,
+                space: true,
+                rtl: true,
+                separatorSwap: false
+            };
+        }
+    };
+
     handleInputChange = (value: string, currency: string) => {
         const { inputValues } = this.state;
-        const { FiatStore } = this.props;
+        const FiatStore = this.props.FiatStore!;
         const fiatRates = FiatStore?.fiatRates || [];
+
+        const formatNumber = (value: string, currency: string) => {
+            if (this.getSymbol(currency).separatorSwap) {
+                return FiatStore.numberWithDecimals(value);
+            } else {
+                return FiatStore.numberWithCommas(value);
+            }
+        };
 
         const convertedValues: { [key: string]: string } = { ...inputValues };
 
@@ -170,15 +192,15 @@ export default class CurrencyConverter extends React.Component<
         // Convert the value to other currencies and BTC
         Object.keys(convertedValues).forEach((key) => {
             if (key !== currency) {
-                let conversionRate: number | null = null;
+                let convertedValue = '';
 
                 // Check if the value is empty
                 if (value === '') {
                     convertedValues[key] = ''; // Set the converted value to empty string
                 } else {
-                    // Check if the input currency is SAT
-                    if (currency === 'SAT') {
-                        // Convert SAT to BTC first
+                    // Check if the input currency is sats
+                    if (currency === 'sats') {
+                        // Convert sats to BTC first
                         const btcValue = (
                             parseFloat(value) / 100000000
                         ).toFixed(8);
@@ -189,17 +211,19 @@ export default class CurrencyConverter extends React.Component<
                         )?.rate;
 
                         if (btcConversionRate) {
-                            const convertedValue =
-                                parseFloat(btcValue) * btcConversionRate;
-                            convertedValues[key] = convertedValue.toFixed(2);
+                            convertedValue = (
+                                parseFloat(btcValue) * btcConversionRate
+                            ).toFixed(2);
                         }
                     } else {
-                        // If the input currency is not SAT, proceed with normal conversion
+                        // If the input currency is not sats, proceed with normal conversion
                         const directRate = fiatRates.find(
                             (rate) => rate.currencyPair === `${currency}_${key}`
                         );
                         if (directRate) {
-                            conversionRate = directRate.rate;
+                            convertedValue = (
+                                parseFloat(value) * directRate.rate
+                            ).toFixed(2);
                         } else {
                             // Conversion from currency to currency
                             const btcToRate = fiatRates.find(
@@ -209,25 +233,24 @@ export default class CurrencyConverter extends React.Component<
                                 (rate) =>
                                     rate.currencyPair === `BTC_${currency}`
                             )?.rate;
-
                             if (btcToRate && btcFromRate) {
-                                conversionRate = btcToRate / btcFromRate;
+                                const btcValue =
+                                    parseFloat(value) / btcFromRate;
+                                convertedValue = (btcValue * btcToRate).toFixed(
+                                    2
+                                );
                             }
-                        }
-
-                        if (conversionRate !== null) {
-                            const convertedValue =
-                                parseFloat(convertedValues[currency]) *
-                                conversionRate;
-                            convertedValues[key] = convertedValue.toFixed(2);
                         }
                     }
                 }
+
+                // Apply formatting based on currency properties
+                convertedValues[key] = formatNumber(convertedValue, key);
             }
         });
 
-        // Update the BTC and SAT values based on the entered currency
-        if (currency !== 'BTC' && currency !== 'SAT') {
+        // Update the BTC and sats values based on the entered currency
+        if (currency !== 'BTC' && currency !== 'sats') {
             const btcConversionRate = fiatRates.find(
                 (rate) => rate.currencyPair === `BTC_${currency}`
             )?.rate;
@@ -236,30 +259,30 @@ export default class CurrencyConverter extends React.Component<
                     parseFloat(value) / btcConversionRate
                 ).toFixed(8);
                 convertedValues['BTC'] = value === '' ? '' : btcValue; // Set to an empty string if the value is empty or convert to BTC
-                if (inputValues['SAT'] !== undefined) {
-                    convertedValues['SAT'] =
+                if (inputValues['sats'] !== undefined) {
+                    convertedValues['sats'] =
                         value === ''
                             ? ''
-                            : (parseFloat(btcValue) * 100000000).toFixed(0); // Convert BTC to SAT if SAT is present
+                            : (parseFloat(btcValue) * 100000000).toFixed(0); // Convert BTC to sats if sats is present
                 }
             }
         } else if (currency === 'BTC') {
             // Check if the value is empty
             convertedValues['BTC'] = value === '' ? '' : convertedValues['BTC']; // Preserve the current BTC value if the value is empty
-            if (inputValues['SAT'] !== undefined) {
-                convertedValues['SAT'] =
+            if (inputValues['sats'] !== undefined) {
+                convertedValues['sats'] =
                     value === ''
                         ? ''
                         : (
                               parseFloat(convertedValues['BTC']) * 100000000
-                          ).toFixed(0); // Convert BTC to SAT if SAT is present
+                          ).toFixed(0); // Convert BTC to sats if sats is present
             }
-        } else if (currency === 'SAT') {
-            if (inputValues['SAT'] !== undefined) {
+        } else if (currency === 'sats') {
+            if (inputValues['sats'] !== undefined) {
                 if (value === '') {
-                    convertedValues['BTC'] = ''; // Set the BTC value to an empty string if the value in SAT is empty
+                    convertedValues['BTC'] = ''; // Set the BTC value to an empty string if the value in sats is empty
                 } else {
-                    // Convert SAT to BTC
+                    // Convert sats to BTC
                     const btcValue = (parseFloat(value) / 100000000).toFixed(8);
                     convertedValues['BTC'] = btcValue; // Update the BTC value directly
                 }
@@ -465,7 +488,7 @@ export default class CurrencyConverter extends React.Component<
                                         >
                                             {editMode &&
                                                 item !== 'BTC' &&
-                                                item !== 'SAT' && (
+                                                item !== 'sats' && (
                                                     <TouchableOpacity
                                                         onPress={() =>
                                                             this.handleDeleteCurrency(
@@ -501,7 +524,7 @@ export default class CurrencyConverter extends React.Component<
                                                 style={[
                                                     styles.inputBox,
                                                     item !== 'BTC' &&
-                                                    item !== 'SAT'
+                                                    item !== 'sats'
                                                         ? {
                                                               transform: [
                                                                   {
@@ -513,12 +536,13 @@ export default class CurrencyConverter extends React.Component<
                                                 ]}
                                             >
                                                 <TextInput
-                                                    suffix={item}
-                                                    placeholder={`${localeString(
-                                                        'views.Settings.CurrencyConverter.enterAmountIn'
-                                                    )} ${item} ${getFlagEmoji(
+                                                    suffix={`${item} ${getFlagEmoji(
                                                         item
                                                     )}`}
+                                                    right={72}
+                                                    placeholder={localeString(
+                                                        'views.Settings.CurrencyConverter.enterAmount'
+                                                    )}
                                                     value={inputValues[item]}
                                                     onChangeText={(value) =>
                                                         this.handleInputChange(
@@ -532,7 +556,7 @@ export default class CurrencyConverter extends React.Component<
 
                                             {editMode &&
                                                 item !== 'BTC' &&
-                                                item !== 'SAT' && (
+                                                item !== 'sats' && (
                                                     <TouchableOpacity
                                                         onPressIn={onDragStart}
                                                         onPressOut={onDragEnd}
