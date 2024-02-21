@@ -518,8 +518,7 @@ export default class SeedRecovery extends React.PureComponent<
                             alignSelf: 'flex-end',
                             margin: 0,
                             marginLeft: 10,
-                            padding: 0,
-                            maxHeight: 20
+                            padding: 0
                         }}
                     >
                         {showSuggestions
