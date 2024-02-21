@@ -483,7 +483,10 @@ export default class SeedRecovery extends React.PureComponent<
                                 style={{
                                     flex: 1,
                                     fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('secondaryText'),
+                                    color:
+                                        index === selectedIndex
+                                            ? themeColor('highlight')
+                                            : themeColor('secondaryText'),
                                     fontSize: 18,
                                     alignSelf: 'flex-start'
                                 }}
@@ -618,6 +621,9 @@ export default class SeedRecovery extends React.PureComponent<
                                             ? selectedIndex + 1
                                             : 'SCB'
                                     }
+                                    prefixStyle={{
+                                        color: themeColor('highlight')
+                                    }}
                                     style={{
                                         margin: 20,
                                         marginLeft: 10,
