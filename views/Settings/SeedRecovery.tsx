@@ -499,7 +499,10 @@ export default class SeedRecovery extends React.PureComponent<
                         <Text
                             style={{
                                 fontFamily: 'PPNeueMontreal-Book',
-                                color: themeColor('secondaryText'),
+                                color:
+                                    index === selectedIndex
+                                        ? themeColor('highlight')
+                                        : themeColor('secondaryText'),
                                 fontSize: 18,
                                 alignSelf: 'flex-start'
                             }}
