@@ -640,7 +640,10 @@ export default class SeedRecovery extends React.PureComponent<
 
                                         if (typeof selectedIndex === 'number') {
                                             this.setState({
-                                                showSuggestions: true
+                                                showSuggestions:
+                                                    text.length > 0
+                                                        ? true
+                                                        : false
                                             });
                                         }
 
