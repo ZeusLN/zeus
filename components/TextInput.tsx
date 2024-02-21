@@ -27,6 +27,7 @@ interface TextInputProps {
     autoFocus?: boolean;
     secureTextEntry?: boolean;
     prefix?: string;
+    prefixStyle?: any;
     suffix?: string;
     toggleUnits?: any;
     onPressIn?: any;
@@ -51,6 +52,7 @@ const TextInput: React.FC<TextInputProps> = (
         autoFocus,
         secureTextEntry,
         prefix,
+        prefixStyle,
         suffix,
         toggleUnits,
         onPressIn,
@@ -76,12 +78,14 @@ const TextInput: React.FC<TextInputProps> = (
                           paddingRight: 5,
                           marginRight: 5,
                           color: themeColor('text'),
-                          backgroundColor: themeColor('background')
+                          backgroundColor: themeColor('background'),
+                          ...prefixStyle
                       }
                     : {
                           ...styles.unit,
                           marginRight: 5,
-                          color: themeColor('text')
+                          color: themeColor('text'),
+                          ...prefixStyle
                       }
             }
         >
