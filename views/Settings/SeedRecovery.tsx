@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Modal,
     ScrollView,
     StyleSheet,
     Text,
@@ -34,7 +33,6 @@ interface SeedRecoveryProps {
 
 interface SeedRecoveryState {
     loading: boolean;
-    showModal: boolean;
     network: string;
     selectedIndex: number | null;
     selectedText: string;
@@ -88,7 +86,6 @@ export default class SeedRecovery extends React.PureComponent<
         this.textInput = React.createRef();
         this.state = {
             loading: false,
-            showModal: false,
             network: 'mainnet',
             selectedIndex: null,
             selectedText: '',
@@ -259,7 +256,6 @@ export default class SeedRecovery extends React.PureComponent<
         const { navigation } = this.props;
         const {
             loading,
-            showModal,
             network,
             selectedIndex,
             selectedText,
@@ -602,66 +598,6 @@ export default class SeedRecovery extends React.PureComponent<
                     navigation={navigation}
                 />
                 {errorMsg && <ErrorMessage message={errorMsg} dismissable />}
-                {false && (
-                    <Modal
-                        animationType="slide"
-                        transparent={true}
-                        visible={showModal}
-                    >
-                        <View style={styles.centeredView}>
-                            <View style={styles.modal}>
-                                {showModal && (
-                                    <View>
-                                        <Text
-                                            style={{
-                                                ...styles.blackText,
-                                                fontSize: 40,
-                                                alignSelf: 'center',
-                                                marginBottom: 20
-                                            }}
-                                        >
-                                            {localeString('general.danger')}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                color: 'black',
-                                                margin: 10
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.Seed.dangerousText1'
-                                            )}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                ...styles.blackText,
-                                                color: 'black',
-                                                margin: 10
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.Seed.dangerousText2'
-                                            )}
-                                        </Text>
-                                        <View style={styles.button}>
-                                            <Button
-                                                title={localeString(
-                                                    'general.cancel'
-                                                )}
-                                                onPress={() =>
-                                                    this.setState({
-                                                        showModal: false
-                                                    })
-                                                }
-                                                primary
-                                            />
-                                        </View>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-                    </Modal>
-                )}
                 {loading && <LoadingIndicator />}
                 {!loading && (
                     <View style={{ flex: 1, justifyContent: 'center' }}>
