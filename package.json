@@ -18,7 +18,7 @@
     "start": "react-native start",
     "ra": "react-native run-android",
     "ri": "react-native run-ios",
-    "postinstall": "rn-nodeify --install --hack & node patch-sifir_android.mjs & npx jetify & yarn run patch & react-native setup-ios-permissions & yarn run fetch-libraries & pod-install",
+    "postinstall": "rn-nodeify --install --hack & node patches/patch-sifir_android.mjs & npx jetify & yarn run patch & react-native setup-ios-permissions & yarn run fetch-libraries & pod-install",
     "test": "jest",
     "tsc": "tsc",
     "lint": "eslint --ext .js,.ts,.tsx \"*.@(js|ts|tsx)\" . && yarn run test check-styles.test.ts --testPathIgnorePatterns=",
