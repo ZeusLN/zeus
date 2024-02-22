@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     Dimensions,
-    Image,
     NativeEventEmitter,
     NativeModules,
     ScrollView,
@@ -24,7 +23,6 @@ import NfcManager, {
 
 import handleAnything from '../utils/handleAnything';
 
-import Success from '../assets/images/GIF/Success.gif';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import ZIcon from '../assets/images/icon-black.png';
 import LightningIcon from '../assets/images/lightning-black.png';
@@ -41,6 +39,7 @@ import PaidIndicator from '../components/PaidIndicator';
 import ModalBox from '../components/ModalBox';
 import { Row } from '../components/layout/Row';
 import Screen from '../components/Screen';
+import SuccessAnimation from '../components/SuccessAnimation';
 import {
     SuccessMessage,
     WarningMessage,
@@ -1280,19 +1279,13 @@ export default class Receive extends React.Component<
                         >
                             <PaidIndicator />
                             <Wordmark
-                                height={windowSize.width * 0.2}
+                                height={windowSize.width * 0.25}
                                 width={windowSize.width}
                                 fill={themeColor('highlight')}
                             />
+                            <SuccessAnimation />
                             <View style={{ alignItems: 'center' }}>
                                 <>
-                                    <Image
-                                        source={Success}
-                                        style={{
-                                            width: windowSize.width * 0.4,
-                                            height: windowSize.width * 0.4
-                                        }}
-                                    />
                                     <Text
                                         style={{
                                             ...styles.text,
