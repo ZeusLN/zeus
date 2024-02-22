@@ -157,37 +157,36 @@ export default class CurrencyConverter extends React.Component<
         }
     };
 
-    getSymbol = (currency: string) => {
-        const FiatStore = this.props.FiatStore!;
-        if (currency) {
-            return FiatStore.symbolLookup(currency);
-        } else {
-            return {
-                symbol: currency,
-                space: true,
-                rtl: true,
-                separatorSwap: false
-            };
-        }
-    };
-
     handleInputChange = (value: string, currency: string) => {
+        const sanitizedValue = value.replace(/,/g, '').replace(/[^\d.]/g, '');
+
         const { inputValues } = this.state;
         const FiatStore = this.props.FiatStore!;
         const fiatRates = FiatStore?.fiatRates || [];
 
         const formatNumber = (value: string, currency: string) => {
-            if (this.getSymbol(currency).separatorSwap) {
-                return FiatStore.numberWithDecimals(value);
+            // Check if the currency is BTC
+            if (currency === 'BTC') {
+                // If BTC and the value is greater than 1, apply formatting with numberWithCommas
+                if (parseFloat(value) > 1) {
+                    return FiatStore.numberWithCommas(value);
+                } else {
+                    // Otherwise, return the value as it is
+                    return value;
+                }
             } else {
+                // For other currencies, apply formatting with numberWithCommas
                 return FiatStore.numberWithCommas(value);
             }
         };
 
         const convertedValues: { [key: string]: string } = { ...inputValues };
 
+        // Apply formatting to the input value before conversion for all currencies
+        const formattedValue = formatNumber(sanitizedValue, currency);
+
         // Set the input value
-        convertedValues[currency] = value;
+        convertedValues[currency] = formattedValue;
 
         // Convert the value to other currencies and BTC
         Object.keys(convertedValues).forEach((key) => {
@@ -195,99 +194,83 @@ export default class CurrencyConverter extends React.Component<
                 let convertedValue = '';
 
                 // Check if the value is empty
-                if (value === '') {
+                if (sanitizedValue === '') {
                     convertedValues[key] = ''; // Set the converted value to empty string
                 } else {
-                    // Check if the input currency is sats
+                    // Conversion from sats to currency
                     if (currency === 'sats') {
                         // Convert sats to BTC first
                         const btcValue = (
-                            parseFloat(value) / 100000000
+                            parseFloat(sanitizedValue) / 100000000
                         ).toFixed(8);
 
-                        // Then convert BTC to the target currency
-                        const btcConversionRate = fiatRates.find(
-                            (rate) => rate.currencyPair === `BTC_${key}`
-                        )?.rate;
+                        if (key === 'BTC') {
+                            convertedValue = btcValue;
+                        } else {
+                            // Then convert BTC to the target currency
+                            const btcConversionRate = fiatRates.find(
+                                (rate) => rate.currencyPair === `BTC_${key}`
+                            )?.rate;
 
-                        if (btcConversionRate) {
-                            convertedValue = (
-                                parseFloat(btcValue) * btcConversionRate
-                            ).toFixed(2);
+                            if (btcConversionRate) {
+                                convertedValue = (
+                                    parseFloat(btcValue) * btcConversionRate
+                                ).toFixed(2);
+                            }
                         }
-                    } else {
-                        // If the input currency is not sats, proceed with normal conversion
+                    } else if (currency === 'BTC') {
+                        // Conversion from BTC to currency
                         const directRate = fiatRates.find(
                             (rate) => rate.currencyPair === `${currency}_${key}`
                         );
+                        if (key === 'sats') {
+                            convertedValue = (
+                                parseFloat(sanitizedValue) * 100000000
+                            ).toFixed(0);
+                        }
                         if (directRate) {
                             convertedValue = (
-                                parseFloat(value) * directRate.rate
+                                parseFloat(sanitizedValue) * directRate.rate
                             ).toFixed(2);
-                        } else {
-                            // Conversion from currency to currency
-                            const btcToRate = fiatRates.find(
-                                (rate) => rate.currencyPair === `BTC_${key}`
-                            )?.rate;
-                            const btcFromRate = fiatRates.find(
-                                (rate) =>
-                                    rate.currencyPair === `BTC_${currency}`
-                            )?.rate;
-                            if (btcToRate && btcFromRate) {
-                                const btcValue =
-                                    parseFloat(value) / btcFromRate;
-                                convertedValue = (btcValue * btcToRate).toFixed(
-                                    2
-                                );
+                        }
+                    } else {
+                        // Conversion from currency to currency
+                        const btcToRate = fiatRates.find(
+                            (rate) => rate.currencyPair === `BTC_${key}`
+                        )?.rate;
+                        const btcFromRate: any = fiatRates.find(
+                            (rate) => rate.currencyPair === `BTC_${currency}`
+                        )?.rate;
+
+                        if (btcFromRate) {
+                            const btcValue = (
+                                parseFloat(sanitizedValue) / btcFromRate
+                            ).toFixed(8);
+                            if (key === 'BTC') {
+                                convertedValue =
+                                    sanitizedValue === '' ? '' : btcValue;
+                            } else if (key === 'sats') {
+                                convertedValue =
+                                    sanitizedValue === ''
+                                        ? ''
+                                        : (
+                                              parseFloat(btcValue) * 100000000
+                                          ).toFixed(0); // Convert BTC to sats if sats is present
                             }
+                        }
+
+                        if (btcToRate && btcFromRate) {
+                            const btcValue =
+                                parseFloat(sanitizedValue) / btcFromRate;
+                            convertedValue = (btcValue * btcToRate).toFixed(2);
                         }
                     }
                 }
 
-                // Apply formatting based on currency properties
+                // Apply formatting on currencies
                 convertedValues[key] = formatNumber(convertedValue, key);
             }
         });
-
-        // Update the BTC and sats values based on the entered currency
-        if (currency !== 'BTC' && currency !== 'sats') {
-            const btcConversionRate = fiatRates.find(
-                (rate) => rate.currencyPair === `BTC_${currency}`
-            )?.rate;
-            if (btcConversionRate) {
-                const btcValue = (
-                    parseFloat(value) / btcConversionRate
-                ).toFixed(8);
-                convertedValues['BTC'] = value === '' ? '' : btcValue; // Set to an empty string if the value is empty or convert to BTC
-                if (inputValues['sats'] !== undefined) {
-                    convertedValues['sats'] =
-                        value === ''
-                            ? ''
-                            : (parseFloat(btcValue) * 100000000).toFixed(0); // Convert BTC to sats if sats is present
-                }
-            }
-        } else if (currency === 'BTC') {
-            // Check if the value is empty
-            convertedValues['BTC'] = value === '' ? '' : convertedValues['BTC']; // Preserve the current BTC value if the value is empty
-            if (inputValues['sats'] !== undefined) {
-                convertedValues['sats'] =
-                    value === ''
-                        ? ''
-                        : (
-                              parseFloat(convertedValues['BTC']) * 100000000
-                          ).toFixed(0); // Convert BTC to sats if sats is present
-            }
-        } else if (currency === 'sats') {
-            if (inputValues['sats'] !== undefined) {
-                if (value === '') {
-                    convertedValues['BTC'] = ''; // Set the BTC value to an empty string if the value in sats is empty
-                } else {
-                    // Convert sats to BTC
-                    const btcValue = (parseFloat(value) / 100000000).toFixed(8);
-                    convertedValues['BTC'] = btcValue; // Update the BTC value directly
-                }
-            }
-        }
 
         // Update the state with the converted values
         this.setState({ inputValues: convertedValues });
