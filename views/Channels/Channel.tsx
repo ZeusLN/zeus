@@ -376,7 +376,10 @@ export default class ChannelView extends React.Component<
                             }
                         />
                     )}
-                    {(pendingOpen || pendingClose || closing) &&
+                    {(pendingOpen ||
+                        pendingClose ||
+                        closing ||
+                        !BackendUtils.isLNDBased()) &&
                         channel_point && (
                             <KeyValue
                                 keyValue={localeString(
