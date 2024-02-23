@@ -1,11 +1,13 @@
 name: Build Android
 on:
-  push:
-    branches:
-      - "master"
-  pull_request:
-    branches:
-      - "*"
+  workflow_dispatch:
+    inputs:
+        branch:
+          description: 'The branch to build'
+          required: true
+    permissions:
+        users:
+          - kaloudis
 jobs:
   build-android:
     runs-on: ubuntu-latest
