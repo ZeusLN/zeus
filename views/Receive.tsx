@@ -578,16 +578,19 @@ export default class Receive extends React.Component<
                                 setWatchedInvoicePaid(
                                     Number(invoice.amt_paid_sat)
                                 );
-                                if (orderId)
-                                    PosStore.recordPayment({
-                                        orderId,
-                                        orderTotal,
-                                        orderTip,
-                                        exchangeRate,
-                                        rate,
-                                        type: 'ln',
-                                        tx: invoice.payment_request
-                                    });
+
+                                PosStore.recordPayment({
+                                    orderId,
+                                    orderTotal,
+                                    orderTip,
+                                    exchangeRate,
+                                    rate,
+                                    type: 'ln',
+                                    tx: invoice.payment_request,
+                                    preimage: Base64Utils.bytesToHex(
+                                        invoice.r_preimage
+                                    )
+                                });
                                 this.listener = null;
                             }
                         } catch (error) {
@@ -674,7 +677,8 @@ export default class Receive extends React.Component<
                                             exchangeRate,
                                             rate,
                                             type: 'ln',
-                                            tx: result.payment_request
+                                            tx: result.payment_request,
+                                            preimage: result.r_preimage
                                         });
                                     this.listener = null;
                                 }
@@ -843,7 +847,8 @@ export default class Receive extends React.Component<
                                             exchangeRate,
                                             rate,
                                             type: 'ln',
-                                            tx: result.payment_request
+                                            tx: result.payment_request,
+                                            preimage: result.r_preimage
                                         });
                                     this.clearIntervals();
                                     break;
@@ -1239,6 +1244,8 @@ export default class Receive extends React.Component<
             { element: oneWButton }
         ];
 
+        const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
+
         return (
             <Screen>
                 <Header
@@ -1311,6 +1318,23 @@ export default class Receive extends React.Component<
                                     </Text>
                                 </>
                             </View>
+                            {posStatus === 'active' &&
+                                Platform.OS === 'android' &&
+                                enablePrinter && (
+                                    <Button
+                                        title={localeString(
+                                            'pos.views.Order.printReceipt'
+                                        )}
+                                        secondary
+                                        icon={{ name: 'print', size: 25 }}
+                                        onPress={() =>
+                                            navigation.navigate('Order', {
+                                                orderId: this.state.orderId,
+                                                print: true
+                                            })
+                                        }
+                                    />
+                                )}
                             <Button
                                 title={
                                     posStatus === 'active'
