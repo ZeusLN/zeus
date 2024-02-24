@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     TouchableHighlight
 } from 'react-native';
+import { SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -16,6 +17,9 @@ import { localeString } from '../utils/LocaleUtils';
 
 import Button from '../components/Button';
 import { ChannelItem } from './Channels/ChannelItem';
+import SortButton from '../components/Channels/SortButton';
+import { Row } from '../components/layout/Row';
+import { FilterOptions } from '../components/Channels/FilterOptions';
 
 import Channel from '../models/Channel';
 
@@ -49,6 +53,98 @@ export default class ChannelPicker extends React.Component<
         channelSelected: null,
         valueSet: '',
         showChannelModal: false
+    };
+
+    private getChannelsSortKeys = (closed?: boolean) => {
+        const sortKeys = [];
+
+        if (closed) {
+            sortKeys.push(
+                {
+                    key: `${localeString(
+                        'views.Channel.closeHeight'
+                    )} (${localeString('views.Channel.SortButton.ascending')})`,
+                    value: { param: 'closeHeight', dir: 'ASC', type: 'numeric' }
+                },
+                {
+                    key: `${localeString(
+                        'views.Channel.closeHeight'
+                    )} (${localeString(
+                        'views.Channel.SortButton.descending'
+                    )})`,
+                    value: {
+                        param: 'closeHeight',
+                        dir: 'DESC',
+                        type: 'numeric'
+                    }
+                }
+            );
+        }
+
+        sortKeys.push(
+            {
+                key: `${localeString('views.Channel.capacity')} (${localeString(
+                    'views.Channel.SortButton.largestFirst'
+                )})`,
+                value: {
+                    param: 'channelCapacity',
+                    dir: 'DESC',
+                    type: 'numeric'
+                }
+            },
+            {
+                key: `${localeString('views.Channel.capacity')} (${localeString(
+                    'views.Channel.SortButton.smallestFirst'
+                )})`,
+                value: { param: 'channelCapacity', dir: 'ASC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.inboundCapacity'
+                )} (${localeString('views.Channel.SortButton.largestFirst')})`,
+                value: { param: 'remoteBalance', dir: 'DESC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.inboundCapacity'
+                )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
+                value: { param: 'remoteBalance', dir: 'ASC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.outboundCapacity'
+                )} (${localeString('views.Channel.SortButton.largestFirst')})`,
+                value: { param: 'localBalance', dir: 'DESC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.outboundCapacity'
+                )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
+                value: { param: 'localBalance', dir: 'ASC', type: 'numeric' }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.displayName'
+                )} (${localeString('views.Channel.SortButton.ascending')})`,
+                value: {
+                    param: 'displayName',
+                    dir: 'ASC',
+                    type: 'alphanumeric'
+                }
+            },
+            {
+                key: `${localeString(
+                    'views.Channel.displayName'
+                )} (${localeString('views.Channel.SortButton.descending')})`,
+                value: {
+                    param: 'displayName',
+                    dir: 'DESC',
+                    type: 'alphanumeric'
+                }
+            }
+        );
+
+        return sortKeys;
     };
 
     openPicker() {
@@ -106,7 +202,15 @@ export default class ChannelPicker extends React.Component<
     render() {
         const { title, onValueChange, ChannelsStore } = this.props;
         const { showChannelModal, valueSet } = this.state;
-        const { filteredChannels, nodes, loading, getChannels } = ChannelsStore;
+        const {
+            filteredChannels,
+            nodes,
+            loading,
+            getChannels,
+            channelsType,
+            setSort,
+            search
+        } = ChannelsStore;
 
         const channels = filteredChannels;
 
@@ -147,6 +251,48 @@ export default class ChannelPicker extends React.Component<
                                     'components.ChannelPicker.modal.description'
                                 )}
                             </Text>
+
+                            <View>
+                                <Row>
+                                    <SearchBar
+                                        placeholder={localeString(
+                                            'general.search'
+                                        )}
+                                        onChangeText={(value: string) =>
+                                            ChannelsStore!.setSearch(value)
+                                        }
+                                        value={search}
+                                        inputStyle={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                        placeholderTextColor={themeColor(
+                                            'secondaryText'
+                                        )}
+                                        containerStyle={{
+                                            backgroundColor: null,
+                                            borderTopWidth: 0,
+                                            borderBottomWidth: 0,
+                                            width: '86%'
+                                        }}
+                                        inputContainerStyle={{
+                                            borderRadius: 15,
+                                            backgroundColor:
+                                                themeColor('secondary')
+                                        }}
+                                        autoCapitalize="none"
+                                    />
+                                    <SortButton
+                                        onValueChange={(value: any) => {
+                                            setSort(value);
+                                        }}
+                                        values={this.getChannelsSortKeys(
+                                            channelsType === ChannelsType.Closed
+                                        )}
+                                    />
+                                </Row>
+                                <FilterOptions ChannelsStore={ChannelsStore!} />
+                            </View>
 
                             <FlatList
                                 data={channels}
