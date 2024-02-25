@@ -998,7 +998,7 @@ export default class SettingsStore {
         lspMainnet: DEFAULT_LSP_MAINNET,
         lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: '',
-        requestSimpleTaproot: false,
+        requestSimpleTaproot: true,
         // Lightning Address
         lightningAddress: {
             enabled: false,
@@ -1233,25 +1233,10 @@ export default class SettingsStore {
                         localeMigrationMapping[this.settings.locale];
                 }
 
-                // TODO PEGASUS
-                // temporarily toggle all beta users settings for now
-                const MOD_KEY = 'beta5-mod';
+                const MOD_KEY = 'lsp-taproot-mod';
                 const mod = await EncryptedStorage.getItem(MOD_KEY);
                 if (!mod) {
-                    this.settings.expressGraphSync = true;
-                    if (this.settings.payments) {
-                        this.settings.payments.defaultFeePercentage = '5.0';
-                        this.settings.payments.defaultFeeFixed = '1000';
-                    } else {
-                        this.settings.payments = {
-                            defaultFeeMethod: 'fixed', // deprecated
-                            defaultFeePercentage: '5.0',
-                            defaultFeeFixed: '1000',
-                            timeoutSeconds: '60',
-                            preferredMempoolRate: 'fastestFee'
-                        };
-                    }
-                    this.settings.automaticDisasterRecoveryBackup = true;
+                    this.settings.requestSimpleTaproot = true;
                     this.setSettings(JSON.stringify(this.settings));
                     await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
