@@ -4,7 +4,6 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import {
     BackHandler,
     Dimensions,
-    Image,
     NativeEventSubscription,
     StyleSheet,
     Text,
@@ -17,6 +16,7 @@ import Button from '../components/Button';
 import LightningLoadingPattern from '../components/LightningLoadingPattern';
 import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
+import SuccessAnimation from '../components/SuccessAnimation';
 
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
@@ -26,7 +26,6 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import Clock from '../assets/images/SVG/Clock.svg';
 import Error from '../assets/images/SVG/Error.svg';
-import Success from '../assets/images/GIF/Success.gif';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import CopyBox from '../components/CopyBox';
 
@@ -113,7 +112,8 @@ export default class SendingLightning extends React.Component<
             error_msg,
             payment_hash,
             payment_preimage,
-            payment_error
+            payment_error,
+            isIncomplete
         } = TransactionsStore;
         const { storedNotes } = this.state;
 
@@ -171,14 +171,7 @@ export default class SendingLightning extends React.Component<
                             <>
                                 <PaidIndicator />
                                 <View style={{ alignItems: 'center' }}>
-                                    <Image
-                                        source={Success}
-                                        style={{
-                                            width: windowSize.width * 0.3,
-                                            height: windowSize.width * 0.3
-                                        }}
-                                        resizeMode="cover"
-                                    />
+                                    <SuccessAnimation />
                                     <Text
                                         style={{
                                             color: themeColor('text'),
@@ -317,22 +310,25 @@ export default class SendingLightning extends React.Component<
                                     />
                                 </View>
                             )}
-                        {!!payment_hash && !error && !payment_error && (
-                            <View style={{ width: '90%' }}>
-                                <CopyBox
-                                    heading={localeString(
-                                        'views.SendingLightning.paymentHash'
-                                    )}
-                                    headingCopied={`${localeString(
-                                        'views.SendingLightning.paymentHash'
-                                    )} ${localeString(
-                                        'components.ExternalLinkModal.copied'
-                                    )}`}
-                                    theme="dark"
-                                    URL={payment_hash}
-                                />
-                            </View>
-                        )}
+                        {!!payment_preimage &&
+                            !isIncomplete &&
+                            !error &&
+                            !payment_error && (
+                                <View style={{ width: '90%' }}>
+                                    <CopyBox
+                                        heading={localeString(
+                                            'views.Payment.paymentPreimage'
+                                        )}
+                                        headingCopied={`${localeString(
+                                            'views.Payment.paymentPreimage'
+                                        )} ${localeString(
+                                            'components.ExternalLinkModal.copied'
+                                        )}`}
+                                        theme="dark"
+                                        URL={payment_preimage}
+                                    />
+                                </View>
+                            )}
                         {
                             <View
                                 style={[

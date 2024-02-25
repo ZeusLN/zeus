@@ -34,6 +34,7 @@ export default class Transaction extends BaseModel {
     public total_fees: string;
     public output_details: Array<OutputDetail>;
     public previous_outpoints: Array<PreviousOutpoint>;
+    public raw_tx_hex: string;
     // c-lightning
     public value: number | string;
     public blockheight: number;

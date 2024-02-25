@@ -4,7 +4,8 @@ import {
     ScrollView,
     Text,
     View,
-    TouchableOpacity
+    TouchableOpacity,
+    Platform
 } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
@@ -25,11 +26,15 @@ import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import FiatStore from '../stores/FiatStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 
+import RNPrint from 'react-native-print';
+import PosStore from '../stores/PosStore';
+
 interface OrderProps {
     navigation: any;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
     UnitsStore: UnitsStore;
+    PosStore: PosStore;
 }
 
 interface OrderState {
@@ -39,15 +44,18 @@ interface OrderState {
     customAmount: string;
     customType: string;
     bitcoinUnits: string;
+    print: boolean;
 }
 
-@inject('FiatStore', 'SettingsStore', 'UnitsStore')
+@inject('FiatStore', 'SettingsStore', 'UnitsStore', 'PosStore')
 @observer
 export default class OrderView extends React.Component<OrderProps, OrderState> {
     constructor(props: any) {
         super(props);
         const { SettingsStore, navigation } = props;
         const order = navigation.getParam('order', null);
+        const print = navigation.getParam('print', false);
+
         const { settings } = SettingsStore;
         const disableTips: boolean =
             settings && settings.pos && settings.pos.disableTips;
@@ -58,8 +66,39 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             customPercentage: disableTips ? '0' : '21',
             customAmount: '',
             customType: 'percentage',
-            bitcoinUnits: 'sats'
+            bitcoinUnits: 'sats',
+            print
         };
+    }
+
+    componentDidUpdate(prevProps: OrderProps) {
+        // print and order id are passed from the paid screen
+        // we update the order so it includes payment details
+        // which will enable the receipt printing
+        if (
+            this.props.navigation.getParam('print', false) !==
+            prevProps.navigation.getParam('print', false)
+        ) {
+            const orderId = this.props.navigation.getParam('orderId', null);
+            const print = this.props.navigation.getParam('print', false);
+
+            const { PosStore } = this.props;
+            if (orderId) {
+                PosStore.getOrderPaymentById(orderId).then(
+                    (payment: any | undefined) => {
+                        if (payment) {
+                            const order = this.state.order;
+                            order.payment = payment;
+
+                            this.setState({
+                                order,
+                                print
+                            });
+                        }
+                    }
+                );
+            }
+        }
     }
 
     render() {
@@ -77,6 +116,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
         const disableTips: boolean = settings?.pos?.disableTips || false;
+        const enablePrinter: boolean =
+            (settings?.pos?.enablePrinter && RNPrint) || false;
         const merchantName = settings?.pos?.merchantName;
         const taxPercentage = settings?.pos?.taxPercentage;
 
@@ -102,7 +143,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             : `ZEUS POS - Order ${order.id}`;
 
         // round to nearest sat
-        let subTotalSats;
+        let subTotalSats: string;
         if (settings.pos.posEnabled === PosEnabled.Square) {
             subTotalSats = new BigNumber(order.total_money.amount)
                 // subtract tax for subtotal if using Square
@@ -312,6 +353,156 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
 
+        const receiptHtmlRow = (key: string, value: any) => {
+            return `
+            <tr>
+                <td style="text-align:left;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:5px">${key}</td>
+                <td style="text-align:right;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:5px;word-break: break-word">${value}</td>
+            </tr>
+            `;
+        };
+
+        const receiptHtmlRows = (key: string, value: any) => {
+            return `
+            <tr>
+                <td style="text-align:left;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:5px" colspan="2">${key}</td>
+            </tr>
+            <tr>
+                <td style="text-align:right;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:20px;word-break: break-word" colspan="2">${value}</td>
+            </tr>
+            `;
+        };
+
+        const receiptDivider = () => {
+            return `
+            <tr>
+                <td colspan="2"><hr></td>
+            </tr>
+            `;
+        };
+
+        const receiptFormatAmount = (units: string, amount: number) => {
+            return UnitsStore.getFormattedAmount(amount, units);
+        };
+
+        const printReceipt = () => {
+            if (!RNPrint) {
+                return;
+            }
+
+            const title =
+                merchantName && merchantName.length
+                    ? merchantName
+                    : isPaid
+                    ? localeString('pos.print.taxReceipt')
+                    : localeString('pos.print.invoice');
+
+            let templateHtml = `<html>
+                <body style="margin-left:0px;margin-right:0px;padding-left:0px;padding-right:0px;">
+                    <h4 style="text-align:center;font-family:Garamond">${title}</h4>
+                    <table border="0" cellpadding="1" cellspacing="0" width="100%">`;
+
+            lineItems.forEach((item: any) => {
+                const keyValue =
+                    item.quantity > 1
+                        ? `${item.name} (x${item.quantity})`
+                        : item.name;
+
+                const fiatPriced = item.base_price_money.amount > 0;
+
+                const unitPrice = fiatPriced
+                    ? item.base_price_money.amount
+                    : item.base_price_money.sats;
+
+                let displayValue;
+                if (fiatPriced) {
+                    displayValue = UnitsStore.getFormattedAmount(
+                        unitPrice,
+                        'fiat'
+                    );
+                } else {
+                    displayValue = UnitsStore.getFormattedAmount(
+                        unitPrice,
+                        'sats'
+                    );
+                }
+
+                templateHtml += receiptHtmlRow(keyValue, displayValue);
+            });
+
+            templateHtml += receiptDivider();
+            templateHtml += receiptHtmlRow(
+                localeString('general.conversionRate'),
+                exchangeRate
+            );
+            templateHtml += receiptHtmlRow(
+                localeString('pos.views.Order.subtotalFiat'),
+                FiatStore.formatAmountForDisplay(subTotalFiat)
+            );
+            templateHtml += receiptHtmlRow(
+                localeString('pos.views.Order.subtotalBitcoin'),
+                receiptFormatAmount(bitcoinUnits, Number(subTotalSats))
+            );
+
+            templateHtml += receiptDivider();
+
+            if (!disableTips) {
+                templateHtml += receiptHtmlRow(
+                    localeString('pos.views.Order.tipFiat'),
+                    FiatStore.formatAmountForDisplay(tipFiat)
+                );
+                templateHtml += receiptHtmlRow(
+                    localeString('pos.views.Order.tipBitcoin'),
+                    receiptFormatAmount(bitcoinUnits, Number(tipSats))
+                );
+            }
+
+            if (isPaid) {
+                templateHtml += receiptHtmlRow(
+                    localeString('pos.views.Order.paymentType'),
+                    order.payment.type === 'ln'
+                        ? localeString('general.lightning')
+                        : localeString('general.onchain')
+                );
+
+                templateHtml += receiptHtmlRows(
+                    order.payment.type === 'ln'
+                        ? localeString('views.Send.rPreimage')
+                        : localeString('views.SendingOnChain.txid'),
+                    order.payment.preimage ?? order.payment.tx
+                );
+            }
+
+            templateHtml += receiptHtmlRow(
+                `${localeString('pos.views.Order.tax')}${
+                    taxPercentage && Number(taxPercentage) > 0
+                        ? ` (${taxPercentage}%)`
+                        : ''
+                }`,
+                order.getTaxMoneyDisplay
+            );
+
+            templateHtml += receiptHtmlRow(
+                localeString('pos.views.Order.totalFiat'),
+                FiatStore.formatAmountForDisplay(totalFiat)
+            );
+
+            templateHtml += receiptHtmlRow(
+                localeString('pos.views.Order.totalBitcoin'),
+                receiptFormatAmount(bitcoinUnits, Number(totalSats))
+            );
+
+            templateHtml += `</table></body></html>`;
+
+            RNPrint.print({
+                html: templateHtml
+            });
+        };
+
+        if (this.state.print && isPaid && enablePrinter) {
+            printReceipt();
+        }
+
         return (
             <Screen>
                 <Header
@@ -331,35 +522,43 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     keyboardShouldPersistTaps="handled"
                 >
                     {lineItems.map((item: any, index: number) => {
-                        const keyValue =
-                            item.quantity > 1
-                                ? `${item.name} (x${item.quantity})`
-                                : item.name;
-
                         const fiatPriced = item.base_price_money.amount > 0;
 
                         const unitPrice = fiatPriced
                             ? item.base_price_money.amount
                             : item.base_price_money.sats;
 
-                        let displayValue;
+                        let unitDisplayValue, totalDisplayValue;
                         if (fiatPriced) {
-                            displayValue = UnitsStore.getFormattedAmount(
+                            unitDisplayValue = UnitsStore.getFormattedAmount(
                                 unitPrice,
                                 'fiat'
                             );
+                            totalDisplayValue = UnitsStore.getFormattedAmount(
+                                unitPrice * item.quantity,
+                                'fiat'
+                            );
                         } else {
-                            displayValue = UnitsStore.getFormattedAmount(
+                            unitDisplayValue = UnitsStore.getFormattedAmount(
                                 unitPrice,
                                 'sats'
                             );
+                            totalDisplayValue = UnitsStore.getFormattedAmount(
+                                unitPrice * item.quantity,
+                                'sats'
+                            );
                         }
+
+                        const keyValue =
+                            item.quantity > 1
+                                ? `${item.name} (x${item.quantity} @ ${unitDisplayValue})`
+                                : item.name;
 
                         return (
                             <KeyValue
                                 key={index}
                                 keyValue={keyValue}
-                                value={displayValue}
+                                value={totalDisplayValue}
                             />
                         );
                     })}
@@ -722,6 +921,19 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 })
                             }
                             disabled={isNaN(Number(totalSats))}
+                        />
+                    )}
+
+                    {Platform.OS === 'android' && enablePrinter && (
+                        <Button
+                            title={localeString(
+                                isPaid
+                                    ? 'pos.views.Order.printReceipt'
+                                    : 'pos.views.Order.printInvoice'
+                            )}
+                            containerStyle={{ marginTop: 40, marginBottom: 40 }}
+                            icon={{ name: 'print', size: 25 }}
+                            onPress={() => printReceipt()}
                         />
                     )}
                 </ScrollView>
