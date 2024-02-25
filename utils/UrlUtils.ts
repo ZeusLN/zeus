@@ -4,7 +4,7 @@ import stores from '../stores/Stores';
 const goToBlockExplorer = (
     type: string,
     value: string | number,
-    testnet: boolean
+    testnet?: boolean
 ) => {
     const { settings } = stores.settingsStore;
     const { privacy } = settings;
@@ -12,7 +12,8 @@ const goToBlockExplorer = (
     const host = custom
         ? privacy.customBlockExplorer
         : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
-    const network = testnet ? 'testnet/' : '';
+    const network =
+        stores.nodeInfoStore.nodeInfo.isTestNet || testnet ? 'testnet/' : '';
 
     let path: string = type;
     if (type === 'block-height') {
@@ -30,19 +31,19 @@ const goToBlockExplorer = (
     goToUrl(url);
 };
 
-const goToBlockExplorerTXID = (txid: string, testnet: boolean) =>
+const goToBlockExplorerTXID = (txid: string, testnet?: boolean) =>
     goToBlockExplorer('tx', txid, testnet);
-const goToBlockExplorerAddress = (address: string, testnet: boolean) =>
+const goToBlockExplorerAddress = (address: string, testnet?: boolean) =>
     goToBlockExplorer('address', address, testnet);
 const goToBlockExplorerBlockHeight = (
     height: string | number,
-    testnet: boolean
+    testnet?: boolean
 ) => goToBlockExplorer('block-height', height, testnet);
-const goToBlockExplorerBlockHash = (hash: string, testnet: boolean) =>
+const goToBlockExplorerBlockHash = (hash: string, testnet?: boolean) =>
     goToBlockExplorer('block', hash, testnet);
-const goToBlockExplorerChannelId = (channelId: string, testnet: boolean) =>
+const goToBlockExplorerChannelId = (channelId: string, testnet?: boolean) =>
     goToBlockExplorer('lightning/channel', channelId, testnet);
-const goToBlockExplorerPubkey = (pubKey: string, testnet: boolean) =>
+const goToBlockExplorerPubkey = (pubKey: string, testnet?: boolean) =>
     goToBlockExplorer('lightning/node', pubKey, testnet);
 
 const goToUrl = (url: string) => {

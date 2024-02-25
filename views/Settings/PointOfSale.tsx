@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -38,6 +38,7 @@ interface PointOfSaleState {
     squareDevMode: boolean;
     showKeypad: boolean;
     taxPercentage: string;
+    enablePrinter: boolean;
 }
 
 @inject('SettingsStore')
@@ -55,7 +56,8 @@ export default class PointOfSale extends React.Component<
         disableTips: false,
         squareDevMode: false,
         showKeypad: true,
-        taxPercentage: '0'
+        taxPercentage: '0',
+        enablePrinter: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -73,7 +75,8 @@ export default class PointOfSale extends React.Component<
             disableTips: settings?.pos?.disableTips || false,
             squareDevMode: settings?.pos?.squareDevMode || false,
             showKeypad: settings?.pos?.showKeypad || false,
-            taxPercentage: settings?.pos?.taxPercentage || '0'
+            taxPercentage: settings?.pos?.taxPercentage || '0',
+            enablePrinter: settings?.pos?.enablePrinter || false
         });
     }
 
@@ -97,7 +100,8 @@ export default class PointOfSale extends React.Component<
             disableTips,
             squareDevMode,
             showKeypad,
-            taxPercentage
+            taxPercentage,
+            enablePrinter
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { passphrase, pin, fiatEnabled } = settings;
@@ -180,7 +184,8 @@ export default class PointOfSale extends React.Component<
                                             disableTips,
                                             squareDevMode,
                                             showKeypad,
-                                            taxPercentage
+                                            taxPercentage,
+                                            enablePrinter
                                         }
                                     });
                                 }}
@@ -216,7 +221,8 @@ export default class PointOfSale extends React.Component<
                                                     disableTips,
                                                     squareDevMode,
                                                     showKeypad,
-                                                    taxPercentage
+                                                    taxPercentage,
+                                                    enablePrinter
                                                 }
                                             });
                                         }}
@@ -249,40 +255,8 @@ export default class PointOfSale extends React.Component<
                                                     disableTips,
                                                     squareDevMode,
                                                     showKeypad,
-                                                    taxPercentage
-                                                }
-                                            });
-                                        }}
-                                    />
-
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.POS.merchantName'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        value={merchantName}
-                                        onChangeText={async (text: string) => {
-                                            this.setState({
-                                                merchantName: text
-                                            });
-
-                                            await updateSettings({
-                                                pos: {
-                                                    posEnabled,
-                                                    squareAccessToken,
-                                                    squareLocationId,
-                                                    merchantName: text,
-                                                    confirmationPreference,
-                                                    disableTips,
-                                                    squareDevMode,
-                                                    showKeypad,
-                                                    taxPercentage
+                                                    taxPercentage,
+                                                    enablePrinter
                                                 }
                                             });
                                         }}
@@ -333,7 +307,8 @@ export default class PointOfSale extends React.Component<
                                                             squareDevMode:
                                                                 !squareDevMode,
                                                             showKeypad,
-                                                            taxPercentage
+                                                            taxPercentage,
+                                                            enablePrinter
                                                         }
                                                     });
                                                 }}
@@ -345,6 +320,39 @@ export default class PointOfSale extends React.Component<
 
                             {posEnabled !== PosEnabled.Disabled && (
                                 <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.merchantName'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={merchantName}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                merchantName: text
+                                            });
+
+                                            await updateSettings({
+                                                pos: {
+                                                    posEnabled,
+                                                    squareAccessToken,
+                                                    squareLocationId,
+                                                    merchantName: text,
+                                                    confirmationPreference,
+                                                    disableTips,
+                                                    squareDevMode,
+                                                    showKeypad,
+                                                    taxPercentage,
+                                                    enablePrinter
+                                                }
+                                            });
+                                        }}
+                                    />
                                     <DropdownSetting
                                         title={localeString(
                                             'views.Settings.POS.confPref'
@@ -419,13 +427,69 @@ export default class PointOfSale extends React.Component<
                                                                 !disableTips,
                                                             squareDevMode,
                                                             showKeypad,
-                                                            taxPercentage
+                                                            taxPercentage,
+                                                            enablePrinter
                                                         }
                                                     });
                                                 }}
                                             />
                                         </View>
                                     </ListItem>
+
+                                    {Platform.OS === 'android' && (
+                                        <ListItem
+                                            containerStyle={{
+                                                borderBottomWidth: 0,
+                                                backgroundColor: 'transparent'
+                                            }}
+                                        >
+                                            <ListItem.Title
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    left: -10
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.POS.enablePrinter'
+                                                )}
+                                            </ListItem.Title>
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'flex-end'
+                                                }}
+                                            >
+                                                <Switch
+                                                    value={enablePrinter}
+                                                    onValueChange={async () => {
+                                                        this.setState({
+                                                            enablePrinter:
+                                                                !enablePrinter
+                                                        });
+                                                        await updateSettings({
+                                                            pos: {
+                                                                squareAccessToken,
+                                                                squareLocationId,
+                                                                posEnabled,
+                                                                merchantName,
+                                                                confirmationPreference,
+                                                                disableTips,
+                                                                squareDevMode,
+                                                                taxPercentage,
+                                                                enablePrinter:
+                                                                    !enablePrinter
+                                                            }
+                                                        });
+                                                    }}
+                                                />
+                                            </View>
+                                        </ListItem>
+                                    )}
                                 </>
                             )}
 
