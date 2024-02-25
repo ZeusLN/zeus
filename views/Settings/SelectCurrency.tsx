@@ -61,10 +61,8 @@ export default class SelectCurrency extends React.Component<
     );
 
     updateSearch = (value: string) => {
-        const result = CURRENCY_KEYS.filter(
-            (item: any) =>
-                item.key.includes(value) ||
-                item.key.toLowerCase().includes(value)
+        const result = CURRENCY_KEYS.filter((item: any) =>
+            item.key.toLowerCase().includes(value.toLowerCase())
         );
         this.setState({
             search: value,
@@ -74,8 +72,15 @@ export default class SelectCurrency extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { selectedCurrency, search, currencies, fiatRatesSource } =
-            this.state;
+        const { selectedCurrency, search, fiatRatesSource } = this.state;
+        const currencies = this.state.currencies
+            .sort((a, b) =>
+                a.key
+                    .substring(a.key.indexOf(' ') + 1)
+                    .localeCompare(b.key.substring(b.key.indexOf(' ') + 1))
+            )
+            .filter((c) => c.supportedSources?.includes(fiatRatesSource));
+
         const { updateSettings, getSettings }: any = SettingsStore;
 
         return (
@@ -118,9 +123,7 @@ export default class SelectCurrency extends React.Component<
                         }}
                     />
                     <FlatList
-                        data={currencies.filter((c) =>
-                            c.supportedSources?.includes(fiatRatesSource)
-                        )}
+                        data={currencies}
                         renderItem={({ item }) => (
                             <ListItem
                                 containerStyle={{

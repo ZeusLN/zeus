@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     Dimensions,
-    Image,
     NativeEventEmitter,
     NativeModules,
     ScrollView,
@@ -24,7 +23,6 @@ import NfcManager, {
 
 import handleAnything from '../utils/handleAnything';
 
-import Success from '../assets/images/GIF/Success.gif';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import ZIcon from '../assets/images/icon-black.png';
 import LightningIcon from '../assets/images/lightning-black.png';
@@ -41,6 +39,7 @@ import PaidIndicator from '../components/PaidIndicator';
 import ModalBox from '../components/ModalBox';
 import { Row } from '../components/layout/Row';
 import Screen from '../components/Screen';
+import SuccessAnimation from '../components/SuccessAnimation';
 import {
     SuccessMessage,
     WarningMessage,
@@ -182,7 +181,7 @@ export default class Receive extends React.Component<
             status();
         }
 
-        const newExpirySeconds = settings?.invoices?.expirySeconds;
+        const newExpirySeconds = settings?.invoices?.expirySeconds || '3600';
         let expirationIndex;
         if (newExpirySeconds === '600') {
             expirationIndex = 0;
@@ -202,7 +201,7 @@ export default class Receive extends React.Component<
             memo: settings?.invoices?.memo || '',
             expiry: settings?.invoices?.expiry || '3600',
             timePeriod: settings?.invoices?.timePeriod || 'Seconds',
-            expirySeconds: newExpirySeconds || '3600',
+            expirySeconds: newExpirySeconds,
             routeHints: settings?.invoices?.routeHints || false,
             ampInvoice: settings?.invoices?.ampInvoice || false,
             enableLSP: settings?.enableLSP,
@@ -579,16 +578,19 @@ export default class Receive extends React.Component<
                                 setWatchedInvoicePaid(
                                     Number(invoice.amt_paid_sat)
                                 );
-                                if (orderId)
-                                    PosStore.recordPayment({
-                                        orderId,
-                                        orderTotal,
-                                        orderTip,
-                                        exchangeRate,
-                                        rate,
-                                        type: 'ln',
-                                        tx: invoice.payment_request
-                                    });
+
+                                PosStore.recordPayment({
+                                    orderId,
+                                    orderTotal,
+                                    orderTip,
+                                    exchangeRate,
+                                    rate,
+                                    type: 'ln',
+                                    tx: invoice.payment_request,
+                                    preimage: Base64Utils.bytesToHex(
+                                        invoice.r_preimage
+                                    )
+                                });
                                 this.listener = null;
                             }
                         } catch (error) {
@@ -675,7 +677,8 @@ export default class Receive extends React.Component<
                                             exchangeRate,
                                             rate,
                                             type: 'ln',
-                                            tx: result.payment_request
+                                            tx: result.payment_request,
+                                            preimage: result.r_preimage
                                         });
                                     this.listener = null;
                                 }
@@ -844,7 +847,8 @@ export default class Receive extends React.Component<
                                             exchangeRate,
                                             rate,
                                             type: 'ln',
-                                            tx: result.payment_request
+                                            tx: result.payment_request,
+                                            preimage: result.r_preimage
                                         });
                                     this.clearIntervals();
                                     break;
@@ -1240,6 +1244,8 @@ export default class Receive extends React.Component<
             { element: oneWButton }
         ];
 
+        const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
+
         return (
             <Screen>
                 <Header
@@ -1280,19 +1286,13 @@ export default class Receive extends React.Component<
                         >
                             <PaidIndicator />
                             <Wordmark
-                                height={windowSize.width * 0.2}
+                                height={windowSize.width * 0.25}
                                 width={windowSize.width}
                                 fill={themeColor('highlight')}
                             />
+                            <SuccessAnimation />
                             <View style={{ alignItems: 'center' }}>
                                 <>
-                                    <Image
-                                        source={Success}
-                                        style={{
-                                            width: windowSize.width * 0.4,
-                                            height: windowSize.width * 0.4
-                                        }}
-                                    />
                                     <Text
                                         style={{
                                             ...styles.text,
@@ -1318,6 +1318,23 @@ export default class Receive extends React.Component<
                                     </Text>
                                 </>
                             </View>
+                            {posStatus === 'active' &&
+                                Platform.OS === 'android' &&
+                                enablePrinter && (
+                                    <Button
+                                        title={localeString(
+                                            'pos.views.Order.printReceipt'
+                                        )}
+                                        secondary
+                                        icon={{ name: 'print', size: 25 }}
+                                        onPress={() =>
+                                            navigation.navigate('Order', {
+                                                orderId: this.state.orderId,
+                                                print: true
+                                            })
+                                        }
+                                    />
+                                )}
                             <Button
                                 title={
                                     posStatus === 'active'
