@@ -5,7 +5,8 @@ import {
     View,
     StyleSheet,
     Animated,
-    Easing
+    Easing,
+    Text
 } from 'react-native';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon } from 'react-native-elements';
@@ -25,6 +26,7 @@ import SettingsStore, { CURRENCY_KEYS } from '../../stores/SettingsStore';
 import Add from '../../assets/images/SVG/Add.svg';
 import Edit from '../../assets/images/SVG/Pen.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
+import BitcoinIcon from '../../assets/images/SVG/bitcoin-icon.svg';
 
 interface CurrencyConverterProps {
     navigation: any;
@@ -518,11 +520,37 @@ export default class CurrencyConverter extends React.Component<
                                                         : null
                                                 ]}
                                             >
-                                                <TextInput
-                                                    suffix={`${item} ${getFlagEmoji(
+                                                <View
+                                                    style={{
+                                                        position: 'absolute',
+                                                        left: 16,
+                                                        zIndex: 1
+                                                    }}
+                                                >
+                                                    {['BTC', 'sats'].includes(
                                                         item
-                                                    )}`}
-                                                    right={72}
+                                                    ) ? (
+                                                        <BitcoinIcon
+                                                            height={24}
+                                                            width={24}
+                                                        />
+                                                    ) : (
+                                                        <Text
+                                                            style={{
+                                                                fontSize: 22
+                                                            }}
+                                                        >
+                                                            {getFlagEmoji(item)}
+                                                        </Text>
+                                                    )}
+                                                </View>
+
+                                                <TextInput
+                                                    suffix={item}
+                                                    style={{
+                                                        flex: 1
+                                                    }}
+                                                    right={80}
                                                     placeholder={localeString(
                                                         'views.Settings.CurrencyConverter.enterAmount'
                                                     )}
@@ -589,7 +617,9 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     inputBox: {
-        flex: 1
+        flex: 1,
+        flexDirection: 'row-reverse',
+        alignItems: 'center'
     },
     deleteIcon: {
         marginRight: 16,
