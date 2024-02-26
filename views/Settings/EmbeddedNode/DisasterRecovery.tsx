@@ -549,6 +549,68 @@ export default class DisasterRecovery extends React.Component<
                                 </Text>
                             </View>
                         </>
+                        <>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ margin: 20 }}
+                            />
+                            <View
+                                style={{
+                                    marginTop: 6,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.EmbeddedNode.initiateDisasterRecoveryClipboard'
+                                    )}
+                                    onPress={() => {
+                                        navigation.navigate(
+                                            'RestoreChannelBackups'
+                                        );
+                                    }}
+                                    containerStyle={{
+                                        borderColor: themeColor('delete')
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('delete')
+                                    }}
+                                    secondary
+                                />
+                            </View>
+                            <View
+                                style={{
+                                    marginHorizontal: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.initiateDisasterRecoveryClipboard.subtitle'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{
+                                    marginHorizontal: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus.subtitle2'
+                                    )}
+                                </Text>
+                            </View>
+                        </>
                     </ScrollView>
                 </View>
             </Screen>

@@ -120,6 +120,7 @@ import LspExplanationFees from './views/Explanations/LspExplanationFees';
 import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
 import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
+import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelBackups';
 
 import RawTxHex from './views/RawTxHex';
 
@@ -432,6 +433,9 @@ const AppScenes = {
     },
     RawTxHex: {
         screen: RawTxHex
+    },
+    RestoreChannelBackups: {
+        screen: RestoreChannelBackups
     }
 };
 
