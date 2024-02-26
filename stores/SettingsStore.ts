@@ -112,7 +112,7 @@ export interface Settings {
     authenticationAttempts?: number;
     fiatEnabled?: boolean;
     fiat?: string;
-    fiatRatesSource: 'ZEUS' | 'Yadio';
+    fiatRatesSource: 'Zeus' | 'Yadio';
     locale?: string;
     privacy: PrivacySettings;
     display: DisplaySettings;
@@ -845,7 +845,7 @@ export const DEFAULT_VIEW_KEYS = [
 
 export const DEFAULT_THEME = 'kyriaki';
 export const DEFAULT_FIAT = 'USD';
-export const DEFAULT_FIAT_RATES_SOURCE = 'ZEUS';
+export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
 export const DEFAULT_LOCALE = 'English';
 
 export const POS_CONF_PREF_KEYS = [
