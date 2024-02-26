@@ -114,6 +114,7 @@ import EditFee from './views/EditFee';
 
 // Embedded LND
 import Seed from './views/Settings/Seed';
+import SeedRecovery from './views/Settings/SeedRecovery';
 import Sync from './views/Sync';
 import LspExplanationFees from './views/Explanations/LspExplanationFees';
 import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
@@ -323,6 +324,9 @@ const AppScenes = {
     },
     Seed: {
         screen: Seed
+    },
+    SeedRecovery: {
+        screen: SeedRecovery
     },
     Sync: {
         screen: Sync
