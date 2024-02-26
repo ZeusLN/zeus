@@ -107,6 +107,8 @@
     "views.Settings.SocialMedia.title": "Social media",
     "views.Settings.SocialMedia.twitter": "X / Twitter",
     "views.Settings.Support.store": "ZEUS merch store",
+    "network.mainnet": "Mainnet",
+    "network.testnet": "Testnet",
     "nostr.nostr": "Nostr",
     "nostr.keys": "Nostr keys",
     "nostr.pubkey": "Nostr pubkey",
