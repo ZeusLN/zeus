@@ -82,7 +82,6 @@ export default class RestoreChannelBackups extends React.Component<
                                     })
                                 }
                                 multiline
-                                numberOfLines={3}
                                 placeholder="XxmvSDaQNk3mRvKYFyX4yGceQpOwXF1rS..."
                                 style={styles.textInput}
                             />
