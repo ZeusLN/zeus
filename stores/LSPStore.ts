@@ -110,13 +110,20 @@ export default class LSPStore {
 
     @action
     public getZeroConfFee = (amount_msat: number) => {
+        const { settings } = this.settingsStore;
+
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
                 `${this.getLSPHost()}/api/v1/fee`,
-                {
-                    'Content-Type': 'application/json'
-                },
+                settings.lspAccessKey
+                    ? {
+                          'Content-Type': 'application/json',
+                          'x-auth-token': settings.lspAccessKey
+                      }
+                    : {
+                          'Content-Type': 'application/json'
+                      },
                 JSON.stringify({
                     amount_msat,
                     pubkey: stores.nodeInfoStore.nodeInfo.nodeId
