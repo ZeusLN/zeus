@@ -16,6 +16,7 @@ import { localeString } from '../utils/LocaleUtils';
 
 import Button from '../components/Button';
 import { ChannelItem } from './Channels/ChannelItem';
+import ChannelsFilter from './Channels/ChannelsFilter';
 
 import Channel from '../models/Channel';
 
@@ -147,6 +148,8 @@ export default class ChannelPicker extends React.Component<
                                     'components.ChannelPicker.modal.description'
                                 )}
                             </Text>
+
+                            <ChannelsFilter width="86%" />
 
                             <FlatList
                                 data={channels}
