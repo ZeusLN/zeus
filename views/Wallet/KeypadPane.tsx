@@ -11,8 +11,9 @@ import { getSatAmount } from '../../components/AmountInput';
 
 import ChannelsStore from '../../stores/ChannelsStore';
 import FiatStore from '../../stores/FiatStore';
-import UnitsStore from '../../stores/UnitsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -22,10 +23,11 @@ import BigNumber from 'bignumber.js';
 
 interface KeypadPaneProps {
     navigation: any;
-    ChannelsStore?: ChannelsStore;
-    FiatStore?: FiatStore;
-    UnitsStore?: UnitsStore;
-    SettingsStore?: SettingsStore;
+    ChannelsStore: ChannelsStore;
+    FiatStore: FiatStore;
+    NodeInfoStore: NodeInfoStore;
+    SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
 }
 
 interface KeypadPaneState {
@@ -33,11 +35,18 @@ interface KeypadPaneState {
     needInbound: boolean;
     belowMinAmount: boolean;
     overrideBelowMinAmount: boolean;
+    lspNotConfigured: boolean;
 }
 
 const MAX_LENGTH = 10;
 
-@inject('ChannelsStore', 'FiatStore', 'UnitsStore', 'SettingsStore')
+@inject(
+    'ChannelsStore',
+    'FiatStore',
+    'NodeInfoStore',
+    'SettingsStore',
+    'UnitsStore'
+)
 @observer
 export default class KeypadPane extends React.PureComponent<
     KeypadPaneProps,
@@ -49,8 +58,26 @@ export default class KeypadPane extends React.PureComponent<
         amount: '0',
         needInbound: false,
         belowMinAmount: false,
-        overrideBelowMinAmount: false
+        overrideBelowMinAmount: false,
+        lspNotConfigured: true
     };
+
+    async UNSAFE_componentWillMount() {
+        this.handleLsp();
+
+        this.props.navigation.addListener('didFocus', async () => {
+            this.handleLsp();
+        });
+    }
+
+    async handleLsp() {
+        const { lspNotConfigured } =
+            this.props.NodeInfoStore.lspNotConfigured();
+
+        this.setState({
+            lspNotConfigured
+        });
+    }
 
     appendValue = (value: string) => {
         const { amount } = this.state;
@@ -89,6 +116,7 @@ export default class KeypadPane extends React.PureComponent<
         if (
             BackendUtils.supportsLSPs() &&
             this.props.SettingsStore!.settings?.enableLSP &&
+            !this.state.lspNotConfigured &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
                 this.props.ChannelsStore!.totalInbound
@@ -132,6 +160,7 @@ export default class KeypadPane extends React.PureComponent<
         if (
             BackendUtils.supportsLSPs() &&
             this.props.SettingsStore!.settings?.enableLSP &&
+            !this.state.lspNotConfigured &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
                 this.props.ChannelsStore!.totalInbound

@@ -8,6 +8,7 @@ import stores from './Stores';
 import lndMobile from '../lndmobile/LndMobileInjection';
 const { channel } = lndMobile;
 
+import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -133,9 +134,13 @@ export default class LSPStore {
                     const status = response.info().status;
                     const data = response.json();
                     if (status == 200) {
-                        this.zeroConfFee = Number.parseInt(
-                            (Number(data.fee_amount_msat) / 1000).toString()
-                        );
+                        this.zeroConfFee = data.fee_amount_msat
+                            ? Number.parseInt(
+                                  (
+                                      Number(data.fee_amount_msat) / 1000
+                                  ).toString()
+                              )
+                            : undefined;
                         this.feeId = data.id;
                         this.error = false;
                         resolve(this.zeroConfFee);
@@ -178,21 +183,34 @@ export default class LSPStore {
     @action
     public initChannelAcceptor = async () => {
         if (this.channelAcceptor) return;
-        this.channelAcceptor = LndMobileEventEmitter.addListener(
-            'ChannelAcceptor',
-            async (event: any) => {
-                try {
-                    const channelAcceptRequest =
-                        channel.decodeChannelAcceptRequest(event.data);
+        if (this.settingsStore.implementation === 'embedded-lnd') {
+            this.channelAcceptor = LndMobileEventEmitter.addListener(
+                'ChannelAcceptor',
+                async (event: any) => {
+                    try {
+                        const channelAcceptRequest =
+                            channel.decodeChannelAcceptRequest(event.data);
 
-                    await this.handleChannelAcceptorEvent(channelAcceptRequest);
-                } catch (error: any) {
-                    console.error('channel acceptance error: ' + error.message);
+                        await this.handleChannelAcceptorEvent(
+                            channelAcceptRequest
+                        );
+                    } catch (error: any) {
+                        console.error(
+                            'channel acceptance error: ' + error.message
+                        );
+                    }
                 }
-            }
-        );
+            );
 
-        await channel.channelAcceptor();
+            await channel.channelAcceptor();
+        } else {
+            // Only allow 0-conf chans from LSP or whitelisted peers
+
+            BackendUtils.initChanAcceptor({
+                zeroConfPeers: this.settingsStore?.settings?.zeroConfPeers,
+                lspPubkey: this.info?.pubkey
+            });
+        }
     };
 
     @action

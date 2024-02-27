@@ -133,4 +133,24 @@ export default class NodeInfoStore {
             )
         );
     };
+
+    @action
+    public lspNotConfigured = () => {
+        const { implementation, certVerification } = this.settingsStore;
+
+        const scidAlias = this.nodeInfo.features['47'];
+        const zeroConf = this.nodeInfo.features['51'];
+        const zeroConfConfig = zeroConf && scidAlias;
+
+        const restIsConfigured = certVerification && zeroConfConfig;
+        const lspNotConfigured = implementation === 'lnd' && !restIsConfigured;
+
+        return {
+            lspNotConfigured,
+            restIsConfigured,
+            zeroConfConfig,
+            zeroConf,
+            scidAlias
+        };
+    };
 }
