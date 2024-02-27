@@ -167,7 +167,7 @@ export default class PosKeypadPane extends React.PureComponent<
         ]);
     };
 
-    addItemAndCheckout = () => {
+    addItemAndCheckout = async () => {
         const { PosStore, UnitsStore, SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore!;
         const { units } = UnitsStore!;
@@ -196,6 +196,9 @@ export default class PosKeypadPane extends React.PureComponent<
         });
 
         PosStore.recalculateCurrentOrder();
+
+        await PosStore.saveStandaloneOrder(order);
+
         navigation.navigate('Order', { order });
     };
 
@@ -279,6 +282,7 @@ export default class PosKeypadPane extends React.PureComponent<
                                     this.addItemAndCheckout();
                                 }}
                                 buttonStyle={{ height: 40 }}
+                                disabled={!amount || amount == '0'}
                             />
                         </View>
                     </View>
