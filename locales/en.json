@@ -1017,6 +1017,8 @@
     "views.Settings.Attestations.invalidAttestation": "Invalid attestation",
     "views.Settings.Nostr.addRelay": "Add relay",
     "views.Settings.Nostr.relays": "Relays",
+    "views.Settings.CurrencyConverter.title": "Currency Converter",
+    "views.Settings.CurrencyConverter.enterAmount": "Enter amount",
     "views.LspExplanation.title": "What are these fees?",
     "views.LspExplanation.text1": "Zeus is a self-custodial lightning wallet. In order to send or receive a lightning payment, you must open a lightning payment channel, which has a setup fee.",
     "views.LspExplanation.text2": "Once the channel is set up, you'll only have to pay normal network fees until your channel exhausts its capacity.",

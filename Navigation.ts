@@ -104,6 +104,8 @@ import AddNotes from './views/AddNotes';
 import Contacts from './views/Settings/Contacts';
 import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
+import CurrencyConverter from './views/Settings/CurrencyConverter';
+
 // POS
 import Order from './views/Order';
 
@@ -427,6 +429,9 @@ const AppScenes = {
     },
     ContactQR: {
         screen: ContactQR
+    },
+    CurrencyConverter: {
+        screen: CurrencyConverter
     },
     ChannelsSettings: {
         screen: ChannelsSettings

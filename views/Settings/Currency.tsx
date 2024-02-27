@@ -183,6 +183,29 @@ export default class Currency extends React.Component<
                             color={themeColor('secondaryText')}
                         />
                     </ListItem>
+                    <ListItem
+                        containerStyle={{
+                            backgroundColor: 'transparent'
+                        }}
+                        onPress={() => navigation.navigate('CurrencyConverter')}
+                    >
+                        <ListItem.Content>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.CurrencyConverter.title'
+                                )}
+                            </ListItem.Title>
+                        </ListItem.Content>
+                        <Icon
+                            name="keyboard-arrow-right"
+                            color={themeColor('secondaryText')}
+                        />
+                    </ListItem>
                 </View>
             </Screen>
         );
