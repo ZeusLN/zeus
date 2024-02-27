@@ -5,9 +5,9 @@ import {
     View,
     StyleSheet,
     Animated,
-    Easing,
-    Text
+    Easing
 } from 'react-native';
+import Svg, { Text } from 'react-native-svg';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -523,7 +523,12 @@ export default class CurrencyConverter extends React.Component<
                                                 <View
                                                     style={{
                                                         position: 'absolute',
-                                                        left: 16,
+                                                        left: [
+                                                            'BTC',
+                                                            'sats'
+                                                        ].includes(item)
+                                                            ? 20
+                                                            : 16,
                                                         zIndex: 1
                                                     }}
                                                 >
@@ -531,17 +536,24 @@ export default class CurrencyConverter extends React.Component<
                                                         item
                                                     ) ? (
                                                         <BitcoinIcon
-                                                            height={24}
-                                                            width={24}
+                                                            height={20}
+                                                            width={20}
                                                         />
                                                     ) : (
-                                                        <Text
-                                                            style={{
-                                                                fontSize: 22
-                                                            }}
+                                                        <Svg
+                                                            height="24"
+                                                            width="24"
                                                         >
-                                                            {getFlagEmoji(item)}
-                                                        </Text>
+                                                            <Text
+                                                                fontSize="16"
+                                                                x="0"
+                                                                y="18"
+                                                            >
+                                                                {getFlagEmoji(
+                                                                    item
+                                                                )}
+                                                            </Text>
+                                                        </Svg>
                                                     )}
                                                 </View>
 
