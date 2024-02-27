@@ -27,14 +27,16 @@ interface TextInputProps {
     autoFocus?: boolean;
     secureTextEntry?: boolean;
     prefix?: string;
+    prefixStyle?: any;
     suffix?: string;
     toggleUnits?: any;
     onPressIn?: any;
     right?: number;
+    ref?: React.Ref<TextInputRN>;
 }
 
-export default function TextInput(props: TextInputProps) {
-    const {
+const TextInput: React.FC<TextInputProps> = (
+    {
         placeholder,
         value,
         onChangeText,
@@ -50,12 +52,14 @@ export default function TextInput(props: TextInputProps) {
         autoFocus,
         secureTextEntry,
         prefix,
+        prefixStyle,
         suffix,
         toggleUnits,
         onPressIn,
         right
-    } = props;
-
+    },
+    ref
+) => {
     const defaultStyle = numberOfLines
         ? {
               paddingTop: 10
@@ -74,12 +78,14 @@ export default function TextInput(props: TextInputProps) {
                           paddingRight: 5,
                           marginRight: 5,
                           color: themeColor('text'),
-                          backgroundColor: themeColor('background')
+                          backgroundColor: themeColor('background'),
+                          ...prefixStyle
                       }
                     : {
                           ...styles.unit,
                           marginRight: 5,
-                          color: themeColor('text')
+                          color: themeColor('text'),
+                          ...prefixStyle
                       }
             }
         >
@@ -154,6 +160,7 @@ export default function TextInput(props: TextInputProps) {
                 autoFocus={autoFocus}
                 secureTextEntry={secureTextEntry}
                 onPressIn={onPressIn}
+                ref={ref}
             />
             {suffix ? (
                 toggleUnits ? (
@@ -168,7 +175,7 @@ export default function TextInput(props: TextInputProps) {
             ) : null}
         </View>
     );
-}
+};
 
 const styles = StyleSheet.create({
     wrapper: {
@@ -191,3 +198,5 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     }
 });
+
+export default React.forwardRef(TextInput);

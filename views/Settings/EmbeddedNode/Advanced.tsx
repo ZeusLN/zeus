@@ -355,7 +355,7 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                             </View>
                         </>
                         <>
-                            <View style={{ margin: 10 }}>
+                            <View style={{ marginTop: 20 }}>
                                 <Button
                                     title={localeString(
                                         'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'

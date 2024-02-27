@@ -114,11 +114,13 @@ import EditFee from './views/EditFee';
 
 // Embedded LND
 import Seed from './views/Settings/Seed';
+import SeedRecovery from './views/Settings/SeedRecovery';
 import Sync from './views/Sync';
 import LspExplanationFees from './views/Explanations/LspExplanationFees';
 import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
 import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
+import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelBackups';
 
 import RawTxHex from './views/RawTxHex';
 
@@ -324,6 +326,9 @@ const AppScenes = {
     Seed: {
         screen: Seed
     },
+    SeedRecovery: {
+        screen: SeedRecovery
+    },
     Sync: {
         screen: Sync
     },
@@ -428,6 +433,9 @@ const AppScenes = {
     },
     RawTxHex: {
         screen: RawTxHex
+    },
+    RestoreChannelBackups: {
+        screen: RestoreChannelBackups
     }
 };
 

@@ -1,11 +1,13 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
+import CopyBox from '../components/CopyBox';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
+import SuccessAnimation from '../components/SuccessAnimation';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -15,9 +17,7 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
 import Error from '../assets/images/SVG/Error.svg';
-import Success from '../assets/images/GIF/Success.gif';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
-import CopyBox from '../components/CopyBox';
 
 interface SendingOnChainProps {
     navigation: any;
@@ -95,14 +95,7 @@ export default class SendingOnChain extends React.Component<
                                     fill={themeColor('highlight')}
                                 />
                                 <View style={{ alignItems: 'center' }}>
-                                    <Image
-                                        source={Success}
-                                        style={{
-                                            width: windowSize.width * 0.3,
-                                            height: windowSize.width * 0.3
-                                        }}
-                                        resizeMode="cover"
-                                    />
+                                    <SuccessAnimation />
                                     <Text
                                         style={{
                                             ...styles.text,

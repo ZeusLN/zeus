@@ -5,6 +5,7 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import VersionUtils from './../utils/VersionUtils';
 import Base64Utils from './../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
+import BigNumber from 'bignumber.js';
 
 export default class CLightningREST extends LND {
     getHeaders = (macaroonHex: string): any => {
@@ -169,11 +170,14 @@ export default class CLightningREST extends LND {
     getNewAddress = () => this.getRequest('/v1/newaddr?addrType=bech32');
     openChannel = (data: OpenChannelRequest) => {
         let request: any;
+        const feeRate = `${new BigNumber(data.sat_per_vbyte)
+            .times(1000)
+            .toString()}perkb`;
         if (data.utxos && data.utxos.length > 0) {
             request = {
                 id: data.id,
                 satoshis: data.satoshis,
-                feeRate: data.sat_per_vbyte,
+                feeRate,
                 announce: !data.privateChannel ? 'true' : 'false',
                 minfConf: data.min_confs,
                 utxos: data.utxos
@@ -182,7 +186,7 @@ export default class CLightningREST extends LND {
             request = {
                 id: data.id,
                 satoshis: data.satoshis,
-                feeRate: data.sat_per_vbyte,
+                feeRate,
                 announce: !data.privateChannel ? 'true' : 'false',
                 minfConf: data.min_confs
             };

@@ -37,6 +37,7 @@ export default class Transaction extends BaseModel {
     public raw_tx_hex: string;
     // c-lightning
     public value: number | string;
+    public amount_msat: number;
     public blockheight: number;
     public status: string;
     public txid: string;
@@ -93,7 +94,8 @@ export default class Transaction extends BaseModel {
     }
 
     @computed public get getAmount(): string {
-        const amount = this.value || this.amount || 0;
+        const amount =
+            this.value || this.amount || this.amount_msat / 1000 || 0;
         const fee = this.getFee;
 
         const amountIsNegative = Number(amount) < 0;

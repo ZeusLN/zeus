@@ -4,7 +4,6 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import {
     BackHandler,
     Dimensions,
-    Image,
     NativeEventSubscription,
     StyleSheet,
     Text,
@@ -17,6 +16,7 @@ import Button from '../components/Button';
 import LightningLoadingPattern from '../components/LightningLoadingPattern';
 import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
+import SuccessAnimation from '../components/SuccessAnimation';
 
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
@@ -26,7 +26,6 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import Clock from '../assets/images/SVG/Clock.svg';
 import Error from '../assets/images/SVG/Error.svg';
-import Success from '../assets/images/GIF/Success.gif';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import CopyBox from '../components/CopyBox';
 
@@ -172,14 +171,7 @@ export default class SendingLightning extends React.Component<
                             <>
                                 <PaidIndicator />
                                 <View style={{ alignItems: 'center' }}>
-                                    <Image
-                                        source={Success}
-                                        style={{
-                                            width: windowSize.width * 0.3,
-                                            height: windowSize.width * 0.3
-                                        }}
-                                        resizeMode="cover"
-                                    />
+                                    <SuccessAnimation />
                                     <Text
                                         style={{
                                             color: themeColor('text'),

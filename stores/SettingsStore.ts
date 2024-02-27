@@ -59,6 +59,7 @@ interface PosSettings {
     squareDevMode?: boolean;
     showKeypad?: boolean;
     taxPercentage?: string;
+    enablePrinter?: boolean;
 }
 
 interface PaymentsSettings {
@@ -111,7 +112,7 @@ export interface Settings {
     authenticationAttempts?: number;
     fiatEnabled?: boolean;
     fiat?: string;
-    fiatRatesSource: 'ZEUS' | 'Yadio';
+    fiatRatesSource: 'Zeus' | 'Yadio';
     locale?: string;
     privacy: PrivacySettings;
     display: DisplaySettings;
@@ -191,6 +192,11 @@ export const INTERFACE_KEYS = [
     { key: 'LNDHub', value: 'lndhub' },
     { key: '[DEPRECATED] Core Lightning (Sparko)', value: 'spark' },
     { key: '[DEPRECATED] Eclair', value: 'eclair' }
+];
+
+export const EMBEDDED_NODE_NETWORK_KEYS = [
+    { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
+    { key: 'Testnet', translateKey: 'network.testnet', value: 'testnet' }
 ];
 
 export const LNC_MAILBOX_KEYS = [
@@ -839,7 +845,7 @@ export const DEFAULT_VIEW_KEYS = [
 
 export const DEFAULT_THEME = 'kyriaki';
 export const DEFAULT_FIAT = 'USD';
-export const DEFAULT_FIAT_RATES_SOURCE = 'ZEUS';
+export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
 export const DEFAULT_LOCALE = 'English';
 
 export const POS_CONF_PREF_KEYS = [
@@ -946,7 +952,8 @@ export default class SettingsStore {
             disableTips: false,
             squareDevMode: false,
             showKeypad: true,
-            taxPercentage: '0'
+            taxPercentage: '0',
+            enablePrinter: false
         },
         payments: {
             defaultFeeMethod: 'fixed', // deprecated

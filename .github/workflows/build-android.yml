@@ -1,0 +1,20 @@
+name: Build Android
+on:
+  workflow_dispatch:
+    inputs:
+        branch:
+          description: 'The branch to build'
+          required: true
+    permissions:
+        users:
+          - kaloudis
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    container: reactnativecommunity/react-native-android@sha256:4ff9c9f80da57c72284900fcfdbd079183e735684c62d7fafd3df50fdb895453
+    steps:
+    - uses: actions/checkout@v4
+    - name: Envinfo
+      run: npx envinfo
+    - name: Build application
+      run: yarn install && cd android && chmod +x gradlew && ./gradlew app:assembleRelease
