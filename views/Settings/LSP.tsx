@@ -60,8 +60,13 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
     render() {
         const { navigation, NodeInfoStore, SettingsStore } = this.props;
         const { enableLSP, lsp, accessKey, requestSimpleTaproot } = this.state;
-        const { updateSettings, embeddedLndNetwork, certVerification }: any =
-            SettingsStore;
+        const {
+            updateSettings,
+            embeddedLndNetwork,
+            certVerification,
+            settings
+        }: any = SettingsStore;
+        const { nodes, selectedNode } = settings;
 
         const { lspNotConfigured, zeroConfConfig, scidAlias, zeroConf } =
             NodeInfoStore.lspNotConfigured();
@@ -145,7 +150,18 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                                 'views.Settings.LSP.enableCertificateVerification'
                                             )}
                                             onPress={() =>
-                                                navigation.navigate('Nodes')
+                                                navigation.navigate(
+                                                    'NodeConfiguration',
+                                                    {
+                                                        node: nodes[
+                                                            selectedNode || 0
+                                                        ],
+                                                        index:
+                                                            selectedNode || 0,
+                                                        active: true,
+                                                        saved: true
+                                                    }
+                                                )
                                             }
                                         />
                                     </View>
