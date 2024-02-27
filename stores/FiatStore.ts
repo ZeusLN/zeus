@@ -24,6 +24,13 @@ export default class FiatStore {
     @observable public loading = false;
     @observable public error = false;
 
+    @observable public numberWithCommas = (x: string | number) =>
+        x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    @observable public numberWithDecimals = (x: string | number) =>
+        this.numberWithCommas(x).replace(/[,.]/g, (y: string) =>
+            y === ',' ? '.' : ','
+        );
     private sourceOfCurrentFiatRates: string | undefined;
 
     getFiatRatesToken: any;
@@ -34,17 +41,11 @@ export default class FiatStore {
         this.settingsStore = settingsStore;
     }
 
-    numberWithCommas = (x: string | number) =>
-        x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-    numberWithDecimals = (x: string | number) =>
-        this.numberWithCommas(x).replace(/[,.]/g, (y: string) =>
-            y === ',' ? '.' : ','
-        );
-
     // Resource below may be helpful for formatting
     // https://fastspring.com/blog/how-to-format-30-currencies-from-countries-all-over-the-world/
-    symbolLookup = (symbol: string): CurrencyDisplayRules => {
+    @observable public symbolLookup = (
+        symbol: string
+    ): CurrencyDisplayRules => {
         const symbolPairs: any = {
             USD: {
                 symbol: '$',
