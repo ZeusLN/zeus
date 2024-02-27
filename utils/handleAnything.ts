@@ -40,8 +40,32 @@ const handleAnything = async (
     ) {
         if (isClipboardValue) return true;
         if (!BackendUtils.supportsOnchainSends()) {
-            invoicesStore.getPayReq(lightning);
-            return ['PaymentRequest', {}];
+            if (lightning?.toLowerCase().startsWith('lnurl')) {
+                try {
+                    const params = await getlnurlParams(lightning);
+                    if ('tag' in params && params.tag === 'payRequest') {
+                        return [
+                            'LnurlPay',
+                            {
+                                lnurlParams: params
+                            }
+                        ];
+                    } else {
+                        throw new Error(
+                            localeString(
+                                'utils.handleAnything.invalidLnurlParams'
+                            )
+                        );
+                    }
+                } catch {
+                    throw new Error(
+                        localeString('utils.handleAnything.invalidLnurlParams')
+                    );
+                }
+            } else {
+                invoicesStore.getPayReq(lightning);
+                return ['PaymentRequest', {}];
+            }
         }
         return [
             'Accounts',

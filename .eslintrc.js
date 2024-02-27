@@ -4,7 +4,7 @@ module.exports = {
     'Buffer': true
   },
   root: true,
-  extends: ['@react-native-community', 'plugin:import/recommended', 'plugin:import/typescript'],
+  extends: ['@react-native', 'plugin:import/recommended', 'plugin:import/typescript'],
   plugins: ['import'],
   rules: {
     '@typescript-eslint/ban-ts-comment': 'off',

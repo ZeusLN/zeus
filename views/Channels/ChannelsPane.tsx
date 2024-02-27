@@ -1,17 +1,14 @@
 import * as React from 'react';
-import { Dimensions, FlatList, View, TouchableHighlight } from 'react-native';
-import { SearchBar } from 'react-native-elements';
+import { FlatList, View, TouchableHighlight } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
-import SortButton from '../../components/Channels/SortButton';
-import { FilterOptions } from '../../components/Channels/FilterOptions';
+import ChannelsFilter from '../../components/Channels/ChannelsFilter';
 
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
-import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 
 import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
@@ -19,7 +16,6 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
 
 import Channel from '../../models/Channel';
 
@@ -42,101 +38,9 @@ interface ChannelsProps {
 @inject('ChannelsStore', 'SettingsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
-    private getChannelsSortKeys = (closed?: boolean) => {
-        const sortKeys = [];
-
-        if (closed) {
-            sortKeys.push(
-                {
-                    key: `${localeString(
-                        'views.Channel.closeHeight'
-                    )} (${localeString('views.Channel.SortButton.ascending')})`,
-                    value: { param: 'closeHeight', dir: 'ASC', type: 'numeric' }
-                },
-                {
-                    key: `${localeString(
-                        'views.Channel.closeHeight'
-                    )} (${localeString(
-                        'views.Channel.SortButton.descending'
-                    )})`,
-                    value: {
-                        param: 'closeHeight',
-                        dir: 'DESC',
-                        type: 'numeric'
-                    }
-                }
-            );
-        }
-
-        sortKeys.push(
-            {
-                key: `${localeString('views.Channel.capacity')} (${localeString(
-                    'views.Channel.SortButton.largestFirst'
-                )})`,
-                value: {
-                    param: 'channelCapacity',
-                    dir: 'DESC',
-                    type: 'numeric'
-                }
-            },
-            {
-                key: `${localeString('views.Channel.capacity')} (${localeString(
-                    'views.Channel.SortButton.smallestFirst'
-                )})`,
-                value: { param: 'channelCapacity', dir: 'ASC', type: 'numeric' }
-            },
-            {
-                key: `${localeString(
-                    'views.Channel.inboundCapacity'
-                )} (${localeString('views.Channel.SortButton.largestFirst')})`,
-                value: { param: 'remoteBalance', dir: 'DESC', type: 'numeric' }
-            },
-            {
-                key: `${localeString(
-                    'views.Channel.inboundCapacity'
-                )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
-                value: { param: 'remoteBalance', dir: 'ASC', type: 'numeric' }
-            },
-            {
-                key: `${localeString(
-                    'views.Channel.outboundCapacity'
-                )} (${localeString('views.Channel.SortButton.largestFirst')})`,
-                value: { param: 'localBalance', dir: 'DESC', type: 'numeric' }
-            },
-            {
-                key: `${localeString(
-                    'views.Channel.outboundCapacity'
-                )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
-                value: { param: 'localBalance', dir: 'ASC', type: 'numeric' }
-            },
-            {
-                key: `${localeString(
-                    'views.Channel.displayName'
-                )} (${localeString('views.Channel.SortButton.ascending')})`,
-                value: {
-                    param: 'displayName',
-                    dir: 'ASC',
-                    type: 'alphanumeric'
-                }
-            },
-            {
-                key: `${localeString(
-                    'views.Channel.displayName'
-                )} (${localeString('views.Channel.SortButton.descending')})`,
-                value: {
-                    param: 'displayName',
-                    dir: 'DESC',
-                    type: 'alphanumeric'
-                }
-            }
-        );
-
-        return sortKeys;
-    };
-
     renderItem = ({ item }: { item: Channel }) => {
         const { ChannelsStore, navigation } = this.props;
-        const { largestChannelSats, channelsType } = ChannelsStore;
+        const { largestChannelSats, channelsType } = ChannelsStore!;
 
         const getStatus = () => {
             if (item.isActive) {
@@ -231,10 +135,8 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             filteredChannels,
             filteredPendingChannels,
             filteredClosedChannels,
-            setSort,
             showSearch,
-            channelsType,
-            search
+            channelsType
         } = ChannelsStore!;
 
         const lurkerMode: boolean =
@@ -263,8 +165,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                 break;
         }
 
-        const windowWidth = Dimensions.get('window').width;
-
         return (
             <View style={{ flex: 1 }}>
                 <WalletHeader
@@ -283,44 +183,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     totalOffline={totalOffline}
                     lurkerMode={lurkerMode}
                 />
-                {showSearch && (
-                    <View>
-                        <Row>
-                            <SearchBar
-                                placeholder={localeString('general.search')}
-                                onChangeText={this.updateSearch}
-                                value={search}
-                                inputStyle={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book'
-                                }}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                containerStyle={{
-                                    backgroundColor: null,
-                                    borderTopWidth: 0,
-                                    borderBottomWidth: 0,
-                                    width: windowWidth - 55
-                                }}
-                                inputContainerStyle={{
-                                    borderRadius: 15,
-                                    backgroundColor: themeColor('secondary')
-                                }}
-                                autoCapitalize="none"
-                            />
-                            <SortButton
-                                onValueChange={(value: any) => {
-                                    setSort(value);
-                                }}
-                                values={this.getChannelsSortKeys(
-                                    channelsType === ChannelsType.Closed
-                                )}
-                            />
-                        </Row>
-                        <FilterOptions ChannelsStore={ChannelsStore!} />
-                    </View>
-                )}
+                {showSearch && <ChannelsFilter />}
                 {loading ? (
                     <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />

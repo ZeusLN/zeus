@@ -29,11 +29,10 @@ and
 ## Features
 
 - [x] Bitcoin only wallet
-- [x] Non-custodial
-- [x] No processing fees
+- [x] Self-custodial
 - [x] No KYC
 - [x] Fully open source (APGLv3)
-- [x] Connect to LND, Core Lightning (REST + Sparko), or Eclair lightning node
+- [x] [Connect to LND, Core Lightning (REST + Sparko), or Eclair lightning node](https://docs.zeusln.app/category/remote-connections)
 - [x] Manage multiple lightning nodes at once
 - [x] Connect via LNDHub instances
 - [x] Lightning accounts
@@ -59,16 +58,17 @@ and
 - [ ] External signer support
 - [ ] Watch-only accounts
 - [x] Contact list for easier payments
-- [ ] Multiple profile types (payments, merchant etc.)
+- [x] Nostr contact import
+- [x] Point of Sale (Standalone and Square integration)
 - [x] Lightning address receive
 - [x] Taproot support 
 - [ ] Connect a watchtower
 - [ ] Advanced security center
-- [ ] Notifications 
 - [ ] Batch on-chain transactions
 - [ ] Batch channel opens
 - [ ] PayJoin
 - [x] [Lightning Node Connect](https://docs.lightning.engineering/lightning-network-tools/lightning-terminal/lightning-node-connect)
+- [x] [Self-custodial lightning address (ZEUS Pay)](https://docs.zeusln.app/lightning-address/intro)
 
 ## Connecting ZEUS to your node
 

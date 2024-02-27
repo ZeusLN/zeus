@@ -17,6 +17,7 @@ export interface orderPaymentInfo {
     rate: number;
     type: string; // ln OR onchain
     tx: string; // txid OR payment request
+    preimage?: string;
 }
 
 const POS_HIDDEN_KEY = 'pos-hidden';
@@ -79,7 +80,8 @@ export default class PosStore {
         exchangeRate,
         rate,
         type,
-        tx
+        tx,
+        preimage
     }: orderPaymentInfo) =>
         EncryptedStorage.setItem(
             `pos-${orderId}`,
@@ -90,7 +92,8 @@ export default class PosStore {
                 exchangeRate,
                 rate,
                 type,
-                tx
+                tx,
+                preimage
             })
         );
 
@@ -541,6 +544,17 @@ export default class PosStore {
                 this.completedOrders = [];
                 this.loading = false;
             });
+    };
+
+    @action
+    public getOrderPaymentById = async (
+        orderId: string
+    ): Promise<Order | undefined> => {
+        const payment = await EncryptedStorage.getItem(`pos-${orderId}`);
+
+        if (payment) {
+            return JSON.parse(payment);
+        }
     };
 
     resetOrders = () => {
