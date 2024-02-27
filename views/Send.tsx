@@ -227,7 +227,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     this.setState({ loading: false });
                 }
             } catch (error) {
-                console.log('Error loading contacts:', error);
+                console.error('Error loading contacts:', error);
                 this.setState({ loading: false });
             }
         });
@@ -783,6 +783,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         <TouchableOpacity
                                             onPress={() => {
                                                 this.setState({
+                                                    contactName: '',
+                                                    destination: '',
+                                                    transactionType: ''
+                                                });
+                                                navigation.setParams({
                                                     contactName: '',
                                                     destination: '',
                                                     transactionType: ''
