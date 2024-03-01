@@ -818,7 +818,10 @@ export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
         request: lnrpc.ListInvoiceRequest,
         response: lnrpc.ListInvoiceResponse,
         method: 'ListInvoices',
-        options: {}
+        options: {
+            reversed: true,
+            num_max_invoices: Long.fromValue(1000)
+        }
     });
     return response;
 };
