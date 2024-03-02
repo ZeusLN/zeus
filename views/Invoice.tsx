@@ -68,7 +68,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             formattedOriginalTimeUntilExpiry,
             formattedTimeUntilExpiry,
             getPaymentRequest,
-            getKeysendMessage
+            getKeysendMessage,
+            is_amp,
+            value
         } = invoice;
         const privateInvoice = invoice.private;
         const noteKey = getRPreimage || payment_hash;
@@ -103,7 +105,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Invoice.title'),
+                        text: is_amp
+                            ? localeString('views.Receive.ampInvoice')
+                            : localeString('views.Invoice.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -150,6 +154,18 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
+                        {is_amp && isPaid && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.invoiceAmount'
+                                )}
+                                value={
+                                    <Amount sats={value} sensitive toggleable />
+                                }
+                                sensitive
+                            />
+                        )}
+
                         <KeyValue
                             keyValue={localeString('views.Invoice.memo')}
                             value={
@@ -166,7 +182,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
-                        {isPaid && (
+                        {isPaid && !is_amp && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.settleDate'
