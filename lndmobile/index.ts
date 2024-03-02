@@ -385,7 +385,7 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         no_inflight_updates: true,
         timeout_seconds: 60,
         max_parts: max_parts || 1,
-        fee_limit_sat: fee_limit_sat || 0,
+        fee_limit_sat,
         max_shard_size_msat,
         cltv_limit: cltv_limit || 0,
         amp

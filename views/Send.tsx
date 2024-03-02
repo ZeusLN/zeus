@@ -132,7 +132,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg: '',
             maxParts: '16',
             maxShardAmt: '',
-            feeLimitSat: '',
+            feeLimitSat: '100',
             message: '',
             enableAtomicMultiPathPayment: false,
             clipboard: '',
@@ -394,6 +394,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             streamingCall = TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
+                fee_limit_sat: feeLimitSat,
                 message
             });
         }
@@ -844,7 +845,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             UTXOsStore={UTXOsStore}
                                         />
                                     )}
-                                <View style={styles.button}>
+                                <View
+                                    style={{
+                                        ...styles.button,
+                                        paddingBottom: 130
+                                    }}
+                                >
                                     <Button
                                         title={localeString(
                                             'views.Send.sendCoins'
@@ -879,6 +885,31 @@ export default class Send extends React.Component<SendProps, SendState> {
 
                                 {BackendUtils.supportsAMP() && (
                                     <React.Fragment>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {`${localeString(
+                                                'views.PaymentRequest.feeLimit'
+                                            )} (${localeString(
+                                                'general.sats'
+                                            )})`}
+                                            :
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder="100"
+                                            value={feeLimitSat}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    feeLimitSat: text
+                                                })
+                                            }
+                                        />
                                         <Text
                                             style={{
                                                 ...styles.text,
@@ -982,33 +1013,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     'views.PaymentRequest.maxPartsDescription'
                                                 )}
                                             </Text>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {`${localeString(
-                                                    'views.PaymentRequest.feeLimit'
-                                                )} (${localeString(
-                                                    'general.sats'
-                                                )}) (${localeString(
-                                                    'general.optional'
-                                                )})`}
-                                                :
-                                            </Text>
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                placeholder="100"
-                                                value={feeLimitSat}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        feeLimitSat: text
-                                                    })
-                                                }
-                                            />
                                             <Text
                                                 style={{
                                                     ...styles.text,
