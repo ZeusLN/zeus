@@ -666,7 +666,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     navigation={navigation}
                 />
                 <ScrollView
-                    style={styles.content}
+                    contentContainerStyle={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
                     {!!destination &&
@@ -674,7 +674,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         BackendUtils.supportsOnchainSends() &&
                         confirmedBlockchainBalance === 0 &&
                         unconfirmedBlockchainBalance === 0 && (
-                            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                            <View style={{ marginBottom: 10 }}>
                                 <WarningMessage
                                     message={localeString(
                                         'views.Send.noOnchainBalance'
@@ -686,7 +686,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         (transactionType === 'Lightning' ||
                             transactionType === 'Keysend') &&
                         lightningBalance === 0 && (
-                            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                            <View style={{ marginBottom: 10 }}>
                                 <WarningMessage
                                     message={localeString(
                                         'views.Send.noLightningBalance'
@@ -702,7 +702,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString('general.destination')}:
+                                {localeString('general.destination')}
                             </Text>
                             <TextInput
                                 value={destination}
@@ -735,8 +735,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     value={contactName ? '' : destination}
                                     onChangeText={(text: string) => {
                                         this.setState({
-                                            destination: text.trim(),
-                                            error_msg: text ? text : ''
+                                            destination: text.replace(/\s/, ''),
+                                            error_msg: ''
                                         });
                                     }}
                                     style={{
@@ -811,8 +811,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                     )}
 
                     {!!error_msg && !!destination && (
-                        <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-                            <ErrorMessage message={error_msg} />
+                        <View style={{ marginVertical: 10 }}>
+                            <ErrorMessage
+                                message={error_msg}
+                                mainStyle={{ marginVertical: 10 }}
+                            />
                         </View>
                     )}
                     {!isValid && !!destination && error_msg && (
@@ -854,9 +857,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <AmountInput
                                     amount={amount}
-                                    title={
-                                        localeString('views.Send.amount') + ':'
-                                    }
+                                    title={localeString('views.Send.amount')}
                                     onAmountChange={(
                                         amount: string,
                                         satAmount: string | number
@@ -898,7 +899,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {localeString('views.Send.feeSatsVbyte')}:
+                                    {localeString('views.Send.feeSatsVbyte')}
                                 </Text>
 
                                 <OnchainFeeInput
@@ -921,7 +922,16 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         )}
                                         icon={{
                                             name: 'send',
-                                            size: 25
+                                            size: 25,
+                                            color:
+                                                confirmedBlockchainBalance ===
+                                                    0 &&
+                                                unconfirmedBlockchainBalance ===
+                                                    0
+                                                    ? themeColor(
+                                                          'secondaryText'
+                                                      )
+                                                    : themeColor('background')
                                         }}
                                         onPress={() =>
                                             this.sendCoins(satAmount)
@@ -939,9 +949,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <AmountInput
                                     amount={amount}
-                                    title={
-                                        localeString('views.Send.amount') + ':'
-                                    }
+                                    title={localeString('views.Send.amount')}
                                     onAmountChange={(
                                         amount: string,
                                         satAmount: string | number
@@ -969,7 +977,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             )} (${localeString(
                                                 'general.optional'
                                             )})`}
-                                            :
                                         </Text>
                                         <TextInput
                                             keyboardType="default"
@@ -1036,7 +1043,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 )} (${localeString(
                                                     'general.optional'
                                                 )})`}
-                                                :
                                             </Text>
                                             <TextInput
                                                 keyboardType="numeric"
@@ -1073,7 +1079,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 )}) (${localeString(
                                                     'general.optional'
                                                 )})`}
-                                                :
                                             </Text>
                                             <TextInput
                                                 keyboardType="numeric"
@@ -1100,7 +1105,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 )}) (${localeString(
                                                     'general.optional'
                                                 )})`}
-                                                :
                                             </Text>
                                             <TextInput
                                                 keyboardType="numeric"
@@ -1118,7 +1122,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         title={localeString('general.send')}
                                         icon={{
                                             name: 'send',
-                                            size: 25
+                                            size: 25,
+                                            color:
+                                                lightningBalance === 0
+                                                    ? themeColor(
+                                                          'secondaryText'
+                                                      )
+                                                    : themeColor('background')
                                         }}
                                         onPress={() =>
                                             this.sendKeySendPayment(satAmount)
@@ -1151,7 +1161,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 title={localeString('views.Send.lookup')}
                                 icon={{
                                     name: 'send',
-                                    size: 25
+                                    size: 25,
+                                    color:
+                                        lightningBalance === 0
+                                            ? themeColor('secondaryText')
+                                            : themeColor('background')
                                 }}
                                 onPress={() =>
                                     navigation.navigate('PaymentRequest')
@@ -1239,7 +1253,8 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     },
     content: {
-        padding: 20
+        padding: 20,
+        paddingTop: 10
     },
     button: {
         alignItems: 'center',
