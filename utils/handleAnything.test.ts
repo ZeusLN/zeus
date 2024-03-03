@@ -13,7 +13,9 @@ jest.mock('../stores/Stores', () => ({
     invoicesStore: { getPayReq: jest.fn() }
 }));
 jest.mock('react-native-blob-util', () => ({}));
-// jest.mock('', () => ({ getParams: () => ({}) }));
+jest.mock('js-lnurl', () => ({
+    getParams: () => mockGetLnurlParams
+}));
 import stores from '../stores/Stores';
 import handleAnything from './handleAnything';
 let mockProcessedSendAddress = {};
@@ -21,6 +23,7 @@ let mockIsValidBitcoinAddress = false;
 let mockIsValidLightningPubKey = false;
 let mockIsValidLightningPaymentRequest = false;
 let mockSupportsOnchainSends = true;
+let mockGetLnurlParams = {};
 
 describe('handleAnything', () => {
     beforeEach(() => {
@@ -116,42 +119,30 @@ describe('handleAnything', () => {
     describe('bitcoin URI with lnurl and backend not supporting on-chain sends', () => {
         // test needs to be mocked out more as endpoint at https://ts.dergigi.com/BTC/UILNURL/pay/i/Wg7JV2ZFHs4cschM6bG5PT
         // returns {"status":"ERROR","reason":"Invoice not in a valid payable state"} and throws on handleAnything.ts:54
-        // it('should return LnurlPay screen if not from clipboard', async () => {
-        //     const data =
-        //         'bitcoin:BC1QUXCS7V556UTNUKU93HSZ7LHHFFLWN9NF2UTQ6N?pj=https://ts.dergigi.com/BTC/pj&lightning=LNURL1DP68GURN8GHJ7ARN9EJX2UN8D9NKJTNRDAKJ7SJ5GVH42J2VFE24YNP0WPSHJTMF9ATKWD622CE953JGWV6XXUMRDPXNVCJ8X4G9GF2CHDF';
-        //     mockProcessedSendAddress = {
-        //         value: 'BC1QUXCS7V556UTNUKU93HSZ7LHHFFLWN9NF2UTQ6N',
-        //         lightning:
-        //             'LNURL1DP68GURN8GHJ7ARN9EJX2UN8D9NKJTNRDAKJ7SJ5GVH42J2VFE24YNP0WPSHJTMF9ATKWD622CE953JGWV6XXUMRDPXNVCJ8X4G9GF2CHDF'
-        //     };
-        //     mockIsValidBitcoinAddress = true;
-        //     mockSupportsOnchainSends = false;
+        it('should return LnurlPay screen if not from clipboard', async () => {
+            const data =
+                'bitcoin:BC1QUXCS7V556UTNUKU93HSZ7LHHFFLWN9NF2UTQ6N?pj=https://ts.dergigi.com/BTC/pj&lightning=LNURL1DP68GURN8GHJ7ARN9EJX2UN8D9NKJTNRDAKJ7SJ5GVH42J2VFE24YNP0WPSHJTMF9ATKWD622CE953JGWV6XXUMRDPXNVCJ8X4G9GF2CHDF';
+            mockProcessedSendAddress = {
+                value: 'BC1QUXCS7V556UTNUKU93HSZ7LHHFFLWN9NF2UTQ6N',
+                lightning:
+                    'LNURL1DP68GURN8GHJ7ARN9EJX2UN8D9NKJTNRDAKJ7SJ5GVH42J2VFE24YNP0WPSHJTMF9ATKWD622CE953JGWV6XXUMRDPXNVCJ8X4G9GF2CHDF'
+            };
+            mockIsValidBitcoinAddress = true;
+            mockSupportsOnchainSends = false;
+            mockGetLnurlParams = {
+                tag: 'payRequest',
+                domain: 'ts.dergigi.com'
+            };
 
-        //     const result = await handleAnything(data);
+            const result = await handleAnything(data);
 
-        //     expect(result).toEqual([
-        //         'LnurlPay',
-        //         {
-        //             lnurlParams: {
-        //                 callback:
-        //                     'https://ts.dergigi.com/BTC/UILNURL/pay/i/Wg7JV2ZFHs4cschM6bG5PT',
-        //                 commentAllowed: 2000,
-        //                 decodedMetadata: [
-        //                     [
-        //                         'text/plain',
-        //                         'Paid to dergigi.com (Order ID: V4V-reader)'
-        //                     ]
-        //                 ],
-        //                 domain: 'ts.dergigi.com',
-        //                 maxSendable: 612000000000,
-        //                 metadata:
-        //                     '[["text/plain","Paid to dergigi.com (Order ID: V4V-reader)"]]',
-        //                 minSendable: 1000,
-        //                 tag: 'payRequest'
-        //             }
-        //         }
-        //     ]);
-        // });
+            expect(result).toEqual([
+                'LnurlPay',
+                {
+                    lnurlParams: mockGetLnurlParams
+                }
+            ]);
+        });
 
         it('should return true if from clipboard', async () => {
             const data =
