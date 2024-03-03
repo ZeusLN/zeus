@@ -669,7 +669,7 @@ export default class PaymentRequest extends React.Component<
                             {!!destination && (
                                 <KeyValue
                                     keyValue={localeString(
-                                        'views.PaymentRequest.destination'
+                                        'general.destination'
                                     )}
                                     value={destination}
                                 />
