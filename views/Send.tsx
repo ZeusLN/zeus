@@ -9,7 +9,9 @@ import {
     Text,
     View,
     ScrollView,
-    TouchableOpacity
+    TouchableOpacity,
+    BackHandler,
+    NativeEventSubscription
 } from 'react-native';
 import { Chip, Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -92,6 +94,7 @@ interface SendState {
     loading: boolean;
     contactName: string;
     contacts: Contact[];
+    clearOnBackPress: boolean;
 }
 
 @inject(
@@ -106,6 +109,8 @@ interface SendState {
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
     listener: any;
+    private backPressSubscription: NativeEventSubscription;
+
     constructor(props: SendProps) {
         super(props);
         const { navigation } = props;
@@ -114,6 +119,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const transactionType = navigation.getParam('transactionType', null);
         const isValid = navigation.getParam('isValid', false);
         const contactName = navigation.getParam('contactName', null);
+        const clearOnBackPress = navigation.getParam(
+            'clearOnBackPress',
+            !destination
+        );
 
         if (transactionType === 'Lightning') {
             this.props.InvoicesStore.getPayReq(destination);
@@ -138,7 +147,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             clipboard: '',
             loading: false,
             contactName,
-            contacts: []
+            contacts: [],
+            clearOnBackPress
         };
     }
 
@@ -189,6 +199,15 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
 
         this.loadContacts();
+
+        this.backPressSubscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.backPressed.bind(this)
+        );
+    }
+
+    componentWillUnmount(): void {
+        this.backPressSubscription?.remove();
     }
 
     loadContacts = async () => {
@@ -510,6 +529,24 @@ export default class Send extends React.Component<SendProps, SendState> {
         );
     };
 
+    backPressed = () => {
+        if (this.state.clearOnBackPress && this.state.transactionType) {
+            this.setState({
+                contactName: '',
+                destination: '',
+                transactionType: ''
+            });
+            this.props.navigation.setParams({
+                contactName: '',
+                destination: '',
+                transactionType: ''
+            });
+        } else {
+            this.props.navigation.pop();
+        }
+        return true;
+    };
+
     render() {
         const { SettingsStore, BalanceStore, UTXOsStore, navigation } =
             this.props;
@@ -557,6 +594,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             <Screen>
                 <Header
                     leftComponent="Back"
+                    onBack={this.backPressed.bind(this)}
+                    navigateBackOnBackPress={false}
                     centerComponent={{
                         text: localeString('views.Send.title'),
                         style: {
@@ -627,7 +666,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     navigation={navigation}
                 />
                 <ScrollView
-                    style={styles.content}
+                    contentContainerStyle={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
                     {!!destination &&
@@ -635,7 +674,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         BackendUtils.supportsOnchainSends() &&
                         confirmedBlockchainBalance === 0 &&
                         unconfirmedBlockchainBalance === 0 && (
-                            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                            <View style={{ marginBottom: 10 }}>
                                 <WarningMessage
                                     message={localeString(
                                         'views.Send.noOnchainBalance'
@@ -647,7 +686,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         (transactionType === 'Lightning' ||
                             transactionType === 'Keysend') &&
                         lightningBalance === 0 && (
-                            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                            <View style={{ marginBottom: 10 }}>
                                 <WarningMessage
                                     message={localeString(
                                         'views.Send.noLightningBalance'
@@ -655,96 +694,128 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 />
                             </View>
                         )}
-                    <Text
-                        style={{
-                            ...styles.text,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {paymentOptions.join(', ')}
-                    </Text>
-                    <View
-                        style={{ flexDirection: 'row', alignItems: 'center' }}
-                    >
-                        <TextInput
-                            placeholder={'lnbc1...'}
-                            value={!contactName && destination}
-                            onChangeText={(text: string) => {
-                                this.setState({
-                                    destination: text.trim(),
-                                    error_msg: !text && ''
-                                });
-                            }}
-                            style={{
-                                flex: 1,
-                                paddingHorizontal: 15,
-                                paddingRight: 40
-                            }}
-                            autoCorrect={false}
-                            autoCapitalize="none"
-                        />
-                        {contactName && (
+                    {transactionType ? (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('general.destination')}
+                            </Text>
+                            <TextInput
+                                value={destination}
+                                locked={true}
+                                multiline={true}
+                                textInputStyle={{
+                                    color: 'red',
+                                    fontSize: 100
+                                }}
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {paymentOptions.join(', ')}
+                            </Text>
                             <View
                                 style={{
                                     flexDirection: 'row',
-                                    alignItems: 'center',
-                                    position: 'absolute',
-                                    left: 10,
-                                    top: 22
+                                    alignItems: 'center'
                                 }}
                             >
-                                <Chip
-                                    title={contactName}
-                                    titleStyle={{
-                                        ...styles.text,
-                                        color: themeColor('background'),
-                                        backgroundColor: themeColor('chain')
-                                    }}
-                                    type="inline"
-                                    containerStyle={{
-                                        backgroundColor: themeColor('chain'),
-                                        borderRadius: 8,
-                                        paddingRight: 24
-                                    }}
-                                />
-                                <TouchableOpacity
-                                    onPress={() => {
+                                <TextInput
+                                    placeholder={'lnbc1...'}
+                                    value={contactName ? '' : destination}
+                                    onChangeText={(text: string) => {
                                         this.setState({
-                                            contactName: '',
-                                            destination: '',
-                                            transactionType: ''
+                                            destination: text.replace(/\s/, ''),
+                                            error_msg: ''
                                         });
                                     }}
                                     style={{
-                                        position: 'absolute',
-                                        right: 8,
-                                        top: 8
+                                        flex: 1,
+                                        paddingHorizontal: 15,
+                                        paddingRight: 40
                                     }}
+                                    autoCorrect={false}
+                                    autoCapitalize="none"
+                                />
+                                {contactName && (
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            position: 'absolute',
+                                            left: 10,
+                                            top: 22
+                                        }}
+                                    >
+                                        <Chip
+                                            title={contactName}
+                                            titleStyle={{
+                                                ...styles.text,
+                                                color: themeColor('background'),
+                                                backgroundColor:
+                                                    themeColor('chain')
+                                            }}
+                                            type="inline"
+                                            containerStyle={{
+                                                backgroundColor:
+                                                    themeColor('chain'),
+                                                borderRadius: 8,
+                                                paddingRight: 24
+                                            }}
+                                        />
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                this.setState({
+                                                    contactName: '',
+                                                    destination: '',
+                                                    transactionType: ''
+                                                });
+                                            }}
+                                            style={{
+                                                position: 'absolute',
+                                                right: 8,
+                                                top: 8
+                                            }}
+                                        >
+                                            <Icon
+                                                name="close-circle"
+                                                type="material-community"
+                                                size={18}
+                                                color={themeColor('background')}
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('Contacts', {
+                                            SendScreen: true
+                                        })
+                                    }
+                                    style={{ position: 'absolute', right: 10 }}
                                 >
-                                    <Icon
-                                        name="close-circle"
-                                        type="material-community"
-                                        size={18}
-                                        color={themeColor('background')}
-                                    />
+                                    <ContactIcon stroke={themeColor('text')} />
                                 </TouchableOpacity>
                             </View>
-                        )}
-                        <TouchableOpacity
-                            onPress={() =>
-                                navigation.navigate('Contacts', {
-                                    SendScreen: true
-                                })
-                            }
-                            style={{ position: 'absolute', right: 10 }}
-                        >
-                            <ContactIcon stroke={themeColor('text')} />
-                        </TouchableOpacity>
-                    </View>
+                        </>
+                    )}
 
                     {!!error_msg && !!destination && (
-                        <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-                            <ErrorMessage message={error_msg} />
+                        <View style={{ marginVertical: 10 }}>
+                            <ErrorMessage
+                                message={error_msg}
+                                mainStyle={{ marginVertical: 10 }}
+                            />
                         </View>
                     )}
                     {!isValid && !!destination && error_msg && (
@@ -828,7 +899,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {localeString('views.Send.feeSatsVbyte')}:
+                                    {localeString('views.Send.feeSatsVbyte')}
                                 </Text>
 
                                 <OnchainFeeInput
@@ -851,10 +922,23 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         )}
                                         icon={{
                                             name: 'send',
-                                            size: 25
+                                            size: 25,
+                                            color:
+                                                confirmedBlockchainBalance ===
+                                                    0 &&
+                                                unconfirmedBlockchainBalance ===
+                                                    0
+                                                    ? themeColor(
+                                                          'secondaryText'
+                                                      )
+                                                    : themeColor('background')
                                         }}
                                         onPress={() =>
                                             this.sendCoins(satAmount)
+                                        }
+                                        disabled={
+                                            confirmedBlockchainBalance === 0 &&
+                                            unconfirmedBlockchainBalance === 0
                                         }
                                     />
                                 </View>
@@ -893,7 +977,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             )} (${localeString(
                                                 'general.optional'
                                             )})`}
-                                            :
                                         </Text>
                                         <TextInput
                                             keyboardType="default"
@@ -960,7 +1043,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 )} (${localeString(
                                                     'general.optional'
                                                 )})`}
-                                                :
                                             </Text>
                                             <TextInput
                                                 keyboardType="numeric"
@@ -997,7 +1079,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 )}) (${localeString(
                                                     'general.optional'
                                                 )})`}
-                                                :
                                             </Text>
                                             <TextInput
                                                 keyboardType="numeric"
@@ -1024,7 +1105,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 )}) (${localeString(
                                                     'general.optional'
                                                 )})`}
-                                                :
                                             </Text>
                                             <TextInput
                                                 keyboardType="numeric"
@@ -1042,11 +1122,18 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         title={localeString('general.send')}
                                         icon={{
                                             name: 'send',
-                                            size: 25
+                                            size: 25,
+                                            color:
+                                                lightningBalance === 0
+                                                    ? themeColor(
+                                                          'secondaryText'
+                                                      )
+                                                    : themeColor('background')
                                         }}
                                         onPress={() =>
                                             this.sendKeySendPayment(satAmount)
                                         }
+                                        disabled={lightningBalance === 0}
                                     />
                                 </View>
                             </React.Fragment>
@@ -1074,11 +1161,16 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 title={localeString('views.Send.lookup')}
                                 icon={{
                                     name: 'send',
-                                    size: 25
+                                    size: 25,
+                                    color:
+                                        lightningBalance === 0
+                                            ? themeColor('secondaryText')
+                                            : themeColor('background')
                                 }}
                                 onPress={() =>
                                     navigation.navigate('PaymentRequest')
                                 }
+                                disabled={lightningBalance === 0}
                             />
                         </View>
                     )}
@@ -1161,7 +1253,8 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     },
     content: {
-        padding: 20
+        padding: 20,
+        paddingTop: 10
     },
     button: {
         alignItems: 'center',
