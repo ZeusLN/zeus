@@ -51,6 +51,7 @@ export default class Invoice extends BaseModel {
     public r_preimage: any;
     public cltv_expiry: string;
     public htlcs: Array<HTLC>;
+    public is_amp?: boolean;
     // c-lightning, eclair
     public bolt11: string;
     public label: string;
@@ -194,7 +195,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getDisplayTimeShort(): string {
-        return this.isPaid
+        return this.isPaid && !this.is_amp
             ? DateTimeUtils.listFormattedDateShort(
                   this.settle_date || this.paid_at || this.timestamp || 0
               )

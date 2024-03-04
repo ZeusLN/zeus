@@ -1373,6 +1373,7 @@ export default class Receive extends React.Component<
                         <ScrollView
                             style={styles.content}
                             keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
                         >
                             {creatingInvoiceError && (
                                 <ErrorMessage
