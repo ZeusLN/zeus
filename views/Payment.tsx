@@ -186,9 +186,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
 
                         {getDestination && (
                             <KeyValue
-                                keyValue={localeString(
-                                    'views.Payment.destination'
-                                )}
+                                keyValue={localeString('general.destination')}
                                 value={getDestination}
                                 sensitive
                                 color={themeColor('highlight')}
