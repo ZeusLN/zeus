@@ -194,9 +194,10 @@ export default class ChannelsStore {
                         ?.toLocaleLowerCase()
                         .includes(query.toLocaleLowerCase()) ||
                     channel.remotePubkey
-                        .toLocaleLowerCase()
+                        ?.toLocaleLowerCase()
                         .includes(query.toLocaleLowerCase()) ||
                     channel.channelId
+                        ?.toString()
                         ?.toLocaleLowerCase()
                         .includes(query.toLocaleLowerCase())
             )
