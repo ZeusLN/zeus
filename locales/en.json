@@ -101,7 +101,6 @@
     "general.advanced": "Advanced",
     "general.clearChanges": "Clear changes",
     "general.destination": "Destination",
-    "general.clearChanges": "Clear changes",
     "restart.title": "Restart required",
     "restart.msg": "ZEUS has to be restarted before the new configuration is applied.",
     "restart.msg1": "Would you like to restart now?",
