@@ -3,7 +3,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import SettingsStore from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
-import stores from './Stores';
+import NodeInfoStore from './NodeInfoStore';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 const { channel } = lndMobile;
@@ -24,10 +24,16 @@ export default class LSPStore {
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
+    nodeInfoStore: NodeInfoStore;
 
-    constructor(settingsStore: SettingsStore, channelsStore: ChannelsStore) {
+    constructor(
+        settingsStore: SettingsStore,
+        channelsStore: ChannelsStore,
+        nodeInfoStore: NodeInfoStore
+    ) {
         this.settingsStore = settingsStore;
         this.channelsStore = channelsStore;
+        this.nodeInfoStore = nodeInfoStore;
     }
 
     @action
@@ -37,9 +43,7 @@ export default class LSPStore {
         this.error = false;
         this.error_msg = '';
         this.showLspSettings = false;
-        // TODO Pegasus clear channel acceptor when
-        // it's supported by other backends
-        // this.channelAcceptor = undefined;
+        this.channelAcceptor = undefined;
     };
 
     @action
@@ -48,9 +52,9 @@ export default class LSPStore {
     };
 
     getLSPHost = () =>
-        this.settingsStore.embeddedLndNetwork === 'Mainnet'
-            ? this.settingsStore.settings.lspMainnet
-            : this.settingsStore.settings.lspTestnet;
+        this.nodeInfoStore!.nodeInfo.isTestNet
+            ? this.settingsStore.settings.lspTestnet
+            : this.settingsStore.settings.lspMainnet;
 
     @action
     public getLSPInfo = () => {
@@ -127,7 +131,7 @@ export default class LSPStore {
                       },
                 JSON.stringify({
                     amount_msat,
-                    pubkey: stores.nodeInfoStore.nodeInfo.nodeId
+                    pubkey: this.nodeInfoStore.nodeInfo.nodeId
                 })
             )
                 .then((response: any) => {
