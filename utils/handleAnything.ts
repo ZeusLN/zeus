@@ -63,7 +63,7 @@ const handleAnything = async (
                     );
                 }
             } else {
-                invoicesStore.getPayReq(lightning);
+                await invoicesStore.getPayReq(lightning);
                 return ['PaymentRequest', {}];
             }
         }
@@ -102,7 +102,7 @@ const handleAnything = async (
         ];
     } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
         if (isClipboardValue) return true;
-        invoicesStore.getPayReq(value);
+        await invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
     } else if (value.includes('c-lightning-rest://')) {
         if (isClipboardValue) return true;
