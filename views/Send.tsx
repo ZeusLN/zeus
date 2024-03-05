@@ -38,6 +38,7 @@ import UTXOsStore from '../stores/UTXOsStore';
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import FeeLimit from '../components/FeeLimit';
 import LoadingIndicator from '../components/LoadingIndicator';
 import {
     WarningMessage,
@@ -88,6 +89,7 @@ interface SendState {
     maxParts: string;
     maxShardAmt: string;
     feeLimitSat: string;
+    maxFeePercent: string;
     message: string;
     enableAtomicMultiPathPayment: boolean;
     clipboard: string;
@@ -95,8 +97,6 @@ interface SendState {
     contactName: string;
     contacts: Contact[];
     clearOnBackPress: boolean;
-    feeOption: string;
-    maxFeePercent: string;
 }
 
 @inject(
@@ -144,15 +144,14 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxParts: '16',
             maxShardAmt: '',
             feeLimitSat: '100',
+            maxFeePercent: '5.0',
             message: '',
             enableAtomicMultiPathPayment: false,
             clipboard: '',
             loading: false,
             contactName,
             contacts: [],
-            clearOnBackPress,
-            feeOption: 'fixed',
-            maxFeePercent: '5.0'
+            clearOnBackPress
         };
     }
 
@@ -171,11 +170,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
 
         if (this.listener && this.listener.stop) this.listener.stop();
-
-        this.setState({
-            feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
-            maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0'
-        });
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -396,10 +390,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingOnChain');
     };
 
-    sendKeySendPayment = (
-        satAmount: string | number,
-        percentAmount?: string | number
-    ) => {
+    sendKeySendPayment = (satAmount: string | number) => {
         const { TransactionsStore, SettingsStore, navigation } = this.props;
         const { implementation } = SettingsStore;
         const {
@@ -408,13 +399,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxShardAmt,
             message,
             enableAtomicMultiPathPayment,
-            feeOption
+            feeLimitSat,
+            maxFeePercent
         } = this.state;
-
-        const feeLimitSat =
-            feeOption == 'percent' && percentAmount
-                ? percentAmount.toString()
-                : this.state.feeLimitSat;
 
         let streamingCall;
         if (enableAtomicMultiPathPayment) {
@@ -432,6 +419,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amount: satAmount.toString(),
                 pubkey: destination,
                 fee_limit_sat: feeLimitSat,
+                max_fee_percent: maxFeePercent,
                 message
             });
         }
@@ -581,15 +569,12 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg,
             maxParts,
             maxShardAmt,
-            feeLimitSat,
             message,
             enableAtomicMultiPathPayment,
             clipboard,
             loading,
             contactName,
-            contacts,
-            feeOption,
-            maxFeePercent
+            contacts
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -610,19 +595,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         const favoriteContacts = contacts.filter(
             (contact: Contact) => contact.isFavourite
         );
-
-        const isLnd: boolean = BackendUtils.isLNDBased();
-        const isCLightning: boolean = implementation === 'c-lightning-REST';
-
-        // handle fee percents that use commas
-        const maxFeePercentFormatted = maxFeePercent.replace(/,/g, '.');
-
-        const percentAmount = satAmount
-            ? (
-                  Number(satAmount) *
-                  (Number(maxFeePercentFormatted) / 100)
-              ).toFixed()
-            : 0;
 
         return (
             <Screen>
@@ -743,8 +715,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 locked={true}
                                 multiline={true}
                                 textInputStyle={{
-                                    color: 'red',
-                                    fontSize: 100
+                                    fontSize: 100,
+                                    marginTop: 10,
+                                    marginBottom: 10
                                 }}
                             />
                         </>
@@ -1000,168 +973,49 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }}
                                 />
 
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        marginTop: 10,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {`${localeString(
-                                        'views.Send.message'
-                                    )} (${localeString('general.optional')})`}
-                                </Text>
-                                <TextInput
-                                    keyboardType="default"
-                                    value={message}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            message: text
-                                        })
-                                    }
-                                />
-
-                                {isLnd && (
+                                {implementation !== 'c-lightning-REST' && (
                                     <>
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.PaymentRequest.feeLimit'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexWrap: 'wrap',
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end',
-                                                opacity:
-                                                    feeOption == 'percent'
-                                                        ? 1
-                                                        : 0.25
-                                            }}
-                                        >
-                                            <Text
-                                                style={{
-                                                    ...styles.label,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                <Amount sats={percentAmount} />
-                                            </Text>
-                                        </View>
-                                        <View
-                                            style={{
-                                                flexDirection: 'row',
-                                                width: '95%'
-                                            }}
-                                        >
-                                            <TextInput
-                                                style={{
-                                                    width: '50%',
-                                                    opacity:
-                                                        feeOption == 'fixed'
-                                                            ? 1
-                                                            : 0.25
-                                                }}
-                                                keyboardType="numeric"
-                                                value={feeLimitSat}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        feeLimitSat: text
-                                                    })
-                                                }
-                                                onPressIn={() =>
-                                                    this.setState({
-                                                        feeOption: 'fixed'
-                                                    })
-                                                }
-                                            />
-                                            <Text
-                                                style={{
-                                                    ...styles.label,
-                                                    color: themeColor('text'),
-                                                    top: 28,
-                                                    right: 30,
-                                                    opacity:
-                                                        feeOption == 'fixed'
-                                                            ? 1
-                                                            : 0.25
-                                                }}
-                                            >
-                                                {localeString('general.sats')}
-                                            </Text>
-                                            <TextInput
-                                                style={{
-                                                    width: '50%',
-                                                    opacity:
-                                                        feeOption == 'percent'
-                                                            ? 1
-                                                            : 0.25
-                                                }}
-                                                keyboardType="numeric"
-                                                value={maxFeePercent}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        maxFeePercent: text
-                                                    })
-                                                }
-                                                onPressIn={() =>
-                                                    this.setState({
-                                                        feeOption: 'percent'
-                                                    })
-                                                }
-                                            />
-                                            <Text
-                                                style={{
-                                                    ...styles.label,
-                                                    color: themeColor('text'),
-                                                    top: 28,
-                                                    right: 18,
-                                                    opacity:
-                                                        feeOption == 'percent'
-                                                            ? 1
-                                                            : 0.25
-                                                }}
-                                            >
-                                                {'%'}
-                                            </Text>
-                                        </View>
-                                    </>
-                                )}
-
-                                {isCLightning && (
-                                    <React.Fragment>
-                                        <Text
-                                            style={{
                                                 ...styles.text,
+                                                marginTop: 10,
                                                 color: themeColor(
                                                     'secondaryText'
                                                 )
                                             }}
                                         >
                                             {`${localeString(
-                                                'views.PaymentRequest.feeLimit'
+                                                'views.Send.message'
                                             )} (${localeString(
-                                                'general.sats'
+                                                'general.optional'
                                             )})`}
                                         </Text>
                                         <TextInput
-                                            keyboardType="numeric"
-                                            placeholder="100"
-                                            value={feeLimitSat}
+                                            keyboardType="default"
+                                            value={message}
                                             onChangeText={(text: string) =>
                                                 this.setState({
-                                                    feeLimitSat: text
+                                                    message: text
                                                 })
                                             }
                                         />
-                                    </React.Fragment>
+                                    </>
                                 )}
+
+                                <FeeLimit
+                                    satAmount={satAmount}
+                                    onFeeLimitSatChange={(value: string) =>
+                                        this.setState({
+                                            feeLimitSat: value
+                                        })
+                                    }
+                                    onMaxFeePercentChange={(value: string) =>
+                                        this.setState({
+                                            maxFeePercent: value
+                                        })
+                                    }
+                                    SettingsStore={SettingsStore}
+                                />
 
                                 {BackendUtils.supportsAMP() && (
                                     <React.Fragment>
@@ -1283,10 +1137,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     : themeColor('background')
                                         }}
                                         onPress={() =>
-                                            this.sendKeySendPayment(
-                                                satAmount,
-                                                percentAmount
-                                            )
+                                            this.sendKeySendPayment(satAmount)
                                         }
                                         disabled={lightningBalance === 0}
                                     />
