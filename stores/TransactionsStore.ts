@@ -286,7 +286,10 @@ export default class TransactionsStore {
         }
 
         // max fee percent for c-lightning
-        if (max_fee_percent) {
+        if (
+            max_fee_percent &&
+            this.settingsStore.implementation === 'c-lightning-REST'
+        ) {
             data.max_fee_percent = max_fee_percent;
         }
 
