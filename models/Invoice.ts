@@ -268,7 +268,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get isZeusPay(): boolean {
-        if (this.getMemo?.startsWith('ZEUS PAY')) return true;
+        if (this.getMemo?.toLowerCase().startsWith('zeus pay')) return true;
         return false;
     }
 
