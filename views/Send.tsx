@@ -38,6 +38,7 @@ import UTXOsStore from '../stores/UTXOsStore';
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import FeeLimit from '../components/FeeLimit';
 import LoadingIndicator from '../components/LoadingIndicator';
 import {
     WarningMessage,
@@ -88,6 +89,7 @@ interface SendState {
     maxParts: string;
     maxShardAmt: string;
     feeLimitSat: string;
+    maxFeePercent: string;
     message: string;
     enableAtomicMultiPathPayment: boolean;
     clipboard: string;
@@ -141,7 +143,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg: '',
             maxParts: '16',
             maxShardAmt: '',
-            feeLimitSat: '',
+            feeLimitSat: '100',
+            maxFeePercent: '5.0',
             message: '',
             enableAtomicMultiPathPayment: false,
             clipboard: '',
@@ -154,7 +157,8 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
@@ -393,9 +397,10 @@ export default class Send extends React.Component<SendProps, SendState> {
             destination,
             maxParts,
             maxShardAmt,
-            feeLimitSat,
             message,
-            enableAtomicMultiPathPayment
+            enableAtomicMultiPathPayment,
+            feeLimitSat,
+            maxFeePercent
         } = this.state;
 
         let streamingCall;
@@ -413,6 +418,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             streamingCall = TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
+                fee_limit_sat: feeLimitSat,
+                max_fee_percent: maxFeePercent,
                 message
             });
         }
@@ -562,7 +569,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg,
             maxParts,
             maxShardAmt,
-            feeLimitSat,
             message,
             enableAtomicMultiPathPayment,
             clipboard,
@@ -709,8 +715,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 locked={true}
                                 multiline={true}
                                 textInputStyle={{
-                                    color: 'red',
-                                    fontSize: 100
+                                    fontSize: 100,
+                                    marginTop: 10,
+                                    marginBottom: 10
                                 }}
                             />
                         </>
@@ -915,7 +922,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             UTXOsStore={UTXOsStore}
                                         />
                                     )}
-                                <View style={styles.button}>
+                                <View
+                                    style={{
+                                        ...styles.button,
+                                        paddingBottom: 130
+                                    }}
+                                >
                                     <Button
                                         title={localeString(
                                             'views.Send.sendCoins'
@@ -961,8 +973,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }}
                                 />
 
-                                {BackendUtils.supportsAMP() && (
-                                    <React.Fragment>
+                                {implementation !== 'c-lightning-REST' && (
+                                    <>
                                         <Text
                                             style={{
                                                 ...styles.text,
@@ -987,6 +999,26 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 })
                                             }
                                         />
+                                    </>
+                                )}
+
+                                <FeeLimit
+                                    satAmount={satAmount}
+                                    onFeeLimitSatChange={(value: string) =>
+                                        this.setState({
+                                            feeLimitSat: value
+                                        })
+                                    }
+                                    onMaxFeePercentChange={(value: string) =>
+                                        this.setState({
+                                            maxFeePercent: value
+                                        })
+                                    }
+                                    SettingsStore={SettingsStore}
+                                />
+
+                                {BackendUtils.supportsAMP() && (
+                                    <React.Fragment>
                                         <Text
                                             style={{
                                                 ...styles.label,
@@ -1064,32 +1096,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     'views.PaymentRequest.maxPartsDescription'
                                                 )}
                                             </Text>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {`${localeString(
-                                                    'views.PaymentRequest.feeLimit'
-                                                )} (${localeString(
-                                                    'general.sats'
-                                                )}) (${localeString(
-                                                    'general.optional'
-                                                )})`}
-                                            </Text>
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                placeholder="100"
-                                                value={feeLimitSat}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        feeLimitSat: text
-                                                    })
-                                                }
-                                            />
                                             <Text
                                                 style={{
                                                     ...styles.text,
