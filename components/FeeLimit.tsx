@@ -6,6 +6,8 @@ import BigNumber from 'bignumber.js';
 import Amount from './Amount';
 import TextInput from './TextInput';
 
+import { Row } from './layout/Row';
+
 import SettingsStore from '../stores/SettingsStore';
 import InvoicesStore from '../stores/InvoicesStore';
 
@@ -193,33 +195,26 @@ export default class FeeLimit extends React.Component<
             <React.Fragment>
                 {isLnd && (
                     <>
-                        <Text
-                            style={{
-                                ...styles.label,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString('views.PaymentRequest.feeLimit')}
-                        </Text>
-                        {displayFeeRecommendation && this.feeRecommendation()}
-                        <View
-                            style={{
-                                flex: 1,
-                                flexWrap: 'wrap',
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end',
-                                opacity: feeOption == 'percent' ? 1 : 0.25
-                            }}
-                        >
+                        <Row justify="space-between">
                             <Text
                                 style={{
                                     ...styles.label,
                                     color: themeColor('text')
                                 }}
                             >
+                                {localeString('views.PaymentRequest.feeLimit')}
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text'),
+                                    opacity: feeOption == 'percent' ? 1 : 0.25
+                                }}
+                            >
                                 <Amount sats={percentAmount} />
                             </Text>
-                        </View>
+                        </Row>
+                        {displayFeeRecommendation && this.feeRecommendation()}
                         <View
                             style={{
                                 flexDirection: 'row',
@@ -309,22 +304,15 @@ export default class FeeLimit extends React.Component<
 
                 {isCLightning && (
                     <React.Fragment>
-                        <Text
-                            style={{
-                                ...styles.label,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString('views.PaymentRequest.feeLimit')}
-                        </Text>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexWrap: 'wrap',
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                        <Row justify="space-between">
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.PaymentRequest.feeLimit')}
+                            </Text>
                             <Text
                                 style={{
                                     ...styles.label,
@@ -333,7 +321,7 @@ export default class FeeLimit extends React.Component<
                             >
                                 <Amount sats={percentAmount} />
                             </Text>
-                        </View>
+                        </Row>
                         <View
                             style={{
                                 flexDirection: 'row'
