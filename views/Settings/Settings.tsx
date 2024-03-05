@@ -245,7 +245,7 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {BackendUtils.supportsLSPs() && (
+                    {BackendUtils.supportsLSPs() && selectedNode && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
