@@ -100,11 +100,8 @@ export default class FeeLimit extends React.Component<
     }
 
     UNSAFE_componentWillReceiveProps(newProps: any) {
-        const { feeOption, satAmount, onFeeLimitSatChange } = newProps;
-        const { feeLimitSat } = this.state;
-
-        const feeOptionUpdated =
-            feeOption && feeOption !== this.state.feeOption;
+        const { satAmount, onFeeLimitSatChange } = newProps;
+        const { feeLimitSat, feeOption } = this.state;
 
         const percentAmount = this.calculatePercentAmount(satAmount);
         const percentUpdated = percentAmount !== this.state.percentAmount;
@@ -123,23 +120,9 @@ export default class FeeLimit extends React.Component<
             });
         }
 
-        if (feeOptionUpdated) {
-            this.setState(
-                {
-                    feeOption
-                },
-                () => {
-                    onFeeLimitSatChange(
-                        BackendUtils.isLNDBased() &&
-                            this.state.feeOption === 'percent'
-                            ? percentAmount
-                            : feeLimitSat
-                    );
-                }
-            );
-        } else if (percentUpdated || satAmountUpdated) {
+        if (percentUpdated || satAmountUpdated) {
             onFeeLimitSatChange(
-                BackendUtils.isLNDBased() && this.state.feeOption === 'percent'
+                BackendUtils.isLNDBased() && feeOption === 'percent'
                     ? percentAmount
                     : feeLimitSat
             );
