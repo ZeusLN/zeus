@@ -1,17 +1,20 @@
 import * as React from 'react';
-import { FlatList, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { ListItem, SearchBar } from 'react-native-elements';
-import AddIcon from '../../assets/images/SVG/Add.svg';
 import { inject, observer } from 'mobx-react';
 
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 
 import InventoryStore from '../../stores/InventoryStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+
 import ProductCategory from '../../models/ProductCategory';
+
+import AddIcon from '../../assets/images/SVG/Add.svg';
 
 interface ProductCategoriesProps {
     navigation: any;
@@ -50,7 +53,8 @@ export default class ProductCategories extends React.Component<
         this.setState({
             categories: categories
                 ? categories.sort((a, b) => a.name.localeCompare(b.name))
-                : []
+                : [],
+            loading: false
         });
 
         return categories;
@@ -78,7 +82,7 @@ export default class ProductCategories extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { categories, search } = this.state;
+        const { categories, search, loading } = this.state;
 
         const Add = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity
@@ -134,37 +138,62 @@ export default class ProductCategories extends React.Component<
                             backgroundColor: themeColor('secondary')
                         }}
                     />
-                    <FlatList
-                        data={categories}
-                        renderItem={({ item }: { item: ProductCategory }) => (
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                                onPress={async () => {
-                                    navigation.navigate(
-                                        'ProductCategoryDetails',
-                                        { categoryId: item.id }
-                                    );
-                                }}
-                            >
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {item.name}
-                                    </ListItem.Title>
-                                </ListItem.Content>
-                            </ListItem>
-                        )}
-                        keyExtractor={(item: ProductCategory, index) =>
-                            `${item.id}-${index}`
-                        }
-                        ItemSeparatorComponent={this.renderSeparator}
-                    />
+                    {loading && (
+                        <View style={{ margin: 20 }}>
+                            <LoadingIndicator />
+                        </View>
+                    )}
+                    {!loading && categories?.length > 0 && (
+                        <FlatList
+                            data={categories}
+                            renderItem={({
+                                item
+                            }: {
+                                item: ProductCategory;
+                            }) => (
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                    onPress={async () => {
+                                        navigation.navigate(
+                                            'ProductCategoryDetails',
+                                            { categoryId: item.id }
+                                        );
+                                    }}
+                                >
+                                    <ListItem.Content>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {item.name}
+                                        </ListItem.Title>
+                                    </ListItem.Content>
+                                </ListItem>
+                            )}
+                            keyExtractor={(item: ProductCategory, index) =>
+                                `${item.id}-${index}`
+                            }
+                            ItemSeparatorComponent={this.renderSeparator}
+                        />
+                    )}
+                    {!loading && categories.length === 0 && (
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                alignSelf: 'center',
+                                marginTop: 20
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.POS.Category.noCategoriesDefined'
+                            )}
+                        </Text>
+                    )}
                 </View>
             </Screen>
         );
