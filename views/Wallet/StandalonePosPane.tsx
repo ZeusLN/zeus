@@ -475,6 +475,8 @@ export default class StandalonePosPane extends React.PureComponent<
 
         const loading = PosStore.loading || InventoryStore.loading;
 
+        const fiatEnabled = SettingsStore?.settings?.fiatEnabled;
+
         const newOrderButton = () => (
             <Text
                 style={{
@@ -592,7 +594,7 @@ export default class StandalonePosPane extends React.PureComponent<
                     SettingsStore={SettingsStore}
                 />
 
-                {getRate() === '$N/A' ? (
+                {fiatEnabled && getRate() === '$N/A' && (
                     <Animated.View
                         style={{
                             alignSelf: 'center',
@@ -610,7 +612,8 @@ export default class StandalonePosPane extends React.PureComponent<
                             )}
                         </Text>
                     </Animated.View>
-                ) : (
+                )}
+                {fiatEnabled && getRate() !== '$N/A' && (
                     <TouchableOpacity onPress={() => getFiatRates()}>
                         <Text
                             style={{
