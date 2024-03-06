@@ -786,13 +786,13 @@ export default class StandalonePosPane extends React.PureComponent<
                     this.state.productsList.length === 0 && (
                         <Text
                             style={{
-                                color: themeColor('text'),
-                                margin: 10,
+                                color: themeColor('secondaryText'),
+                                marginTop: 20,
                                 textAlign: 'center'
                             }}
                         >
                             {localeString(
-                                'pos.views.Wallet.PosPane.noProducts'
+                                'views.Settings.POS.Product.noProductsDefined'
                             )}
                         </Text>
                     )}
