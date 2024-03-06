@@ -466,6 +466,7 @@ export default class PointOfSale extends React.Component<
                                                             confirmationPreference,
                                                             disableTips,
                                                             squareDevMode,
+                                                            showKeypad,
                                                             taxPercentage,
                                                             enablePrinter:
                                                                 !enablePrinter
