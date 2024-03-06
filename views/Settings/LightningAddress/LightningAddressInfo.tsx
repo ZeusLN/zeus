@@ -170,7 +170,7 @@ export default class LightningAddressInfo extends React.Component<
                                         >
                                             {localeString(
                                                 'views.Settings.LightningAddressInfo.pressToRedeem'
-                                            )}
+                                            ).replace('ZEUS PAY', 'ZEUS Pay')}
                                         </Text>
                                     </ListItem.Subtitle>
                                 </ListItem.Content>
