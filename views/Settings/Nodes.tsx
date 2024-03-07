@@ -206,7 +206,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     ];
 
                                 if (
-                                    item.implementation === 'Embedded LND' &&
+                                    item.implementation === 'embedded-lnd' &&
                                     item.embeddedLndNetwork
                                 ) {
                                     nodeSubtitle += ` (${item.embeddedLndNetwork})`;
