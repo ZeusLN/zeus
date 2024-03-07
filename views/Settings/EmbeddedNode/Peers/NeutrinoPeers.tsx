@@ -11,7 +11,10 @@ import Screen from '../../../../components/Screen';
 import Switch from '../../../../components/Switch';
 import { Row } from '../../../../components/layout/Row';
 
-import SettingsStore from '../../../../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_NEUTRINO_PEERS_MAINNET,
+    DEFAULT_NEUTRINO_PEERS_TESTNET
+} from '../../../../stores/SettingsStore';
 
 import { localeString } from '../../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../../utils/RestartUtils';
@@ -48,21 +51,33 @@ export default class NeutrinoPeers extends React.Component<
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
+        const { settings, embeddedLndNetwork } = SettingsStore;
         this.setState({
             dontAllowOtherPeers:
                 settings.dontAllowOtherPeers !== undefined
                     ? settings.dontAllowOtherPeers
                     : false,
-            neutrinoPeers: settings.neutrinoPeers || []
+            neutrinoPeers:
+                embeddedLndNetwork === 'Testnet'
+                    ? settings.neutrinoPeersTestnet
+                    : settings.neutrinoPeersMainnet
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
         const { dontAllowOtherPeers, neutrinoPeers, addPeer } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
+
+        const mainnetPeersChanged =
+            embeddedLndNetwork === 'Mainnet' &&
+            JSON.stringify(neutrinoPeers) !==
+                JSON.stringify(DEFAULT_NEUTRINO_PEERS_MAINNET);
+
+        const testnetPeersChanged =
+            embeddedLndNetwork === 'Testnet' &&
+            JSON.stringify(neutrinoPeers) !==
+                JSON.stringify(DEFAULT_NEUTRINO_PEERS_TESTNET);
 
         return (
             <Screen>
@@ -80,194 +95,261 @@ export default class NeutrinoPeers extends React.Component<
                         }}
                         navigation={navigation}
                     />
-                    <ScrollView style={{ margin: 5 }}>
-                        <>
-                            <View
-                                style={{
-                                    margin: 10
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {`${localeString(
-                                        'general.note'
-                                    ).toUpperCase()}: ${localeString(
-                                        'general.restartZeusChanges'
-                                    ).replace('Zeus', 'ZEUS')}`}
-                                </Text>
-                            </View>
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                            >
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers'
-                                    )}
-                                </ListItem.Title>
+                    <View style={{ flex: 1 }}>
+                        <ScrollView style={{ margin: 5 }}>
+                            <>
                                 <View
                                     style={{
-                                        flex: 1,
-                                        flexDirection: 'row',
-                                        justifyContent: 'flex-end'
+                                        margin: 10
                                     }}
                                 >
-                                    <Switch
-                                        value={dontAllowOtherPeers}
-                                        onValueChange={async () => {
-                                            this.setState({
-                                                dontAllowOtherPeers:
-                                                    !dontAllowOtherPeers
-                                            });
-                                            await updateSettings({
-                                                dontAllowOtherPeers:
-                                                    !dontAllowOtherPeers
-                                            });
-                                            restartNeeded();
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
                                         }}
-                                    />
+                                    >
+                                        {`${localeString(
+                                            'general.note'
+                                        ).toUpperCase()}: ${localeString(
+                                            'general.restartZeusChanges'
+                                        ).replace('Zeus', 'ZEUS')}`}
+                                    </Text>
                                 </View>
-                            </ListItem>
-                            <View
-                                style={{
-                                    margin: 10
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
                                     }}
                                 >
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={dontAllowOtherPeers}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    dontAllowOtherPeers:
+                                                        !dontAllowOtherPeers
+                                                });
+                                                await updateSettings({
+                                                    dontAllowOtherPeers:
+                                                        !dontAllowOtherPeers
+                                                });
+                                                restartNeeded();
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
+                                <View
+                                    style={{
+                                        margin: 10
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle'
+                                        )}
+                                    </Text>
+                                </View>
+                            </>
+                            <View style={{ margin: 5 }}>
+                                <Text>
                                     {localeString(
-                                        'views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle'
+                                        'views.Settings.EmbeddedNode.Peers.addPeer'
                                     )}
                                 </Text>
-                            </View>
-                        </>
-                        <View style={{ margin: 5 }}>
-                            <Text>
-                                {localeString(
-                                    'views.Settings.EmbeddedNode.Peers.addPeer'
-                                )}
-                            </Text>
-                            <Row align="flex-end">
-                                <TextInput
-                                    placeholder="btcd.lnolymp.us"
-                                    onChangeText={(text: string) =>
-                                        this.setState({ addPeer: text })
-                                    }
-                                    value={addPeer}
-                                    style={{ flex: 1 }}
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                />
-                                <View style={{ width: 50, height: 60 }}>
-                                    <Button
-                                        icon={{
-                                            name: 'plus',
-                                            type: 'font-awesome',
-                                            size: 25,
-                                            color: themeColor('text')
-                                        }}
-                                        iconOnly
-                                        onPress={() => {
-                                            if (!addPeer) return;
-                                            const newNeutrinoPeers = [
-                                                ...neutrinoPeers,
-                                                addPeer
-                                            ];
-                                            this.setState({
-                                                neutrinoPeers: newNeutrinoPeers,
-                                                addPeer: ''
-                                            });
-                                            updateSettings({
-                                                neutrinoPeers: newNeutrinoPeers
-                                            });
-                                        }}
+                                <Row align="flex-end">
+                                    <TextInput
+                                        placeholder="btcd.lnolymp.us"
+                                        onChangeText={(text: string) =>
+                                            this.setState({ addPeer: text })
+                                        }
+                                        value={addPeer}
+                                        style={{ flex: 1 }}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
                                     />
-                                </View>
-                            </Row>
-                            <Text>
-                                {localeString(
-                                    'views.Settings.EmbeddedNode.Peers.peersList'
-                                )}
-                            </Text>
-                            {neutrinoPeers && neutrinoPeers.length > 0 ? (
-                                <FlatList
-                                    data={neutrinoPeers}
-                                    renderItem={({ item }: any) => (
-                                        <Row align="flex-end">
-                                            <TextInput
-                                                value={item}
-                                                style={{ flex: 1 }}
-                                                autoCapitalize="none"
-                                                locked
-                                            />
-                                            <View
-                                                style={{
-                                                    alignSelf: 'flex-end',
-                                                    width: 50,
-                                                    height: 60
-                                                }}
-                                            >
-                                                <Button
-                                                    icon={{
-                                                        name: 'minus',
-                                                        type: 'font-awesome',
-                                                        size: 25,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                    iconOnly
-                                                    onPress={() => {
-                                                        const newNeutrinoPeers =
-                                                            this.remove(
-                                                                neutrinoPeers,
-                                                                item
-                                                            );
-                                                        this.setState({
-                                                            neutrinoPeers:
-                                                                newNeutrinoPeers
-                                                        });
-                                                        updateSettings({
-                                                            neutrinoPeers:
-                                                                newNeutrinoPeers
-                                                        });
-                                                    }}
-                                                />
-                                            </View>
-                                        </Row>
+                                    <View style={{ width: 50, height: 60 }}>
+                                        <Button
+                                            icon={{
+                                                name: 'plus',
+                                                type: 'font-awesome',
+                                                size: 25,
+                                                color: themeColor('text')
+                                            }}
+                                            iconOnly
+                                            onPress={() => {
+                                                if (!addPeer) return;
+                                                const newNeutrinoPeers = [
+                                                    ...neutrinoPeers,
+                                                    addPeer
+                                                ];
+                                                this.setState({
+                                                    neutrinoPeers:
+                                                        newNeutrinoPeers,
+                                                    addPeer: ''
+                                                });
+                                                if (
+                                                    embeddedLndNetwork ===
+                                                    'Mainnet'
+                                                ) {
+                                                    updateSettings({
+                                                        neutrinoPeersMainnet:
+                                                            newNeutrinoPeers
+                                                    });
+                                                } else if (
+                                                    embeddedLndNetwork ===
+                                                    'Testnet'
+                                                ) {
+                                                    updateSettings({
+                                                        neutrinoPeersTestnet:
+                                                            newNeutrinoPeers
+                                                    });
+                                                }
+                                            }}
+                                        />
+                                    </View>
+                                </Row>
+                                <Text>
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.Peers.peersList'
                                     )}
-                                    keyExtractor={(item: any, index: number) =>
-                                        `${item.txid}-${index}`
+                                </Text>
+                                {neutrinoPeers && neutrinoPeers.length > 0 ? (
+                                    <FlatList
+                                        data={neutrinoPeers}
+                                        renderItem={({ item }: any) => (
+                                            <Row align="flex-end">
+                                                <TextInput
+                                                    value={item}
+                                                    style={{ flex: 1 }}
+                                                    autoCapitalize="none"
+                                                    locked
+                                                />
+                                                <View
+                                                    style={{
+                                                        alignSelf: 'flex-end',
+                                                        width: 50,
+                                                        height: 60
+                                                    }}
+                                                >
+                                                    <Button
+                                                        icon={{
+                                                            name: 'minus',
+                                                            type: 'font-awesome',
+                                                            size: 25,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                        iconOnly
+                                                        onPress={() => {
+                                                            const newNeutrinoPeers =
+                                                                this.remove(
+                                                                    neutrinoPeers,
+                                                                    item
+                                                                );
+                                                            this.setState({
+                                                                neutrinoPeers:
+                                                                    newNeutrinoPeers
+                                                            });
+                                                            if (
+                                                                embeddedLndNetwork ===
+                                                                'Mainnet'
+                                                            ) {
+                                                                updateSettings({
+                                                                    neutrinoPeersMainnet:
+                                                                        newNeutrinoPeers
+                                                                });
+                                                            } else if (
+                                                                embeddedLndNetwork ===
+                                                                'Testnet'
+                                                            ) {
+                                                                updateSettings({
+                                                                    neutrinoPeersTestnet:
+                                                                        newNeutrinoPeers
+                                                                });
+                                                            }
+                                                        }}
+                                                    />
+                                                </View>
+                                            </Row>
+                                        )}
+                                        keyExtractor={(
+                                            item: any,
+                                            index: number
+                                        ) => `${item.txid}-${index}`}
+                                        onEndReachedThreshold={50}
+                                    />
+                                ) : (
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            marginTop: 15
+                                        }}
+                                    >{`${localeString(
+                                        'general.noneSelected'
+                                    )}. ${localeString(
+                                        'general.zeusDefaults'
+                                    ).replace('Zeus', 'ZEUS')}.`}</Text>
+                                )}
+                            </View>
+                        </ScrollView>
+                    </View>
+                    {(dontAllowOtherPeers ||
+                        mainnetPeersChanged ||
+                        testnetPeersChanged) && (
+                        <View style={{ bottom: 10 }}>
+                            <Button
+                                title={localeString('general.reset')}
+                                onPress={() => {
+                                    if (embeddedLndNetwork === 'Mainnet') {
+                                        this.setState({
+                                            neutrinoPeers:
+                                                DEFAULT_NEUTRINO_PEERS_MAINNET,
+                                            dontAllowOtherPeers: false
+                                        });
+                                        updateSettings({
+                                            neutrinoPeersMainnet:
+                                                DEFAULT_NEUTRINO_PEERS_MAINNET,
+                                            dontAllowOtherPeers: false
+                                        });
                                     }
-                                    onEndReachedThreshold={50}
-                                />
-                            ) : (
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        marginTop: 15
-                                    }}
-                                >{`${localeString(
-                                    'general.noneSelected'
-                                )}. ${localeString(
-                                    'general.zeusDefaults'
-                                ).replace('Zeus', 'ZEUS')}.`}</Text>
-                            )}
+
+                                    if (embeddedLndNetwork === 'Testnet') {
+                                        this.setState({
+                                            neutrinoPeers:
+                                                DEFAULT_NEUTRINO_PEERS_TESTNET,
+                                            dontAllowOtherPeers: false
+                                        });
+                                        updateSettings({
+                                            neutrinoPeersTestnet:
+                                                DEFAULT_NEUTRINO_PEERS_TESTNET,
+                                            dontAllowOtherPeers: false
+                                        });
+                                    }
+                                }}
+                            />
                         </View>
-                    </ScrollView>
+                    )}
                 </View>
             </Screen>
         );
