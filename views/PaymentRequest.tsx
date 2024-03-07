@@ -396,665 +396,701 @@ export default class PaymentRequest extends React.Component<
                     </View>
                 )}
 
-                <ScrollView keyboardShouldPersistTaps="handled">
-                    {!!getPayReqError && (
-                        <View style={styles.content}>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.PaymentRequest.error')}:{' '}
-                                {getPayReqError}
-                            </Text>
-                        </View>
-                    )}
+                <View style={{ flex: 1 }}>
+                    <ScrollView keyboardShouldPersistTaps="handled">
+                        {!!getPayReqError && (
+                            <View style={styles.content}>
+                                <Text
+                                    style={{
+                                        ...styles.label,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.PaymentRequest.error')}
+                                    : {getPayReqError}
+                                </Text>
+                            </View>
+                        )}
 
-                    {!loading && !loadingFeeEstimate && !!pay_req && (
-                        <View style={styles.content}>
-                            <>
-                                {showZaplockerWarning &&
-                                    implementation === 'embedded-lnd' && (
-                                        <View
-                                            style={{
-                                                paddingTop: 10,
-                                                paddingBottom: 10
-                                            }}
-                                        >
-                                            <WarningMessage
-                                                message={localeString(
-                                                    'views.Send.zaplockerWarning'
-                                                )}
-                                            />
-                                        </View>
-                                    )}
-                                {!BackendUtils.supportsLightningSends() && (
-                                    <View
-                                        style={{
-                                            paddingTop: 10,
-                                            paddingBottom: 10
-                                        }}
-                                    >
-                                        <WarningMessage
-                                            message={localeString(
-                                                'views.PaymentRequest.notAllowedToSend'
-                                            )}
-                                        />
-                                    </View>
-                                )}
-                                {noBalance &&
-                                    BackendUtils.supportsLightningSends() && (
-                                        <View
-                                            style={{
-                                                paddingTop: 10,
-                                                paddingBottom: 10
-                                            }}
-                                        >
-                                            <WarningMessage
-                                                message={localeString(
-                                                    'views.Send.noLightningBalance'
-                                                )}
-                                            />
-                                        </View>
-                                    )}
-                                {isNoAmountInvoice ? (
-                                    <AmountInput
-                                        amount={customAmount}
-                                        title={localeString(
-                                            'views.PaymentRequest.customAmt'
+                        {!loading && !loadingFeeEstimate && !!pay_req && (
+                            <View style={styles.content}>
+                                <>
+                                    {showZaplockerWarning &&
+                                        implementation === 'embedded-lnd' && (
+                                            <View
+                                                style={{
+                                                    paddingTop: 10,
+                                                    paddingBottom: 10
+                                                }}
+                                            >
+                                                <WarningMessage
+                                                    message={localeString(
+                                                        'views.Send.zaplockerWarning'
+                                                    )}
+                                                />
+                                            </View>
                                         )}
-                                        onAmountChange={(
-                                            amount: string,
-                                            satAmount: string | number
-                                        ) => {
+                                    {!BackendUtils.supportsLightningSends() && (
+                                        <View
+                                            style={{
+                                                paddingTop: 10,
+                                                paddingBottom: 10
+                                            }}
+                                        >
+                                            <WarningMessage
+                                                message={localeString(
+                                                    'views.PaymentRequest.notAllowedToSend'
+                                                )}
+                                            />
+                                        </View>
+                                    )}
+                                    {noBalance &&
+                                        BackendUtils.supportsLightningSends() && (
+                                            <View
+                                                style={{
+                                                    paddingTop: 10,
+                                                    paddingBottom: 10
+                                                }}
+                                            >
+                                                <WarningMessage
+                                                    message={localeString(
+                                                        'views.Send.noLightningBalance'
+                                                    )}
+                                                />
+                                            </View>
+                                        )}
+                                    {isNoAmountInvoice ? (
+                                        <AmountInput
+                                            amount={customAmount}
+                                            title={localeString(
+                                                'views.PaymentRequest.customAmt'
+                                            )}
+                                            onAmountChange={(
+                                                amount: string,
+                                                satAmount: string | number
+                                            ) => {
+                                                this.setState({
+                                                    customAmount: amount,
+                                                    satAmount
+                                                });
+                                            }}
+                                        />
+                                    ) : (
+                                        <View style={styles.center}>
+                                            <Amount
+                                                sats={requestAmount}
+                                                jumboText
+                                                toggleable
+                                            />
+                                            <View style={{ top: 10 }}>
+                                                <Conversion
+                                                    sats={requestAmount}
+                                                />
+                                            </View>
+                                        </View>
+                                    )}
+                                </>
+
+                                {isZaplocker && (
+                                    <TouchableOpacity
+                                        onPress={() => {
                                             this.setState({
-                                                customAmount: amount,
-                                                satAmount
+                                                zaplockerToggle:
+                                                    !zaplockerToggle
                                             });
                                         }}
-                                    />
-                                ) : (
-                                    <View style={styles.center}>
-                                        <Amount
-                                            sats={requestAmount}
-                                            jumboText
-                                            toggleable
-                                        />
-                                        <View style={{ top: 10 }}>
-                                            <Conversion sats={requestAmount} />
-                                        </View>
-                                    </View>
-                                )}
-                            </>
-
-                            {isZaplocker && (
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        this.setState({
-                                            zaplockerToggle: !zaplockerToggle
-                                        });
-                                    }}
-                                >
-                                    <View
-                                        style={{
-                                            marginTop: 10,
-                                            marginBottom: 10
-                                        }}
                                     >
-                                        <Row justify="space-between">
-                                            <View style={{ width: '95%' }}>
-                                                <KeyValue
-                                                    keyValue={localeString(
-                                                        'views.Settings.LightningAddress.zaplockerVerification'
-                                                    )}
-                                                    color={
-                                                        isZaplockerValid
-                                                            ? themeColor(
-                                                                  'success'
-                                                              )
-                                                            : themeColor(
-                                                                  'error'
-                                                              )
-                                                    }
-                                                />
-                                            </View>
-                                            {zaplockerToggle ? (
-                                                <CaretDown
-                                                    fill={
-                                                        isZaplockerValid
-                                                            ? themeColor(
-                                                                  'success'
-                                                              )
-                                                            : themeColor(
-                                                                  'error'
-                                                              )
-                                                    }
-                                                    width="20"
-                                                    height="20"
-                                                />
-                                            ) : (
-                                                <CaretRight
-                                                    fill={
-                                                        isZaplockerValid
-                                                            ? themeColor(
-                                                                  'success'
-                                                              )
-                                                            : themeColor(
-                                                                  'error'
-                                                              )
-                                                    }
-                                                    width="20"
-                                                    height="20"
-                                                />
+                                        <View
+                                            style={{
+                                                marginTop: 10,
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            <Row justify="space-between">
+                                                <View style={{ width: '95%' }}>
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.Settings.LightningAddress.zaplockerVerification'
+                                                        )}
+                                                        color={
+                                                            isZaplockerValid
+                                                                ? themeColor(
+                                                                      'success'
+                                                                  )
+                                                                : themeColor(
+                                                                      'error'
+                                                                  )
+                                                        }
+                                                    />
+                                                </View>
+                                                {zaplockerToggle ? (
+                                                    <CaretDown
+                                                        fill={
+                                                            isZaplockerValid
+                                                                ? themeColor(
+                                                                      'success'
+                                                                  )
+                                                                : themeColor(
+                                                                      'error'
+                                                                  )
+                                                        }
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                ) : (
+                                                    <CaretRight
+                                                        fill={
+                                                            isZaplockerValid
+                                                                ? themeColor(
+                                                                      'success'
+                                                                  )
+                                                                : themeColor(
+                                                                      'error'
+                                                                  )
+                                                        }
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                )}
+                                            </Row>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+
+                                {zaplockerToggle && (
+                                    <>
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.PaymentRequest.isPmtHashSigValid'
                                             )}
-                                        </Row>
-                                    </View>
-                                </TouchableOpacity>
-                            )}
-
-                            {zaplockerToggle && (
-                                <>
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.PaymentRequest.isPmtHashSigValid'
-                                        )}
-                                        value={
-                                            isPmtHashSigValid
-                                                ? localeString('general.valid')
-                                                : localeString(
-                                                      'general.invalid'
-                                                  )
-                                        }
-                                        color={
-                                            isPmtHashSigValid
-                                                ? themeColor('success')
-                                                : themeColor('error')
-                                        }
-                                    />
-
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.PaymentRequest.isRelaysSigValid'
-                                        )}
-                                        value={
-                                            isRelaysSigValid
-                                                ? localeString('general.valid')
-                                                : localeString(
-                                                      'general.invalid'
-                                                  )
-                                        }
-                                        color={
-                                            isRelaysSigValid
-                                                ? themeColor('success')
-                                                : themeColor('error')
-                                        }
-                                    />
-
-                                    <KeyValue
-                                        keyValue={localeString('nostr.npub')}
-                                        value={zaplockerNpub}
-                                        sensitive
-                                    />
-
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={localeString(
-                                                'nostr.loadProfileExternal'
-                                            )}
-                                            onPress={() =>
-                                                LinkingUtils.handleDeepLink(
-                                                    `nostr:${zaplockerNpub}`,
-                                                    this.props.navigation
-                                                )
+                                            value={
+                                                isPmtHashSigValid
+                                                    ? localeString(
+                                                          'general.valid'
+                                                      )
+                                                    : localeString(
+                                                          'general.invalid'
+                                                      )
+                                            }
+                                            color={
+                                                isPmtHashSigValid
+                                                    ? themeColor('success')
+                                                    : themeColor('error')
                                             }
                                         />
-                                    </View>
-                                </>
-                            )}
 
-                            {!!description && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.PaymentRequest.description'
-                                    )}
-                                    value={description}
-                                />
-                            )}
-
-                            {!!timestamp && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.PaymentRequest.timestamp'
-                                    )}
-                                    value={date}
-                                />
-                            )}
-
-                            {!!expiry && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.PaymentRequest.expiry'
-                                    )}
-                                    value={expiry}
-                                />
-                            )}
-
-                            {!!cltv_expiry && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.PaymentRequest.cltvExpiry'
-                                    )}
-                                    value={cltv_expiry}
-                                />
-                            )}
-
-                            {!!destination && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'general.destination'
-                                    )}
-                                    value={destination}
-                                />
-                            )}
-
-                            {!!payment_hash && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.PaymentRequest.paymentHash'
-                                    )}
-                                    value={payment_hash}
-                                />
-                            )}
-
-                            {!!successProbability && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.PaymentRequest.successProbability'
-                                    )}
-                                    value={`${successProbability}%`}
-                                />
-                            )}
-
-                            {(!!feeEstimate || feeEstimate === 0) && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.PaymentRequest.feeEstimate'
-                                    )}
-                                    value={
-                                        <Amount
-                                            sats={feeEstimate || 0}
-                                            toggleable
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.PaymentRequest.isRelaysSigValid'
+                                            )}
+                                            value={
+                                                isRelaysSigValid
+                                                    ? localeString(
+                                                          'general.valid'
+                                                      )
+                                                    : localeString(
+                                                          'general.invalid'
+                                                      )
+                                            }
+                                            color={
+                                                isRelaysSigValid
+                                                    ? themeColor('success')
+                                                    : themeColor('error')
+                                            }
                                         />
-                                    }
-                                />
-                            )}
 
-                            {(isLnd || isCLightning) && (
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        this.setState({
-                                            settingsToggle: !settingsToggle
-                                        });
-                                    }}
-                                >
-                                    <View
-                                        style={{
-                                            marginTop: 10,
-                                            marginBottom: 10
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'nostr.npub'
+                                            )}
+                                            value={zaplockerNpub}
+                                            sensitive
+                                        />
+
+                                        <View style={styles.button}>
+                                            <Button
+                                                title={localeString(
+                                                    'nostr.loadProfileExternal'
+                                                )}
+                                                onPress={() =>
+                                                    LinkingUtils.handleDeepLink(
+                                                        `nostr:${zaplockerNpub}`,
+                                                        this.props.navigation
+                                                    )
+                                                }
+                                            />
+                                        </View>
+                                    </>
+                                )}
+
+                                {!!description && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.description'
+                                        )}
+                                        value={description}
+                                    />
+                                )}
+
+                                {!!timestamp && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.timestamp'
+                                        )}
+                                        value={date}
+                                    />
+                                )}
+
+                                {!!expiry && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.expiry'
+                                        )}
+                                        value={expiry}
+                                    />
+                                )}
+
+                                {!!cltv_expiry && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.cltvExpiry'
+                                        )}
+                                        value={cltv_expiry}
+                                    />
+                                )}
+
+                                {!!destination && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'general.destination'
+                                        )}
+                                        value={destination}
+                                    />
+                                )}
+
+                                {!!payment_hash && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.paymentHash'
+                                        )}
+                                        value={payment_hash}
+                                    />
+                                )}
+
+                                {!!successProbability && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.successProbability'
+                                        )}
+                                        value={`${successProbability}%`}
+                                    />
+                                )}
+
+                                {(!!feeEstimate || feeEstimate === 0) && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.feeEstimate'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={feeEstimate || 0}
+                                                toggleable
+                                            />
+                                        }
+                                    />
+                                )}
+
+                                {(isLnd || isCLightning) && (
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            this.setState({
+                                                settingsToggle: !settingsToggle
+                                            });
                                         }}
                                     >
-                                        <Row justify="space-between">
-                                            <View style={{ width: '95%' }}>
-                                                <KeyValue
-                                                    keyValue={localeString(
-                                                        'views.Settings.title'
-                                                    )}
-                                                />
-                                            </View>
-                                            {settingsToggle ? (
-                                                <CaretDown
-                                                    fill={themeColor('text')}
-                                                    width="20"
-                                                    height="20"
-                                                />
-                                            ) : (
-                                                <CaretRight
-                                                    fill={themeColor('text')}
-                                                    width="20"
-                                                    height="20"
-                                                />
+                                        <View
+                                            style={{
+                                                marginTop: 10,
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            <Row justify="space-between">
+                                                <View style={{ width: '95%' }}>
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.Settings.title'
+                                                        )}
+                                                    />
+                                                </View>
+                                                {settingsToggle ? (
+                                                    <CaretDown
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                ) : (
+                                                    <CaretRight
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                )}
+                                            </Row>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+
+                                <FeeLimit
+                                    satAmount={
+                                        isNoAmountInvoice
+                                            ? customAmount
+                                            : requestAmount || 0
+                                    }
+                                    onFeeLimitSatChange={(value: string) =>
+                                        this.setState({
+                                            feeLimitSat: value
+                                        })
+                                    }
+                                    onMaxFeePercentChange={(value: string) =>
+                                        this.setState({
+                                            maxFeePercent: value
+                                        })
+                                    }
+                                    feeOption={feeOption}
+                                    SettingsStore={SettingsStore}
+                                    InvoicesStore={InvoicesStore}
+                                    displayFeeRecommendation
+                                    hide={!settingsToggle}
+                                />
+
+                                {settingsToggle && (
+                                    <>
+                                        {!!pay_req &&
+                                            BackendUtils.supportsHopPicking() && (
+                                                <>
+                                                    {
+                                                        <HopPicker
+                                                            onValueChange={(
+                                                                item: any
+                                                            ) =>
+                                                                this.setState({
+                                                                    outgoingChanId:
+                                                                        item
+                                                                            ? item.channelId
+                                                                            : null
+                                                                })
+                                                            }
+                                                            title={localeString(
+                                                                'views.PaymentRequest.firstHop'
+                                                            )}
+                                                            ChannelsStore={
+                                                                ChannelsStore
+                                                            }
+                                                            UnitsStore={
+                                                                UnitsStore
+                                                            }
+                                                        />
+                                                    }
+                                                    {
+                                                        <HopPicker
+                                                            onValueChange={(
+                                                                item: any
+                                                            ) =>
+                                                                this.setState({
+                                                                    lastHopPubkey:
+                                                                        item
+                                                                            ? item.remote_pubkey
+                                                                            : null
+                                                                })
+                                                            }
+                                                            title={localeString(
+                                                                'views.PaymentRequest.lastHop'
+                                                            )}
+                                                            ChannelsStore={
+                                                                ChannelsStore
+                                                            }
+                                                            UnitsStore={
+                                                                UnitsStore
+                                                            }
+                                                        />
+                                                    }
+                                                </>
                                             )}
-                                        </Row>
-                                    </View>
-                                </TouchableOpacity>
-                            )}
 
-                            <FeeLimit
-                                satAmount={
-                                    isNoAmountInvoice
-                                        ? customAmount
-                                        : requestAmount || 0
-                                }
-                                onFeeLimitSatChange={(value: string) =>
-                                    this.setState({
-                                        feeLimitSat: value
-                                    })
-                                }
-                                onMaxFeePercentChange={(value: string) =>
-                                    this.setState({
-                                        maxFeePercent: value
-                                    })
-                                }
-                                feeOption={feeOption}
-                                SettingsStore={SettingsStore}
-                                InvoicesStore={InvoicesStore}
-                                displayFeeRecommendation
-                                hide={!settingsToggle}
-                            />
-
-                            {settingsToggle && (
-                                <>
-                                    {!!pay_req &&
-                                        BackendUtils.supportsHopPicking() && (
-                                            <>
-                                                {
-                                                    <HopPicker
-                                                        onValueChange={(
-                                                            item: any
-                                                        ) =>
-                                                            this.setState({
-                                                                outgoingChanId:
-                                                                    item
-                                                                        ? item.channelId
-                                                                        : null
-                                                            })
-                                                        }
-                                                        title={localeString(
-                                                            'views.PaymentRequest.firstHop'
+                                        {!!pay_req &&
+                                            BackendUtils.supportsMPP() &&
+                                            !enableTor && (
+                                                <React.Fragment>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.label,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            top: 25
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.PaymentRequest.mpp'
                                                         )}
-                                                        ChannelsStore={
-                                                            ChannelsStore
-                                                        }
-                                                        UnitsStore={UnitsStore}
-                                                    />
-                                                }
-                                                {
-                                                    <HopPicker
-                                                        onValueChange={(
-                                                            item: any
-                                                        ) =>
-                                                            this.setState({
-                                                                lastHopPubkey:
-                                                                    item
-                                                                        ? item.remote_pubkey
-                                                                        : null
-                                                            })
-                                                        }
-                                                        title={localeString(
-                                                            'views.PaymentRequest.lastHop'
-                                                        )}
-                                                        ChannelsStore={
-                                                            ChannelsStore
-                                                        }
-                                                        UnitsStore={UnitsStore}
-                                                    />
-                                                }
-                                            </>
-                                        )}
+                                                    </Text>
+                                                    <View
+                                                        style={{
+                                                            flex: 1,
+                                                            flexDirection:
+                                                                'row',
+                                                            justifyContent:
+                                                                'flex-end'
+                                                        }}
+                                                    >
+                                                        <Switch
+                                                            value={
+                                                                enableMultiPathPayment
+                                                            }
+                                                            onValueChange={() => {
+                                                                const enable =
+                                                                    !enableMultiPathPayment;
+                                                                this.setState({
+                                                                    enableMultiPathPayment:
+                                                                        enable,
+                                                                    enableAtomicMultiPathPayment:
+                                                                        enableMultiPathPayment
+                                                                            ? false
+                                                                            : true
+                                                                });
+                                                            }}
+                                                        />
+                                                    </View>
+                                                </React.Fragment>
+                                            )}
 
-                                    {!!pay_req &&
-                                        BackendUtils.supportsMPP() &&
-                                        !enableTor && (
+                                        {!!pay_req &&
+                                            BackendUtils.supportsAMP() && (
+                                                <React.Fragment>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.label,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            top: 25
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.PaymentRequest.amp'
+                                                        )}
+                                                    </Text>
+                                                    <View
+                                                        style={{
+                                                            flex: 1,
+                                                            flexDirection:
+                                                                'row',
+                                                            justifyContent:
+                                                                'flex-end'
+                                                        }}
+                                                    >
+                                                        <Switch
+                                                            value={enableAmp}
+                                                            onValueChange={() => {
+                                                                const enable =
+                                                                    !enableAtomicMultiPathPayment;
+                                                                this.setState({
+                                                                    enableAtomicMultiPathPayment:
+                                                                        enable,
+                                                                    enableMultiPathPayment:
+                                                                        enable ||
+                                                                        enableMultiPathPayment
+                                                                });
+                                                            }}
+                                                            disabled={
+                                                                lockAtomicMultiPathPayment
+                                                            }
+                                                        />
+                                                    </View>
+                                                </React.Fragment>
+                                            )}
+
+                                        {ampOrMppEnabled && (
                                             <React.Fragment>
                                                 <Text
                                                     style={{
                                                         ...styles.label,
                                                         color: themeColor(
                                                             'text'
-                                                        ),
-                                                        top: 25
+                                                        )
                                                     }}
                                                 >
                                                     {localeString(
-                                                        'views.PaymentRequest.mpp'
+                                                        'views.PaymentRequest.maxParts'
                                                     )}
                                                 </Text>
-                                                <View
+                                                <TextInput
+                                                    keyboardType="numeric"
+                                                    value={maxParts}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            maxParts: text
+                                                        })
+                                                    }
+                                                />
+                                                <Text
                                                     style={{
-                                                        flex: 1,
-                                                        flexDirection: 'row',
-                                                        justifyContent:
-                                                            'flex-end'
+                                                        ...styles.labelSecondary,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
                                                     }}
                                                 >
-                                                    <Switch
-                                                        value={
-                                                            enableMultiPathPayment
-                                                        }
-                                                        onValueChange={() => {
-                                                            const enable =
-                                                                !enableMultiPathPayment;
-                                                            this.setState({
-                                                                enableMultiPathPayment:
-                                                                    enable,
-                                                                enableAtomicMultiPathPayment:
-                                                                    enableMultiPathPayment
-                                                                        ? false
-                                                                        : true
-                                                            });
-                                                        }}
-                                                    />
-                                                </View>
+                                                    {localeString(
+                                                        'views.PaymentRequest.maxPartsDescription'
+                                                    )}
+                                                </Text>
                                             </React.Fragment>
                                         )}
 
-                                    {!!pay_req && BackendUtils.supportsAMP() && (
-                                        <React.Fragment>
-                                            <Text
-                                                style={{
-                                                    ...styles.label,
-                                                    color: themeColor('text'),
-                                                    top: 25
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.PaymentRequest.amp'
-                                                )}
-                                            </Text>
-                                            <View
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    justifyContent: 'flex-end'
-                                                }}
-                                            >
-                                                <Switch
-                                                    value={enableAmp}
-                                                    onValueChange={() => {
-                                                        const enable =
-                                                            !enableAtomicMultiPathPayment;
-                                                        this.setState({
-                                                            enableAtomicMultiPathPayment:
-                                                                enable,
-                                                            enableMultiPathPayment:
-                                                                enable ||
-                                                                enableMultiPathPayment
-                                                        });
+                                        {ampOrMppEnabled && (
+                                            <React.Fragment>
+                                                <Text
+                                                    style={{
+                                                        ...styles.label,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
                                                     }}
-                                                    disabled={
-                                                        lockAtomicMultiPathPayment
+                                                >
+                                                    {`${localeString(
+                                                        'views.PaymentRequest.maxShardAmt'
+                                                    )} (${localeString(
+                                                        'general.sats'
+                                                    )}) (${localeString(
+                                                        'general.optional'
+                                                    )})`}
+                                                </Text>
+                                                <TextInput
+                                                    keyboardType="numeric"
+                                                    value={maxShardAmt}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            maxShardAmt: text
+                                                        })
                                                     }
                                                 />
-                                            </View>
-                                        </React.Fragment>
-                                    )}
+                                            </React.Fragment>
+                                        )}
 
-                                    {ampOrMppEnabled && (
-                                        <React.Fragment>
-                                            <Text
-                                                style={{
-                                                    ...styles.label,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.PaymentRequest.maxParts'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                value={maxParts}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        maxParts: text
-                                                    })
-                                                }
-                                            />
-                                            <Text
-                                                style={{
-                                                    ...styles.labelSecondary,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.PaymentRequest.maxPartsDescription'
-                                                )}
-                                            </Text>
-                                        </React.Fragment>
-                                    )}
+                                        {isLnd && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.label,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.Payments.timeoutSeconds'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    keyboardType="numeric"
+                                                    value={timeoutSeconds}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            timeoutSeconds: text
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )}
+                                    </>
+                                )}
 
-                                    {ampOrMppEnabled && (
-                                        <React.Fragment>
-                                            <Text
-                                                style={{
-                                                    ...styles.label,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {`${localeString(
-                                                    'views.PaymentRequest.maxShardAmt'
-                                                )} (${localeString(
-                                                    'general.sats'
-                                                )}) (${localeString(
-                                                    'general.optional'
-                                                )})`}
-                                            </Text>
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                value={maxShardAmt}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        maxShardAmt: text
-                                                    })
-                                                }
-                                            />
-                                        </React.Fragment>
-                                    )}
-
-                                    {isLnd && (
+                                {!!pay_req &&
+                                    !lightningReadyToSend &&
+                                    !noBalance && (
                                         <>
                                             <Text
                                                 style={{
-                                                    ...styles.label,
-                                                    color: themeColor('text')
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Medium',
+                                                    color: themeColor(
+                                                        'highlight'
+                                                    ),
+                                                    margin: 5,
+                                                    alignSelf: 'center',
+                                                    marginTop: 10,
+                                                    marginBottom: 10
                                                 }}
                                             >
                                                 {localeString(
-                                                    'views.Settings.Payments.timeoutSeconds'
+                                                    'views.PaymentRequest.lndGettingReady'
                                                 )}
                                             </Text>
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                value={timeoutSeconds}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        timeoutSeconds: text
-                                                    })
-                                                }
-                                            />
+                                            <LoadingIndicator size={30} />
                                         </>
                                     )}
-                                </>
-                            )}
+                            </View>
+                        )}
+                    </ScrollView>
+                </View>
 
-                            {!!pay_req && !lightningReadyToSend && !noBalance && (
-                                <>
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Medium',
-                                            color: themeColor('highlight'),
-                                            margin: 5,
-                                            alignSelf: 'center',
-                                            marginTop: 10,
-                                            marginBottom: 10
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.lndGettingReady'
-                                        )}
-                                    </Text>
-                                    <LoadingIndicator size={30} />
-                                </>
-                            )}
-
-                            {!!pay_req &&
-                                BackendUtils.supportsLightningSends() && (
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={localeString(
-                                                'views.PaymentRequest.payInvoice'
-                                            )}
-                                            icon={
-                                                lightningReadyToSend
-                                                    ? {
-                                                          name: 'send',
-                                                          size: 25
-                                                      }
-                                                    : undefined
-                                            }
-                                            onPress={() => {
-                                                if (isZaplocker)
-                                                    LnurlPayStore.broadcastAttestation();
-                                                this.sendPayment({
-                                                    payment_request:
-                                                        paymentRequest,
-                                                    amount: satAmount
-                                                        ? satAmount.toString()
-                                                        : undefined,
-                                                    max_parts:
-                                                        enableMultiPathPayment
-                                                            ? maxParts
-                                                            : null,
-                                                    max_shard_amt:
-                                                        enableMultiPathPayment
-                                                            ? maxShardAmt
-                                                            : null,
-                                                    fee_limit_sat: isLnd
-                                                        ? feeLimitSat
-                                                        : null,
-                                                    max_fee_percent:
-                                                        isCLightning
-                                                            ? maxFeePercentFormatted
-                                                            : null,
-                                                    outgoing_chan_id:
-                                                        outgoingChanId,
-                                                    last_hop_pubkey:
-                                                        lastHopPubkey,
-                                                    amp: enableAmp,
-                                                    timeout_seconds:
-                                                        timeoutSeconds
-                                                });
-                                            }}
-                                            disabled={!lightningReadyToSend}
-                                        />
-                                    </View>
+                {!!pay_req && BackendUtils.supportsLightningSends() && (
+                    <View style={{ bottom: 10 }}>
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.PaymentRequest.payInvoice'
                                 )}
+                                icon={
+                                    lightningReadyToSend
+                                        ? {
+                                              name: 'send',
+                                              size: 25
+                                          }
+                                        : undefined
+                                }
+                                onPress={() => {
+                                    if (isZaplocker)
+                                        LnurlPayStore.broadcastAttestation();
+                                    this.sendPayment({
+                                        payment_request: paymentRequest,
+                                        amount: satAmount
+                                            ? satAmount.toString()
+                                            : undefined,
+                                        max_parts: enableMultiPathPayment
+                                            ? maxParts
+                                            : null,
+                                        max_shard_amt: enableMultiPathPayment
+                                            ? maxShardAmt
+                                            : null,
+                                        fee_limit_sat: isLnd
+                                            ? feeLimitSat
+                                            : null,
+                                        max_fee_percent: isCLightning
+                                            ? maxFeePercentFormatted
+                                            : null,
+                                        outgoing_chan_id: outgoingChanId,
+                                        last_hop_pubkey: lastHopPubkey,
+                                        amp: enableAmp,
+                                        timeout_seconds: timeoutSeconds
+                                    });
+                                }}
+                                disabled={!lightningReadyToSend}
+                            />
                         </View>
-                    )}
-                </ScrollView>
+                    </View>
+                )}
             </Screen>
         );
     }
