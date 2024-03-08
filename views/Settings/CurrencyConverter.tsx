@@ -5,7 +5,8 @@ import {
     View,
     StyleSheet,
     Animated,
-    Easing
+    Easing,
+    ScrollView
 } from 'react-native';
 import Svg, { Text } from 'react-native-svg';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
@@ -454,167 +455,195 @@ export default class CurrencyConverter extends React.Component<
                         />
                     </View>
                 ) : (
-                    <View style={{ marginHorizontal: 22 }}>
-                        <DragList
-                            onReordered={this.onReordered}
-                            data={Object.keys(inputValues)}
-                            keyExtractor={(item: any) => item}
-                            renderItem={({
-                                item,
-                                onDragStart,
-                                onDragEnd
-                            }: DragListRenderItemInfo<any>) => {
-                                const { inputValues } = this.state;
-                                return (
-                                    <View style={styles.draggableItem}>
-                                        <View
-                                            style={styles.inputContainer}
-                                            key={item}
-                                        >
-                                            {editMode &&
-                                                item !== 'BTC' &&
-                                                item !== 'sats' && (
-                                                    <TouchableOpacity
-                                                        onPress={() =>
-                                                            this.handleDeleteCurrency(
-                                                                item
-                                                            )
-                                                        }
-                                                    >
-                                                        <Animated.View
-                                                            style={[
-                                                                styles.deleteIcon,
-                                                                {
-                                                                    transform: [
-                                                                        {
-                                                                            translateX:
-                                                                                slideInLeft
-                                                                        }
-                                                                    ]
-                                                                }
-                                                            ]}
-                                                        >
-                                                            <Icon
-                                                                name="delete"
-                                                                size={28}
-                                                                color={themeColor(
-                                                                    'delete'
-                                                                )}
-                                                            />
-                                                        </Animated.View>
-                                                    </TouchableOpacity>
-                                                )}
-
-                                            <Animated.View
-                                                style={[
-                                                    styles.inputBox,
-                                                    item !== 'BTC' &&
-                                                    item !== 'sats'
-                                                        ? {
-                                                              transform: [
-                                                                  {
-                                                                      scaleX: inputBoxWidth
-                                                                  }
-                                                              ]
-                                                          }
-                                                        : null
-                                                ]}
-                                            >
+                    <View style={{ flex: 1 }}>
+                        <ScrollView>
+                            <View
+                                style={{
+                                    marginHorizontal: 16,
+                                    paddingBottom: 10
+                                }}
+                            >
+                                <DragList
+                                    onReordered={this.onReordered}
+                                    data={Object.keys(inputValues)}
+                                    keyExtractor={(item: any) => item}
+                                    renderItem={({
+                                        item,
+                                        onDragStart,
+                                        onDragEnd
+                                    }: DragListRenderItemInfo<any>) => {
+                                        const { inputValues } = this.state;
+                                        return (
+                                            <View style={styles.draggableItem}>
                                                 <View
-                                                    style={{
-                                                        position: 'absolute',
-                                                        left: [
-                                                            'BTC',
-                                                            'sats'
-                                                        ].includes(item)
-                                                            ? 20
-                                                            : 16,
-                                                        zIndex: 1
-                                                    }}
-                                                >
-                                                    {['BTC', 'sats'].includes(
-                                                        item
-                                                    ) ? (
-                                                        <BitcoinIcon
-                                                            height={20}
-                                                            width={20}
-                                                        />
-                                                    ) : (
-                                                        <Svg
-                                                            height="24"
-                                                            width="24"
-                                                        >
-                                                            <Text
-                                                                fontSize="16"
-                                                                x="0"
-                                                                y="18"
-                                                            >
-                                                                {getFlagEmoji(
-                                                                    item
-                                                                )}
-                                                            </Text>
-                                                        </Svg>
-                                                    )}
-                                                </View>
-
-                                                <TextInput
-                                                    suffix={item}
-                                                    style={{
-                                                        flex: 1
-                                                    }}
-                                                    right={80}
-                                                    placeholder={localeString(
-                                                        'views.Settings.CurrencyConverter.enterAmount'
-                                                    )}
-                                                    value={inputValues[item]}
-                                                    onChangeText={(value) =>
-                                                        this.handleInputChange(
-                                                            value,
-                                                            item
-                                                        )
+                                                    style={
+                                                        styles.inputContainer
                                                     }
-                                                    autoCapitalize="none"
-                                                />
-                                            </Animated.View>
-
-                                            {editMode &&
-                                                item !== 'BTC' &&
-                                                item !== 'sats' && (
-                                                    <TouchableOpacity
-                                                        onPressIn={onDragStart}
-                                                        onPressOut={onDragEnd}
-                                                        accessibilityLabel={
-                                                            'Reorder'
-                                                        }
-                                                    >
-                                                        <Animated.View
-                                                            style={[
-                                                                styles.dragHandle,
-                                                                {
-                                                                    transform: [
-                                                                        {
-                                                                            translateX:
-                                                                                slideInRight
-                                                                        }
-                                                                    ]
+                                                    key={item}
+                                                >
+                                                    {editMode &&
+                                                        item !== 'BTC' &&
+                                                        item !== 'sats' && (
+                                                            <TouchableOpacity
+                                                                onPress={() =>
+                                                                    this.handleDeleteCurrency(
+                                                                        item
+                                                                    )
                                                                 }
-                                                            ]}
+                                                            >
+                                                                <Animated.View
+                                                                    style={[
+                                                                        styles.deleteIcon,
+                                                                        {
+                                                                            transform:
+                                                                                [
+                                                                                    {
+                                                                                        translateX:
+                                                                                            slideInLeft
+                                                                                    }
+                                                                                ]
+                                                                        }
+                                                                    ]}
+                                                                >
+                                                                    <Icon
+                                                                        name="delete"
+                                                                        size={
+                                                                            28
+                                                                        }
+                                                                        color={themeColor(
+                                                                            'delete'
+                                                                        )}
+                                                                    />
+                                                                </Animated.View>
+                                                            </TouchableOpacity>
+                                                        )}
+
+                                                    <Animated.View
+                                                        style={[
+                                                            styles.inputBox,
+                                                            item !== 'BTC' &&
+                                                            item !== 'sats'
+                                                                ? {
+                                                                      transform:
+                                                                          [
+                                                                              {
+                                                                                  scaleX: inputBoxWidth
+                                                                              }
+                                                                          ]
+                                                                  }
+                                                                : null
+                                                        ]}
+                                                    >
+                                                        <View
+                                                            style={{
+                                                                position:
+                                                                    'absolute',
+                                                                left: [
+                                                                    'BTC',
+                                                                    'sats'
+                                                                ].includes(item)
+                                                                    ? 20
+                                                                    : 16,
+                                                                zIndex: 1
+                                                            }}
                                                         >
-                                                            <DragDots
-                                                                fill={themeColor(
-                                                                    'text'
-                                                                )}
-                                                                width="30"
-                                                                height="30"
-                                                            />
-                                                        </Animated.View>
-                                                    </TouchableOpacity>
-                                                )}
-                                        </View>
-                                    </View>
-                                );
-                            }}
-                        />
+                                                            {[
+                                                                'BTC',
+                                                                'sats'
+                                                            ].includes(item) ? (
+                                                                <BitcoinIcon
+                                                                    height={20}
+                                                                    width={20}
+                                                                />
+                                                            ) : (
+                                                                <Svg
+                                                                    height="24"
+                                                                    width="24"
+                                                                >
+                                                                    <Text
+                                                                        fontSize="16"
+                                                                        x="0"
+                                                                        y="18"
+                                                                    >
+                                                                        {getFlagEmoji(
+                                                                            item
+                                                                        )}
+                                                                    </Text>
+                                                                </Svg>
+                                                            )}
+                                                        </View>
+
+                                                        <TextInput
+                                                            suffix={item}
+                                                            style={{
+                                                                flex: 1
+                                                            }}
+                                                            right={80}
+                                                            placeholder={localeString(
+                                                                'views.Settings.CurrencyConverter.enterAmount'
+                                                            )}
+                                                            value={
+                                                                inputValues[
+                                                                    item
+                                                                ]
+                                                            }
+                                                            onChangeText={(
+                                                                value
+                                                            ) =>
+                                                                this.handleInputChange(
+                                                                    value,
+                                                                    item
+                                                                )
+                                                            }
+                                                            autoCapitalize="none"
+                                                        />
+                                                    </Animated.View>
+
+                                                    {editMode &&
+                                                        item !== 'BTC' &&
+                                                        item !== 'sats' && (
+                                                            <TouchableOpacity
+                                                                onPressIn={
+                                                                    onDragStart
+                                                                }
+                                                                onPressOut={
+                                                                    onDragEnd
+                                                                }
+                                                                accessibilityLabel={
+                                                                    'Reorder'
+                                                                }
+                                                            >
+                                                                <Animated.View
+                                                                    style={[
+                                                                        styles.dragHandle,
+                                                                        {
+                                                                            transform:
+                                                                                [
+                                                                                    {
+                                                                                        translateX:
+                                                                                            slideInRight
+                                                                                    }
+                                                                                ]
+                                                                        }
+                                                                    ]}
+                                                                >
+                                                                    <DragDots
+                                                                        fill={themeColor(
+                                                                            'text'
+                                                                        )}
+                                                                        width="30"
+                                                                        height="30"
+                                                                    />
+                                                                </Animated.View>
+                                                            </TouchableOpacity>
+                                                        )}
+                                                </View>
+                                            </View>
+                                        );
+                                    }}
+                                />
+                            </View>
+                        </ScrollView>
                     </View>
                 )}
             </Screen>
@@ -635,7 +664,7 @@ const styles = StyleSheet.create({
     },
     deleteIcon: {
         marginRight: 16,
-        marginLeft: -6
+        marginLeft: 0
     },
     draggableItem: {
         flexDirection: 'row',
@@ -644,6 +673,6 @@ const styles = StyleSheet.create({
     },
     dragHandle: {
         marginLeft: 16,
-        marginRight: -6
+        marginRight: 0
     }
 });
