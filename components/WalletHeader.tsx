@@ -483,7 +483,7 @@ export default class WalletHeader extends React.Component<
                             <TempleButton navigation={navigation} />
                         </Row>
                     ) : channels ? (
-                        <Row style={{ marginTop: 3 }}>
+                        <Row style={{ marginTop: 1 }}>
                             <SearchButton />
                             <OpenChannelButton />
                         </Row>
