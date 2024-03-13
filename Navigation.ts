@@ -62,7 +62,7 @@ import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
-import SelectNodeProfile from './views/Settings/SelectNodeProfile';
+import SetNodePicture from './views/Settings/SetNodePicture';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -443,8 +443,8 @@ const AppScenes = {
     RestoreChannelBackups: {
         screen: RestoreChannelBackups
     },
-    SelectNodeProfile: {
-        screen: SelectNodeProfile
+    SetNodePicture: {
+        screen: SetNodePicture
     }
 };
 
