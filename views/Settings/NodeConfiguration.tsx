@@ -1548,11 +1548,20 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
+                    <View style={{ ...styles.button, marginTop: 20 }}>
+                        <Button
+                            onPress={() => {
+                                navigation.navigate('SelectNodeProfile');
+                            }}
+                            title="Upload profile picture"
+                        />
+                    </View>
+
                     {!creatingWallet &&
                         !(
                             implementation === 'embedded-lnd' && !adminMacaroon
                         ) && (
-                            <View style={{ ...styles.button, marginTop: 20 }}>
+                            <View style={{ ...styles.button }}>
                                 <Button
                                     title={
                                         saved
