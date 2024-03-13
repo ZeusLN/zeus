@@ -25,7 +25,7 @@ interface SelectNodeProfileProps {
 
 interface SelectNodeProfileState {
     images: string[];
-    photo: string | null;
+    photo: string;
 }
 
 export default class SelectNodeProfile extends React.Component<
@@ -105,10 +105,30 @@ export default class SelectNodeProfile extends React.Component<
         return photo || '';
     }
 
+    handleImageTap = async (item) => {
+        try {
+            // Fetch the local image
+            let imageUri = Image.resolveAssetSource(item).uri;
+
+            // Convert the local image to Base64
+            let response = await fetch(imageUri);
+            let blob = await response.blob();
+
+            let reader = new FileReader();
+            reader.onload = async () => {
+                const dataUrl = reader.result;
+                // Set Base64 representation to state
+                this.setState({ photo: dataUrl });
+            };
+            reader.readAsDataURL(blob);
+        } catch (error) {
+            console.error('Error converting image to Base64:', error);
+        }
+    };
+
     render() {
         const { navigation } = this.props;
         const { photo } = this.state;
-        console.log(photo);
 
         const AddPhotos = () => (
             <AddIcon
@@ -148,7 +168,7 @@ export default class SelectNodeProfile extends React.Component<
                         >
                             {photo ? (
                                 <Image
-                                    source={this.getPhoto(photo)}
+                                    source={{ uri: this.getPhoto(photo) }}
                                     style={styles.photo}
                                 />
                             ) : (
@@ -161,7 +181,7 @@ export default class SelectNodeProfile extends React.Component<
                     data={this.state.images}
                     renderItem={({ item }) => (
                         <TouchableOpacity
-                            onPress={() => this.setState({ photo: item })}
+                            onPress={() => this.handleImageTap(item)}
                         >
                             <View
                                 style={{
@@ -188,7 +208,14 @@ export default class SelectNodeProfile extends React.Component<
                     }}
                 />
 
-                <Button title="Upload picture" />
+                <Button
+                    title="Upload picture"
+                    onPress={() => {
+                        navigation.navigate('NodeConfiguration', {
+                            photo
+                        });
+                    }}
+                />
             </Screen>
         );
     }
