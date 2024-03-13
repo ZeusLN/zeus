@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
+import RNFS from 'react-native-fs';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
@@ -45,8 +46,6 @@ import stores from '../stores/Stores';
 
 import { Body } from './text/Body';
 import { Row } from '../components/layout/Row';
-
-const Contact = require('../assets/images/Mascot.png');
 
 const TorIcon = require('../assets/images/tor.png');
 
@@ -206,6 +205,14 @@ export default class WalletHeader extends React.Component<
         }
     }
 
+    getPhoto(photo: string | null): string {
+        if (typeof photo === 'string' && photo.includes('rnfs://')) {
+            const fileName = photo.replace('rnfs://', '');
+            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
+        }
+        return photo || '';
+    }
+
     render() {
         const { clipboard } = this.state;
         const {
@@ -227,8 +234,6 @@ export default class WalletHeader extends React.Component<
         const laLoading = LightningAddressStore?.loading;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
-        const multipleNodes: boolean =
-            (settings && settings.nodes && settings.nodes.length > 1) || false;
         const selectedNode: any =
             (settings &&
                 settings.nodes?.length &&
@@ -245,14 +250,19 @@ export default class WalletHeader extends React.Component<
                 onLongPress={() => protectedNavigation(navigation, 'Nodes')}
                 accessibilityLabel={localeString('views.Settings.title')}
             >
-                {multipleNodes ? (
+                {selectedNode && selectedNode.photo ? (
+                    <Image
+                        source={{
+                            uri: this.getPhoto(selectedNode.photo)
+                        }}
+                        style={styles.photo}
+                    />
+                ) : (
                     <NodeIdenticon
                         selectedNode={selectedNode}
                         width={35}
                         rounded
                     />
-                ) : (
-                    <Image source={Contact} style={{ width: 35, height: 35 }} />
                 )}
             </TouchableOpacity>
         );
@@ -556,5 +566,11 @@ const styles = StyleSheet.create({
     badgeTextStyle: {
         fontWeight: 'normal',
         textAlign: 'center'
+    },
+    photo: {
+        alignSelf: 'center',
+        width: 42,
+        height: 42,
+        borderRadius: 68
     }
 });

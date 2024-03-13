@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import RNFS from 'react-native-fs';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -92,6 +93,14 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             }}
         />
     );
+
+    getPhoto(photo: string | null): string {
+        if (typeof photo === 'string' && photo.includes('rnfs://')) {
+            const fileName = photo.replace('rnfs://', '');
+            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
+        }
+        return photo || '';
+    }
 
     render() {
         const {
@@ -247,11 +256,23 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 backgroundColor: 'transparent'
                                             }}
                                         >
-                                            <NodeIdenticon
-                                                selectedNode={item}
-                                                width={35}
-                                                rounded
-                                            />
+                                            {item.photo ? (
+                                                <Image
+                                                    source={{
+                                                        uri: this.getPhoto(
+                                                            item.photo
+                                                        )
+                                                    }}
+                                                    style={styles.photo}
+                                                />
+                                            ) : (
+                                                <NodeIdenticon
+                                                    selectedNode={item}
+                                                    width={35}
+                                                    rounded
+                                                />
+                                            )}
+
                                             <ListItem.Content>
                                                 <ListItem.Title
                                                     style={{
@@ -361,3 +382,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         );
     }
 }
+
+const styles = StyleSheet.create({
+    photo: {
+        alignSelf: 'center',
+        width: 42,
+        height: 42,
+        borderRadius: 68
+    }
+});
