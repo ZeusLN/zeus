@@ -6,7 +6,8 @@ import {
     Image,
     StyleSheet,
     FlatList,
-    Dimensions
+    Dimensions,
+    ScrollView
 } from 'react-native';
 import { Avatar } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -18,6 +19,8 @@ import { themeColor } from '../../utils/ThemeUtils';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
+
+import { localeString } from '../../utils/LocaleUtils';
 
 interface SelectNodeProfileProps {
     navigation: any;
@@ -51,7 +54,7 @@ export default class SelectNodeProfile extends React.Component<
                 require('../../assets/images/zeus-illustration-7a.jpg'),
                 require('../../assets/images/zeus-illustration-7b.jpg')
             ],
-            photo: null
+            photo: ''
         };
     }
 
@@ -144,7 +147,9 @@ export default class SelectNodeProfile extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Select Profile Picture',
+                        text: localeString(
+                            'views.SelectNodeProfile.selectProfilePicture'
+                        ),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -177,44 +182,50 @@ export default class SelectNodeProfile extends React.Component<
                         </View>
                     </TouchableOpacity>
                 </View>
-                <FlatList
-                    data={this.state.images}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            onPress={() => this.handleImageTap(item)}
-                        >
-                            <View
-                                style={{
-                                    ...styles.avatarContainer,
-                                    backgroundColor: themeColor('secondaryText')
-                                }}
+                <ScrollView style={{ marginVertical: 10 }}>
+                    <FlatList
+                        data={this.state.images}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                onPress={() => this.handleImageTap(item)}
                             >
-                                <Avatar
-                                    rounded
-                                    size={
-                                        Dimensions.get('window').width / 3 - 20
-                                    }
-                                    source={item}
-                                />
-                            </View>
-                        </TouchableOpacity>
-                    )}
-                    numColumns={3}
-                    keyExtractor={(item, index) => index.toString()}
-                    contentContainerStyle={{
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        paddingVertical: 20
-                    }}
-                />
+                                <View
+                                    style={{
+                                        ...styles.avatarContainer,
+                                        backgroundColor:
+                                            themeColor('secondaryText')
+                                    }}
+                                >
+                                    <Avatar
+                                        rounded
+                                        size={
+                                            Dimensions.get('window').width / 3 -
+                                            20
+                                        }
+                                        source={item}
+                                    />
+                                </View>
+                            </TouchableOpacity>
+                        )}
+                        numColumns={3}
+                        keyExtractor={(item, index) => index.toString()}
+                        contentContainerStyle={{
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    />
+                </ScrollView>
 
                 <Button
-                    title="Upload picture"
+                    title={localeString(
+                        'views.SelectNodeProfile.uploadPicture'
+                    )}
                     onPress={() => {
                         navigation.navigate('NodeConfiguration', {
                             photo
                         });
                     }}
+                    containerStyle={{ paddingBottom: 10 }}
                 />
             </Screen>
         );
