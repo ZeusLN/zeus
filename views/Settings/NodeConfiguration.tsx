@@ -73,6 +73,7 @@ interface NodeConfigurationState {
     showCertModal: boolean;
     enableTor: boolean;
     interfaceKeys: Array<any>;
+    photo: string;
     // lnc
     pairingPhrase: string;
     mailboxServer: string;
@@ -124,6 +125,7 @@ export default class NodeConfiguration extends React.Component<
         username: '',
         password: '',
         accessKey: '',
+        photo: '',
         // lnc
         pairingPhrase: '',
         mailboxServer: 'mailbox.terminal.lightning.today:443',
@@ -273,6 +275,7 @@ export default class NodeConfiguration extends React.Component<
         const tor = navigation.getParam('enableTor', false);
         const saved = navigation.getParam('saved', null);
         const newEntry = navigation.getParam('newEntry', null);
+        const photo = navigation.getParam('photo', null);
 
         if (node) {
             const {
@@ -318,6 +321,7 @@ export default class NodeConfiguration extends React.Component<
                 saved,
                 newEntry,
                 enableTor: tor || enableTor,
+                photo,
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -360,7 +364,8 @@ export default class NodeConfiguration extends React.Component<
             seedPhrase,
             walletPassword,
             adminMacaroon,
-            embeddedLndNetwork
+            embeddedLndNetwork,
+            photo
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -391,7 +396,8 @@ export default class NodeConfiguration extends React.Component<
             seedPhrase,
             walletPassword,
             adminMacaroon,
-            embeddedLndNetwork
+            embeddedLndNetwork,
+            photo
         };
 
         let nodes: any;
@@ -444,7 +450,8 @@ export default class NodeConfiguration extends React.Component<
             certVerification,
             pairingPhrase,
             mailboxServer,
-            customMailboxServer
+            customMailboxServer,
+            photo
         } = this.state;
         const { nodes } = settings;
 
@@ -464,7 +471,8 @@ export default class NodeConfiguration extends React.Component<
             enableTor,
             pairingPhrase,
             mailboxServer,
-            customMailboxServer
+            customMailboxServer,
+            photo
         };
 
         navigation.navigate('NodeConfiguration', {

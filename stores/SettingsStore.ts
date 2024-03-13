@@ -24,6 +24,7 @@ interface Node {
     pairingPhrase?: string;
     mailboxServer?: string;
     customMailboxServer?: string;
+    photo?: string;
 }
 
 interface PrivacySettings {
