@@ -196,7 +196,7 @@ export default class TransactionsStore {
             })
             .catch((error: any) => {
                 // handle error
-                this.error_msg = error.message;
+                this.error_msg = errorToUserFriendly(error.message);
                 this.error = true;
                 this.loading = false;
             });

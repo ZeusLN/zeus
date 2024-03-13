@@ -15,6 +15,23 @@ const userFriendlyErrors: any = {
 };
 
 const errorToUserFriendly = (error: string, localize = true) => {
+    let errorObject;
+    // Check if the error string is in JSON format
+    if (error.startsWith('{') && error.endsWith('}')) {
+        try {
+            errorObject = JSON.parse(error);
+        } catch (err) {
+            console.error('Error parsing JSON:', err);
+        }
+    }
+
+    // If the error is parsed successfully and has a message property, return it
+    if (errorObject && errorObject.message) {
+        return errorObject.message;
+    } else if (errorObject && errorObject.error && errorObject.error.message) {
+        return errorObject.error.message;
+    }
+
     if (localize) {
         const localeString = require('./LocaleUtils').localeString;
         return (

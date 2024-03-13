@@ -7,6 +7,7 @@ import NodeInfoStore from './NodeInfoStore';
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 import ForwardEvent from '../models/ForwardEvent';
 
 export default class FeeStore {
@@ -227,7 +228,9 @@ export default class FeeStore {
             })
             .catch((err: Error) => {
                 this.bumpFeeError = true;
-                this.bumpFeeErrorMsg = err.toString();
+                this.bumpFeeErrorMsg = errorToUserFriendly(
+                    err.message.toString()
+                );
                 this.loading = false;
             });
     };
@@ -272,12 +275,16 @@ export default class FeeStore {
                         })
                         .catch((err: Error) => {
                             this.bumpFeeError = true;
-                            this.bumpFeeErrorMsg = err.toString();
+                            this.bumpFeeErrorMsg = errorToUserFriendly(
+                                err.message.toString()
+                            );
                             this.loading = false;
                         });
                 } else {
                     this.bumpFeeError = true;
-                    this.bumpFeeErrorMsg = err.toString();
+                    this.bumpFeeErrorMsg = errorToUserFriendly(
+                        err.message.toString()
+                    );
                     this.loading = false;
                 }
             });
