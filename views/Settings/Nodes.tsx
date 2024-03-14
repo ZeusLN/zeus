@@ -268,7 +268,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             ) : (
                                                 <NodeIdenticon
                                                     selectedNode={item}
-                                                    width={35}
+                                                    width={42}
                                                     rounded
                                                 />
                                             )}

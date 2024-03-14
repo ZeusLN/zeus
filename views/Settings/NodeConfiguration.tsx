@@ -339,7 +339,8 @@ export default class NodeConfiguration extends React.Component<
             this.setState({
                 index,
                 active,
-                newEntry
+                newEntry,
+                photo
             });
         }
     }
@@ -591,6 +592,7 @@ export default class NodeConfiguration extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
+        const node = navigation.getParam('node', null);
         const {
             nickname,
             host,
@@ -957,12 +959,22 @@ export default class NodeConfiguration extends React.Component<
                         <View style={styles.container}>
                             <TouchableOpacity
                                 onPress={
+                                    (node === null ||
+                                        node?.photo === '' ||
+                                        node?.photo === null) &&
                                     photo === null
                                         ? () =>
                                               navigation.navigate(
                                                   'SetNodePicture'
                                               )
-                                        : () => this.setState({ photo: null })
+                                        : () =>
+                                              this.setState(
+                                                  { photo: null },
+                                                  () =>
+                                                      node
+                                                          ? (node.photo = '')
+                                                          : null
+                                              )
                                 }
                             >
                                 <View
@@ -972,10 +984,12 @@ export default class NodeConfiguration extends React.Component<
                                             themeColor('secondaryText')
                                     }}
                                 >
-                                    {photo ? (
+                                    {node?.photo || photo ? (
                                         <Image
                                             source={{
-                                                uri: this.getPhoto(photo)
+                                                uri: this.getPhoto(
+                                                    node?.photo || photo
+                                                )
                                             }}
                                             style={styles.imageBackground}
                                         />
