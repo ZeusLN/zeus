@@ -456,7 +456,10 @@ export default class CurrencyConverter extends React.Component<
                     </View>
                 ) : (
                     <View style={{ flex: 1 }}>
-                        <ScrollView>
+                        <ScrollView
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                        >
                             <View
                                 style={{
                                     marginHorizontal: 16,
@@ -574,6 +577,7 @@ export default class CurrencyConverter extends React.Component<
                                                         </View>
 
                                                         <TextInput
+                                                            keyboardType="numeric"
                                                             suffix={item}
                                                             style={{
                                                                 flex: 1
