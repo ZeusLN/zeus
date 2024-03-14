@@ -71,18 +71,6 @@ const writeLndConfig = async (
         ? 'connect'
         : 'addpeer';
 
-    const peerDefaults = `neutrino.${peerMode}=${
-        isTestnet
-            ? 'btcd-testnet.lightning.computer'
-            : 'btcd-mainnet.lightning.computer'
-    }
-    ${!isTestnet ? `neutrino.${peerMode}=btcd1.lnolymp.us` : ''}
-    ${!isTestnet ? `neutrino.${peerMode}=btcd2.lnolymp.us` : ''}
-    ${!isTestnet ? `neutrino.${peerMode}=node.eldamar.icu` : ''}
-    ${!isTestnet ? `neutrino.${peerMode}=noad.sathoarder.com` : ''}
-    ${isTestnet ? `neutrino.${peerMode}=testnet.lnolymp.us` : ''}
-    ${isTestnet ? `neutrino.${peerMode}=testnet.blixtwallet.com` : ''}`;
-
     const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
@@ -114,12 +102,13 @@ const writeLndConfig = async (
     
     [Neutrino]
     ${
-        stores.settingsStore?.settings?.neutrinoPeers &&
-        stores.settingsStore?.settings?.neutrinoPeers.length > 0
-            ? stores.settingsStore?.settings?.neutrinoPeers.map(
-                  (peer) => `neutrino.${peerMode}=${peer}`
-              )
-            : peerDefaults
+        !isTestnet
+            ? stores.settingsStore?.settings?.neutrinoPeersMainnet
+                  .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
+                  .join('')
+            : stores.settingsStore?.settings?.neutrinoPeersTestnet
+                  .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
+                  .join('')
     }
     ${
         !isTestnet
