@@ -475,6 +475,8 @@ export default class StandalonePosPane extends React.PureComponent<
 
         const loading = PosStore.loading || InventoryStore.loading;
 
+        const fiatEnabled = SettingsStore?.settings?.fiatEnabled;
+
         const newOrderButton = () => (
             <Text
                 style={{
@@ -592,7 +594,7 @@ export default class StandalonePosPane extends React.PureComponent<
                     SettingsStore={SettingsStore}
                 />
 
-                {getRate() === '$N/A' ? (
+                {fiatEnabled && getRate() === '$N/A' && (
                     <Animated.View
                         style={{
                             alignSelf: 'center',
@@ -610,7 +612,8 @@ export default class StandalonePosPane extends React.PureComponent<
                             )}
                         </Text>
                     </Animated.View>
-                ) : (
+                )}
+                {fiatEnabled && getRate() !== '$N/A' && (
                     <TouchableOpacity onPress={() => getFiatRates()}>
                         <Text
                             style={{
@@ -697,102 +700,96 @@ export default class StandalonePosPane extends React.PureComponent<
                 {!loading &&
                     selectedIndex === 0 &&
                     this.state.productsList &&
-                    this.state.productsList.length > 0 && (
-                        <>
-                            <SectionList
-                                sections={this.state.productsList}
-                                renderSectionHeader={this.renderSectionHeader}
-                                stickySectionHeadersEnabled={false}
-                                renderItem={this.renderSection}
-                                keyExtractor={(_, index) => `${index}`}
-                                contentContainerStyle={{
-                                    marginLeft: 10,
-                                    marginRight: 10
-                                }}
-                            />
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    paddingLeft: 10,
-                                    paddingRight: 10,
-                                    paddingTop: 5,
-                                    marginBottom: 10
-                                }}
-                            >
-                                <Button
-                                    title={`${localeString(
-                                        'general.charge'
-                                    )} (${
-                                        currentOrder
-                                            ? (this.state.itemQty > 0
-                                                  ? `${this.state.itemQty} - `
-                                                  : '') +
-                                              (this.state.totalMoneyDisplay ||
-                                                  0)
-                                            : '0'
-                                    })`}
-                                    containerStyle={{
-                                        borderRadius: 12,
-                                        flex: 3,
-                                        marginRight: 5
-                                    }}
-                                    titleStyle={{
-                                        color: themeColor('background')
-                                    }}
-                                    buttonStyle={{
-                                        backgroundColor: themeColor('highlight')
-                                    }}
-                                    disabled={disableButtons}
-                                    onPress={async () => {
-                                        // there is no order so we can't charge
-                                        if (!currentOrder) return;
-
-                                        // save the current order. This will move it to the open orders screen
-                                        await PosStore.saveStandaloneOrder(
-                                            currentOrder
-                                        );
-
-                                        // now let's create the charge
-                                        navigation.navigate('Order', {
-                                            order: currentOrder
-                                        });
-                                    }}
-                                />
-                                <Button
-                                    title={localeString('general.clear')}
-                                    containerStyle={{
-                                        borderRadius: 12,
-                                        flex: 1
-                                    }}
-                                    onPress={() => {
-                                        PosStore.clearCurrentOrder();
-                                        this.setState({
-                                            itemQty: 0,
-                                            totalMoneyDisplay: '0'
-                                        });
-                                    }}
-                                    disabled={disableButtons}
-                                />
-                            </View>
-                        </>
-                    )}
-
-                {!loading &&
-                    selectedIndex === 0 &&
-                    this.state.productsList &&
                     this.state.productsList.length === 0 && (
                         <Text
                             style={{
-                                color: themeColor('text'),
-                                margin: 10,
+                                color: themeColor('secondaryText'),
+                                marginTop: 20,
                                 textAlign: 'center'
                             }}
                         >
                             {localeString(
-                                'pos.views.Wallet.PosPane.noProducts'
+                                'views.Settings.POS.Product.noProductsDefined'
                             )}
                         </Text>
                     )}
+
+                {!loading && selectedIndex === 0 && (
+                    <>
+                        <SectionList
+                            sections={this.state.productsList}
+                            renderSectionHeader={this.renderSectionHeader}
+                            stickySectionHeadersEnabled={false}
+                            renderItem={this.renderSection}
+                            keyExtractor={(_, index) => `${index}`}
+                            contentContainerStyle={{
+                                marginLeft: 10,
+                                marginRight: 10
+                            }}
+                        />
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                paddingLeft: 10,
+                                paddingRight: 10,
+                                paddingTop: 5,
+                                marginBottom: 10
+                            }}
+                        >
+                            <Button
+                                title={`${localeString('general.charge')} (${
+                                    currentOrder
+                                        ? (this.state.itemQty > 0
+                                              ? `${this.state.itemQty} - `
+                                              : '') +
+                                          (this.state.totalMoneyDisplay || 0)
+                                        : '0'
+                                })`}
+                                containerStyle={{
+                                    borderRadius: 12,
+                                    flex: 3,
+                                    marginRight: 5
+                                }}
+                                titleStyle={{
+                                    color: themeColor('background')
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: themeColor('highlight')
+                                }}
+                                disabled={disableButtons}
+                                onPress={async () => {
+                                    // there is no order so we can't charge
+                                    if (!currentOrder) return;
+
+                                    // save the current order. This will move it to the open orders screen
+                                    await PosStore.saveStandaloneOrder(
+                                        currentOrder
+                                    );
+
+                                    // now let's create the charge
+                                    navigation.navigate('Order', {
+                                        order: currentOrder
+                                    });
+                                }}
+                            />
+                            <Button
+                                title={localeString('general.clear')}
+                                containerStyle={{
+                                    borderRadius: 12,
+                                    flex: 1
+                                }}
+                                onPress={() => {
+                                    PosStore.clearCurrentOrder();
+                                    this.setState({
+                                        itemQty: 0,
+                                        totalMoneyDisplay: '0'
+                                    });
+                                }}
+                                disabled={disableButtons}
+                            />
+                        </View>
+                    </>
+                )}
 
                 {!loading &&
                     orders &&

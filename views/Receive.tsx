@@ -1285,9 +1285,8 @@ export default class Receive extends React.Component<
                         posStatus === 'active' ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
-                            BackendUtils.supportsAddressTypeSelection() && (
-                                <SettingsButton />
-                            )
+                            BackendUtils.supportsAddressTypeSelection() &&
+                            !creatingInvoice && <SettingsButton />
                         )
                     }
                     navigation={navigation}
@@ -1373,6 +1372,7 @@ export default class Receive extends React.Component<
                         <ScrollView
                             style={styles.content}
                             keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
                         >
                             {creatingInvoiceError && (
                                 <ErrorMessage

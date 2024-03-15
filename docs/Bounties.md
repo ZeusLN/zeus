@@ -10,7 +10,7 @@ Currently, ZEUS supports remote connections to Core Lightning (CLN) through c-li
 
 Additional bounty patrons: @sathoarder, Seth For Privacy, denis2342
 
-## Point of Sale: Clover integration
+## [WORK IN PROGRESS] Point of Sale: Clover integration
 
 Payout: 1,500,000 sats (0.015 BTC)
 

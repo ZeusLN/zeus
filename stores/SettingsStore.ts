@@ -130,7 +130,8 @@ export interface Settings {
     resetExpressGraphSyncOnStartup: boolean;
     bimodalPathfinding: boolean;
     dontAllowOtherPeers: boolean;
-    neutrinoPeers: Array<string>;
+    neutrinoPeersMainnet: Array<string>;
+    neutrinoPeersTestnet: Array<string>;
     zeroConfPeers: Array<string>;
     rescan: boolean;
     compactDb: boolean;
@@ -925,6 +926,20 @@ export const TIME_PERIOD_KEYS = [
     { key: 'Weeks', translateKey: 'time.weeks', value: 'Weeks' }
 ];
 
+export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
+    'btcd1.lnolymp.us',
+    'btcd2.lnolymp.us',
+    'btcd-mainnet.lightning.computer',
+    'node.eldamar.icu',
+    'noad.sathoarder.com'
+];
+
+export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
+    'testnet.lnolymp.us',
+    'btcd-testnet.lightning.computer',
+    'testnet.blixtwallet.com'
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -992,7 +1007,8 @@ export default class SettingsStore {
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: true,
         dontAllowOtherPeers: true,
-        neutrinoPeers: [],
+        neutrinoPeersMainnet: DEFAULT_NEUTRINO_PEERS_MAINNET,
+        neutrinoPeersTestnet: DEFAULT_NEUTRINO_PEERS_TESTNET,
         zeroConfPeers: [],
         rescan: false,
         compactDb: false,
@@ -1266,6 +1282,15 @@ export default class SettingsStore {
                 if (this.settings?.pos?.squareEnabled) {
                     this.settings.pos.posEnabled = PosEnabled.Square;
                     this.settings.pos.squareEnabled = false;
+                }
+
+                if (!this.settings.neutrinoPeersMainnet) {
+                    this.settings.neutrinoPeersMainnet =
+                        DEFAULT_NEUTRINO_PEERS_MAINNET;
+                }
+                if (!this.settings.neutrinoPeersTestnet) {
+                    this.settings.neutrinoPeersTestnet =
+                        DEFAULT_NEUTRINO_PEERS_TESTNET;
                 }
 
                 const node: any =

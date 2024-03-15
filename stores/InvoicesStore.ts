@@ -397,6 +397,7 @@ export default class InvoicesStore {
                 this.pay_req = new Invoice(data);
                 this.getPayReqError = null;
                 this.loading = false;
+                return;
             })
             .catch((error: any) => {
                 // handle error
