@@ -202,7 +202,7 @@
     "views.Settings.AddEditNode.import": "Importovat",
     "views.Settings.AddEditNode.importPrompt": "Chcete jej importovat?",
     "views.Settings.AddEditNode.lndhubWarning": "S jakoukoli instancí LNDHub může operátor sledovat vaše zůstatky, transakce, IP adresy, ke kterým se připojujete, nebo dokonce utéct s vašimi prostředky.",
-    "views.Settings.AddEditNode.lndhubFriend": "Pokud máte přítele, kterému důvěřujete a který provozuje lnd uzel, možná byste měli zvážit, zda by od něj měli požádat, aby vás připojil k instanci LNDHub.",
+    "views.Settings.AddEditNode.lndhubFriend": "Pokud máte přítele, kterému důvěřujete a který provozuje lnd uzel, možná byste měli zvážit, zda jej nepožádat, aby vás připojil k instanci LNDHub.",
     "views.Settings.AddEditNode.lndhubUnderstand": "Rozumím, vytvořte mi účet",
     "views.Settings.AddEditNode.certificateWarning1": "Pokud se rozhodnete nepoužívat ověřování certifikátů, můžete se stát zranitelným proti útokům typu nepřítel-uprostřed. Udělejte to podle vlastního uvážení.",
     "views.Settings.AddEditNode.certificateWarning2": "Pokud neověřujete své připojení pomocí VPN nebo přes skryté služby Tor v3, důrazně doporučujeme nainstalovat do tohoto zařízení certifikát uzlu.",
