@@ -42,6 +42,8 @@ export const DEFAULT_FILTERS = {
     inTransit: false,
     isFailed: false,
     unconfirmed: true,
+    standardInvoices: true,
+    ampInvoices: true,
     zeusPay: true,
     minimumAmount: 0,
     startDate: undefined,

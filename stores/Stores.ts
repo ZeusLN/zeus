@@ -54,7 +54,11 @@ class Stores {
             this.channelsStore,
             this.settingsStore
         );
-        this.lspStore = new LSPStore(this.settingsStore, this.channelsStore);
+        this.lspStore = new LSPStore(
+            this.settingsStore,
+            this.channelsStore,
+            this.nodeInfoStore
+        );
         this.lightningAddressStore = new LightningAddressStore(
             this.nodeInfoStore,
             this.settingsStore

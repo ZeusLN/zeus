@@ -403,12 +403,7 @@ export default class WalletHeader extends React.Component<
             <Header
                 leftComponent={
                     loading ? undefined : (
-                        <Row
-                            style={{
-                                flexGrow: 1,
-                                alignItems: 'center'
-                            }}
-                        >
+                        <Row>
                             <SettingsButton />
                             {paid && paid.length > 0 && (
                                 <TouchableOpacity
@@ -498,7 +493,7 @@ export default class WalletHeader extends React.Component<
                             <TempleButton navigation={navigation} />
                         </Row>
                     ) : channels ? (
-                        <Row>
+                        <Row style={{ marginTop: 1 }}>
                             <SearchButton />
                             <OpenChannelButton />
                         </Row>
