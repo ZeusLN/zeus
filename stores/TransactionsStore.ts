@@ -370,7 +370,7 @@ export default class TransactionsStore {
         this.error_msg =
             typeof err === 'string'
                 ? errorToUserFriendly(err)
-                : errorToUserFriendly(err.message) ||
+                : errorToUserFriendly(err.message.toString()) ||
                   localeString('error.sendingPayment');
     };
 
