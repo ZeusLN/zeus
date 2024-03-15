@@ -16,31 +16,36 @@ const userFriendlyErrors: any = {
 
 const errorToUserFriendly = (error: string, localize = true) => {
     let errorObject;
-    // Check if the error string is in JSON format
-    if (error.startsWith('{') && error.endsWith('}')) {
-        try {
-            errorObject = JSON.parse(error);
-        } catch (err) {
-            console.error('Error parsing JSON:', err);
+    try {
+        errorObject = JSON.parse(error);
+    } catch (err) {
+        if (localize) {
+            const localeString = require('./LocaleUtils').localeString;
+            return (
+                localeString(userFriendlyErrors[error])?.replace(
+                    'Zeus',
+                    'ZEUS'
+                ) || error
+            );
+        } else {
+            const EN = require('../locales/en.json');
+            return EN[userFriendlyErrors[error]] || error;
         }
     }
 
-    // If the error is parsed successfully and has a message property, return it
-    if (errorObject && errorObject.message) {
+    // If the parsed object has a message property, return it
+    if (errorObject && typeof errorObject === 'object' && errorObject.message) {
         return errorObject.message;
-    } else if (errorObject && errorObject.error && errorObject.error.message) {
-        return errorObject.error.message;
     }
 
-    if (localize) {
-        const localeString = require('./LocaleUtils').localeString;
-        return (
-            localeString(userFriendlyErrors[error])?.replace('Zeus', 'ZEUS') ||
-            error
-        );
-    } else {
-        const EN = require('../locales/en.json');
-        return EN[userFriendlyErrors[error]] || error;
+    // If the parsed object has an error object with a message property, return that
+    if (
+        errorObject &&
+        typeof errorObject === 'object' &&
+        errorObject.error &&
+        errorObject.error.message
+    ) {
+        return errorObject.error.message;
     }
 };
 
