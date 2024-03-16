@@ -274,7 +274,7 @@
     "views.OpenChannel.announceChannel": "Ohlásit kanál",
     "views.OpenChannel.scidAlias": "Pokus o použití aliasu SCID",
     "views.OpenChannel.simpleTaprootChannel": "Jednoduchý Taproot kanál",
-    "views.OpenChannel.openChannelToOlympus": "Otevřený kanál s Olympus",
+    "views.OpenChannel.openChannelToOlympus": "Otevřít kanál do Olympus",
     "views.OpenChannel.peerToOlympus": "Peer s Olympus",
     "views.OpenChannel.fundMax": "Využít všechny možné prostředky",
     "views.Wallet.BalancePane.sync.title": "Dokončení synchronizace",
