@@ -580,7 +580,7 @@
     "views.Send.message": "Zpráva",
     "views.Send.feeSats": "Poplatek (satoshi za byte)",
     "views.Send.feeSatsVbyte": "Poplatek (satoshi za vByte)",
-    "views.Send.sendCoins": "Poslat mince",
+    "views.Send.sendCoins": "Odeslat mince",
     "views.Send.sorry": "Omlouváme se",
     "views.Send.editNetworkFees": "Upravit síťové poplatky",
     "views.Send.keysendNotSupported": "v tuto chvíli nepodporuje odesílání keysend plateb.",
