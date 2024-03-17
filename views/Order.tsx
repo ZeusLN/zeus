@@ -531,14 +531,13 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         let unitDisplayValue, totalDisplayValue;
                         if (fiatPriced) {
                             unitDisplayValue = UnitsStore.getFormattedAmount(
-                                unitPrice,
+                                new BigNumber(unitPrice).toFixed(2),
                                 'fiat'
                             );
                             totalDisplayValue = UnitsStore.getFormattedAmount(
                                 new BigNumber(unitPrice)
                                     .multipliedBy(item.quantity)
-                                    .toFixed(2)
-                                    .toString(),
+                                    .toFixed(2),
                                 'fiat'
                             );
                         } else {
