@@ -342,11 +342,11 @@ export default class ProductDetails extends React.Component<
                                             />
                                         </View>
                                         <AmountInput
-                                            amount={String(
-                                                product?.price == 0
-                                                    ? ''
-                                                    : product?.price
-                                            )}
+                                            amount={
+                                                product?.price
+                                                    ? String(product?.price)
+                                                    : ''
+                                            }
                                             title={localeString(
                                                 'views.Settings.POS.Product.price'
                                             )}
