@@ -212,7 +212,12 @@ export default class ProductDetails extends React.Component<
     isValid = () => {
         const { product } = this.state;
 
-        return product && product?.name !== '' && product.price > 0;
+        return (
+            product &&
+            product?.name !== '' &&
+            product?.price &&
+            Number(product?.price.toString().replace(',', '.')) > 0
+        );
     };
 
     render() {
