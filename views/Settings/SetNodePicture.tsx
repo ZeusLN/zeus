@@ -37,27 +37,49 @@ export default class SetNodePicture extends React.Component<
 > {
     constructor(props: SetNodePictureProps) {
         super(props);
-        this.state = {
-            images: [
-                require('../../assets/images/zeus-illustration-1a.jpg'),
-                require('../../assets/images/zeus-illustration-1b.jpg'),
-                require('../../assets/images/zeus-illustration-2a.jpg'),
-                require('../../assets/images/zeus-illustration-2b.jpg'),
-                require('../../assets/images/zeus-illustration-3a.jpg'),
-                require('../../assets/images/zeus-illustration-3b.jpg'),
-                require('../../assets/images/zeus-illustration-4a.jpg'),
-                require('../../assets/images/zeus-illustration-4b.jpg'),
-                require('../../assets/images/zeus-illustration-5a.jpg'),
-                require('../../assets/images/zeus-illustration-5b.jpg'),
-                require('../../assets/images/zeus-illustration-6a.jpg'),
-                require('../../assets/images/zeus-illustration-6b.jpg'),
-                require('../../assets/images/zeus-illustration-7a.jpg'),
-                require('../../assets/images/zeus-illustration-7b.jpg'),
-                require('../../assets/images/Alby.jpg'),
-                require('../../assets/images/BTCpay.jpg'),
+        const implementation = this.props.navigation.getParam(
+            'implementation',
+            null
+        );
+        let images: string[] = [
+            require('../../assets/images/zeus-illustration-1a.jpg'),
+            require('../../assets/images/zeus-illustration-1b.jpg'),
+            require('../../assets/images/zeus-illustration-2a.jpg'),
+            require('../../assets/images/zeus-illustration-2b.jpg'),
+            require('../../assets/images/zeus-illustration-3a.jpg'),
+            require('../../assets/images/zeus-illustration-3b.jpg'),
+            require('../../assets/images/zeus-illustration-4a.jpg'),
+            require('../../assets/images/zeus-illustration-4b.jpg'),
+            require('../../assets/images/zeus-illustration-5a.jpg'),
+            require('../../assets/images/zeus-illustration-5b.jpg'),
+            require('../../assets/images/zeus-illustration-6a.jpg'),
+            require('../../assets/images/zeus-illustration-6b.jpg'),
+            require('../../assets/images/zeus-illustration-7a.jpg'),
+            require('../../assets/images/zeus-illustration-7b.jpg')
+        ];
+
+        // Map implementations to corresponding images
+        const implementationImagesMap = {
+            lndhub: [require('../../assets/images/Alby.jpg')],
+            spark: [require('../../assets/images/CLN.jpg')],
+            'c-lightning-REST': [
                 require('../../assets/images/CLN.jpg'),
+                require('../../assets/images/BTCpay.jpg')
+            ],
+            lnd: [
+                require('../../assets/images/BTCpay.jpg'),
                 require('../../assets/images/LND.jpg')
             ],
+            'embedded-lnd': [require('../../assets/images/LND.jpg')],
+            'lightning-node-connect': [require('../../assets/images/LND.jpg')]
+        };
+
+        if (implementation && implementation in implementationImagesMap) {
+            images.push(...implementationImagesMap[implementation]);
+        }
+
+        this.state = {
+            images,
             photo: ''
         };
     }

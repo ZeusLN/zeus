@@ -965,7 +965,8 @@ export default class NodeConfiguration extends React.Component<
                                     photo === null
                                         ? () =>
                                               navigation.navigate(
-                                                  'SetNodePicture'
+                                                  'SetNodePicture',
+                                                  { implementation }
                                               )
                                         : () =>
                                               this.setState(
