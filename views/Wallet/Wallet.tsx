@@ -453,15 +453,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
+        if (connecting) {
+            setConnectingStatus(false);
+        }
+
         if (BackendUtils.supportsLSPs()) {
             if (SettingsStore.settings.enableLSP) {
                 await LSPStore.getLSPInfo();
             }
             LSPStore.initChannelAcceptor();
-        }
-
-        if (connecting) {
-            setConnectingStatus(false);
         }
 
         // only navigate to initial url after connection and main calls are made
