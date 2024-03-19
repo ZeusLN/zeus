@@ -8267,6 +8267,11 @@ react-native-permissions@3.8.0:
     picocolors "^1.0.0"
     pkg-dir "^5.0.0"
 
+react-native-ping@1.2.8:
+  version "1.2.8"
+  resolved "https://registry.yarnpkg.com/react-native-ping/-/react-native-ping-1.2.8.tgz#c84a944cad50e7874f35b3f8bf884cd08333575e"
+  integrity sha512-yqUJuaoZKi6DclNIppTEKJinppwD0OHzcDkLwtClbLwaYIUrZeMuuAM0iBgeyZeDgNt1DWA4Nr86ictuA48xuA==
+
 react-native-print@0.11.0:
   version "0.11.0"
   resolved "https://registry.yarnpkg.com/react-native-print/-/react-native-print-0.11.0.tgz#3dc69fb05552f0c5da5be0dd345a93e1604621d1"
