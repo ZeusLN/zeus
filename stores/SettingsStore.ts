@@ -1277,6 +1277,25 @@ export default class SettingsStore {
                     await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
 
+                const MOD_KEY2 = 'lsp-preview-mod';
+                const mod2 = await EncryptedStorage.getItem(MOD_KEY2);
+                if (!mod2) {
+                    if (
+                        this.settings?.lspMainnet ===
+                        'https://lsp-preview.lnolymp.us'
+                    ) {
+                        this.settings.lspMainnet = DEFAULT_LSP_MAINNET;
+                    }
+                    if (
+                        this.settings?.lspTestnet ===
+                        'https://testnet-lsp.lnolymp.us'
+                    ) {
+                        this.settings.lspTestnet = DEFAULT_LSP_TESTNET;
+                    }
+                    this.setSettings(JSON.stringify(this.settings));
+                    await EncryptedStorage.setItem(MOD_KEY2, 'true');
+                }
+
                 // migrate old POS squareEnabled setting to posEnabled
                 if (this.settings?.pos?.squareEnabled) {
                     this.settings.pos.posEnabled = PosEnabled.Square;
