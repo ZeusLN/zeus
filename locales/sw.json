@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "Unganisha tu na rika zilizoelezwa. Kuwezesha hii kunaweza kupunguza kasi ya kufuata masanduku, lakini inaweza kusaidia ikiwa una matatizo ya kutangaza shughuli.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Ruhusu kuunganisha na rika nyingine.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Haikubali kuunganisha na rika nyingine.",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Rika za Zero conf",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Weka rika unazotaka kukubali njia za umeme za sifuri, zaidi ya LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Sync ya Grafu ya haraka",
