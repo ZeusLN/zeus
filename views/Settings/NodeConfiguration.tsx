@@ -959,9 +959,7 @@ export default class NodeConfiguration extends React.Component<
                         <View style={styles.container}>
                             <TouchableOpacity
                                 onPress={
-                                    (node === null ||
-                                        node?.photo === '' ||
-                                        node?.photo === null) &&
+                                    (node === null || !node.photo) &&
                                     photo === null
                                         ? () =>
                                               navigation.navigate(
@@ -970,7 +968,7 @@ export default class NodeConfiguration extends React.Component<
                                               )
                                         : () =>
                                               this.setState(
-                                                  { photo: null },
+                                                  { photo: null, saved: false },
                                                   () =>
                                                       node
                                                           ? (node.photo = '')
