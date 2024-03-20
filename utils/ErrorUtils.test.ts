@@ -4,36 +4,36 @@ describe('ErrorUtils', () => {
     describe('errorToUserFriendly', () => {
         it('Turns error message to user friendly values', () => {
             expect(
-                errorToUserFriendly(
-                    JSON.stringify({
-                        code: 2,
-                        message: 'transaction output is dust',
-                        details: []
-                    })
-                )
+                errorToUserFriendly({
+                    message: `{
+                        "code": 2,
+                        "message": "transaction output is dust",
+                        "details": []
+                    }`
+                })
             ).toEqual('transaction output is dust');
             expect(
-                errorToUserFriendly(
-                    JSON.stringify({
-                        code: 3,
-                        message:
-                            'proto: (line 1:126): invalid value for uint64 type: "0.01"',
-                        details: []
-                    })
-                )
+                errorToUserFriendly({
+                    message: `{
+                        "code": 2,
+                        "message": "proto: (line 1:126): invalid value for uint64 type: 0.1",
+                        "details": []
+                    }`
+                })
             ).toEqual(
-                'proto: (line 1:126): invalid value for uint64 type: "0.01"'
+                'proto: (line 1:126): invalid value for uint64 type: 0.1'
             );
             expect(
-                errorToUserFriendly(
-                    JSON.stringify({
-                        error: {
-                            code: 2,
-                            message: 'invoice is already paid',
-                            details: []
+                errorToUserFriendly({
+                    message: `{
+                            "error": {
+                                "code": 2,
+                                "message": "invoice is already paid",
+                                "details": []
+                            }
                         }
-                    })
-                )
+                        `
+                })
             ).toEqual('invoice is already paid');
             expect(
                 errorToUserFriendly('Error: SOCKS: Connection refused', false)

@@ -499,7 +499,7 @@ export default class ChannelsStore {
                     this.peerSuccess = true;
                     resolve(true);
                 })
-                .catch((error: any) => {
+                .catch((error: Error) => {
                     this.connectingToPeer = false;
                     this.peerSuccess = false;
                     this.channelSuccess = false;
@@ -511,16 +511,12 @@ export default class ChannelsStore {
                         if (!connectPeerOnly) {
                             this.channelRequest = request;
                         } else {
-                            this.errorMsgPeer = errorToUserFriendly(
-                                error.message.toString()
-                            );
+                            this.errorMsgPeer = errorToUserFriendly(error);
                             this.errorPeerConnect = true;
                         }
                         resolve(true);
                     } else {
-                        this.errorMsgPeer = errorToUserFriendly(
-                            error.message.toString()
-                        );
+                        this.errorMsgPeer = errorToUserFriendly(error);
                         this.errorPeerConnect = true;
                         reject(this.errorMsgPeer);
                     }
@@ -545,10 +541,8 @@ export default class ChannelsStore {
                 this.channelRequest = null;
                 this.channelSuccess = true;
             })
-            .catch((error: any) => {
-                this.errorMsgChannel = errorToUserFriendly(
-                    error.message.toString()
-                );
+            .catch((error: Error) => {
+                this.errorMsgChannel = errorToUserFriendly(error);
                 this.output_index = null;
                 this.funding_txid_str = null;
                 this.errorOpenChannel = true;

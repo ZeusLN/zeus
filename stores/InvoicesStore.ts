@@ -400,12 +400,10 @@ export default class InvoicesStore {
                 this.loading = false;
                 return;
             })
-            .catch((error: any) => {
+            .catch((error: Error) => {
                 // handle error
                 this.pay_req = null;
-                this.getPayReqError = errorToUserFriendly(
-                    error.message.toString()
-                );
+                this.getPayReqError = errorToUserFriendly(error);
                 this.loading = false;
             });
     };
