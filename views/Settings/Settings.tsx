@@ -127,7 +127,10 @@ export default class Settings extends React.Component<
             nodeSubtitle +=
                 implementationDisplayValue[selectedNode.implementation];
 
-            if (selectedNode.embeddedLndNetwork) {
+            if (
+                selectedNode.embeddedLndNetwork &&
+                selectedNode.implementation === 'embedded-lnd'
+            ) {
                 nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
             }
         }
