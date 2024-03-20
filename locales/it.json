@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "Connettersi solo ai pari specificati. Abilitare ciò può rallentare la sincronizzazione del blocco, ma può essere utile se si hanno problemi di trasmissione di transazioni.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Consentendo connessioni ad altri coetanei.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Non consente connessioni ad altri coetanei.",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Imposta i coetanei da cui desideri accettare i canali di fulmini a zero conf, oltre all'LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",
