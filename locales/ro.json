@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "Conectați -vă doar la partenerii specificați. Activarea acestui lucru poate încetini sincronizarea blocurilor, dar poate fi utilă dacă aveți probleme de difuzare a tranzacțiilor.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Permițând conexiuni la alți parteneri.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Nu se permite conexiuni la alți parteneri.",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Setați partenerii de la care doriți să acceptați canale Lightning Zero Conf, altele decât LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",
