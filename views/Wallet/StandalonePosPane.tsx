@@ -295,11 +295,16 @@ export default class StandalonePosPane extends React.PureComponent<
 
         if (!order) return;
 
+        // handle products with comma separator amounts
+        const productCalcPrice = Number(
+            product.price.toString().replace(/,/g, '.')
+        );
+
         const item = order.line_items.find(
             (item) =>
                 item.name === product.name &&
-                (item.base_price_money.amount === product.price ||
-                    item.base_price_money.sats === product.price)
+                (item.base_price_money.amount === productCalcPrice ||
+                    item.base_price_money.sats === productCalcPrice)
         );
 
         if (item) {
@@ -310,12 +315,14 @@ export default class StandalonePosPane extends React.PureComponent<
                 quantity: 1,
                 base_price_money: {
                     amount:
-                        product.pricedIn === PricedIn.Fiat ? product.price : 0,
+                        product.pricedIn === PricedIn.Fiat
+                            ? productCalcPrice
+                            : 0,
                     sats:
                         product.pricedIn === PricedIn.Sats
-                            ? product.price
+                            ? productCalcPrice
                             : product.pricedIn === PricedIn.Bitcoin
-                            ? product.price * SATS_PER_BTC
+                            ? productCalcPrice * SATS_PER_BTC
                             : 0
                 }
             });
@@ -443,7 +450,7 @@ export default class StandalonePosPane extends React.PureComponent<
             InventoryStore,
             navigation
         } = this.props;
-        const { search, selectedIndex } = this.state;
+        const { search, selectedIndex, productsList, itemQty } = this.state;
         const { setFiltersPos } = ActivityStore;
         const {
             getOrders,
@@ -662,8 +669,8 @@ export default class StandalonePosPane extends React.PureComponent<
 
                 {!loading &&
                     ((selectedIndex === 0 &&
-                        this.state.productsList &&
-                        this.state.productsList.length > 0) ||
+                        productsList &&
+                        productsList.length > 0) ||
                         (orders &&
                             orders.length > 0 &&
                             selectedIndex !== 0)) && (
@@ -699,8 +706,8 @@ export default class StandalonePosPane extends React.PureComponent<
 
                 {!loading &&
                     selectedIndex === 0 &&
-                    this.state.productsList &&
-                    this.state.productsList.length === 0 && (
+                    productsList &&
+                    productsList.length === 0 && (
                         <Text
                             style={{
                                 color: themeColor('secondaryText'),
@@ -717,7 +724,7 @@ export default class StandalonePosPane extends React.PureComponent<
                 {!loading && selectedIndex === 0 && (
                     <>
                         <SectionList
-                            sections={this.state.productsList}
+                            sections={productsList}
                             renderSectionHeader={this.renderSectionHeader}
                             stickySectionHeadersEnabled={false}
                             renderItem={this.renderSection}
@@ -739,9 +746,7 @@ export default class StandalonePosPane extends React.PureComponent<
                             <Button
                                 title={`${localeString('general.charge')} (${
                                     currentOrder
-                                        ? (this.state.itemQty > 0
-                                              ? `${this.state.itemQty} - `
-                                              : '') +
+                                        ? (itemQty > 0 ? `${itemQty} - ` : '') +
                                           (this.state.totalMoneyDisplay || 0)
                                         : '0'
                                 })`}

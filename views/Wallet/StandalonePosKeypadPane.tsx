@@ -181,16 +181,18 @@ export default class PosKeypadPane extends React.PureComponent<
 
         if (!order) return;
 
+        const amountCalc = amount.replace(/,/g, '.');
+
         order.line_items.push({
             name: localeString('pos.customItem'),
             quantity: 1,
             base_price_money: {
-                amount: units === PricedIn.Fiat ? Number(amount) : 0,
+                amount: units === PricedIn.Fiat ? Number(amountCalc) : 0,
                 sats:
                     units === PricedIn.Sats
-                        ? Number(amount)
+                        ? Number(amountCalc)
                         : units === PricedIn.Bitcoin
-                        ? Number(amount) * SATS_PER_BTC
+                        ? Number(amountCalc) * SATS_PER_BTC
                         : 0
             }
         });

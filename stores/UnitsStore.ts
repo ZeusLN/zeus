@@ -237,7 +237,10 @@ export default class UnitsStore {
                 const { symbol, space, rtl, separatorSwap } =
                     this.fiatStore.symbolLookup(code);
 
-                const amount = value;
+                // handle amounts passed in with commas
+                const amount = Number(
+                    value.toString().replace(/,/g, '.')
+                ).toFixed(2);
 
                 const formattedAmount = separatorSwap
                     ? this.fiatStore.numberWithDecimals(amount)
