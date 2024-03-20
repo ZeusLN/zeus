@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "Only connect to the peers specified. Enabling this may slow down block sync, but may be helpful if you're having issues broadcasting transactions.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Να επιτρέπονται συνδέσεις σε άλλους ομότιμους.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Να μην επιτρέπονται συνδέσεις σε άλλους ομότιμους.",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Set the peers you would like to accept zero conf lightning channels from, other than the LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",
