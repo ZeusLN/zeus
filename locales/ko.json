@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "명시된 피어들과만 연결합니다. 이를 활성화하면 블록 싱크 속도가 느려질 수 있으나, 트랜잭션 발송에 문제를 겪는 상황에는 도움이 될 수 있습니다.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "다른 피어들과의 연결을 허용",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "다른 피어들과의 연결을 불허",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "제로 컨펌 피어들",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "LSP 외에, 제로 컨펌 라이트닝 채널을 허용할 피어들을 설정합니다.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "고속 그래프 동기화",
