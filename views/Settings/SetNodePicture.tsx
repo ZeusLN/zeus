@@ -244,7 +244,8 @@ export default class SetNodePicture extends React.Component<
                     title={localeString('views.SetNodePicture.setPicture')}
                     onPress={() => {
                         navigation.navigate('NodeConfiguration', {
-                            photo
+                            photo,
+                            saved: false
                         });
                     }}
                     containerStyle={{ paddingBottom: 10 }}
