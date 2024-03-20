@@ -342,6 +342,8 @@ PODS:
     - React-Core
   - react-native-notifications (5.1.0):
     - React-Core
+  - react-native-ping (1.2.8):
+    - React
   - react-native-print (0.11.0):
     - React-Core
   - react-native-randombytes (3.5.3):
@@ -565,6 +567,7 @@ DEPENDENCIES:
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-nfc-manager (from `../node_modules/react-native-nfc-manager`)
   - react-native-notifications (from `../node_modules/react-native-notifications`)
+  - react-native-ping (from `../node_modules/react-native-ping`)
   - react-native-print (from `../node_modules/react-native-print`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-restart (from `../node_modules/react-native-restart`)
@@ -683,6 +686,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-nfc-manager"
   react-native-notifications:
     :path: "../node_modules/react-native-notifications"
+  react-native-ping:
+    :path: "../node_modules/react-native-ping"
   react-native-print:
     :path: "../node_modules/react-native-print"
   react-native-randombytes:
@@ -802,6 +807,7 @@ SPEC CHECKSUMS:
   react-native-netinfo: fefd4e98d75cbdd6e85fc530f7111a8afdf2b0c5
   react-native-nfc-manager: 250424ac5f6b2827f98bec7a1ed7f27615852ed4
   react-native-notifications: 4601a5a8db4ced6ae7cfc43b44d35fe437ac50c4
+  react-native-ping: e9f64f02087c3cd2a0bc771ad0cf4a88edaa3072
   react-native-print: f704aef52d931bfce6d1d84351dbb5232d7ecb89
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-restart: 7595693413fe3ca15893702f2c8306c62a708162
