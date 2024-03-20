@@ -14,11 +14,26 @@ const userFriendlyErrors: any = {
         'error.failureReasonInsufficientBalance'
 };
 
-const errorToUserFriendly = (error: string, localize = true) => {
-    let errorObject;
-    try {
-        errorObject = JSON.parse(error);
-    } catch (err) {
+const errorToUserFriendly = (error: Error, localize = true) => {
+    if (typeof error === 'object') {
+        let errorMessage: object | string | any = error.message;
+
+        if (typeof errorMessage === 'string') {
+            errorMessage = JSON.parse(errorMessage || '{}');
+        }
+
+        if (errorMessage && errorMessage?.message) {
+            return errorMessage?.message;
+        }
+
+        if (
+            errorMessage &&
+            errorMessage?.error &&
+            errorMessage?.error?.message
+        ) {
+            return errorMessage?.error?.message;
+        }
+    } else {
         if (localize) {
             const localeString = require('./LocaleUtils').localeString;
             return (
@@ -31,21 +46,6 @@ const errorToUserFriendly = (error: string, localize = true) => {
             const EN = require('../locales/en.json');
             return EN[userFriendlyErrors[error]] || error;
         }
-    }
-
-    // If the parsed object has a message property, return it
-    if (errorObject && typeof errorObject === 'object' && errorObject.message) {
-        return errorObject.message;
-    }
-
-    // If the parsed object has an error object with a message property, return that
-    if (
-        errorObject &&
-        typeof errorObject === 'object' &&
-        errorObject.error &&
-        errorObject.error.message
-    ) {
-        return errorObject.error.message;
     }
 };
 
