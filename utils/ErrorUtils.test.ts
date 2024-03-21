@@ -4,45 +4,74 @@ describe('ErrorUtils', () => {
     describe('errorToUserFriendly', () => {
         it('Turns error message to user friendly values', () => {
             expect(
-                errorToUserFriendly({
-                    message: `{
+                errorToUserFriendly(
+                    {
+                        message: `{
                         "code": 2,
                         "message": "transaction output is dust",
                         "details": []
-                    }`
-                })
+                    }`,
+                        name: 'test'
+                    },
+                    false
+                )
             ).toEqual('transaction output is dust');
             expect(
-                errorToUserFriendly({
-                    message: `{
+                errorToUserFriendly(
+                    {
+                        message: `{
                         "code": 2,
                         "message": "proto: (line 1:126): invalid value for uint64 type: 0.1",
                         "details": []
-                    }`
-                })
+                    }`,
+                        name: 'test'
+                    },
+                    false
+                )
             ).toEqual(
                 'proto: (line 1:126): invalid value for uint64 type: 0.1'
             );
             expect(
-                errorToUserFriendly({
-                    message: `{
+                errorToUserFriendly(
+                    {
+                        message: `{
                             "error": {
                                 "code": 2,
                                 "message": "invoice is already paid",
                                 "details": []
                             }
                         }
-                        `
-                })
+                        `,
+                        name: 'test'
+                    },
+                    false
+                )
             ).toEqual('invoice is already paid');
             expect(
-                errorToUserFriendly('Error: SOCKS: Connection refused', false)
+                errorToUserFriendly(
+                    {
+                        message: `{
+                            "error": {
+                                "code": 2,
+                                "message": "Error: SOCKS: Connection refused",
+                                "details": []
+                            }
+                        }
+                        `,
+                        name: 'test'
+                    },
+                    false
+                )
             ).toEqual(
                 'Host unreachable. Try restarting your node or its Tor process.'
             );
             expect(
                 errorToUserFriendly(
-                    'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")',
+                    {
+                        message:
+                            'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")',
+                        name: 'test'
+                    },
                     false
                 )
             ).toEqual(
@@ -50,7 +79,11 @@ describe('ErrorUtils', () => {
             );
             expect(
                 errorToUserFriendly(
-                    'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")',
+                    {
+                        message:
+                            'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")',
+                        name: 'test'
+                    },
                     false
                 )
             ).toEqual(
@@ -59,9 +92,15 @@ describe('ErrorUtils', () => {
         });
 
         it('Returns inputted error if no match found', () => {
-            expect(errorToUserFriendly('Random message', false)).toEqual(
-                'Random message'
-            );
+            expect(
+                errorToUserFriendly(
+                    {
+                        message: 'Random message',
+                        name: 'test'
+                    },
+                    false
+                )
+            ).toEqual('Random message');
         });
     });
 });

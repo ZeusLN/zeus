@@ -15,37 +15,32 @@ const userFriendlyErrors: any = {
 };
 
 const errorToUserFriendly = (error: Error, localize = true) => {
-    if (typeof error === 'object') {
-        let errorMessage: object | string | any = error.message;
+    let errorMessage: object | string | any = error.message;
+    let errorObject: any;
 
-        if (typeof errorMessage === 'string') {
-            errorMessage = JSON.parse(errorMessage || '{}');
-        }
+    try {
+        errorObject = JSON.parse(errorMessage);
+    } catch (err) {
+        console.log(err);
+    }
 
-        if (errorMessage && errorMessage?.message) {
-            return errorMessage?.message;
-        }
+    const userFriendlyErrorMessage =
+        errorObject?.error?.message || errorObject?.message || errorMessage;
 
-        if (
-            errorMessage &&
-            errorMessage?.error &&
-            errorMessage?.error?.message
-        ) {
-            return errorMessage?.error?.message;
-        }
+    if (localize) {
+        const localeString = require('./LocaleUtils').localeString;
+        return (
+            localeString(userFriendlyErrors[userFriendlyErrorMessage])?.replace(
+                'Zeus',
+                'ZEUS'
+            ) || userFriendlyErrorMessage
+        );
     } else {
-        if (localize) {
-            const localeString = require('./LocaleUtils').localeString;
-            return (
-                localeString(userFriendlyErrors[error])?.replace(
-                    'Zeus',
-                    'ZEUS'
-                ) || error
-            );
-        } else {
-            const EN = require('../locales/en.json');
-            return EN[userFriendlyErrors[error]] || error;
-        }
+        const EN = require('../locales/en.json');
+        return (
+            EN[userFriendlyErrors[userFriendlyErrorMessage]] ||
+            userFriendlyErrorMessage
+        );
     }
 };
 
