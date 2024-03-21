@@ -474,7 +474,14 @@ export default class SeedRecovery extends React.PureComponent<
                         margin: 6,
                         marginTop: 4,
                         marginBottom: 4,
-                        flexDirection: 'row'
+                        flexDirection: 'row',
+                        maxHeight:
+                            index ===
+                            localeString(
+                                'views.Settings.AddEditNode.disasterRecoveryBase64'
+                            )
+                                ? 60
+                                : undefined
                     }}
                 >
                     {!showSuggestions && word !== 'scb' && (
