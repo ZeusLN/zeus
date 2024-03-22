@@ -154,7 +154,8 @@ export default class Settings extends React.Component<
                 />
                 <ScrollView
                     style={{
-                        flex: 1
+                        flex: 1,
+                        marginTop: 10
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
