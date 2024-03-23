@@ -30,7 +30,7 @@ export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
                         size: 25
                     }}
                     adaptiveWidth
-                    quinary
+                    quaternary
                     noUppercase
                     onPress={() => {
                         if (onToggle) onToggle();

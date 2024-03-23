@@ -72,7 +72,7 @@ export default class SortButton extends React.Component<SortButtonProps, {}> {
                             }}
                             adaptiveWidth
                             buttonStyle={{ width: 50 }}
-                            quinary
+                            quaternary
                             onPress={() =>
                                 ActionSheetIOS.showActionSheetWithOptions(
                                     {
