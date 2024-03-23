@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "Connectez uniquement aux pairs spécifiés. L'activation peut ralentir la synchronisation des blocs, mais peut être utile si vous avez des problèmes de diffusion de transactions.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Permettant des connexions à d'autres pairs.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Ne pas autoriser les connexions à d'autres pairs.",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zéro conf pairs",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Définissez les pairs que vous souhaitez accepter les zero conf canaux de Lightning, à part le LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",

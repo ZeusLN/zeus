@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "การเชื่อมต่อเฉพาะวงเครือข่ายที่ต้องการอาจจะทำให้ซิงค์ข้อมูลช้าลง แต่จะเป็นประโยชน์หากคุณมีปัญหาในการประกาศธุรกรรม",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "อนุญาติให้เชื่อมไปยังวงเครือข่ายอื่น ๆ ",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "ไม่อนุญาติให้เชื่อมไปยังวงเครือข่ายอื่น",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "วงเครือข่ายสำเร็จ",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "เลือกวงเครือข่ายที่คุณจะเชื่อมกับแชนแนล นอกเหนือจาก LSP",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "ซิงค์กราฟแบบเร่งด่วน EGS",

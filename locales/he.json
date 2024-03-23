@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "Only connect to the peers specified. Enabling this may slow down block sync, but may be helpful if you're having issues broadcasting transactions.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "הרשאת חיבורים לעמיתים אחרים.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "חסימת חיבורים לעמיתים אחרים.",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "עמיתי אפס אישורים",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Set the peers you would like to accept zero conf lightning channels from, other than the LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "סנכרון גרף מהיר",

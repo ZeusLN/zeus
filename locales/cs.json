@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "Připojit se pouze na uvedené peery. Povolení této funkce může zpomalit synchronizaci bloků, ale může pomoct při problémech s vysíláním transakcí.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Povoleno připojování k ostatním peerům.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Nepovoleno připojování k ostatním peerům.",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping vypršel",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "0-conf peery",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Nastavte peery, od kterých byste chtěli přijímat 0-conf lightningové kanály. Jiné než LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Expresní synchronizace grafu",

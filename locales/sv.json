@@ -773,6 +773,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle": "Anslut endast till de angivna peers. Om du aktiverar detta kan blocksynkroniseringen sakta ner, men det kan vara användbart om du har problem med att sända transaktioner.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Tillåter anslutningar till andra peers.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Tillåter inte kopplingar till andra peers.",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Noll conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Ställ in de peers som du vill acceptera noll conf lightning-kanaler från, förutom LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",
