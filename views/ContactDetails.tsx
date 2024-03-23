@@ -93,6 +93,10 @@ export default class ContactDetails extends React.Component<
                 const contactsString = await EncryptedStorage.getItem(
                     'zeus-contacts'
                 );
+                const isNostrContact = this.props.navigation.getParam(
+                    'isNostrContact',
+                    null
+                );
 
                 if (contactsString && contactId) {
                     const existingContact = JSON.parse(contactsString);
@@ -103,9 +107,17 @@ export default class ContactDetails extends React.Component<
                     );
 
                     // Store the found contact in the component's state
-                    this.setState({ contact, isLoading: false });
+                    this.setState({
+                        contact,
+                        isNostrContact,
+                        isLoading: false
+                    });
                 } else {
-                    this.setState({ contact: nostrContact, isLoading: false });
+                    this.setState({
+                        contact: nostrContact,
+                        isNostrContact,
+                        isLoading: false
+                    });
                 }
             } catch (error) {
                 console.log('Error fetching contact:', error);
@@ -315,7 +327,7 @@ export default class ContactDetails extends React.Component<
                             }
                             rightComponent={
                                 <Row>
-                                    <StarButton />
+                                    {!isNostrContact && <StarButton />}
                                     <QRButton />
                                 </Row>
                             }
