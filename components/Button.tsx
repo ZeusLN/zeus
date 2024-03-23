@@ -12,7 +12,6 @@ interface ButtonProps {
     tertiary?: boolean;
     quaternary?: boolean;
     warning?: boolean;
-    quinary?: boolean;
     iconOnly?: boolean;
     adaptiveWidth?: boolean;
     containerStyle?: any;
@@ -32,7 +31,6 @@ function Button(props: ButtonProps) {
         tertiary,
         quaternary,
         warning,
-        quinary,
         iconOnly,
         adaptiveWidth,
         containerStyle,
@@ -83,10 +81,8 @@ function Button(props: ButtonProps) {
             buttonStyle={{
                 backgroundColor: iconOnly
                     ? 'transparent'
-                    : quinary
-                    ? themeColor('buttonBackground') || themeColor('secondary')
                     : quaternary
-                    ? themeColor('background')
+                    ? themeColor('buttonBackground') || themeColor('secondary')
                     : tertiary
                     ? themeColor('highlight')
                     : secondary
@@ -104,10 +100,6 @@ function Button(props: ButtonProps) {
                     : {
                           color: iconOnly
                               ? textColor
-                              : quinary
-                              ? warning
-                                  ? themeColor('warning')
-                                  : textColor
                               : quaternary
                               ? warning
                                   ? themeColor('warning')
