@@ -918,6 +918,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth not supported by your node implementation",
     "utils.handleAnything.unsupportedLnurlType": "Unsupported lnurl type",
     "utils.handleAnything.invalidLnurlParams": "Could not parse lnurl params",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Error creating invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Error generating new address",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
