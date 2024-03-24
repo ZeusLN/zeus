@@ -151,9 +151,20 @@ const writeLndConfig = async (
 };
 
 export async function expressGraphSync() {
-    if (stores.settingsStore.embeddedLndNetwork === 'Mainnet') {
-        const start = new Date();
+    return await new Promise(async (resolve) => {
         stores.syncStore.setExpressGraphSyncStatus(true);
+
+        const timer = setInterval(() => {
+            console.log('Express graph sync is running...');
+            // Check if the cancellation token is set
+            if (!stores.syncStore.isInExpressGraphSync) {
+                clearInterval(timer);
+                // TODO call cancellation to LND here
+                resolve(true);
+            }
+        }, 1000);
+
+        const start = new Date();
         if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
             log.d('Clearing speedloader files');
             try {
@@ -175,8 +186,7 @@ export async function expressGraphSync() {
         }
 
         stores.syncStore.setExpressGraphSyncStatus(false);
-    }
-    return;
+    });
 }
 
 export async function initializeLnd(
