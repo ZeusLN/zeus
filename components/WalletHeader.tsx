@@ -265,6 +265,8 @@ export default class WalletHeader extends React.Component<
             infoValue = localeString('views.Wallet.MainPane.testnet');
         } else if (NodeInfoStore!.nodeInfo.isRegTest) {
             infoValue = localeString('views.Wallet.MainPane.regnet');
+        } else if (NodeInfoStore!.nodeInfo.isSigNet) {
+            infoValue = localeString('views.Wallet.MainPane.signet');
         }
 
         const { fontScale } = Dimensions.get('window');
