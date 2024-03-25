@@ -12,13 +12,14 @@ import remove from 'lodash/remove';
 import { inject, observer } from 'mobx-react';
 
 import Amount from './Amount';
-import Button from './../components/Button';
+import Button from '../components/Button';
+import LoadingIndicator from './LoadingIndicator';
 
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-import stores from './../stores/Stores';
-import UTXOsStore from './../stores/UTXOsStore';
+import stores from '../stores/Stores';
+import UTXOsStore from '../stores/UTXOsStore';
 
 interface UTXOPickerProps {
     title?: string;
@@ -161,100 +162,142 @@ export default class UTXOPicker extends React.Component<
                                         />
                                     </View>
 
-                                    <FlatList
-                                        data={utxos}
-                                        renderItem={({ item }: any) => (
-                                            <ListItem
-                                                containerStyle={{
-                                                    flex: 1,
-                                                    flexDirection: 'column',
-                                                    borderBottomWidth: 0,
-                                                    backgroundColor:
-                                                        themeColor('background')
+                                    {loading && <LoadingIndicator />}
+
+                                    {!loading && utxos.length === 0 && (
+                                        <View
+                                            style={{
+                                                marginTop: 10,
+                                                alignSelf: 'center'
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
                                                 }}
-                                                onPress={() =>
-                                                    this.toggleItem(item)
-                                                }
                                             >
-                                                <Text
-                                                    style={{
-                                                        alignSelf: 'flex-start',
-                                                        color: utxosPicked.includes(
-                                                            item.getOutpoint
-                                                        )
-                                                            ? themeColor(
-                                                                  'highlight'
-                                                              )
-                                                            : themeColor('text')
+                                                {localeString(
+                                                    'views.UTXOs.CoinControl.noUTXOs'
+                                                )}
+                                            </Text>
+                                        </View>
+                                    )}
+
+                                    {!loading && utxos.length > 0 && (
+                                        <FlatList
+                                            data={utxos}
+                                            renderItem={({ item }: any) => (
+                                                <ListItem
+                                                    containerStyle={{
+                                                        flex: 1,
+                                                        flexDirection: 'column',
+                                                        borderBottomWidth: 0,
+                                                        backgroundColor:
+                                                            themeColor(
+                                                                'background'
+                                                            )
                                                     }}
+                                                    onPress={() =>
+                                                        this.toggleItem(item)
+                                                    }
                                                 >
-                                                    {item.getOutpoint}
-                                                </Text>
-                                                <View
-                                                    style={{
-                                                        alignSelf: 'flex-start'
-                                                    }}
-                                                >
-                                                    <Amount
-                                                        sats={item.getAmount}
-                                                        sensitive={true}
-                                                        color={
-                                                            utxosPicked.includes(
+                                                    <Text
+                                                        style={{
+                                                            alignSelf:
+                                                                'flex-start',
+                                                            color: utxosPicked.includes(
                                                                 item.getOutpoint
                                                             )
-                                                                ? 'highlight'
-                                                                : 'secondaryText'
-                                                        }
-                                                    />
-                                                </View>
-                                            </ListItem>
-                                        )}
-                                        keyExtractor={(
-                                            item: any,
-                                            index: number
-                                        ) => `${item.txid}-${index}`}
-                                        onEndReachedThreshold={50}
-                                        refreshing={loading}
-                                        onRefresh={() => getUTXOs()}
-                                    />
-
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={localeString(
-                                                'components.UTXOPicker.modal.set'
+                                                                ? themeColor(
+                                                                      'highlight'
+                                                                  )
+                                                                : themeColor(
+                                                                      'text'
+                                                                  )
+                                                        }}
+                                                    >
+                                                        {item.getOutpoint}
+                                                    </Text>
+                                                    <View
+                                                        style={{
+                                                            alignSelf:
+                                                                'flex-start'
+                                                        }}
+                                                    >
+                                                        <Amount
+                                                            sats={
+                                                                item.getAmount
+                                                            }
+                                                            sensitive={true}
+                                                            color={
+                                                                utxosPicked.includes(
+                                                                    item.getOutpoint
+                                                                )
+                                                                    ? 'highlight'
+                                                                    : 'secondaryText'
+                                                            }
+                                                        />
+                                                    </View>
+                                                </ListItem>
                                             )}
-                                            onPress={() => {
-                                                const {
-                                                    utxosSelected,
-                                                    selectedBalance
-                                                } = this.state;
-                                                this.setState({
-                                                    showUtxoModal: false,
-                                                    utxosSet: utxosSelected,
-                                                    setBalance: selectedBalance
-                                                });
-
-                                                onValueChange(
-                                                    utxosSelected,
-                                                    selectedBalance
-                                                );
-                                            }}
+                                            keyExtractor={(
+                                                item: any,
+                                                index: number
+                                            ) => `${item.txid}-${index}`}
+                                            onEndReachedThreshold={50}
+                                            refreshing={loading}
+                                            onRefresh={() => getUTXOs()}
                                         />
-                                    </View>
+                                    )}
 
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={localeString(
-                                                'general.cancel'
-                                            )}
-                                            onPress={() =>
-                                                this.setState({
-                                                    showUtxoModal: false
-                                                })
-                                            }
-                                            secondary
-                                        />
-                                    </View>
+                                    {!loading && utxos.length > 0 && (
+                                        <>
+                                            <View style={styles.button}>
+                                                <Button
+                                                    title={localeString(
+                                                        'components.UTXOPicker.modal.set'
+                                                    )}
+                                                    onPress={() => {
+                                                        const {
+                                                            utxosSelected,
+                                                            selectedBalance
+                                                        } = this.state;
+                                                        this.setState({
+                                                            showUtxoModal:
+                                                                false,
+                                                            utxosSet:
+                                                                utxosSelected,
+                                                            setBalance:
+                                                                selectedBalance
+                                                        });
+
+                                                        onValueChange(
+                                                            utxosSelected,
+                                                            selectedBalance
+                                                        );
+                                                    }}
+                                                />
+                                            </View>
+
+                                            <View style={styles.button}>
+                                                <Button
+                                                    title={localeString(
+                                                        'general.cancel'
+                                                    )}
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            showUtxoModal: false
+                                                        })
+                                                    }
+                                                    secondary
+                                                />
+                                            </View>
+                                        </>
+                                    )}
                                 </>
                             )}
                         </View>
@@ -329,7 +372,9 @@ const styles = StyleSheet.create({
         },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
-        elevation: 5
+        elevation: 5,
+        width: '95%',
+        height: '95%'
     },
     centeredView: {
         flex: 1,
