@@ -28,8 +28,14 @@ const {
     closeChannel,
     openChannel
 } = lndMobile.channel;
-const { signMessageNodePubkey, verifyMessageNodePubkey, bumpFee } =
-    lndMobile.wallet;
+const {
+    signMessageNodePubkey,
+    verifyMessageNodePubkey,
+    bumpFee,
+    fundPsbt,
+    finalizePsbt,
+    publishTransaction
+} = lndMobile.wallet;
 const { walletBalance, newAddress, getTransactions, sendCoins } =
     lndMobile.onchain;
 
@@ -146,10 +152,21 @@ export default class EmbeddedLND extends LND {
         urlParams && (await queryRoutes(urlParams[0], urlParams[1]));
     // getForwardingHistory = () => N/A
     // // Coin Control
-    // fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
-    // finalizePsbt = (data: any) =>
-    //     this.postRequest('/v2/wallet/psbt/finalize', data);
-    // publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
+    fundPsbt = async (data: any) =>
+        await fundPsbt({
+            raw: data.raw,
+            spend_unconfirmed: data.spend_unconfirmed,
+            sat_per_vbyte: data.sat_per_vbyte
+        });
+    finalizePsbt = async (data: any) =>
+        await finalizePsbt({
+            funded_psbt: data.funded_psbt
+        });
+    publishTransaction = async (data: any) =>
+        await publishTransaction({
+            tx_hex: data.tx_hex
+        });
+
     getUTXOs = async () => await listUnspent();
     bumpFee = async (data: any) => await bumpFee(data);
     lookupInvoice = async (data: any) => await lookupInvoice(data.r_hash);
