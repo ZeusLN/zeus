@@ -75,7 +75,10 @@ import {
     verifyMessageNodePubkey,
     signMessage,
     signMessageNodePubkey,
-    bumpFee
+    bumpFee,
+    fundPsbt,
+    finalizePsbt,
+    publishTransaction
 } from './wallet';
 import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
@@ -331,6 +334,25 @@ export interface ILndMobileInjections {
             force?: boolean;
             sat_per_vbyte?: Long;
         }) => Promise<walletrpc.BumpFeeResponse>;
+        fundPsbt: ({
+            raw,
+            spend_unconfirmed,
+            sat_per_vbyte
+        }: {
+            raw: walletrpc.TxTemplate;
+            spend_unconfirmed?: boolean;
+            sat_per_vbyte?: Long;
+        }) => Promise<walletrpc.FundPsbtResponse>;
+        finalizePsbt: ({
+            funded_psbt
+        }: {
+            funded_psbt: Uint8Array;
+        }) => Promise<walletrpc.FinalizePsbtResponse>;
+        publishTransaction: ({
+            tx_hex
+        }: {
+            tx_hex: Uint8Array;
+        }) => Promise<walletrpc.PublishResponse>;
     };
     autopilot: {
         status: () => Promise<autopilotrpc.StatusResponse>;
@@ -421,7 +443,10 @@ export default {
         verifyMessageNodePubkey,
         signMessage,
         signMessageNodePubkey,
-        bumpFee
+        bumpFee,
+        fundPsbt,
+        finalizePsbt,
+        publishTransaction
     },
     autopilot: {
         status,

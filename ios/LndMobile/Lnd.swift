@@ -116,7 +116,10 @@ open class Lnd {
     "InitWallet": { bytes, cb in LndmobileInitWallet(bytes, cb) },
     "UnlockWallet": { bytes, cb in LndmobileUnlockWallet(bytes, cb) },
     "WalletKitDeriveKey": { bytes, cb in LndmobileWalletKitDeriveKey(bytes, cb) },
-//    derivePrivateKey
+    "FundPsbt": { bytes, cb in LndmobileWalletKitFundPsbt(bytes, cb) },
+    "FinalizePsbt": { bytes, cb in LndmobileWalletKitFinalizePsbt(bytes, cb) },
+    "PublishTransaction": { bytes, cb in LndmobileWalletKitPublishTransaction(bytes, cb) },
+  //    derivePrivateKey
     "VerifyMessage": { bytes, cb in LndmobileVerifyMessage(bytes, cb) },
     "SignMessage": { bytes, cb in LndmobileSignMessage(bytes, cb) },
     "SignerSignMessage": { bytes, cb in LndmobileSignerSignMessage(bytes, cb) },
