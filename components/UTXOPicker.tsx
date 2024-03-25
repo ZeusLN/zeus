@@ -68,6 +68,7 @@ export default class UTXOPicker extends React.Component<
             selectedBalance: 0,
             setBalance: 0
         });
+        this.props.onValueChange([], 0);
     }
 
     displayValues(): string {
