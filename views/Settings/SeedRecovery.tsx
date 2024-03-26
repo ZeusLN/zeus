@@ -465,7 +465,7 @@ export default class SeedRecovery extends React.PureComponent<
                         });
 
                         // set focus
-                        this.textInput?.current?.focus();
+                        if (!showSuggestions) this.textInput?.current?.focus();
                     }}
                     style={{
                         padding: 8,
