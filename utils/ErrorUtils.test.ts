@@ -5,27 +5,27 @@ describe('ErrorUtils', () => {
         it('Turns error message to user friendly values', () => {
             expect(
                 errorToUserFriendly(
-                    {
+                    Object.assign(new Error(), {
                         message: `{
                         "code": 2,
                         "message": "transaction output is dust",
                         "details": []
                     }`,
                         name: 'test'
-                    },
+                    }),
                     false
                 )
             ).toEqual('transaction output is dust');
             expect(
                 errorToUserFriendly(
-                    {
+                    Object.assign(new Error(), {
                         message: `{
                         "code": 2,
                         "message": "proto: (line 1:126): invalid value for uint64 type: 0.1",
                         "details": []
                     }`,
                         name: 'test'
-                    },
+                    }),
                     false
                 )
             ).toEqual(
@@ -33,7 +33,7 @@ describe('ErrorUtils', () => {
             );
             expect(
                 errorToUserFriendly(
-                    {
+                    Object.assign(new Error(), {
                         message: `{
                             "error": {
                                 "code": 2,
@@ -43,13 +43,13 @@ describe('ErrorUtils', () => {
                         }
                         `,
                         name: 'test'
-                    },
+                    }),
                     false
                 )
             ).toEqual('invoice is already paid');
             expect(
                 errorToUserFriendly(
-                    {
+                    Object.assign(new Error(), {
                         message: `{
                             "error": {
                                 "code": 2,
@@ -59,7 +59,7 @@ describe('ErrorUtils', () => {
                         }
                         `,
                         name: 'test'
-                    },
+                    }),
                     false
                 )
             ).toEqual(
@@ -67,11 +67,11 @@ describe('ErrorUtils', () => {
             );
             expect(
                 errorToUserFriendly(
-                    {
+                    Object.assign(new Error(), {
                         message:
                             'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")',
                         name: 'test'
-                    },
+                    }),
                     false
                 )
             ).toEqual(
@@ -79,11 +79,11 @@ describe('ErrorUtils', () => {
             );
             expect(
                 errorToUserFriendly(
-                    {
+                    Object.assign(new Error(), {
                         message:
                             'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")',
                         name: 'test'
-                    },
+                    }),
                     false
                 )
             ).toEqual(
@@ -94,10 +94,10 @@ describe('ErrorUtils', () => {
         it('Returns inputted error if no match found', () => {
             expect(
                 errorToUserFriendly(
-                    {
+                    Object.assign(new Error(), {
                         message: 'Random message',
                         name: 'test'
-                    },
+                    }),
                     false
                 )
             ).toEqual('Random message');
