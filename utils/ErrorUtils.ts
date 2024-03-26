@@ -15,7 +15,7 @@ const userFriendlyErrors: any = {
 };
 
 const errorToUserFriendly = (error: Error, localize = true) => {
-    let errorMessage: object | string | any = error.message;
+    let errorMessage: string = error.message;
     let errorObject: any;
 
     try {
