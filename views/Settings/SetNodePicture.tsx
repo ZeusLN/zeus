@@ -173,7 +173,9 @@ export default class SetNodePicture extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.SetNodePicture.setPicture'),
+                        text: localeString(
+                            'views.SetNodePicture.choosePicture'
+                        ),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -241,7 +243,7 @@ export default class SetNodePicture extends React.Component<
                 </ScrollView>
 
                 <Button
-                    title={localeString('views.SetNodePicture.setPicture')}
+                    title={localeString('views.SetNodePicture.choosePicture')}
                     onPress={() => {
                         navigation.navigate('NodeConfiguration', {
                             photo,
