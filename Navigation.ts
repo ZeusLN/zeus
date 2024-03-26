@@ -62,6 +62,7 @@ import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
+import SetNodePicture from './views/Settings/SetNodePicture';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -441,6 +442,9 @@ const AppScenes = {
     },
     RestoreChannelBackups: {
         screen: RestoreChannelBackups
+    },
+    SetNodePicture: {
+        screen: SetNodePicture
     }
 };
 
