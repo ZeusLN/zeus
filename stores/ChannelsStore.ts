@@ -12,6 +12,7 @@ import SettingsStore from './SettingsStore';
 
 import BackendUtils from './../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 import _ from 'lodash';
 
@@ -503,7 +504,7 @@ export default class ChannelsStore {
                     if (!connectPeerOnly) this.channelRequest = request;
                     resolve(true);
                 })
-                .catch((error: any) => {
+                .catch((error: Error) => {
                     if (!silent) {
                         this.connectingToPeer = false;
                         this.peerSuccess = false;
@@ -518,14 +519,14 @@ export default class ChannelsStore {
                             this.channelRequest = request;
                         } else {
                             if (!silent) {
-                                this.errorMsgPeer = error.toString();
+                                this.errorMsgPeer = errorToUserFriendly(error);
                                 this.errorPeerConnect = true;
                             }
                         }
                         resolve(true);
                     } else {
                         if (!silent) {
-                            this.errorMsgPeer = error.toString();
+                            this.errorMsgPeer = errorToUserFriendly(error);
                             this.errorPeerConnect = true;
                         }
                         reject(this.errorMsgPeer);
@@ -551,8 +552,8 @@ export default class ChannelsStore {
                 this.channelRequest = null;
                 this.channelSuccess = true;
             })
-            .catch((error: any) => {
-                this.errorMsgChannel = error.toString();
+            .catch((error: Error) => {
+                this.errorMsgChannel = errorToUserFriendly(error);
                 this.output_index = null;
                 this.funding_txid_str = null;
                 this.errorOpenChannel = true;

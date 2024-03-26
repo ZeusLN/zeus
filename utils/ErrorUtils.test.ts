@@ -4,13 +4,74 @@ describe('ErrorUtils', () => {
     describe('errorToUserFriendly', () => {
         it('Turns error message to user friendly values', () => {
             expect(
-                errorToUserFriendly('Error: SOCKS: Connection refused', false)
+                errorToUserFriendly(
+                    Object.assign(new Error(), {
+                        message: `{
+                        "code": 2,
+                        "message": "transaction output is dust",
+                        "details": []
+                    }`,
+                        name: 'test'
+                    }),
+                    false
+                )
+            ).toEqual('transaction output is dust');
+            expect(
+                errorToUserFriendly(
+                    Object.assign(new Error(), {
+                        message: `{
+                        "code": 2,
+                        "message": "proto: (line 1:126): invalid value for uint64 type: 0.1",
+                        "details": []
+                    }`,
+                        name: 'test'
+                    }),
+                    false
+                )
+            ).toEqual(
+                'proto: (line 1:126): invalid value for uint64 type: 0.1'
+            );
+            expect(
+                errorToUserFriendly(
+                    Object.assign(new Error(), {
+                        message: `{
+                            "error": {
+                                "code": 2,
+                                "message": "invoice is already paid",
+                                "details": []
+                            }
+                        }
+                        `,
+                        name: 'test'
+                    }),
+                    false
+                )
+            ).toEqual('invoice is already paid');
+            expect(
+                errorToUserFriendly(
+                    Object.assign(new Error(), {
+                        message: `{
+                            "error": {
+                                "code": 2,
+                                "message": "Error: SOCKS: Connection refused",
+                                "details": []
+                            }
+                        }
+                        `,
+                        name: 'test'
+                    }),
+                    false
+                )
             ).toEqual(
                 'Host unreachable. Try restarting your node or its Tor process.'
             );
             expect(
                 errorToUserFriendly(
-                    'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")',
+                    Object.assign(new Error(), {
+                        message:
+                            'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")',
+                        name: 'test'
+                    }),
                     false
                 )
             ).toEqual(
@@ -18,7 +79,11 @@ describe('ErrorUtils', () => {
             );
             expect(
                 errorToUserFriendly(
-                    'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")',
+                    Object.assign(new Error(), {
+                        message:
+                            'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")',
+                        name: 'test'
+                    }),
                     false
                 )
             ).toEqual(
@@ -27,9 +92,15 @@ describe('ErrorUtils', () => {
         });
 
         it('Returns inputted error if no match found', () => {
-            expect(errorToUserFriendly('Random message', false)).toEqual(
-                'Random message'
-            );
+            expect(
+                errorToUserFriendly(
+                    Object.assign(new Error(), {
+                        message: 'Random message',
+                        name: 'test'
+                    }),
+                    false
+                )
+            ).toEqual('Random message');
         });
     });
 });

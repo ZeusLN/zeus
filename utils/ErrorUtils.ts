@@ -14,16 +14,33 @@ const userFriendlyErrors: any = {
         'error.failureReasonInsufficientBalance'
 };
 
-const errorToUserFriendly = (error: string, localize = true) => {
+const errorToUserFriendly = (error: Error, localize = true) => {
+    let errorMessage: string = error.message;
+    let errorObject: any;
+
+    try {
+        errorObject = JSON.parse(errorMessage);
+    } catch (err) {
+        console.log(err);
+    }
+
+    const userFriendlyErrorMessage =
+        errorObject?.error?.message || errorObject?.message || errorMessage;
+
     if (localize) {
         const localeString = require('./LocaleUtils').localeString;
         return (
-            localeString(userFriendlyErrors[error])?.replace('Zeus', 'ZEUS') ||
-            error
+            localeString(userFriendlyErrors[userFriendlyErrorMessage])?.replace(
+                'Zeus',
+                'ZEUS'
+            ) || userFriendlyErrorMessage
         );
     } else {
         const EN = require('../locales/en.json');
-        return EN[userFriendlyErrors[error]] || error;
+        return (
+            EN[userFriendlyErrors[userFriendlyErrorMessage]] ||
+            userFriendlyErrorMessage
+        );
     }
 };
 

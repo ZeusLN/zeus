@@ -194,9 +194,9 @@ export default class TransactionsStore {
                 this.publishSuccess = true;
                 this.loading = false;
             })
-            .catch((error: any) => {
+            .catch((error: Error) => {
                 // handle error
-                this.error_msg = error.message;
+                this.error_msg = errorToUserFriendly(error);
                 this.error = true;
                 this.loading = false;
             });
@@ -368,10 +368,7 @@ export default class TransactionsStore {
         this.error = true;
         this.loading = false;
         this.error_msg =
-            typeof err === 'string'
-                ? errorToUserFriendly(err)
-                : errorToUserFriendly(err.message) ||
-                  localeString('error.sendingPayment');
+            errorToUserFriendly(err) || localeString('error.sendingPayment');
     };
 
     @action resetBroadcast = () => {
