@@ -124,18 +124,20 @@ export default class ChannelsStore {
     }
 
     @action
-    resetOpenChannel = () => {
+    resetOpenChannel = (silent?: boolean) => {
         this.loading = false;
         this.error = false;
-        this.errorPeerConnect = false;
+        if (!silent) {
+            this.errorMsgPeer = null;
+            this.errorPeerConnect = false;
+            this.connectingToPeer = false;
+            this.peerSuccess = false;
+        }
         this.errorMsgChannel = null;
-        this.errorMsgPeer = null;
         this.output_index = null;
         this.funding_txid_str = null;
         this.openingChannel = false;
-        this.connectingToPeer = false;
         this.errorOpenChannel = false;
-        this.peerSuccess = false;
         this.channelSuccess = false;
         this.channelRequest = null;
     };
@@ -469,11 +471,12 @@ export default class ChannelsStore {
     public connectPeer = async (
         request: OpenChannelRequest,
         perm?: boolean,
-        connectPeerOnly?: boolean
+        connectPeerOnly?: boolean,
+        silent?: boolean
     ) => {
-        this.resetOpenChannel();
+        this.resetOpenChannel(silent);
         this.channelRequest = undefined;
-        this.connectingToPeer = true;
+        if (!silent) this.connectingToPeer = true;
 
         if (!request.host) {
             return await new Promise((resolve) => {
@@ -491,16 +494,20 @@ export default class ChannelsStore {
                 perm
             })
                 .then(() => {
-                    this.errorPeerConnect = false;
-                    this.connectingToPeer = false;
-                    this.errorMsgPeer = null;
+                    if (!silent) {
+                        this.errorPeerConnect = false;
+                        this.connectingToPeer = false;
+                        this.errorMsgPeer = null;
+                        this.peerSuccess = true;
+                    }
                     if (!connectPeerOnly) this.channelRequest = request;
-                    this.peerSuccess = true;
                     resolve(true);
                 })
                 .catch((error: any) => {
-                    this.connectingToPeer = false;
-                    this.peerSuccess = false;
+                    if (!silent) {
+                        this.connectingToPeer = false;
+                        this.peerSuccess = false;
+                    }
                     this.channelSuccess = false;
                     // handle error
                     if (
@@ -510,13 +517,17 @@ export default class ChannelsStore {
                         if (!connectPeerOnly) {
                             this.channelRequest = request;
                         } else {
-                            this.errorMsgPeer = error.toString();
-                            this.errorPeerConnect = true;
+                            if (!silent) {
+                                this.errorMsgPeer = error.toString();
+                                this.errorPeerConnect = true;
+                            }
                         }
                         resolve(true);
                     } else {
-                        this.errorMsgPeer = error.toString();
-                        this.errorPeerConnect = true;
+                        if (!silent) {
+                            this.errorMsgPeer = error.toString();
+                            this.errorPeerConnect = true;
+                        }
                         reject(this.errorMsgPeer);
                     }
                 });
