@@ -85,6 +85,7 @@ export default class LSPStore {
                                     local_funding_amount: ''
                                 },
                                 false,
+                                true,
                                 true
                             );
                         } catch (e) {}

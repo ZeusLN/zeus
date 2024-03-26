@@ -90,9 +90,7 @@ export default class EmbeddedLND extends LND {
             max_shard_amt: data?.max_shard_amt,
             fee_limit_sat: data?.fee_limit_sat || 0,
             outgoing_chan_id: data?.outgoing_chan_id,
-            last_hop_pubkey: data?.last_hop_pubkey
-                ? Base64Utils.base64ToHex(data?.last_hop_pubkey)
-                : undefined,
+            last_hop_pubkey: data?.last_hop_pubkey,
             message: data?.message
                 ? Base64Utils.hexToBase64(Base64Utils.utf8ToHex(data?.message))
                 : undefined,

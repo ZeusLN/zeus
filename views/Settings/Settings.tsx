@@ -127,7 +127,10 @@ export default class Settings extends React.Component<
             nodeSubtitle +=
                 implementationDisplayValue[selectedNode.implementation];
 
-            if (selectedNode.embeddedLndNetwork) {
+            if (
+                selectedNode.embeddedLndNetwork &&
+                selectedNode.implementation === 'embedded-lnd'
+            ) {
                 nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
             }
         }
@@ -151,7 +154,8 @@ export default class Settings extends React.Component<
                 />
                 <ScrollView
                     style={{
-                        flex: 1
+                        flex: 1,
+                        marginTop: 10
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
