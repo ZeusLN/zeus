@@ -1756,7 +1756,7 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {implementation === 'embedded-lnd' && saved && (
+                    {implementation === 'embedded-lnd' && !newEntry && (
                         <>
                             <Text
                                 style={{
