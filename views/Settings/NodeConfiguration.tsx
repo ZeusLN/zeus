@@ -706,11 +706,17 @@ export default class NodeConfiguration extends React.Component<
                     navigation={navigation}
                 />
                 {!!suggestImport && (
-                    <View style={styles.clipboardImport}>
+                    <View
+                        style={{
+                            padding: 10,
+                            backgroundColor: themeColor('disabled')
+                        }}
+                    >
                         <Text style={styles.whiteText}>
                             {localeString(
                                 'views.Settings.AddEditNode.connectionStringClipboard'
                             )}
+                            :
                         </Text>
                         <Text
                             style={{
@@ -722,7 +728,7 @@ export default class NodeConfiguration extends React.Component<
                                 ? `${suggestImport.substring(0, 100)}...`
                                 : suggestImport}
                         </Text>
-                        <Text style={styles.whiteText}>
+                        <Text style={{ ...styles.whiteText, marginBottom: 10 }}>
                             {localeString(
                                 'views.Settings.AddEditNode.importPrompt'
                             )}
@@ -733,9 +739,6 @@ export default class NodeConfiguration extends React.Component<
                                     'views.Settings.AddEditNode.import'
                                 )}
                                 onPress={() => this.importClipboard()}
-                                titleStyle={{
-                                    color: 'rgba(92, 99,216, 1)'
-                                }}
                                 tertiary
                             />
                         </View>
@@ -743,9 +746,6 @@ export default class NodeConfiguration extends React.Component<
                             <Button
                                 title={localeString('general.cancel')}
                                 onPress={() => this.clearImportSuggestion()}
-                                titleStyle={{
-                                    color: 'rgba(92, 99,216, 1)'
-                                }}
                                 tertiary
                             />
                         </View>
@@ -930,7 +930,7 @@ export default class NodeConfiguration extends React.Component<
                             <Text
                                 style={{
                                     ...styles.text,
-                                    color: themeColor('text')
+                                    color: themeColor('secondaryText')
                                 }}
                             >
                                 {localeString(
@@ -1735,15 +1735,9 @@ const styles = StyleSheet.create({
         height: 50
     },
     button: {
-        paddingTop: 10,
-        paddingBottom: 10,
+        paddingVertical: 10,
         width: 350,
         alignSelf: 'center'
-    },
-    clipboardImport: {
-        padding: 10,
-        backgroundColor: 'rgba(92, 99,216, 1)',
-        color: 'white'
     },
     modal: {
         margin: 20,

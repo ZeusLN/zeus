@@ -342,6 +342,8 @@ PODS:
     - React-Core
   - react-native-notifications (5.1.0):
     - React-Core
+  - react-native-ping (1.2.8):
+    - React
   - react-native-print (0.11.0):
     - React-Core
   - react-native-randombytes (3.5.3):
@@ -565,6 +567,7 @@ DEPENDENCIES:
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-nfc-manager (from `../node_modules/react-native-nfc-manager`)
   - react-native-notifications (from `../node_modules/react-native-notifications`)
+  - react-native-ping (from `../node_modules/react-native-ping`)
   - react-native-print (from `../node_modules/react-native-print`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-restart (from `../node_modules/react-native-restart`)
@@ -683,6 +686,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-nfc-manager"
   react-native-notifications:
     :path: "../node_modules/react-native-notifications"
+  react-native-ping:
+    :path: "../node_modules/react-native-ping"
   react-native-print:
     :path: "../node_modules/react-native-print"
   react-native-randombytes:
@@ -765,14 +770,14 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  boost: 57d2868c099736d80fcd648bf211b4431e51a558
+  boost: 7dcd2de282d72e344012f7d6564d024930a6a440
   BVLinearGradient: 34a999fda29036898a09c6a6b728b0b4189e1a44
   CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
-  DoubleConversion: 5189b271737e1565bdce30deb4a08d647e3f5f54
+  DoubleConversion: fea03f2699887d960129cc54bba7e52542b6f953
   FBLazyVector: f91d538f197fa71a7d5b77ec2069d49550c0eb96
   FBReactNativeSpec: b13d1c23d6ed82d6b66aad7a253edf8ba76c4a4c
   fmt: ff9d55029c625d3757ed641535fd4a75fedc7ce9
-  glog: 04b94705f318337d7ead9e6d17c019bd9b1f6b1b
+  glog: c5d68082e772fa1c511173d6b30a9de2c05a69a2
   hermes-engine: 90e4033deb00bee33330a9f15eff0f874bd82f6d
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
   lottie-ios: 8f97d3271e155c2d688875c29cd3c74908aef5f8
@@ -802,6 +807,7 @@ SPEC CHECKSUMS:
   react-native-netinfo: fefd4e98d75cbdd6e85fc530f7111a8afdf2b0c5
   react-native-nfc-manager: 250424ac5f6b2827f98bec7a1ed7f27615852ed4
   react-native-notifications: 4601a5a8db4ced6ae7cfc43b44d35fe437ac50c4
+  react-native-ping: e9f64f02087c3cd2a0bc771ad0cf4a88edaa3072
   react-native-print: f704aef52d931bfce6d1d84351dbb5232d7ecb89
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-restart: 7595693413fe3ca15893702f2c8306c62a708162

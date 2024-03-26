@@ -54,11 +54,13 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
 
         const NodeInfoView = () => (
             <React.Fragment>
-                <KeyValue
-                    keyValue={localeString('views.NodeInfo.alias')}
-                    value={nodeInfo.alias}
-                    sensitive
-                />
+                {nodeInfo.alias && (
+                    <KeyValue
+                        keyValue={localeString('views.NodeInfo.alias')}
+                        value={nodeInfo.alias}
+                        sensitive
+                    />
+                )}
 
                 {nodeInfo.nodeId && (
                     <KeyValue
@@ -119,10 +121,12 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     />
                 )}
 
-                <KeyValue
-                    keyValue={localeString('views.NodeInfo.blockHeight')}
-                    value={nodeInfo.currentBlockHeight}
-                />
+                {nodeInfo.currentBlockHeight && (
+                    <KeyValue
+                        keyValue={localeString('views.NodeInfo.blockHeight')}
+                        value={nodeInfo.currentBlockHeight}
+                    />
+                )}
 
                 {nodeInfo.block_hash && (
                     <KeyValue

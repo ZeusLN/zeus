@@ -106,96 +106,108 @@ export default class NostrContacts extends React.Component<
             }
         }
 
-        DEFAULT_NOSTR_RELAYS.map(async (relayItem) => {
-            const relay = relayInit(relayItem);
-            relay.on('connect', () => {
-                console.log(`connected to ${relay.url}`);
-            });
-            relay.on('error', () => {
-                console.log(`failed to connect to ${relay.url}`);
-            });
-
-            await relay.connect();
-            let eventReceived = await relay.list([
-                {
-                    authors: [pubkey],
-                    kinds: [3]
-                }
-            ]);
-
-            let latestContactEvent: any;
-
-            eventReceived.forEach((content) => {
-                if (
-                    !latestContactEvent ||
-                    content.created_at > latestContactEvent.created_at
-                ) {
-                    latestContactEvent = content;
-                }
-            });
-
-            if (!latestContactEvent) return;
-
-            const tags: Array<string> = [];
-            latestContactEvent.tags.forEach((tag: string) => {
-                if (tag[0] === 'p') {
-                    tags.push(tag[1]);
-                }
-            });
-
-            const profilesEvents = await relay.list([
-                {
-                    authors: tags,
-                    kinds: [0]
-                }
-            ]);
-
-            const newContactDataIndexByName: any = {};
-            const newContactDataIndexByPubkey: any = {};
-            const newContactsData: any[] = [];
-
-            profilesEvents.forEach((item) => {
-                try {
-                    const content = JSON.parse(item.content);
-                    if (
-                        !newContactDataIndexByPubkey[item.pubkey] ||
-                        item.created_at >
-                            newContactDataIndexByPubkey[item.pubkey].timestamp
-                    ) {
-                        newContactDataIndexByPubkey[item.pubkey] = {
-                            content,
-                            timestamp: item.created_at
-                        };
-                    }
-                } catch (error: any) {
-                    // Handle the error, e.g., log it or skip this item
-                    this.setState({ loading: false });
-                    console.error(
-                        `Error parsing JSON for item with ID ${item.id}: ${error.message}`
-                    );
-                }
-            });
-            Object.keys(newContactDataIndexByPubkey).forEach((pubkey) => {
-                const content = newContactDataIndexByPubkey[pubkey].content;
-                if (!content?.npub) {
-                    content.npub = nip19.npubEncode(pubkey);
-                }
-                newContactDataIndexByName[
-                    content?.display_name?.toLowerCase() ||
-                        content?.name?.toLowerCase()
-                ] = content;
-            });
-
-            Object.keys(newContactDataIndexByName)
-                .sort()
-                .forEach((name) => {
-                    newContactsData.push(newContactDataIndexByName[name]);
+        const profilesEventsPromises = DEFAULT_NOSTR_RELAYS.map(
+            async (relayItem) => {
+                const relay = relayInit(relayItem);
+                relay.on('connect', () => {
+                    console.log(`connected to ${relay.url}`);
                 });
-            this.setState({
-                contactsData: newContactsData,
-                loading: false
+                relay.on('error', () => {
+                    console.log(`failed to connect to ${relay.url}`);
+                });
+
+                await relay.connect();
+                let eventReceived = await relay.list([
+                    {
+                        authors: [pubkey],
+                        kinds: [3]
+                    }
+                ]);
+
+                let latestContactEvent: any;
+
+                eventReceived.forEach((content) => {
+                    if (
+                        !latestContactEvent ||
+                        content.created_at > latestContactEvent.created_at
+                    ) {
+                        latestContactEvent = content;
+                    }
+                });
+
+                if (!latestContactEvent) return;
+
+                const tags: Array<string> = [];
+                latestContactEvent.tags.forEach((tag: string) => {
+                    if (tag[0] === 'p') {
+                        tags.push(tag[1]);
+                    }
+                });
+
+                return relay.list([
+                    {
+                        authors: tags,
+                        kinds: [0]
+                    }
+                ]);
+            }
+        );
+
+        Promise.all(profilesEventsPromises)
+            .then((profilesEventsArrays) => {
+                const profileEvents = profilesEventsArrays
+                    .flat()
+                    .filter((event) => event !== undefined);
+                const newContactDataIndexByName: any = {};
+                const newContactDataIndexByPubkey: any = {};
+                const newContactsData: any[] = [];
+
+                profileEvents.forEach((item: any) => {
+                    try {
+                        const content = JSON.parse(item.content);
+                        if (
+                            !newContactDataIndexByPubkey[item.pubkey] ||
+                            item.created_at >
+                                newContactDataIndexByPubkey[item.pubkey]
+                                    .timestamp
+                        ) {
+                            newContactDataIndexByPubkey[item.pubkey] = {
+                                content,
+                                timestamp: item.created_at
+                            };
+                        }
+                    } catch (error: any) {
+                        // Handle the error, e.g., log it or skip this item
+                        this.setState({ loading: false });
+                        console.error(
+                            `Error parsing JSON for item with ID ${item.id}: ${error.message}`
+                        );
+                    }
+                });
+                Object.keys(newContactDataIndexByPubkey).forEach((pubkey) => {
+                    const content = newContactDataIndexByPubkey[pubkey].content;
+                    if (!content?.npub) {
+                        content.npub = nip19.npubEncode(pubkey);
+                    }
+                    newContactDataIndexByName[
+                        content?.display_name?.toLowerCase() ||
+                            content?.name?.toLowerCase()
+                    ] = content;
+                });
+
+                Object.keys(newContactDataIndexByName)
+                    .sort()
+                    .forEach((name) => {
+                        newContactsData.push(newContactDataIndexByName[name]);
+                    });
+                this.setState({
+                    contactsData: newContactsData,
+                    loading: false
+                });
+            })
+            .catch((error) => {
+                console.error('Error fetching profiles events:', error);
             });
-        });
     }
 
     toggleContactSelection = (contact: any) => {
