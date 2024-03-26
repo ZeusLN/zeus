@@ -4,6 +4,7 @@ import {
     StyleSheet,
     Text,
     View,
+    Image,
     ScrollView,
     TouchableOpacity
 } from 'react-native';
@@ -11,6 +12,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import cloneDeep from 'lodash/cloneDeep';
+import RNFS from 'react-native-fs';
 
 import { hash, STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
@@ -43,6 +45,7 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
+import AddIcon from '../../assets/images/SVG/Add.svg';
 
 import { createLndWallet } from '../../utils/LndMobileUtils';
 
@@ -73,6 +76,7 @@ interface NodeConfigurationState {
     showCertModal: boolean;
     enableTor: boolean;
     interfaceKeys: Array<any>;
+    photo: string | null;
     // lnc
     pairingPhrase: string;
     mailboxServer: string;
@@ -124,6 +128,7 @@ export default class NodeConfiguration extends React.Component<
         username: '',
         password: '',
         accessKey: '',
+        photo: null,
         // lnc
         pairingPhrase: '',
         mailboxServer: 'mailbox.terminal.lightning.today:443',
@@ -273,6 +278,7 @@ export default class NodeConfiguration extends React.Component<
         const tor = navigation.getParam('enableTor', false);
         const saved = navigation.getParam('saved', null);
         const newEntry = navigation.getParam('newEntry', null);
+        const photo = navigation.getParam('photo', null);
 
         if (node) {
             const {
@@ -318,6 +324,7 @@ export default class NodeConfiguration extends React.Component<
                 saved,
                 newEntry,
                 enableTor: tor || enableTor,
+                photo,
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -332,7 +339,8 @@ export default class NodeConfiguration extends React.Component<
             this.setState({
                 index,
                 active,
-                newEntry
+                newEntry,
+                photo
             });
         }
     }
@@ -360,7 +368,8 @@ export default class NodeConfiguration extends React.Component<
             seedPhrase,
             walletPassword,
             adminMacaroon,
-            embeddedLndNetwork
+            embeddedLndNetwork,
+            photo
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -391,7 +400,8 @@ export default class NodeConfiguration extends React.Component<
             seedPhrase,
             walletPassword,
             adminMacaroon,
-            embeddedLndNetwork
+            embeddedLndNetwork,
+            photo
         };
 
         let nodes: any;
@@ -444,7 +454,8 @@ export default class NodeConfiguration extends React.Component<
             certVerification,
             pairingPhrase,
             mailboxServer,
-            customMailboxServer
+            customMailboxServer,
+            photo
         } = this.state;
         const { nodes } = settings;
 
@@ -464,7 +475,8 @@ export default class NodeConfiguration extends React.Component<
             enableTor,
             pairingPhrase,
             mailboxServer,
-            customMailboxServer
+            customMailboxServer,
+            photo
         };
 
         navigation.navigate('NodeConfiguration', {
@@ -570,8 +582,17 @@ export default class NodeConfiguration extends React.Component<
         }
     };
 
+    getPhoto(photo: string | null): string {
+        if (typeof photo === 'string' && photo.includes('rnfs://')) {
+            const fileName = photo.replace('rnfs://', '');
+            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
+        }
+        return photo || '';
+    }
+
     render() {
         const { navigation, SettingsStore } = this.props;
+        const node = navigation.getParam('node', null);
         const {
             nickname,
             host,
@@ -589,6 +610,7 @@ export default class NodeConfiguration extends React.Component<
             implementation,
             certVerification,
             enableTor,
+            photo,
             interfaceKeys,
             existingAccount,
             suggestImport,
@@ -674,6 +696,15 @@ export default class NodeConfiguration extends React.Component<
                 />
             );
         };
+
+        const AddPhotos = () => (
+            <AddIcon
+                fill={themeColor('background')}
+                width="14"
+                height="14"
+                style={{ alignSelf: 'center' }}
+            />
+        );
 
         return (
             <Screen>
@@ -925,29 +956,77 @@ export default class NodeConfiguration extends React.Component<
                                     message={createAccountSuccess}
                                 />
                             )}
+                        <View style={styles.container}>
+                            <TouchableOpacity
+                                onPress={
+                                    (node === null || !node.photo) &&
+                                    photo === null
+                                        ? () =>
+                                              navigation.navigate(
+                                                  'SetNodePicture',
+                                                  { implementation }
+                                              )
+                                        : () =>
+                                              this.setState(
+                                                  { photo: null, saved: false },
+                                                  () =>
+                                                      node
+                                                          ? (node.photo = '')
+                                                          : null
+                                              )
+                                }
+                            >
+                                <View
+                                    style={{
+                                        ...styles.imageBackground,
+                                        backgroundColor:
+                                            themeColor('secondaryText')
+                                    }}
+                                >
+                                    {node?.photo || photo ? (
+                                        <Image
+                                            source={{
+                                                uri: this.getPhoto(
+                                                    node?.photo || photo
+                                                )
+                                            }}
+                                            style={styles.imageBackground}
+                                        />
+                                    ) : (
+                                        <AddPhotos />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
 
-                        <View>
-                            <Text
+                            <View
                                 style={{
-                                    ...styles.text,
-                                    color: themeColor('secondaryText')
+                                    flex: 1,
+                                    marginLeft: 14,
+                                    marginTop: -16
                                 }}
                             >
-                                {localeString(
-                                    'views.Settings.AddEditNode.nickname'
-                                )}
-                            </Text>
-                            <TextInput
-                                placeholder={'My lightning node'}
-                                value={nickname}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        nickname: text,
-                                        saved: false
-                                    })
-                                }
-                                locked={loading}
-                            />
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.nickname'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'My lightning node'}
+                                    value={nickname}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            nickname: text,
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                />
+                            </View>
                         </View>
 
                         {!adminMacaroon && <NodeInterface />}
@@ -1552,7 +1631,7 @@ export default class NodeConfiguration extends React.Component<
                         !(
                             implementation === 'embedded-lnd' && !adminMacaroon
                         ) && (
-                            <View style={{ ...styles.button, marginTop: 20 }}>
+                            <View style={{ ...styles.button }}>
                                 <Button
                                     title={
                                         saved
@@ -1763,5 +1842,21 @@ const styles = StyleSheet.create({
     nodeInterface: {
         paddingTop: 10,
         paddingBottom: 10
+    },
+    container: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    imageBackground: {
+        width: 50,
+        height: 50,
+        borderRadius: 24,
+        justifyContent: 'center'
+    },
+    photo: {
+        alignSelf: 'center',
+        width: 128,
+        height: 128,
+        borderRadius: 68
     }
 });
