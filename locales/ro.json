@@ -855,6 +855,7 @@
     "views.Settings.Contacts.noAddress": "Fără adresă",
     "views.Settings.Contacts.to": "La",
     "views.Settings.Contacts.deleteAllContacts": "Ștergeți toate contactele",
+    "views.SetNodePicture.choosePicture": "Choose Picture",
     "views.Transaction.title": "Tranzacție",
     "views.Transaction.totalFees": "Total Comisioane",
     "views.Transaction.transactionHash": "Hash Tranzacției",
