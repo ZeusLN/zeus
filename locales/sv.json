@@ -855,6 +855,7 @@
     "views.Settings.Contacts.noAddress": "Ingen adress",
     "views.Settings.Contacts.to": "Till",
     "views.Settings.Contacts.deleteAllContacts": "Radera alla kontakter",
+    "views.SetNodePicture.choosePicture": "Choose Picture",
     "views.Transaction.title": "Transaktion",
     "views.Transaction.totalFees": "Avgifter totalt",
     "views.Transaction.transactionHash": "Transaktionshash",
