@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Χωρίς τιμολόγια",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Σφάλμα κατά την σύνδεση του κόμβου σας. Παρακαλώ ελεξτε τις ρυθμίσεις σας και δοκιμάστε ξανά.",
     "views.Wallet.MainPane.goToSettings": "Μετάβαση στις ρυθμίσεις",
     "views.Wallet.Payments.noPayments": "Χωρίς πληρωμές",
