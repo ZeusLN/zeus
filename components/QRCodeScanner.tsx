@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useEffect, useState } from 'react';
 import {
     Dimensions,
     StyleSheet,
@@ -6,9 +6,14 @@ import {
     View,
     Platform,
     TouchableOpacity,
-    PermissionsAndroid
+    PermissionsAndroid,
+    BackHandler
 } from 'react-native';
-import { Camera } from 'react-native-camera-kit';
+import {
+    Camera,
+    useCameraDevice,
+    useCodeScanner
+} from 'react-native-vision-camera';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { launchImageLibrary } from 'react-native-image-picker';
 
@@ -27,261 +32,285 @@ const createHash = require('create-hash');
 
 interface QRProps {
     text?: string;
-    handleQRScanned: any;
+    handleQRScanned: (data: string) => void;
     goBack: any;
     navigation: any;
 }
 
-interface QRState {
-    cameraStatus: any;
-    isTorchOn: boolean;
-}
 const CameraAuthStatus = Object.freeze({
     AUTHORIZED: 'AUTHORIZED',
     NOT_AUTHORIZED: 'NOT_AUTHORIZED',
     UNKNOWN: 'UNKNOWN'
 });
 
-export default class QRCodeScanner extends React.Component<QRProps, QRState> {
-    constructor(props: QRProps) {
-        super(props);
+export default function QRCodeScanner({
+    text,
+    handleQRScanned,
+    goBack,
+    navigation
+}: QRProps) {
+    const [cameraStatus, setCameraStatus] = useState<string>(
+        CameraAuthStatus.UNKNOWN
+    );
+    const [isTorchOn, setIsTorchOn] = useState(false);
+    const [scannedQrCode, setScannedQrCode] = useState<string | null>(null);
+    const [scannedCache, setScannedCache] = useState(new Set<string>());
+    const [backPressed, setBackPressed] = useState(false);
 
-        this.state = {
-            cameraStatus: CameraAuthStatus.UNKNOWN,
-            isTorchOn: false
-        };
-    }
-    scannedCache: { [name: string]: number } = {};
-    maskLength = (Dimensions.get('window').width * 80) / 100;
+    useEffect(() => {
+        console.log('registering back press listener');
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            () => {
+                console.log('back pressed');
+                setBackPressed(true);
+                return true;
+            }
+        );
 
-    handleRead = (data: any) => {
+        return () => backHandler.remove();
+    }, []);
+
+    console.log('QRCodeScanner render');
+    const maskLength = (Dimensions.get('window').width * 80) / 100;
+
+    const device = useCameraDevice('back');
+
+    const handleRead = (data: any) => {
         const hash = createHash('sha256').update(data).digest().toString('hex');
-        if (this.scannedCache[hash]) {
+        if (scannedCache.has(hash)) {
             // this QR was already scanned let's prevent firing duplicate
             // callbacks
             return;
         }
-        this.scannedCache[hash] = +new Date();
-        this.props.handleQRScanned(data);
+        scannedCache.add(hash);
+        console.log('scanned qr', data);
+        setScannedQrCode(data);
     };
 
-    handleOpenGallery = () => {
-        launchImageLibrary(
-            {
-                mediaType: 'photo'
-            },
-            (response) => {
-                if (!response.didCancel) {
-                    const asset = response.assets[0];
-                    if (asset.uri) {
-                        const uri = asset.uri.toString().replace('file://', '');
-                        LocalQRCode.decode(uri, (error: any, result: any) => {
-                            if (!error) {
-                                this.handleRead(result);
-                            }
-                        });
-                    }
+    const handleOpenGallery = () => {
+        launchImageLibrary({ mediaType: 'photo' }, (response) => {
+            if (!response.didCancel) {
+                const asset = response.assets?.[0];
+                if (asset?.uri) {
+                    const uri = asset.uri.toString().replace('file://', '');
+                    LocalQRCode.decode(uri, (error: any, result: any) => {
+                        if (!error) {
+                            handleRead(result);
+                        }
+                    });
                 }
             }
-        );
-    };
-    onQRCodeScan = (event: { nativeEvent: { codeStringValue: any } }) => {
-        this.handleRead(event.nativeEvent.codeStringValue);
+        });
     };
 
-    toggleTorch = async () => {
-        const { isTorchOn } = this.state;
+    const codeScanner = useCodeScanner({
+        codeTypes: ['qr'],
+        onCodeScanned: (codes) => {
+            const code = codes.find((c) => c.value != null)?.value;
+            if (code != null) {
+                handleRead(code);
+            }
+        }
+    });
+
+    const toggleTorch = async () => {
         try {
-            this.setState({ isTorchOn: !isTorchOn });
+            setIsTorchOn(!isTorchOn);
         } catch (error) {
             console.log('Error toggling torch: ', error);
         }
     };
 
-    async componentDidMount() {
-        // triggers when loaded from navigation or back action
-        this.props.navigation.addListener('didFocus', () => {
-            this.scannedCache = {};
-        });
+    useEffect(() => {
+        (async () => {
+            // triggers when loaded from navigation or back action
+            navigation.addListener('didFocus', () => {
+                setScannedCache(new Set<string>());
+            });
 
-        if (Platform.OS !== 'ios' && Platform.OS !== 'macos') {
-            // For android
-            // Returns true or false
-            const permissionAndroid = await PermissionsAndroid.check(
-                'android.permission.CAMERA'
-            );
-            if (permissionAndroid) {
-                this.setState({
-                    cameraStatus: CameraAuthStatus.AUTHORIZED
-                });
-            } else
-                try {
-                    const granted = await PermissionsAndroid.request(
-                        PermissionsAndroid.PERMISSIONS.CAMERA,
-                        {
-                            title: localeString(
-                                'components.QRCodeScanner.cameraPermissionTitle'
-                            ),
-                            message: localeString(
-                                'components.QRCodeScanner.cameraPermission'
-                            ),
-                            buttonNegative: localeString('general.cancel'),
-                            buttonPositive: localeString('general.ok')
+            if (Platform.OS !== 'ios' && Platform.OS !== 'macos') {
+                // For android
+                // Returns true or false
+                const permissionAndroid = await PermissionsAndroid.check(
+                    'android.permission.CAMERA'
+                );
+                if (permissionAndroid) {
+                    setCameraStatus(CameraAuthStatus.AUTHORIZED);
+                } else
+                    try {
+                        const granted = await PermissionsAndroid.request(
+                            PermissionsAndroid.PERMISSIONS.CAMERA,
+                            {
+                                title: localeString(
+                                    'components.QRCodeScanner.cameraPermissionTitle'
+                                ),
+                                message: localeString(
+                                    'components.QRCodeScanner.cameraPermission'
+                                ),
+                                buttonNegative: localeString('general.cancel'),
+                                buttonPositive: localeString('general.ok')
+                            }
+                        );
+                        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+                            setCameraStatus(CameraAuthStatus.AUTHORIZED);
+                        } else {
+                            setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
                         }
-                    );
-                    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-                        this.setState({
-                            cameraStatus: CameraAuthStatus.AUTHORIZED
-                        });
-                    } else {
-                        this.setState({
-                            cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
-                        });
+                    } catch (err) {
+                        console.warn(err);
                     }
-                } catch (err) {
-                    console.warn(err);
-                }
 
-            return;
-        }
-        // Camera permission for IOS
-        else {
-            const cameraPermission = PERMISSIONS.IOS.CAMERA;
-            const status = await check(cameraPermission);
-
-            if (status === RESULTS.GRANTED) {
-                this.setState({ cameraStatus: CameraAuthStatus.AUTHORIZED });
-            } else if (status === RESULTS.DENIED) {
-                const result = await request(cameraPermission);
-
-                if (result === RESULTS.GRANTED) {
-                    this.setState({
-                        cameraStatus: CameraAuthStatus.AUTHORIZED
-                    });
-                } else {
-                    this.setState({
-                        cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
-                    });
-                }
-            } else {
-                this.setState({
-                    cameraStatus: CameraAuthStatus.NOT_AUTHORIZED
-                });
+                return;
             }
-        }
-    }
+            // Camera permission for IOS
+            else {
+                const cameraPermission = PERMISSIONS.IOS.CAMERA;
+                const status = await check(cameraPermission);
 
-    componentWillUnmount() {
-        this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
-    }
+                if (status === RESULTS.GRANTED) {
+                    setCameraStatus(CameraAuthStatus.AUTHORIZED);
+                } else if (status === RESULTS.DENIED) {
+                    const result = await request(cameraPermission);
 
-    render() {
-        const { cameraStatus, isTorchOn } = this.state;
-        const { text, goBack } = this.props;
+                    if (result === RESULTS.GRANTED) {
+                        setCameraStatus(CameraAuthStatus.AUTHORIZED);
+                    } else {
+                        setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
+                    }
+                } else {
+                    setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
+                }
+            }
 
-        return (
-            <>
-                {cameraStatus === CameraAuthStatus.AUTHORIZED && (
+            return () => {
+                if (navigation.removeListener) {
+                    navigation.removeListener('didFocus');
+                }
+            };
+        })();
+    }, []);
+
+    console.log('render');
+
+    return (
+        <>
+            <Text>device position: {device?.position}</Text>
+            <Text>isActive: {(!scannedQrCode).toString()}</Text>
+            {!device && (
+                <View>
+                    {/* todo: proper message */}
+                    <Text>No camera found</Text>
+                </View>
+            )}
+            {cameraStatus === CameraAuthStatus.AUTHORIZED && device && (
+                <View
+                    style={{ flex: 1 }}
+                    accessibilityLabel={localeString('general.scan')}
+                >
+                    <Camera
+                        style={StyleSheet.absoluteFill}
+                        device={device}
+                        codeScanner={codeScanner}
+                        torch={isTorchOn ? 'on' : 'off'}
+                        isActive={!scannedQrCode && !backPressed}
+                        enableZoomGesture={true}
+                        onInitialized={() => console.log('onInitialized')}
+                        onError={(error) => console.error('onError', error)}
+                        onStopped={() => {
+                            console.log('onStopped');
+                            if (scannedQrCode) {
+                                handleQRScanned(scannedQrCode);
+                            } else if (backPressed) {
+                                console.log('back pressed -> nav pop');
+                                goBack();
+                            }
+                        }}
+                    />
+                    <View style={styles.actionOverlay}>
+                        <TouchableOpacity
+                            style={styles.flashButton}
+                            onPress={toggleTorch}
+                        >
+                            {isTorchOn ? (
+                                <View
+                                    accessibilityLabel={localeString(
+                                        'components.QRCodeScanner.flashOn'
+                                    )}
+                                >
+                                    <FlashOnIcon width={35} height={35} />
+                                </View>
+                            ) : (
+                                <View
+                                    accessibilityLabel={localeString(
+                                        'components.QRCodeScanner.flashOff'
+                                    )}
+                                >
+                                    <FlashOffIcon width={35} height={35} />
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={handleOpenGallery}
+                            accessibilityLabel={localeString(
+                                'components.QRCodeScanner.chooseFromGallery'
+                            )}
+                        >
+                            <GalleryIcon width={50} height={50} />
+                        </TouchableOpacity>
+                    </View>
+                    {text !== undefined && (
+                        <Text style={styles.textOverlay}>{text}</Text>
+                    )}
                     <View
                         style={{
-                            flex: 1
+                            position: 'absolute',
+                            top:
+                                (Dimensions.get('window').height - maskLength) /
+                                2,
+                            alignSelf: 'center',
+                            height: maskLength
                         }}
-                        accessibilityLabel={localeString('general.scan')}
                     >
-                        <Camera
-                            style={styles.preview}
-                            scanBarcode={true}
-                            torchMode={isTorchOn ? 'on' : 'off'}
-                            onReadCode={this.onQRCodeScan}
-                            focusMode="off"
-                        />
-                        <View style={styles.actionOverlay}>
-                            <TouchableOpacity
-                                style={styles.flashButton}
-                                onPress={this.toggleTorch}
-                            >
-                                {isTorchOn ? (
-                                    <View
-                                        accessibilityLabel={localeString(
-                                            'components.QRCodeScanner.flashOn'
-                                        )}
-                                    >
-                                        <FlashOnIcon width={35} height={35} />
-                                    </View>
-                                ) : (
-                                    <View
-                                        accessibilityLabel={localeString(
-                                            'components.QRCodeScanner.flashOff'
-                                        )}
-                                    >
-                                        <FlashOffIcon width={35} height={35} />
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={this.handleOpenGallery}
-                                accessibilityLabel={localeString(
-                                    'components.QRCodeScanner.chooseFromGallery'
-                                )}
-                            >
-                                <GalleryIcon width={50} height={50} />
-                            </TouchableOpacity>
-                        </View>
-                        {text !== undefined && (
-                            <Text style={styles.textOverlay}>{text}</Text>
-                        )}
-                        <View
-                            style={{
-                                position: 'absolute',
-                                top:
-                                    (Dimensions.get('window').height -
-                                        this.maskLength) /
-                                    2,
-                                alignSelf: 'center',
-                                height: this.maskLength
-                            }}
-                        >
-                            <View style={styles.scan}>
-                                <ScanFrameSvg height="100%" />
-                            </View>
-                        </View>
-                        <View style={styles.cancelOverlay}>
-                            <Button
-                                title={localeString('general.cancel')}
-                                onPress={() => goBack()}
-                                iconOnly
-                                noUppercase
-                            />
+                        <View style={styles.scan}>
+                            <ScanFrameSvg height="100%" />
                         </View>
                     </View>
-                )}
-
-                {cameraStatus === CameraAuthStatus.NOT_AUTHORIZED && (
-                    <View style={styles.content}>
-                        <Text
-                            style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                textAlign: 'center',
-                                padding: 15
-                            }}
-                        >
-                            {localeString(
-                                'components.QRCodeScanner.noCameraAccess'
-                            )}
-                        </Text>
+                    <View style={styles.cancelOverlay}>
                         <Button
-                            title={localeString('general.goBack')}
-                            onPress={() => goBack()}
-                            secondary
-                            containerStyle={{ width: 200 }}
-                            adaptiveWidth
+                            title={localeString('general.cancel')}
+                            onPress={() => setBackPressed(true)}
+                            iconOnly
+                            noUppercase
                         />
                     </View>
-                )}
-            </>
-        );
-    }
+                </View>
+            )}
+
+            {cameraStatus === CameraAuthStatus.NOT_AUTHORIZED && (
+                <View style={styles.content}>
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            textAlign: 'center',
+                            padding: 15
+                        }}
+                    >
+                        {localeString(
+                            'components.QRCodeScanner.noCameraAccess'
+                        )}
+                    </Text>
+                    <Button
+                        title={localeString('general.goBack')}
+                        onPress={() => goBack()}
+                        secondary
+                        containerStyle={{ width: 200 }}
+                        adaptiveWidth
+                    />
+                </View>
+            )}
+        </>
+    );
 }
 
 const styles = StyleSheet.create({
