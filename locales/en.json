@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "No Invoices",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Error connecting to your node. Please check your settings and try again.",
     "views.Wallet.MainPane.goToSettings": "Go to Settings",
     "views.Wallet.Payments.noPayments": "No Payments",

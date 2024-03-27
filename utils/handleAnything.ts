@@ -21,7 +21,7 @@ const handleAnything = async (
     isClipboardValue?: boolean
 ): Promise<any> => {
     const { nodeInfo } = nodeInfoStore;
-    const { isTestNet, isRegTest } = nodeInfo;
+    const { isTestNet, isRegTest, isSigNet } = nodeInfo;
     const { value, amount, lightning }: any =
         AddressUtils.processSendAddress(data);
     const hasAt: boolean = value.includes('@');
@@ -77,7 +77,10 @@ const handleAnything = async (
         ];
     } else if (
         !hasAt &&
-        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
+        AddressUtils.isValidBitcoinAddress(
+            value,
+            isTestNet || isRegTest || isSigNet
+        )
     ) {
         if (isClipboardValue) return true;
         if (amount) unitsStore?.resetUnits();

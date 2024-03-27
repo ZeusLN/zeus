@@ -4,8 +4,16 @@ import { SATS_PER_BTC } from '../stores/UnitsStore';
 const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBech = /^(bc1|BC1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
 
+/*
+ BOLT 11
+ https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#human-readable-part
+ lnbc - mainnet
+ lntb - testnet
+ lntbs - signet
+ lnbcrt - regtest
+*/
 const lnInvoice =
-    /^(lnbcrt|lntb|lnbc|LNBCRT|LNTB|LNBC)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+    /^(lnbc|lntb|lntbs|lnbcrt|LNBC|LNTB|LNTBS|LNBCRT)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* testnet */
