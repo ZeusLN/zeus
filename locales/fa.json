@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "بدون صورت‌حساب",
     "views.Wallet.MainPane.testnet": "شبکه آزمایشی",
     "views.Wallet.MainPane.regnet": "درخواست",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "خطا در اتصال به گره شما. لطفا تنظیمات خود را بررسی کنید و دوباره امتحان کنید.",
     "views.Wallet.MainPane.goToSettings": "برو به تنظیمات",
     "views.Wallet.Payments.noPayments": "پرداختی نیست",
