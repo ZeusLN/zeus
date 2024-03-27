@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Nema faktura",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Pogreška pri povezivanju s vašim nodom. Provjerite svoje postavke i pokušajte ponovno.",
     "views.Wallet.MainPane.goToSettings": "Idi na Postavke",
     "views.Wallet.Payments.noPayments": "Nema plaćanja",
