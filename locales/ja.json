@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "インボイスがありません",
     "views.Wallet.MainPane.testnet": "テストネット",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "あなたのノードへの接続にエラーが発生しました。設定を確認し、もう一度やり直してください。",
     "views.Wallet.MainPane.goToSettings": "Go to Settings",
     "views.Wallet.Payments.noPayments": "No Payments",
