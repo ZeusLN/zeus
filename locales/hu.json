@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Nincs számla",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Hibatörtént a nodehoz csatlakozás közben. Kérlek, ellenőrízd a beállításokat és próbálkozzál újra.",
     "views.Wallet.MainPane.goToSettings": "Beállításokhoz",
     "views.Wallet.Payments.noPayments": "Nincsenek Kifizetések",
