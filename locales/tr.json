@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Fatura yok ",
     "views.Wallet.MainPane.testnet": "Test ağı",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Nodunuza bağlanırken hata oluştu. Lütfen ayarlarınızı kontrol edip tekrardan deneyiniz. ",
     "views.Wallet.MainPane.goToSettings": "Ayarlara git",
     "views.Wallet.Payments.noPayments": "Ödeme yok",
