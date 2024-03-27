@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Ni računov",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Napaka pri povezovanju z vašim vozliščem. Preverite nastavitve in poskusite ponovno.",
     "views.Wallet.MainPane.goToSettings": "Pojdi na Nastavitve",
     "views.Wallet.Payments.noPayments": "Ni plačil",
