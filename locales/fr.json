@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Pas de factures",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Erreur lors de la connexion a votre noeud. Veuillez vérifier votre configuration et recommencer.",
     "views.Wallet.MainPane.goToSettings": "Aller à la configuration",
     "views.Wallet.Payments.noPayments": "Pas de paiements",
