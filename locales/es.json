@@ -855,6 +855,7 @@
     "views.Settings.Contacts.noAddress": "Sin dirección",
     "views.Settings.Contacts.to": "A",
     "views.Settings.Contacts.deleteAllContacts": "Eliminar todos los contactos",
+    "views.SetNodePicture.choosePicture": "Choose Picture",
     "views.Transaction.title": "Transacción",
     "views.Transaction.totalFees": "Comisiones Totales",
     "views.Transaction.transactionHash": "Hash de Transacción",
