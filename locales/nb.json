@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Ingen faktura",
     "views.Wallet.MainPane.testnet": "Testnett",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Feil ved tilkobling til noden din. Sjekk innstillingene og prøv igjen.",
     "views.Wallet.MainPane.goToSettings": "Gå til innstillinger",
     "views.Wallet.Payments.noPayments": "Ingen betalinger",
