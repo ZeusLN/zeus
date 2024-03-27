@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Немає рахунків",
     "views.Wallet.MainPane.testnet": "Тестова мережа",
     "views.Wallet.MainPane.regnet": "Регресійна тестова мережа",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Не вдалося підключитись до вашого вузла. Будь ласка, перевірте налаштування і спробуйте знову.",
     "views.Wallet.MainPane.goToSettings": "До налаштувань",
     "views.Wallet.Payments.noPayments": "Немає платежів",
