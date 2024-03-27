@@ -158,20 +158,22 @@ export async function expressGraphSync() {
     return await new Promise(async (resolve) => {
         stores.syncStore.setExpressGraphSyncStatus(true);
 
+        const start = new Date();
+
         const timer = setInterval(async () => {
             console.log('Express graph sync is running...');
             // Check if the cancellation token is set
             if (!stores.syncStore.isInExpressGraphSync) {
                 clearInterval(timer);
                 // call cancellation to LND here
-                console.log('cancelling...');
-                await cancelGossipSync();
+                console.log('Express graph sync cancelling...');
+                cancelGossipSync();
+
                 console.log('Express graph sync cancelled...');
                 resolve(true);
             }
         }, 1000);
 
-        const start = new Date();
         if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
             log.d('Clearing speedloader files');
             try {
@@ -188,6 +190,9 @@ export async function expressGraphSync() {
                 'https://speedloader.lnolymp.us/',
                 connectionState.type
             );
+
+            clearInterval(timer);
+
             const completionTime =
                 (new Date().getTime() - start.getTime()) / 1000 + 's';
             console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
@@ -196,6 +201,7 @@ export async function expressGraphSync() {
         }
 
         stores.syncStore.setExpressGraphSyncStatus(false);
+        resolve(true);
     });
 }
 
