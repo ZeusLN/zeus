@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Brak faktur",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Błąd połączenia z węzłem. Sprawdź ustawienia i spróbuj ponownie.",
     "views.Wallet.MainPane.goToSettings": "Idź do ustawień",
     "views.Wallet.Payments.noPayments": "Brak płatności",
