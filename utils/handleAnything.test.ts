@@ -13,6 +13,8 @@ jest.mock('../stores/Stores', () => ({
     invoicesStore: { getPayReq: jest.fn() }
 }));
 jest.mock('react-native-blob-util', () => ({}));
+jest.mock('react-native-encrypted-storage', () => ({}));
+jest.mock('react-native-fs', () => ({}));
 jest.mock('js-lnurl', () => ({
     getParams: () => mockGetLnurlParams
 }));
