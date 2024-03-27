@@ -127,6 +127,8 @@ import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelB
 
 import RawTxHex from './views/RawTxHex';
 
+import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
+
 const AppScenes = {
     Wallet: {
         screen: Wallet
@@ -445,6 +447,9 @@ const AppScenes = {
     },
     SetNodePicture: {
         screen: SetNodePicture
+    },
+    CustodialWalletWarning: {
+        screen: CustodialWalletWarning
     }
 };
 
