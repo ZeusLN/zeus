@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Žádné faktury",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Při připojování k uzlu došlo k chybě. Zkontrolujte nastavení a zkuste to znovu.",
     "views.Wallet.MainPane.goToSettings": "Přejít do nastavení",
     "views.Wallet.Payments.noPayments": "Žádné platby",
