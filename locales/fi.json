@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Ei laskuja",
     "views.Wallet.MainPane.testnet": "Testiverkko",
     "views.Wallet.MainPane.regnet": "Regressiotesti",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Virhe yhteyden muodostamisessa solmuun. Tarkista asetukset ja yritä uudelleen.",
     "views.Wallet.MainPane.goToSettings": "Siirry Asetuksiin",
     "views.Wallet.Payments.noPayments": "Ei maksuja",
