@@ -322,7 +322,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const expressGraphSyncEnabled =
             settings.expressGraphSync && embeddedLndNetwork === 'Mainnet';
 
+        let start;
         if (connecting) {
+            start = new Date().getTime();
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
@@ -462,6 +464,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         if (connecting) {
+            console.log(
+                'connect time: ' + (new Date().getTime() - start) / 1000 + 's'
+            );
             setConnectingStatus(false);
         }
 
