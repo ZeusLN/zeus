@@ -316,16 +316,12 @@ export default class Send extends React.Component<SendProps, SendState> {
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
-        this.setState((prevState) => {
-            ({
-                utxos,
-                utxoBalance,
-                amount:
-                    implementation === 'c-lightning-REST'
-                        ? 'all'
-                        : prevState.amount
-            });
-        });
+        this.setState((prevState) => ({
+            utxos,
+            utxoBalance,
+            amount:
+                implementation === 'c-lightning-REST' ? 'all' : prevState.amount
+        }));
     };
 
     validateAddress = (text: string) => {
@@ -920,13 +916,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         this.setState({ fee: text })
                                     }
                                 />
-                                {BackendUtils.supportsCoinControl() &&
-                                    !BackendUtils.isLNDBased && (
-                                        <UTXOPicker
-                                            onValueChange={this.selectUTXOs}
-                                            UTXOsStore={UTXOsStore}
-                                        />
-                                    )}
+                                {BackendUtils.supportsCoinControl() && (
+                                    <UTXOPicker
+                                        onValueChange={this.selectUTXOs}
+                                        UTXOsStore={UTXOsStore}
+                                    />
+                                )}
                                 <View
                                     style={{
                                         ...styles.button,
