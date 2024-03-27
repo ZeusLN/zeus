@@ -13,6 +13,7 @@ import {
     checkLndFolderExists,
     createIOSApplicationSupportAndLndDirectories,
     gossipSync,
+    cancelGossipSync,
     TEMP_moveLndToApplicationSupport,
     excludeLndICloudBackup,
     queryRoutes,
@@ -102,7 +103,11 @@ export interface ILndMobileInjections {
             isTestnet?: boolean
         ) => Promise<string>;
         stopLnd: () => Promise<string>;
-        gossipSync: (networkType: string) => Promise<{ data: string }>;
+        gossipSync: (
+            serviceUrl: string,
+            networkType: string
+        ) => Promise<{ data: string }>;
+        cancelGossipSync: () => void;
         checkICloudEnabled: () => Promise<boolean>;
         checkApplicationSupportExists: () => Promise<boolean>;
         checkLndFolderExists: () => Promise<boolean>;
@@ -355,6 +360,7 @@ export default {
         startLnd,
         stopLnd,
         gossipSync,
+        cancelGossipSync,
         checkICloudEnabled,
         checkApplicationSupportExists,
         checkLndFolderExists,
