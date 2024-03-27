@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "暂无发票",
     "views.Wallet.MainPane.testnet": "测试网",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "连接到节点时出错。请检查您的设置，然后重试。",
     "views.Wallet.MainPane.goToSettings": "设置",
     "views.Wallet.Payments.noPayments": "付款列表为空",
