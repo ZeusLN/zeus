@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Sin facturas",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Error al conectarse a su Nodo. Verifique su configuración e inténtelo nuevamente.",
     "views.Wallet.MainPane.goToSettings": "Ir a Ajustes",
     "views.Wallet.Payments.noPayments": "Sin Pagos",
