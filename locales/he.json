@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "אין חשבוניות",
     "views.Wallet.MainPane.testnet": "טסטנט",
     "views.Wallet.MainPane.regnet": "רגטסט",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "אירעה שגיאה בהתחברות לצומת שלך. יש לבדוק הגדרות ולנסות שנית.",
     "views.Wallet.MainPane.goToSettings": "מעבר להגדרות",
     "views.Wallet.Payments.noPayments": "אין תשלומים",
