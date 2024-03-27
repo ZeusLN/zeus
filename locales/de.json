@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Keine Rechnungen",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Fehler bei der Verbindung zu deiner Node. Bitte überprüfe deine Einstellungen und versuche es erneut.",
     "views.Wallet.MainPane.goToSettings": "Gehe zu Einstellungen",
     "views.Wallet.Payments.noPayments": "Keine Zahlungen",
