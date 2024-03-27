@@ -15,7 +15,11 @@ import { sleep } from './SleepUtils';
 import Base64Utils from './Base64Utils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-import { ELndMobileStatusCodes, gossipSync } from '../lndmobile/index';
+import {
+    ELndMobileStatusCodes,
+    gossipSync,
+    cancelGossipSync
+} from '../lndmobile/index';
 
 import stores from '../stores/Stores';
 
@@ -154,12 +158,15 @@ export async function expressGraphSync() {
     return await new Promise(async (resolve) => {
         stores.syncStore.setExpressGraphSyncStatus(true);
 
-        const timer = setInterval(() => {
+        const timer = setInterval(async () => {
             console.log('Express graph sync is running...');
             // Check if the cancellation token is set
             if (!stores.syncStore.isInExpressGraphSync) {
                 clearInterval(timer);
-                // TODO call cancellation to LND here
+                // call cancellation to LND here
+                console.log('cancelling...');
+                await cancelGossipSync();
+                console.log('Express graph sync cancelled...');
                 resolve(true);
             }
         }, 1000);
@@ -177,7 +184,10 @@ export async function expressGraphSync() {
 
         try {
             const connectionState = await NetInfo.fetch();
-            const gossipStatus = await gossipSync(connectionState.type);
+            const gossipStatus = await gossipSync(
+                'https://speedloader.lnolymp.us/',
+                connectionState.type
+            );
             const completionTime =
                 (new Date().getTime() - start.getTime()) / 1000 + 's';
             console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
