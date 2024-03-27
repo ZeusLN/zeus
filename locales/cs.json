@@ -855,7 +855,7 @@
     "views.Settings.Contacts.noAddress": "Žádná adresa",
     "views.Settings.Contacts.to": "Pro",
     "views.Settings.Contacts.deleteAllContacts": "Odstranit všechny kontakty",
-    "views.SetNodePicture.choosePicture": "Choose Picture",
+    "views.SetNodePicture.choosePicture": "Zvolte obrázek",
     "views.Transaction.title": "Transakce",
     "views.Transaction.totalFees": "Celkové poplatky",
     "views.Transaction.transactionHash": "Hash transakce",
