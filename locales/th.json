@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "ไม่มีใบแจ้งหนี้",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "เกิดข้อผิดพลาดขณะทำการเชื่อมต่อโหลด โปรดตรวจสอบการตั้งค่าของคุณแล้วลองอีกครั้ง",
     "views.Wallet.MainPane.goToSettings": "ไปยังการตั้งค่า",
     "views.Wallet.Payments.noPayments": "ไม่มีการใช้จ่าย",
