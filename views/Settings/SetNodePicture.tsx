@@ -6,8 +6,7 @@ import {
     Image,
     StyleSheet,
     FlatList,
-    Dimensions,
-    ScrollView
+    Dimensions
 } from 'react-native';
 import { Avatar } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -208,39 +207,36 @@ export default class SetNodePicture extends React.Component<
                         </View>
                     </TouchableOpacity>
                 </View>
-                <ScrollView style={{ marginVertical: 10 }}>
-                    <FlatList
-                        data={this.state.images}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity
-                                onPress={() => this.handleImageTap(item)}
+                <FlatList
+                    data={this.state.images}
+                    style={{ marginVertical: 10 }}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity
+                            onPress={() => this.handleImageTap(item)}
+                        >
+                            <View
+                                style={{
+                                    ...styles.avatarContainer,
+                                    backgroundColor: themeColor('secondaryText')
+                                }}
                             >
-                                <View
-                                    style={{
-                                        ...styles.avatarContainer,
-                                        backgroundColor:
-                                            themeColor('secondaryText')
-                                    }}
-                                >
-                                    <Avatar
-                                        rounded
-                                        size={
-                                            Dimensions.get('window').width / 3 -
-                                            20
-                                        }
-                                        source={item}
-                                    />
-                                </View>
-                            </TouchableOpacity>
-                        )}
-                        numColumns={3}
-                        keyExtractor={(item, index) => index.toString()}
-                        contentContainerStyle={{
-                            justifyContent: 'center',
-                            alignItems: 'center'
-                        }}
-                    />
-                </ScrollView>
+                                <Avatar
+                                    rounded
+                                    size={
+                                        Dimensions.get('window').width / 3 - 20
+                                    }
+                                    source={item}
+                                />
+                            </View>
+                        </TouchableOpacity>
+                    )}
+                    numColumns={3}
+                    keyExtractor={(item, index) => index.toString()}
+                    contentContainerStyle={{
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                />
 
                 <Button
                     title={localeString('views.SetNodePicture.choosePicture')}
