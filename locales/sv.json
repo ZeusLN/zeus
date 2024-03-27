@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Inga invoices",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "est",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Kunde inte ansluta till din nod. Var god kontrollera dina inställningar och försök igen.",
     "views.Wallet.MainPane.goToSettings": "Gå till inställningar",
     "views.Wallet.Payments.noPayments": "Inga betalningar",
