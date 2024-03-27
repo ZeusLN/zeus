@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "لا توجد فواتير",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "خطأ بالإتصال بال Node خاصتك، الرجاء التحقق من إعداداتك ثم قم بالمحاولة مرة أخرى.",
     "views.Wallet.MainPane.goToSettings": "اذهب الى الإعدادات",
     "views.Wallet.Payments.noPayments": "لا توجد دفعات",
