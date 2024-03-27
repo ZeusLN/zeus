@@ -364,7 +364,7 @@ export default class KeypadPane extends React.PureComponent<
                                 <View style={{ width: '25%' }}>
                                     <Button
                                         title={'50k'}
-                                        quinary
+                                        quaternary
                                         noUppercase
                                         onPress={() => {
                                             UnitsStore.resetUnits();
@@ -379,7 +379,7 @@ export default class KeypadPane extends React.PureComponent<
                                 <View style={{ width: '25%' }}>
                                     <Button
                                         title={'100k'}
-                                        quinary
+                                        quaternary
                                         noUppercase
                                         onPress={() => {
                                             UnitsStore.resetUnits();
@@ -394,7 +394,7 @@ export default class KeypadPane extends React.PureComponent<
                                 <View style={{ width: '25%' }}>
                                     <Button
                                         title={'1m'}
-                                        quinary
+                                        quaternary
                                         noUppercase
                                         onPress={() => {
                                             UnitsStore.resetUnits();
@@ -409,7 +409,7 @@ export default class KeypadPane extends React.PureComponent<
                                 <View style={{ width: '25%' }}>
                                     <Button
                                         title={localeString('general.other')}
-                                        quinary
+                                        quaternary
                                         noUppercase
                                         onPress={() => {
                                             UnitsStore.resetUnits();
@@ -435,7 +435,7 @@ export default class KeypadPane extends React.PureComponent<
                             <View style={{ width: '40%' }}>
                                 <Button
                                     title={localeString('general.request')}
-                                    quinary
+                                    quaternary
                                     noUppercase
                                     onPress={() => {
                                         navigation.navigate('Receive', {
@@ -456,7 +456,7 @@ export default class KeypadPane extends React.PureComponent<
                                             themeColor('buttonText') ||
                                             themeColor('text')
                                     }}
-                                    quinary
+                                    quaternary
                                     noUppercase
                                     onPress={() => {
                                         navigation.navigate('Receive', {
@@ -469,7 +469,7 @@ export default class KeypadPane extends React.PureComponent<
                             <View style={{ width: '40%' }}>
                                 <Button
                                     title={localeString('general.send')}
-                                    quinary
+                                    quaternary
                                     noUppercase
                                     onPress={() => {
                                         navigation.navigate('Send', {
