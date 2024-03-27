@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Hakuna Bili",
     "views.Wallet.MainPane.testnet": "Mtandao wa Majaribio",
     "views.Wallet.MainPane.regnet": "Mtandao wa Majaribio",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Hitilafu katika kuunganisha kwenye nodi yako. Tafadhali angalia mipangilio yako na jaribu tena.",
     "views.Wallet.MainPane.goToSettings": "Nenda kwa Mipangilio",
     "views.Wallet.Payments.noPayments": "Hakuna Malipo",
