@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "존재하는 인보이스가 없음",
     "views.Wallet.MainPane.testnet": "테스트넷",
     "views.Wallet.MainPane.regnet": "재테스트",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "노드에 연결하는 동안 오류가 발생했습니다. 설정을 확인한 후 다시 시도하세요.",
     "views.Wallet.MainPane.goToSettings": "설정으로 이동",
     "views.Wallet.Payments.noPayments": "결제 없음",
