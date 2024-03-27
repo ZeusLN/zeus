@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Fără Facturi",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Eroare la conectarea cu nodul tău. Te rugăm să verifici setările și să încerci din nou.",
     "views.Wallet.MainPane.goToSettings": "Mergi la Setări",
     "views.Wallet.Payments.noPayments": "Fără Plăți",
