@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Нет инвойсов",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Ошибка подключения к вашему узлу. Пожалуйста проверьте настроки и попробуйте снова",
     "views.Wallet.MainPane.goToSettings": "Вперед к Настройкам",
     "views.Wallet.Payments.noPayments": "Нет Платежей",
