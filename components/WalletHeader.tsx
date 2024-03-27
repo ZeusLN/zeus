@@ -229,7 +229,8 @@ export default class WalletHeader extends React.Component<
             SyncStore
         } = this.props;
         const { filteredPendingChannels } = ChannelsStore!;
-        const { settings, posStatus, setPosStatus } = SettingsStore!;
+        const { settings, posStatus, setPosStatus, implementation } =
+            SettingsStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
         const laLoading = LightningAddressStore?.loading;
         const { isSyncing } = SyncStore!;
@@ -295,6 +296,24 @@ export default class WalletHeader extends React.Component<
             ) : null;
         };
 
+        const CustodialBadge = () => {
+            return implementation === 'lndhub' ? (
+                <Badge
+                    onPress={() =>
+                        navigation.navigate('CustodialWalletWarning')
+                    }
+                    value={`⚠ ${localeString('general.custodialWallet')}`}
+                    badgeStyle={{
+                        ...styles.badgeStyle,
+                        backgroundColor: themeColor('error'),
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale
+                    }}
+                    textStyle={styles.badgeTextStyle}
+                />
+            ) : null;
+        };
+
         const TorBadge = () => (
             <>
                 {nodeAddress && nodeAddress.includes('.onion') ? (
@@ -332,6 +351,15 @@ export default class WalletHeader extends React.Component<
                 />
             ) : null;
         };
+
+        const StatusBadges = () => (
+            <>
+                <CustodialBadge />
+                <NetworkBadge />
+                <ReadOnlyBadge />
+                <TorBadge />
+            </>
+        );
 
         const SearchButton = () => (
             <TouchableOpacity
@@ -473,16 +501,12 @@ export default class WalletHeader extends React.Component<
                                         displayName
                                     )?.toString()}
                                 </Text>
-                                <NetworkBadge />
-                                <ReadOnlyBadge />
-                                <TorBadge />
+                                <StatusBadges />
                             </Row>
                         </View>
                     ) : (
                         <Row style={{ alignItems: 'center', flexGrow: 1 }}>
-                            <NetworkBadge />
-                            <ReadOnlyBadge />
-                            <TorBadge />
+                            <StatusBadges />
                         </Row>
                     )
                 }
