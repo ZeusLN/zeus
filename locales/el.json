@@ -855,6 +855,7 @@
     "views.Settings.Contacts.noAddress": "Χωρίς διεύθυνση",
     "views.Settings.Contacts.to": "To",
     "views.Settings.Contacts.deleteAllContacts": "Διαγραφή όλων των επαφών",
+    "views.SetNodePicture.choosePicture": "Choose Picture",
     "views.Transaction.title": "Συναλλαγή",
     "views.Transaction.totalFees": "Συνολικά τέλη",
     "views.Transaction.transactionHash": "Hash συναλλαγής",
