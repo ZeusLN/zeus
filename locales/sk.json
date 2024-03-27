@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Žiadne faktúry",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Chyba pri pripájaní k vášmu zlu. Prosím, skontrolujte nastavenia a skúste znovu.",
     "views.Wallet.MainPane.goToSettings": "Do nastavení",
     "views.Wallet.Payments.noPayments": "Žiadne platby",
