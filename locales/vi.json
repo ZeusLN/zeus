@@ -290,6 +290,7 @@
     "views.Wallet.Invoices.noInvoices": "Không có Hoá đơn",
     "views.Wallet.MainPane.testnet": "Testnet",
     "views.Wallet.MainPane.regnet": "Regtest",
+    "views.Wallet.MainPane.signet": "Signet",
     "views.Wallet.MainPane.error": "Lỗi khi kết nối tới nút của bạn. Vui lòng kiểm tra thiết lập và thử lại.",
     "views.Wallet.MainPane.goToSettings": "Đi đến Thiết lập",
     "views.Wallet.Payments.noPayments": "Không có Khoản thanh toán",
