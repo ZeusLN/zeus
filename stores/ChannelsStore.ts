@@ -44,8 +44,9 @@ export default class ChannelsStore {
     @observable public errorOpenChannel = false;
     @observable public peerSuccess = false;
     @observable public channelSuccess = false;
+    @observable public closeChannelErr: string | null;
+    @observable public closingChannel = false;
     @observable channelRequest: any;
-    closeChannelSuccess: boolean;
     // redesign
     @observable public largestChannelSats = 0;
     @observable public totalOutbound = 0;
@@ -325,6 +326,7 @@ export default class ChannelsStore {
         this.channels = [];
         this.error = true;
         this.loading = false;
+        this.closingChannel = false;
     };
 
     @action
@@ -428,13 +430,14 @@ export default class ChannelsStore {
     };
 
     @action
-    public closeChannel = (
+    public closeChannel = async (
         request?: CloseChannelRequest | null,
         channelId?: string | null,
         satPerByte?: string | null,
         forceClose?: boolean | string | null
     ) => {
-        this.loading = true;
+        this.closeChannelErr = null;
+        this.closingChannel = true;
 
         let urlParams: Array<any> = [];
         if (channelId) {
@@ -456,16 +459,30 @@ export default class ChannelsStore {
             }
         }
 
-        BackendUtils.closeChannel(urlParams)
-            .then((data: any) => {
-                const { chan_close } = data;
-                this.closeChannelSuccess = chan_close.success;
+        return await Promise.race([
+            new Promise((resolve) => {
+                BackendUtils.closeChannel(urlParams)
+                    .then(() => {
+                        this.error = false;
+                        this.closingChannel = false;
+                        resolve(true);
+                    })
+                    .catch((error: Error) => {
+                        this.closeChannelErr = errorToUserFriendly(error);
+                        this.getChannelsError();
+                        resolve(true);
+                    });
+            }),
+            // LND REST call tends to time out, so let's put a 6 second
+            // forced resolution, as true errors will typically throw
+            // before that time
+            new Promise(async (resolve) => {
+                await new Promise((res) => setTimeout(res, 6000));
                 this.error = false;
-                this.loading = false;
+                this.closingChannel = false;
+                resolve(true);
             })
-            .catch(() => {
-                this.getChannelsError();
-            });
+        ]);
     };
 
     @action

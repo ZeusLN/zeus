@@ -17,8 +17,10 @@ import Button from '../../components/Button';
 import FeeBreakdown from '../../components/FeeBreakdown';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
 import Screen from '../../components/Screen';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 
 import PrivacyUtils from '../../utils/PrivacyUtils';
@@ -71,9 +73,9 @@ export default class ChannelView extends React.Component<
         }
     }
 
-    closeChannel = (
-        channelPoint: string,
-        channelId: string,
+    closeChannel = async (
+        channelPoint?: string,
+        channelId?: string,
         satPerByte?: string | null,
         forceClose?: boolean | null
     ) => {
@@ -83,27 +85,23 @@ export default class ChannelView extends React.Component<
         if (channelPoint) {
             const [funding_txid_str, output_index] = channelPoint.split(':');
 
-            if (satPerByte) {
-                ChannelsStore.closeChannel(
-                    { funding_txid_str, output_index },
-                    null,
-                    satPerByte,
-                    forceClose
-                );
-            } else {
-                ChannelsStore.closeChannel(
-                    { funding_txid_str, output_index },
-                    null,
-                    null,
-                    forceClose
-                );
-            }
+            await ChannelsStore.closeChannel(
+                { funding_txid_str, output_index },
+                null,
+                satPerByte ? satPerByte : null,
+                forceClose
+            );
         } else if (channelId) {
             // c-lightning, eclair
-            ChannelsStore.closeChannel(null, channelId, satPerByte, forceClose);
+            await ChannelsStore.closeChannel(
+                null,
+                channelId,
+                satPerByte,
+                forceClose
+            );
         }
 
-        navigation.navigate('Wallet');
+        if (!ChannelsStore.closeChannelErr) navigation.navigate('Wallet');
     };
 
     handleOnNavigateBack = (satPerByte: string) => {
@@ -113,13 +111,15 @@ export default class ChannelView extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore, NodeInfoStore } = this.props;
+        const { navigation, SettingsStore, NodeInfoStore, ChannelsStore } =
+            this.props;
         const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
             this.state;
         const { settings } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
         const { testnet } = NodeInfoStore;
+        const { closeChannelErr, closingChannel } = ChannelsStore;
 
         const {
             channel_point,
@@ -572,6 +572,14 @@ export default class ChannelView extends React.Component<
                         )}
                     {confirmCloseChannel && (
                         <View>
+                            {closingChannel && (
+                                <View style={{ margin: 20, marginBottom: 40 }}>
+                                    <LoadingIndicator />
+                                </View>
+                            )}
+                            {!closingChannel && closeChannelErr && (
+                                <ErrorMessage message={closeChannelErr} />
+                            )}
                             {BackendUtils.isLNDBased() && (
                                 <>
                                     <Text
