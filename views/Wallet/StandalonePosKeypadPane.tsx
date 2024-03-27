@@ -278,7 +278,7 @@ export default class PosKeypadPane extends React.PureComponent<
                                 title={localeString(
                                     'general.request'
                                 ).toUpperCase()}
-                                quinary
+                                quaternary
                                 noUppercase
                                 onPress={() => {
                                     this.addItemAndCheckout();

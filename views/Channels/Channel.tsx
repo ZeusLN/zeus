@@ -629,7 +629,7 @@ export default class ChannelView extends React.Component<
                                             forceCloseChannel
                                         )
                                     }
-                                    quinary
+                                    quaternary
                                     warning
                                 />
                             </View>
