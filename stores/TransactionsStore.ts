@@ -1,3 +1,5 @@
+const bitcoin = require('bitcoinjs-lib');
+
 import { action, reaction, observable } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
@@ -144,10 +146,20 @@ export default class TransactionsStore {
                     .then((data: any) => {
                         const raw_final_tx = data.raw_final_tx;
 
+                        // Grok txid out from raw tx hex
+                        const raw_final_tx_hex =
+                            Base64Utils.base64ToHex(raw_final_tx);
+                        // Decode the raw transaction hex string
+                        const tx =
+                            bitcoin.Transaction.fromHex(raw_final_tx_hex);
+                        // Get the transaction ID (txid)
+                        const txid = tx.getId();
+
                         BackendUtils.publishTransaction({
                             tx_hex: raw_final_tx
                         })
                             .then(() => {
+                                this.txid = txid;
                                 this.publishSuccess = true;
                                 this.loading = false;
                             })
@@ -181,6 +193,7 @@ export default class TransactionsStore {
         this.txid = null;
         this.publishSuccess = false;
         this.loading = true;
+
         if (
             BackendUtils.isLNDBased() &&
             transactionRequest.utxos &&
@@ -188,15 +201,16 @@ export default class TransactionsStore {
         ) {
             return this.sendCoinsLNDCoinControl(transactionRequest);
         }
+
         BackendUtils.sendCoins(transactionRequest)
             .then((data: any) => {
                 this.txid = data.txid;
                 this.publishSuccess = true;
                 this.loading = false;
             })
-            .catch((error: any) => {
+            .catch((error: Error) => {
                 // handle error
-                this.error_msg = error.message;
+                this.error_msg = errorToUserFriendly(error);
                 this.error = true;
                 this.loading = false;
             });
@@ -286,7 +300,10 @@ export default class TransactionsStore {
         }
 
         // max fee percent for c-lightning
-        if (max_fee_percent) {
+        if (
+            max_fee_percent &&
+            this.settingsStore.implementation === 'c-lightning-REST'
+        ) {
             data.max_fee_percent = max_fee_percent;
         }
 
@@ -365,10 +382,7 @@ export default class TransactionsStore {
         this.error = true;
         this.loading = false;
         this.error_msg =
-            typeof err === 'string'
-                ? errorToUserFriendly(err)
-                : errorToUserFriendly(err.message) ||
-                  localeString('error.sendingPayment');
+            errorToUserFriendly(err) || localeString('error.sendingPayment');
     };
 
     @action resetBroadcast = () => {

@@ -212,7 +212,12 @@ export default class ProductDetails extends React.Component<
     isValid = () => {
         const { product } = this.state;
 
-        return product && product?.name !== '' && product.price > 0;
+        return (
+            product &&
+            product?.name !== '' &&
+            product?.price &&
+            Number(product?.price.toString().replace(',', '.')) > 0
+        );
     };
 
     render() {
@@ -342,11 +347,11 @@ export default class ProductDetails extends React.Component<
                                             />
                                         </View>
                                         <AmountInput
-                                            amount={String(
-                                                product?.price == 0
-                                                    ? ''
-                                                    : product?.price
-                                            )}
+                                            amount={
+                                                product?.price
+                                                    ? String(product?.price)
+                                                    : ''
+                                            }
                                             title={localeString(
                                                 'views.Settings.POS.Product.price'
                                             )}

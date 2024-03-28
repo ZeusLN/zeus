@@ -21,7 +21,7 @@ const handleAnything = async (
     isClipboardValue?: boolean
 ): Promise<any> => {
     const { nodeInfo } = nodeInfoStore;
-    const { isTestNet, isRegTest } = nodeInfo;
+    const { isTestNet, isRegTest, isSigNet } = nodeInfo;
     const { value, amount, lightning }: any =
         AddressUtils.processSendAddress(data);
     const hasAt: boolean = value.includes('@');
@@ -63,7 +63,7 @@ const handleAnything = async (
                     );
                 }
             } else {
-                invoicesStore.getPayReq(lightning);
+                await invoicesStore.getPayReq(lightning);
                 return ['PaymentRequest', {}];
             }
         }
@@ -77,7 +77,10 @@ const handleAnything = async (
         ];
     } else if (
         !hasAt &&
-        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
+        AddressUtils.isValidBitcoinAddress(
+            value,
+            isTestNet || isRegTest || isSigNet
+        )
     ) {
         if (isClipboardValue) return true;
         if (amount) unitsStore?.resetUnits();
@@ -102,7 +105,7 @@ const handleAnything = async (
         ];
     } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
         if (isClipboardValue) return true;
-        invoicesStore.getPayReq(value);
+        await invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
     } else if (value.includes('c-lightning-rest://')) {
         if (isClipboardValue) return true;

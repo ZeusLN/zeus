@@ -43,15 +43,14 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings, embeddedLndNetwork } = SettingsStore;
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const { settings } = SettingsStore;
 
         this.setState({
             enableLSP: settings.enableLSP,
-            lsp:
-                embeddedLndNetwork === 'Mainnet'
-                    ? settings.lspMainnet
-                    : settings.lspTestnet,
+            lsp: NodeInfoStore!.nodeInfo.isTestNet
+                ? settings.lspTestnet
+                : settings.lspMainnet,
             accessKey: settings.lspAccessKey,
             requestSimpleTaproot: settings.requestSimpleTaproot
         });

@@ -252,10 +252,20 @@ export default class Activity extends React.PureComponent<
 
                             if (item instanceof Invoice) {
                                 displayName = item.isPaid
-                                    ? localeString('views.Activity.youReceived')
+                                    ? item.is_amp
+                                        ? localeString(
+                                              'views.Activity.youReceivedAmp'
+                                          )
+                                        : localeString(
+                                              'views.Activity.youReceived'
+                                          )
                                     : item.isExpired
                                     ? localeString(
                                           'views.Activity.expiredRequested'
+                                      )
+                                    : item.is_amp
+                                    ? localeString(
+                                          'views.Activity.requestedPaymentAmp'
                                       )
                                     : localeString(
                                           'views.Activity.requestedPayment'

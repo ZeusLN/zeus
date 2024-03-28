@@ -77,6 +77,8 @@ export default class ActivityFilter extends React.Component<
             inTransit,
             isFailed,
             unconfirmed,
+            standardInvoices,
+            ampInvoices,
             zeusPay,
             minimumAmount,
             startDate,
@@ -210,7 +212,21 @@ export default class ActivityFilter extends React.Component<
                 condition: BackendUtils.isLNDBased()
             },
             {
-                label: 'ZEUS PAY',
+                label: localeString('views.ActivityFilter.standardInvoices'),
+                value: standardInvoices,
+                var: 'standardInvoices',
+                type: 'Toggle',
+                condition: BackendUtils.isLNDBased()
+            },
+            {
+                label: localeString('views.ActivityFilter.ampInvoices'),
+                value: ampInvoices,
+                var: 'ampInvoices',
+                type: 'Toggle',
+                condition: BackendUtils.isLNDBased()
+            },
+            {
+                label: 'ZEUS Pay',
                 value: zeusPay,
                 var: 'zeusPay',
                 type: 'Toggle',

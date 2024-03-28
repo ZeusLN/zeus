@@ -484,7 +484,13 @@ export default class AddContact extends React.Component<
                                 alignItems: 'center'
                             }}
                         >
-                            <TouchableOpacity onPress={this.selectPhoto}>
+                            <TouchableOpacity
+                                onPress={
+                                    photo === null
+                                        ? this.selectPhoto
+                                        : () => this.setState({ photo: null })
+                                }
+                            >
                                 <View
                                     style={{
                                         backgroundColor:

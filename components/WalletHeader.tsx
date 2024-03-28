@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
+import RNFS from 'react-native-fs';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
@@ -45,8 +46,6 @@ import stores from '../stores/Stores';
 
 import { Body } from './text/Body';
 import { Row } from '../components/layout/Row';
-
-const Contact = require('../assets/images/Mascot.png');
 
 const TorIcon = require('../assets/images/tor.png');
 
@@ -206,6 +205,14 @@ export default class WalletHeader extends React.Component<
         }
     }
 
+    getPhoto(photo: string | null): string {
+        if (typeof photo === 'string' && photo.includes('rnfs://')) {
+            const fileName = photo.replace('rnfs://', '');
+            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
+        }
+        return photo || '';
+    }
+
     render() {
         const { clipboard } = this.state;
         const {
@@ -222,13 +229,12 @@ export default class WalletHeader extends React.Component<
             SyncStore
         } = this.props;
         const { filteredPendingChannels } = ChannelsStore!;
-        const { settings, posStatus, setPosStatus } = SettingsStore!;
+        const { settings, posStatus, setPosStatus, implementation } =
+            SettingsStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
         const laLoading = LightningAddressStore?.loading;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
-        const multipleNodes: boolean =
-            (settings && settings.nodes && settings.nodes.length > 1) || false;
         const selectedNode: any =
             (settings &&
                 settings.nodes?.length &&
@@ -245,14 +251,19 @@ export default class WalletHeader extends React.Component<
                 onLongPress={() => protectedNavigation(navigation, 'Nodes')}
                 accessibilityLabel={localeString('views.Settings.title')}
             >
-                {multipleNodes ? (
+                {selectedNode && selectedNode.photo ? (
+                    <Image
+                        source={{
+                            uri: this.getPhoto(selectedNode.photo)
+                        }}
+                        style={styles.photo}
+                    />
+                ) : (
                     <NodeIdenticon
                         selectedNode={selectedNode}
                         width={35}
                         rounded
                     />
-                ) : (
-                    <Image source={Contact} style={{ width: 35, height: 35 }} />
                 )}
             </TouchableOpacity>
         );
@@ -265,6 +276,8 @@ export default class WalletHeader extends React.Component<
             infoValue = localeString('views.Wallet.MainPane.testnet');
         } else if (NodeInfoStore!.nodeInfo.isRegTest) {
             infoValue = localeString('views.Wallet.MainPane.regnet');
+        } else if (NodeInfoStore!.nodeInfo.isSigNet) {
+            infoValue = localeString('views.Wallet.MainPane.signet');
         }
 
         const { fontScale } = Dimensions.get('window');
@@ -277,6 +290,24 @@ export default class WalletHeader extends React.Component<
                     badgeStyle={{
                         ...styles.badgeStyle,
                         backgroundColor: 'gray',
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale
+                    }}
+                    textStyle={styles.badgeTextStyle}
+                />
+            ) : null;
+        };
+
+        const CustodialBadge = () => {
+            return implementation === 'lndhub' ? (
+                <Badge
+                    onPress={() =>
+                        navigation.navigate('CustodialWalletWarning')
+                    }
+                    value={`⚠ ${localeString('general.custodialWallet')}`}
+                    badgeStyle={{
+                        ...styles.badgeStyle,
+                        backgroundColor: themeColor('error'),
                         minHeight: 18 * fontScale,
                         borderRadius: 9 * fontScale
                     }}
@@ -322,6 +353,15 @@ export default class WalletHeader extends React.Component<
                 />
             ) : null;
         };
+
+        const StatusBadges = () => (
+            <>
+                <CustodialBadge />
+                <NetworkBadge />
+                <ReadOnlyBadge />
+                <TorBadge />
+            </>
+        );
 
         const SearchButton = () => (
             <TouchableOpacity
@@ -393,12 +433,7 @@ export default class WalletHeader extends React.Component<
             <Header
                 leftComponent={
                     loading ? undefined : (
-                        <Row
-                            style={{
-                                flexGrow: 1,
-                                alignItems: 'center'
-                            }}
-                        >
+                        <Row>
                             <SettingsButton />
                             {paid && paid.length > 0 && (
                                 <TouchableOpacity
@@ -468,16 +503,12 @@ export default class WalletHeader extends React.Component<
                                         displayName
                                     )?.toString()}
                                 </Text>
-                                <NetworkBadge />
-                                <ReadOnlyBadge />
-                                <TorBadge />
+                                <StatusBadges />
                             </Row>
                         </View>
                     ) : (
                         <Row style={{ alignItems: 'center', flexGrow: 1 }}>
-                            <NetworkBadge />
-                            <ReadOnlyBadge />
-                            <TorBadge />
+                            <StatusBadges />
                         </Row>
                     )
                 }
@@ -488,7 +519,7 @@ export default class WalletHeader extends React.Component<
                             <TempleButton navigation={navigation} />
                         </Row>
                     ) : channels ? (
-                        <Row>
+                        <Row style={{ marginTop: 1 }}>
                             <SearchButton />
                             <OpenChannelButton />
                         </Row>
@@ -556,5 +587,11 @@ const styles = StyleSheet.create({
     badgeTextStyle: {
         fontWeight: 'normal',
         textAlign: 'center'
+    },
+    photo: {
+        alignSelf: 'center',
+        width: 42,
+        height: 42,
+        borderRadius: 68
     }
 });

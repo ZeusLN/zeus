@@ -284,7 +284,8 @@ export default class SendingLightning extends React.Component<
                                                     0.014,
                                                 textAlign: 'center',
                                                 marginTop:
-                                                    windowSize.height * 0.025
+                                                    windowSize.height * 0.025,
+                                                padding: 5
                                             }}
                                         >
                                             {payment_error || error_msg}

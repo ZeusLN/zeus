@@ -62,6 +62,7 @@ import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
+import SetNodePicture from './views/Settings/SetNodePicture';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -125,6 +126,8 @@ import LspExplanationOverview from './views/Explanations/LspExplanationOverview'
 import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelBackups';
 
 import RawTxHex from './views/RawTxHex';
+
+import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
 
 const AppScenes = {
     Wallet: {
@@ -441,6 +444,12 @@ const AppScenes = {
     },
     RestoreChannelBackups: {
         screen: RestoreChannelBackups
+    },
+    SetNodePicture: {
+        screen: SetNodePicture
+    },
+    CustodialWalletWarning: {
+        screen: CustodialWalletWarning
     }
 };
 

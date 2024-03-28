@@ -89,10 +89,6 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                         setNewFee(text);
                         onChangeFee(text);
                     }}
-                    style={{
-                        paddingTop: 10,
-                        paddingBottom: 10
-                    }}
                 />
             )}
         </>

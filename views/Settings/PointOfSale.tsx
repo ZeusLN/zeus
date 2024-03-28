@@ -136,484 +136,463 @@ export default class PointOfSale extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                {!fiatEnabled ? (
-                    <View style={{ flex: 1, padding: 15 }}>
-                        <ErrorMessage
-                            message={localeString(
-                                'pos.views.Settings.PointOfSale.currencyError'
-                            )}
-                        />
-                    </View>
-                ) : (
-                    <ScrollView
-                        style={{ flex: 1 }}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        <View style={{ padding: 15 }}>
-                            {!BackendUtils.isLNDBased() && (
-                                <WarningMessage
-                                    message={localeString(
-                                        'pos.views.Settings.PointOfSale.backendWarning'
-                                    )}
-                                />
-                            )}
-                            {!pin && !passphrase && (
-                                <WarningMessage
-                                    message={localeString(
-                                        'pos.views.Settings.PointOfSale.authWarning'
-                                    )}
-                                />
-                            )}
-
-                            <DropdownSetting
-                                title={localeString(
-                                    'views.Settings.POS.enablePos'
+                <ScrollView
+                    style={{ flex: 1 }}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={{ padding: 15 }}>
+                        {!fiatEnabled && posEnabled === 'square' && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'pos.views.Settings.PointOfSale.currencyError'
                                 )}
-                                selectedValue={posEnabled}
-                                onValueChange={async (value: PosEnabled) => {
-                                    this.setState({
-                                        posEnabled: value
-                                    });
-                                    await updateSettings({
-                                        pos: {
-                                            posEnabled: value,
-                                            squareAccessToken,
-                                            squareLocationId,
-                                            merchantName,
-                                            confirmationPreference,
-                                            disableTips,
-                                            squareDevMode,
-                                            showKeypad,
-                                            taxPercentage,
-                                            enablePrinter
-                                        }
-                                    });
-                                }}
-                                values={POS_ENABLED_KEYS}
                             />
+                        )}
+                        {!BackendUtils.isLNDBased() && (
+                            <WarningMessage
+                                message={localeString(
+                                    'pos.views.Settings.PointOfSale.backendWarning'
+                                )}
+                            />
+                        )}
+                        {!pin && !passphrase && (
+                            <WarningMessage
+                                message={localeString(
+                                    'pos.views.Settings.PointOfSale.authWarning'
+                                )}
+                            />
+                        )}
 
-                            {posEnabled === PosEnabled.Square && (
-                                <>
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.POS.squareAccessToken'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        value={squareAccessToken}
-                                        onChangeText={async (text: string) => {
-                                            this.setState({
-                                                squareAccessToken: text
-                                            });
+                        <DropdownSetting
+                            title={localeString('views.Settings.POS.enablePos')}
+                            selectedValue={posEnabled}
+                            onValueChange={async (value: PosEnabled) => {
+                                this.setState({
+                                    posEnabled: value
+                                });
+                                await updateSettings({
+                                    pos: {
+                                        posEnabled: value,
+                                        squareAccessToken,
+                                        squareLocationId,
+                                        merchantName,
+                                        confirmationPreference,
+                                        disableTips,
+                                        squareDevMode,
+                                        showKeypad,
+                                        taxPercentage,
+                                        enablePrinter
+                                    }
+                                });
+                            }}
+                            values={POS_ENABLED_KEYS}
+                        />
 
-                                            await updateSettings({
-                                                pos: {
-                                                    posEnabled,
-                                                    squareAccessToken: text,
-                                                    squareLocationId,
-                                                    merchantName,
-                                                    confirmationPreference,
-                                                    disableTips,
-                                                    squareDevMode,
-                                                    showKeypad,
-                                                    taxPercentage,
-                                                    enablePrinter
-                                                }
-                                            });
-                                        }}
-                                    />
-
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.POS.squareLocationId'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        value={squareLocationId}
-                                        onChangeText={async (text: string) => {
-                                            this.setState({
-                                                squareLocationId: text
-                                            });
-
-                                            await updateSettings({
-                                                pos: {
-                                                    posEnabled,
-                                                    squareAccessToken,
-                                                    squareLocationId: text,
-                                                    merchantName,
-                                                    confirmationPreference,
-                                                    disableTips,
-                                                    squareDevMode,
-                                                    showKeypad,
-                                                    taxPercentage,
-                                                    enablePrinter
-                                                }
-                                            });
-                                        }}
-                                    />
-
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
-                                        }}
-                                    >
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                left: -10
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.POS.devMode'
-                                            )}
-                                        </ListItem.Title>
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
-                                            }}
-                                        >
-                                            <Switch
-                                                value={squareDevMode}
-                                                onValueChange={async () => {
-                                                    this.setState({
-                                                        squareDevMode:
-                                                            !squareDevMode
-                                                    });
-                                                    await updateSettings({
-                                                        pos: {
-                                                            squareAccessToken,
-                                                            squareLocationId,
-                                                            posEnabled,
-                                                            merchantName,
-                                                            confirmationPreference,
-                                                            disableTips,
-                                                            squareDevMode:
-                                                                !squareDevMode,
-                                                            showKeypad,
-                                                            taxPercentage,
-                                                            enablePrinter
-                                                        }
-                                                    });
-                                                }}
-                                            />
-                                        </View>
-                                    </ListItem>
-                                </>
-                            )}
-
-                            {posEnabled !== PosEnabled.Disabled && (
-                                <>
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.POS.merchantName'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        value={merchantName}
-                                        onChangeText={async (text: string) => {
-                                            this.setState({
-                                                merchantName: text
-                                            });
-
-                                            await updateSettings({
-                                                pos: {
-                                                    posEnabled,
-                                                    squareAccessToken,
-                                                    squareLocationId,
-                                                    merchantName: text,
-                                                    confirmationPreference,
-                                                    disableTips,
-                                                    squareDevMode,
-                                                    showKeypad,
-                                                    taxPercentage,
-                                                    enablePrinter
-                                                }
-                                            });
-                                        }}
-                                    />
-                                    <DropdownSetting
-                                        title={localeString(
-                                            'views.Settings.POS.confPref'
-                                        )}
-                                        selectedValue={confirmationPreference}
-                                        onValueChange={async (
-                                            value: string
-                                        ) => {
-                                            this.setState({
-                                                confirmationPreference: value
-                                            });
-                                            await updateSettings({
-                                                pos: {
-                                                    posEnabled,
-                                                    squareAccessToken,
-                                                    squareLocationId,
-                                                    merchantName,
-                                                    confirmationPreference:
-                                                        value,
-                                                    disableTips,
-                                                    squareDevMode,
-                                                    showKeypad,
-                                                    taxPercentage
-                                                }
-                                            });
-                                        }}
-                                        values={POS_CONF_PREF_KEYS}
-                                    />
-
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
-                                        }}
-                                    >
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                left: -10
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.POS.disableTips'
-                                            )}
-                                        </ListItem.Title>
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
-                                            }}
-                                        >
-                                            <Switch
-                                                value={disableTips}
-                                                onValueChange={async () => {
-                                                    this.setState({
-                                                        disableTips:
-                                                            !disableTips
-                                                    });
-                                                    await updateSettings({
-                                                        pos: {
-                                                            squareAccessToken,
-                                                            squareLocationId,
-                                                            posEnabled,
-                                                            merchantName,
-                                                            confirmationPreference,
-                                                            disableTips:
-                                                                !disableTips,
-                                                            squareDevMode,
-                                                            showKeypad,
-                                                            taxPercentage,
-                                                            enablePrinter
-                                                        }
-                                                    });
-                                                }}
-                                            />
-                                        </View>
-                                    </ListItem>
-
-                                    {Platform.OS === 'android' && (
-                                        <ListItem
-                                            containerStyle={{
-                                                borderBottomWidth: 0,
-                                                backgroundColor: 'transparent'
-                                            }}
-                                        >
-                                            <ListItem.Title
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-                                                    left: -10
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.POS.enablePrinter'
-                                                )}
-                                            </ListItem.Title>
-                                            <View
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    justifyContent: 'flex-end'
-                                                }}
-                                            >
-                                                <Switch
-                                                    value={enablePrinter}
-                                                    onValueChange={async () => {
-                                                        this.setState({
-                                                            enablePrinter:
-                                                                !enablePrinter
-                                                        });
-                                                        await updateSettings({
-                                                            pos: {
-                                                                squareAccessToken,
-                                                                squareLocationId,
-                                                                posEnabled,
-                                                                merchantName,
-                                                                confirmationPreference,
-                                                                disableTips,
-                                                                squareDevMode,
-                                                                taxPercentage,
-                                                                enablePrinter:
-                                                                    !enablePrinter
-                                                            }
-                                                        });
-                                                    }}
-                                                />
-                                            </View>
-                                        </ListItem>
+                        {posEnabled === PosEnabled.Square && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.squareAccessToken'
                                     )}
-                                </>
-                            )}
+                                </Text>
+                                <TextInput
+                                    value={squareAccessToken}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            squareAccessToken: text
+                                        });
 
-                            {posEnabled === PosEnabled.Standalone && (
-                                <>
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
-                                        }}
-                                    >
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                left: -10
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.POS.showKeypad'
-                                            )}
-                                        </ListItem.Title>
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
-                                            }}
-                                        >
-                                            <Switch
-                                                value={showKeypad}
-                                                onValueChange={async () => {
-                                                    this.setState({
-                                                        showKeypad: !showKeypad
-                                                    });
-                                                    await updateSettings({
-                                                        pos: {
-                                                            squareAccessToken,
-                                                            squareLocationId,
-                                                            posEnabled,
-                                                            merchantName,
-                                                            confirmationPreference,
-                                                            disableTips,
-                                                            squareDevMode,
-                                                            taxPercentage,
-                                                            showKeypad:
-                                                                !showKeypad
-                                                        }
-                                                    });
-                                                }}
-                                            />
-                                        </View>
-                                    </ListItem>
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.POS.taxPercentage'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        value={taxPercentage}
-                                        keyboardType="numeric"
-                                        onChangeText={async (text: string) => {
-                                            this.setState({
-                                                taxPercentage: text
-                                            });
+                                        await updateSettings({
+                                            pos: {
+                                                posEnabled,
+                                                squareAccessToken: text,
+                                                squareLocationId,
+                                                merchantName,
+                                                confirmationPreference,
+                                                disableTips,
+                                                squareDevMode,
+                                                showKeypad,
+                                                taxPercentage,
+                                                enablePrinter
+                                            }
+                                        });
+                                    }}
+                                />
 
-                                            await updateSettings({
-                                                pos: {
-                                                    posEnabled,
-                                                    squareAccessToken,
-                                                    squareLocationId,
-                                                    merchantName,
-                                                    confirmationPreference,
-                                                    disableTips,
-                                                    squareDevMode,
-                                                    taxPercentage: text,
-                                                    showKeypad
-                                                }
-                                            });
-                                        }}
-                                        suffix="%"
-                                    />
-                                </>
-                            )}
-                        </View>
-                        {posEnabled !== PosEnabled.Disabled &&
-                            LIST_ITEMS.map((item, index) => (
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.squareLocationId'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={squareLocationId}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            squareLocationId: text
+                                        });
+
+                                        await updateSettings({
+                                            pos: {
+                                                posEnabled,
+                                                squareAccessToken,
+                                                squareLocationId: text,
+                                                merchantName,
+                                                confirmationPreference,
+                                                disableTips,
+                                                squareDevMode,
+                                                showKeypad,
+                                                taxPercentage,
+                                                enablePrinter
+                                            }
+                                        });
+                                    }}
+                                />
+
                                 <ListItem
                                     containerStyle={{
                                         borderBottomWidth: 0,
-                                        backgroundColor: 'none'
+                                        backgroundColor: 'transparent'
                                     }}
-                                    onPress={() =>
-                                        navigation.navigate(item.path)
-                                    }
-                                    key={`${item.label}-${index}`}
                                 >
-                                    <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            left: -10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.devMode'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={squareDevMode}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    squareDevMode:
+                                                        !squareDevMode
+                                                });
+                                                await updateSettings({
+                                                    pos: {
+                                                        squareAccessToken,
+                                                        squareLocationId,
+                                                        posEnabled,
+                                                        merchantName,
+                                                        confirmationPreference,
+                                                        disableTips,
+                                                        squareDevMode:
+                                                            !squareDevMode,
+                                                        showKeypad,
+                                                        taxPercentage,
+                                                        enablePrinter
+                                                    }
+                                                });
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
+                            </>
+                        )}
+
+                        {posEnabled !== PosEnabled.Disabled && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.merchantName'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={merchantName}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            merchantName: text
+                                        });
+
+                                        await updateSettings({
+                                            pos: {
+                                                posEnabled,
+                                                squareAccessToken,
+                                                squareLocationId,
+                                                merchantName: text,
+                                                confirmationPreference,
+                                                disableTips,
+                                                squareDevMode,
+                                                showKeypad,
+                                                taxPercentage,
+                                                enablePrinter
+                                            }
+                                        });
+                                    }}
+                                />
+                                <DropdownSetting
+                                    title={localeString(
+                                        'views.Settings.POS.confPref'
+                                    )}
+                                    selectedValue={confirmationPreference}
+                                    onValueChange={async (value: string) => {
+                                        this.setState({
+                                            confirmationPreference: value
+                                        });
+                                        await updateSettings({
+                                            pos: {
+                                                posEnabled,
+                                                squareAccessToken,
+                                                squareLocationId,
+                                                merchantName,
+                                                confirmationPreference: value,
+                                                disableTips,
+                                                squareDevMode,
+                                                showKeypad,
+                                                taxPercentage
+                                            }
+                                        });
+                                    }}
+                                    values={POS_CONF_PREF_KEYS}
+                                />
+
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                >
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            left: -10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.disableTips'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={disableTips}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    disableTips: !disableTips
+                                                });
+                                                await updateSettings({
+                                                    pos: {
+                                                        squareAccessToken,
+                                                        squareLocationId,
+                                                        posEnabled,
+                                                        merchantName,
+                                                        confirmationPreference,
+                                                        disableTips:
+                                                            !disableTips,
+                                                        squareDevMode,
+                                                        showKeypad,
+                                                        taxPercentage,
+                                                        enablePrinter
+                                                    }
+                                                });
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
+
+                                {Platform.OS === 'android' && (
+                                    <ListItem
+                                        containerStyle={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor: 'transparent'
+                                        }}
+                                    >
                                         <ListItem.Title
                                             style={{
-                                                color: themeColor('text'),
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
                                                 fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                    'PPNeueMontreal-Book',
+                                                left: -10
                                             }}
                                         >
-                                            {item.label}
+                                            {localeString(
+                                                'views.Settings.POS.enablePrinter'
+                                            )}
                                         </ListItem.Title>
-                                    </ListItem.Content>
-                                    <Icon
-                                        name="keyboard-arrow-right"
-                                        color={themeColor('secondaryText')}
-                                    />
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
+                                            }}
+                                        >
+                                            <Switch
+                                                value={enablePrinter}
+                                                onValueChange={async () => {
+                                                    this.setState({
+                                                        enablePrinter:
+                                                            !enablePrinter
+                                                    });
+                                                    await updateSettings({
+                                                        pos: {
+                                                            squareAccessToken,
+                                                            squareLocationId,
+                                                            posEnabled,
+                                                            merchantName,
+                                                            confirmationPreference,
+                                                            disableTips,
+                                                            squareDevMode,
+                                                            showKeypad,
+                                                            taxPercentage,
+                                                            enablePrinter:
+                                                                !enablePrinter
+                                                        }
+                                                    });
+                                                }}
+                                            />
+                                        </View>
+                                    </ListItem>
+                                )}
+                            </>
+                        )}
+
+                        {posEnabled === PosEnabled.Standalone && (
+                            <>
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                >
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            left: -10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.showKeypad'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={showKeypad}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    showKeypad: !showKeypad
+                                                });
+                                                await updateSettings({
+                                                    pos: {
+                                                        squareAccessToken,
+                                                        squareLocationId,
+                                                        posEnabled,
+                                                        merchantName,
+                                                        confirmationPreference,
+                                                        disableTips,
+                                                        squareDevMode,
+                                                        taxPercentage,
+                                                        showKeypad: !showKeypad
+                                                    }
+                                                });
+                                            }}
+                                        />
+                                    </View>
                                 </ListItem>
-                            ))}
-                    </ScrollView>
-                )}
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.taxPercentage'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={taxPercentage}
+                                    keyboardType="numeric"
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            taxPercentage: text
+                                        });
+
+                                        await updateSettings({
+                                            pos: {
+                                                posEnabled,
+                                                squareAccessToken,
+                                                squareLocationId,
+                                                merchantName,
+                                                confirmationPreference,
+                                                disableTips,
+                                                squareDevMode,
+                                                taxPercentage: text,
+                                                showKeypad
+                                            }
+                                        });
+                                    }}
+                                    suffix="%"
+                                />
+                            </>
+                        )}
+                    </View>
+                    {posEnabled !== PosEnabled.Disabled &&
+                        LIST_ITEMS.map((item, index) => (
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: 'none'
+                                }}
+                                onPress={() => navigation.navigate(item.path)}
+                                key={`${item.label}-${index}`}
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {item.label}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        ))}
+                </ScrollView>
             </Screen>
         );
     }

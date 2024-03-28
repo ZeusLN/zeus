@@ -293,4 +293,8 @@ export default class Payment extends BaseModel {
             .replace(/(\d+) /g, '$1 ')
             .replace(/ (\d+)/g, ' $1');
     }
+
+    @computed public get noteKey(): string {
+        return this.paymentHash || this.getPreimage;
+    }
 }

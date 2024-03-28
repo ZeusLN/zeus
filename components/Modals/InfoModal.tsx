@@ -11,6 +11,7 @@ import ModalStore from '../../stores/ModalStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface InfoModalProps {
     ModalStore: ModalStore;
@@ -48,7 +49,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                 >
                     <View
                         style={{
-                            backgroundColor: 'white',
+                            backgroundColor: themeColor('secondary'),
                             borderRadius: 30,
                             padding: 30,
                             width: '100%',
@@ -63,6 +64,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('text'),
                                     fontSize: 20,
                                     marginBottom: 40
                                 }}
@@ -77,6 +79,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                     key={index}
                                     style={{
                                         fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('text'),
                                         fontSize: 20,
                                         marginBottom: 40
                                     }}

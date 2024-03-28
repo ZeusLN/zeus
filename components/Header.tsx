@@ -34,14 +34,20 @@ interface HeaderProps {
     placement?: 'left' | 'center' | 'right' | undefined;
     navigation?: any;
     onBack?: () => void;
+    navigateBackOnBackPress?: boolean;
 }
 
 function ZeusHeader(props: HeaderProps) {
-    const BackButton = (onBack?: () => void) => (
+    const BackButton = (
+        onBack?: () => void,
+        navigateBackOnBackPress?: boolean
+    ) => (
         <TouchableOpacity
             onPress={() => {
                 if (onBack) onBack();
-                props.navigation.goBack();
+                if (navigateBackOnBackPress) {
+                    props.navigation.goBack();
+                }
             }}
             accessibilityLabel={localeString('general.goBack')}
         >
@@ -77,13 +83,14 @@ function ZeusHeader(props: HeaderProps) {
         rightComponent,
         containerStyle,
         placement,
-        onBack
+        onBack,
+        navigateBackOnBackPress = true
     } = props;
     return (
         <Header
             leftComponent={
                 leftComponent === 'Back'
-                    ? BackButton(onBack)
+                    ? BackButton(onBack, navigateBackOnBackPress)
                     : leftComponent === 'Close'
                     ? CloseButton(onBack)
                     : leftComponent

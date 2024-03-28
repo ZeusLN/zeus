@@ -64,6 +64,8 @@ const TextInput: React.FC<TextInputProps> = (
         ? {
               paddingTop: 10
           }
+        : multiline
+        ? {}
         : {
               height: 60
           };

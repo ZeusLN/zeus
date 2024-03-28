@@ -81,7 +81,7 @@ export default class PaymentsSettings extends React.Component<
             preferredMempoolRate
         } = this.state;
         const { SettingsStore } = this.props;
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettings, settings, implementation } = SettingsStore;
 
         return (
             <Screen>
@@ -214,6 +214,72 @@ export default class PaymentsSettings extends React.Component<
                             </Text>
                         </View>
                     )}
+
+                    {implementation === 'c-lightning-REST' && (
+                        <View>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    paddingTop: 5,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('general.lightning')} -{' '}
+                                {localeString(
+                                    'views.Settings.Payments.defaultFeeLimit'
+                                )}
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexWrap: 'wrap',
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            ></View>
+                            <View
+                                style={{
+                                    flexDirection: 'row'
+                                }}
+                            >
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={feePercentage}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            feePercentage: text
+                                        });
+                                        await updateSettings({
+                                            payments: {
+                                                defaultFeeMethod: 'percent',
+                                                defaultFeePercentage: text,
+                                                defaultFeeFixed: feeLimit,
+                                                timeoutSeconds,
+                                                preferredMempoolRate
+                                            }
+                                        });
+                                    }}
+                                    onPressIn={() =>
+                                        this.setState({
+                                            feeLimitMethod: 'percent'
+                                        })
+                                    }
+                                />
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        paddingTop: 5,
+                                        color: themeColor('text'),
+                                        top: 28,
+                                        right: 28
+                                    }}
+                                >
+                                    {'%'}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+
                     {BackendUtils.isLNDBased() && (
                         <>
                             <Text

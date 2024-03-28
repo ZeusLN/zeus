@@ -11,6 +11,7 @@ import SettingsStore from './SettingsStore';
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 import ChannelsStore from './ChannelsStore';
 
 export default class InvoicesStore {
@@ -397,11 +398,12 @@ export default class InvoicesStore {
                 this.pay_req = new Invoice(data);
                 this.getPayReqError = null;
                 this.loading = false;
+                return;
             })
-            .catch((error: any) => {
+            .catch((error: Error) => {
                 // handle error
                 this.pay_req = null;
-                this.getPayReqError = error.toString();
+                this.getPayReqError = errorToUserFriendly(error);
                 this.loading = false;
             });
     };
