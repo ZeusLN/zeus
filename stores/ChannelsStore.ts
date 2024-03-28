@@ -44,8 +44,9 @@ export default class ChannelsStore {
     @observable public errorOpenChannel = false;
     @observable public peerSuccess = false;
     @observable public channelSuccess = false;
+    @observable public closeChannelErr: string | null;
+    @observable public closingChannel = false;
     @observable channelRequest: any;
-    closeChannelSuccess: boolean;
     // redesign
     @observable public largestChannelSats = 0;
     @observable public totalOutbound = 0;
@@ -141,6 +142,11 @@ export default class ChannelsStore {
         this.errorOpenChannel = false;
         this.channelSuccess = false;
         this.channelRequest = null;
+    };
+
+    @action
+    clearCloseChannelErr = () => {
+        this.closeChannelErr = null;
     };
 
     @action
@@ -325,6 +331,7 @@ export default class ChannelsStore {
         this.channels = [];
         this.error = true;
         this.loading = false;
+        this.closingChannel = false;
     };
 
     @action
@@ -428,44 +435,76 @@ export default class ChannelsStore {
     };
 
     @action
-    public closeChannel = (
-        request?: CloseChannelRequest | null,
+    public closeChannel = async (
+        channelPoint?: CloseChannelRequest | null,
         channelId?: string | null,
-        satPerByte?: string | null,
+        satPerVbyte?: string | null,
         forceClose?: boolean | string | null
     ) => {
-        this.loading = true;
+        this.closeChannelErr = null;
+        this.closingChannel = true;
 
         let urlParams: Array<any> = [];
-        if (channelId) {
+        if (channelId && !channelPoint) {
             // c-lightning, eclair
             urlParams = [channelId, forceClose];
-        } else if (request) {
+        } else if (channelPoint) {
             // lnd
-            const { funding_txid_str, output_index } = request;
+            const { funding_txid_str, output_index } = channelPoint;
 
             urlParams = [funding_txid_str, output_index, forceClose];
 
-            if (satPerByte) {
+            if (satPerVbyte) {
                 urlParams = [
                     funding_txid_str,
                     output_index,
                     forceClose,
-                    satPerByte
+                    satPerVbyte
                 ];
             }
         }
 
-        BackendUtils.closeChannel(urlParams)
-            .then((data: any) => {
-                const { chan_close } = data;
-                this.closeChannelSuccess = chan_close.success;
-                this.error = false;
-                this.loading = false;
-            })
-            .catch(() => {
-                this.getChannelsError();
-            });
+        if (this.settingsStore.implementation === 'lightning-node-connect') {
+            return BackendUtils.closeChannel(urlParams);
+        } else {
+            let resolved = false;
+            return await Promise.race([
+                new Promise((resolve) => {
+                    BackendUtils.closeChannel(urlParams)
+                        .then(() => {
+                            this.handleChannelClose();
+                            resolved = true;
+                            resolve(true);
+                        })
+                        .catch((error: Error) => {
+                            this.handleChannelCloseError(error);
+                            resolved = true;
+                            resolve(true);
+                        });
+                }),
+                // LND REST call tends to time out, so let's put a 6 second
+                // forced resolution, as true errors will typically throw
+                // before that time
+                new Promise(async (resolve) => {
+                    await new Promise((res) => setTimeout(res, 6000));
+                    if (!resolved) this.handleChannelClose();
+                    resolve(true);
+                })
+            ]);
+        }
+    };
+
+    @action
+    public handleChannelClose = () => {
+        this.closeChannelErr = null;
+        this.error = false;
+        this.closingChannel = false;
+    };
+
+    @action
+    public handleChannelCloseError = (error: Error) => {
+        this.closeChannelErr = errorToUserFriendly(error);
+        this.getChannelsError();
     };
 
     @action
