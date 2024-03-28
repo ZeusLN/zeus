@@ -20,8 +20,18 @@ interface PeersProps {
 export default class Peers extends React.Component<PeersProps, {}> {
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { settings }: any = SettingsStore;
-        const { neutrinoPeers, zeroConfPeers, dontAllowOtherPeers } = settings;
+        const { settings, embeddedLndNetwork }: any = SettingsStore;
+        const {
+            neutrinoPeersMainnet,
+            neutrinoPeersTestnet,
+            zeroConfPeers,
+            dontAllowOtherPeers
+        } = settings;
+
+        const neutrinoPeers =
+            embeddedLndNetwork === 'Mainnet'
+                ? neutrinoPeersMainnet
+                : neutrinoPeersTestnet;
 
         return (
             <Screen>

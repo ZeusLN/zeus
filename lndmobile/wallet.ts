@@ -40,6 +40,84 @@ export const bumpFee = async ({
     return response;
 };
 
+/**
+ * @throws
+ */
+export const fundPsbt = async ({
+    raw,
+    spend_unconfirmed,
+    sat_per_vbyte
+}: {
+    raw: walletrpc.TxTemplate;
+    spend_unconfirmed?: boolean;
+    sat_per_vbyte?: Long;
+}): Promise<walletrpc.FundPsbtResponse> => {
+    const options: walletrpc.IFundPsbtRequest = {
+        raw,
+        spend_unconfirmed,
+        sat_per_vbyte
+    };
+    const response = await sendCommand<
+        walletrpc.IFundPsbtRequest,
+        walletrpc.FundPsbtRequest,
+        walletrpc.FundPsbtResponse
+    >({
+        request: walletrpc.FundPsbtRequest,
+        response: walletrpc.FundPsbtResponse,
+        method: 'FundPsbt',
+        options
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
+export const finalizePsbt = async ({
+    funded_psbt
+}: {
+    funded_psbt: Uint8Array;
+}): Promise<walletrpc.FinalizePsbtResponse> => {
+    const options: walletrpc.IFinalizePsbtRequest = {
+        funded_psbt
+    };
+    const response = await sendCommand<
+        walletrpc.IFinalizePsbtRequest,
+        walletrpc.FinalizePsbtRequest,
+        walletrpc.FinalizePsbtResponse
+    >({
+        request: walletrpc.FinalizePsbtRequest,
+        response: walletrpc.FinalizePsbtResponse,
+        method: 'FinalizePsbt',
+        options
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
+export const publishTransaction = async ({
+    tx_hex
+}: {
+    tx_hex: Uint8Array;
+}): Promise<walletrpc.PublishResponse> => {
+    const options: walletrpc.ITransaction = {
+        tx_hex
+    };
+    const response = await sendCommand<
+        walletrpc.ITransaction,
+        walletrpc.Transaction,
+        walletrpc.PublishResponse
+    >({
+        request: walletrpc.Transaction,
+        response: walletrpc.PublishResponse,
+        method: 'PublishTransaction',
+        options
+    });
+    return response;
+};
+
 // Base wallet
 
 /**

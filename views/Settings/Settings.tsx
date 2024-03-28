@@ -4,11 +4,13 @@ import {
     StyleSheet,
     Text,
     View,
+    Image,
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
 import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import RNFS from 'react-native-fs';
 
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import BlockIcon from '../../assets/images/SVG/Block.svg';
@@ -90,6 +92,14 @@ export default class Settings extends React.Component<
             this.props.navigation.removeListener('didFocus');
     }
 
+    getPhoto(photo: string | null): string {
+        if (typeof photo === 'string' && photo.includes('rnfs://')) {
+            const fileName = photo.replace('rnfs://', '');
+            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
+        }
+        return photo || '';
+    }
+
     render() {
         const {
             navigation,
@@ -127,7 +137,10 @@ export default class Settings extends React.Component<
             nodeSubtitle +=
                 implementationDisplayValue[selectedNode.implementation];
 
-            if (selectedNode.embeddedLndNetwork) {
+            if (
+                selectedNode.embeddedLndNetwork &&
+                selectedNode.implementation === 'embedded-lnd'
+            ) {
                 nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
             }
         }
@@ -151,7 +164,8 @@ export default class Settings extends React.Component<
                 />
                 <ScrollView
                     style={{
-                        flex: 1
+                        flex: 1,
+                        marginTop: 10
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
@@ -173,11 +187,22 @@ export default class Settings extends React.Component<
                                     alignItems: 'center'
                                 }}
                             >
-                                <NodeIdenticon
-                                    selectedNode={selectedNode}
-                                    width={50}
-                                    rounded
-                                />
+                                {selectedNode.photo ? (
+                                    <Image
+                                        source={{
+                                            uri: this.getPhoto(
+                                                selectedNode.photo
+                                            )
+                                        }}
+                                        style={styles.photo}
+                                    />
+                                ) : (
+                                    <NodeIdenticon
+                                        selectedNode={selectedNode}
+                                        width={50}
+                                        rounded
+                                    />
+                                )}
                                 <View style={{ flex: 1 }}>
                                     <Text
                                         style={{
@@ -245,7 +270,7 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {BackendUtils.supportsLSPs() && (
+                    {BackendUtils.supportsLSPs() && selectedNode && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -1175,6 +1200,12 @@ const styles = StyleSheet.create({
     icon: {
         width: 50,
         alignItems: 'center'
+    },
+    photo: {
+        alignSelf: 'center',
+        width: 60,
+        height: 60,
+        borderRadius: 68
     },
     columnText: {
         fontSize: 16,

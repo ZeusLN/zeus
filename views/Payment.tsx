@@ -56,10 +56,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
             this.setState({ lnurlpaytx });
         }
         navigation.addListener('didFocus', () => {
-            const noteKey =
-                payment.paymentHash ?? typeof payment.getPreimage === 'string'
-                    ? payment.getPreimage
-                    : null;
+            const noteKey = payment.noteKey;
 
             EncryptedStorage.getItem('note-' + noteKey)
                 .then((storedNotes) => {
@@ -92,11 +89,11 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getMemo,
             isIncomplete,
             isInTransit,
-            isFailed
+            isFailed,
+            noteKey
         } = payment;
         const date = getDisplayTime;
-        const noteKey =
-            paymentHash ?? typeof getPreimage === 'string' ? getPreimage : null;
+
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
@@ -189,9 +186,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
 
                         {getDestination && (
                             <KeyValue
-                                keyValue={localeString(
-                                    'views.Payment.destination'
-                                )}
+                                keyValue={localeString('general.destination')}
                                 value={getDestination}
                                 sensitive
                                 color={themeColor('highlight')}

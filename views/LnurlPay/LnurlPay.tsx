@@ -273,7 +273,7 @@ export default class LnurlPay extends React.Component<
                                                     )
                                                 }}
                                             >
-                                                {'):'}
+                                                {')'}
                                             </Text>
                                         </>
                                     )}
@@ -312,7 +312,6 @@ export default class LnurlPay extends React.Component<
                                     {localeString(
                                         'views.LnurlPay.LnurlPay.comment'
                                     ) + ` (${lnurl.commentAllowed} char)`}
-                                    :
                                 </Text>
                                 <TextInput
                                     value={comment}

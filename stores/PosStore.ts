@@ -178,24 +178,20 @@ export default class PosStore {
             let totalSats = new BigNumber(0);
             this.currentOrder.line_items.forEach((item) => {
                 if (item.base_price_money.sats! > 0) {
-                    totalSats = totalSats.plus(
-                        (item.base_price_money.sats || 0) * item.quantity
-                    );
+                    const addedAmount = new BigNumber(
+                        item.base_price_money.sats || 0
+                    ).times(item.quantity);
+                    totalSats = totalSats.plus(addedAmount);
                     totalFiat = totalFiat.plus(
-                        this.calcFiatAmountFromSats(
-                            (item.base_price_money.sats || 0) * item.quantity
-                        )
+                        this.calcFiatAmountFromSats(addedAmount.toNumber())
                     );
                 } else {
-                    totalFiat = totalFiat.plus(
-                        (item.base_price_money.amount || 0) *
-                            item.quantity *
-                            100
-                    );
+                    const addedAmount = new BigNumber(
+                        item.base_price_money.amount || 0
+                    ).times(item.quantity);
+                    totalFiat = totalFiat.plus(addedAmount.times(100));
                     totalSats = totalSats.plus(
-                        this.calcSatsAmountFromFiat(
-                            (item.base_price_money.amount || 0) * item.quantity
-                        )
+                        this.calcSatsAmountFromFiat(addedAmount.toNumber())
                     );
                 }
             });

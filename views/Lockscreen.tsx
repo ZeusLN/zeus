@@ -95,6 +95,7 @@ export default class Lockscreen extends React.Component<
             );
 
             if (isVerified) {
+                this.resetAuthenticationAttempts();
                 SettingsStore.setLoginStatus(true);
                 navigation.navigate('Wallet');
                 return;

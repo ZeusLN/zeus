@@ -138,8 +138,9 @@ export default class NodeInfoStore {
     public lspNotConfigured = () => {
         const { implementation, certVerification } = this.settingsStore;
 
-        const scidAlias = this.nodeInfo.features['47'];
-        const zeroConf = this.nodeInfo.features['51'];
+        const scidAlias =
+            this.nodeInfo.features && this.nodeInfo.features['47'];
+        const zeroConf = this.nodeInfo.features && this.nodeInfo.features['51'];
         const zeroConfConfig = zeroConf && scidAlias;
 
         const restIsConfigured = certVerification && zeroConfConfig;
