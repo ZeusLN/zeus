@@ -467,15 +467,18 @@ export default class ChannelsStore {
         if (this.settingsStore.implementation === 'lightning-node-connect') {
             return BackendUtils.closeChannel(urlParams);
         } else {
+            let resolved = false;
             return await Promise.race([
                 new Promise((resolve) => {
                     BackendUtils.closeChannel(urlParams)
                         .then(() => {
                             this.handleChannelClose();
+                            resolved = true;
                             resolve(true);
                         })
                         .catch((error: Error) => {
                             this.handleChannelCloseError(error);
+                            resolved = true;
                             resolve(true);
                         });
                 }),
@@ -484,7 +487,7 @@ export default class ChannelsStore {
                 // before that time
                 new Promise(async (resolve) => {
                     await new Promise((res) => setTimeout(res, 6000));
-                    this.handleChannelClose();
+                    if (!resolved) this.handleChannelClose();
                     resolve(true);
                 })
             ]);
