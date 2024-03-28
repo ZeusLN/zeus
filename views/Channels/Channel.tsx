@@ -1,5 +1,7 @@
 import * as React from 'react';
 import {
+    NativeModules,
+    NativeEventEmitter,
     ScrollView,
     StyleSheet,
     Text,
@@ -17,8 +19,10 @@ import Button from '../../components/Button';
 import FeeBreakdown from '../../components/FeeBreakdown';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
 import Screen from '../../components/Screen';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 
 import PrivacyUtils from '../../utils/PrivacyUtils';
@@ -54,6 +58,7 @@ export default class ChannelView extends React.Component<
     ChannelProps,
     ChannelState
 > {
+    listener: any;
     constructor(props: ChannelProps) {
         super(props);
         const { navigation, ChannelsStore } = props;
@@ -71,39 +76,34 @@ export default class ChannelView extends React.Component<
         }
     }
 
-    closeChannel = (
-        channelPoint: string,
-        channelId: string,
-        satPerByte?: string | null,
+    closeChannel = async (
+        channelPoint?: string,
+        channelId?: string,
+        satPerVbyte?: string | null,
         forceClose?: boolean | null
     ) => {
-        const { ChannelsStore, navigation } = this.props;
+        const { ChannelsStore, SettingsStore, navigation } = this.props;
+        const { implementation } = SettingsStore;
 
-        // lnd
+        let funding_txid_str, output_index;
         if (channelPoint) {
-            const [funding_txid_str, output_index] = channelPoint.split(':');
-
-            if (satPerByte) {
-                ChannelsStore.closeChannel(
-                    { funding_txid_str, output_index },
-                    null,
-                    satPerByte,
-                    forceClose
-                );
-            } else {
-                ChannelsStore.closeChannel(
-                    { funding_txid_str, output_index },
-                    null,
-                    null,
-                    forceClose
-                );
-            }
-        } else if (channelId) {
-            // c-lightning, eclair
-            ChannelsStore.closeChannel(null, channelId, satPerByte, forceClose);
+            const [fundingTxidStr, outputIndex] = channelPoint.split(':');
+            funding_txid_str = fundingTxidStr;
+            output_index = outputIndex;
         }
 
-        navigation.navigate('Wallet');
+        const streamingCall = await ChannelsStore.closeChannel(
+            channelPoint ? { funding_txid_str, output_index } : null,
+            channelId ? channelId : null,
+            satPerVbyte ? satPerVbyte : null,
+            forceClose
+        );
+
+        if (implementation === 'lightning-node-connect') {
+            await this.subscribeChannelClose(streamingCall);
+        } else {
+            if (!ChannelsStore.closeChannelErr) navigation.navigate('Wallet');
+        }
     };
 
     handleOnNavigateBack = (satPerByte: string) => {
@@ -112,14 +112,51 @@ export default class ChannelView extends React.Component<
         });
     };
 
+    subscribeChannelClose = (streamingCall: string) => {
+        const { handleChannelClose, handleChannelCloseError } =
+            this.props.ChannelsStore;
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        this.listener = eventEmitter.addListener(
+            streamingCall,
+            (event: any) => {
+                if (event.result && event.result !== 'EOF') {
+                    let result;
+                    try {
+                        result = JSON.parse(event.result);
+                    } catch (e) {
+                        try {
+                            result = JSON.parse(event);
+                        } catch (e2) {
+                            result = event.result || event;
+                        }
+                    }
+                    if (
+                        result &&
+                        (result?.chan_close?.success || result?.close_pending)
+                    ) {
+                        handleChannelClose();
+                        this.listener = null;
+                        this.props.navigation.navigate('Wallet');
+                    } else {
+                        handleChannelCloseError(new Error(result));
+                        this.listener = null;
+                    }
+                }
+            }
+        );
+    };
+
     render() {
-        const { navigation, SettingsStore, NodeInfoStore } = this.props;
+        const { navigation, SettingsStore, NodeInfoStore, ChannelsStore } =
+            this.props;
         const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
             this.state;
         const { settings } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
         const { testnet } = NodeInfoStore;
+        const { closeChannelErr, closingChannel } = ChannelsStore;
 
         const {
             channel_point,
@@ -212,6 +249,9 @@ export default class ChannelView extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
+                    onBack={() => {
+                        ChannelsStore.clearCloseChannelErr();
+                    }}
                     centerComponent={centerComponent}
                     rightComponent={<KeySend />}
                     placement="right"
@@ -572,6 +612,14 @@ export default class ChannelView extends React.Component<
                         )}
                     {confirmCloseChannel && (
                         <View>
+                            {closingChannel && (
+                                <View style={{ margin: 20, marginBottom: 40 }}>
+                                    <LoadingIndicator />
+                                </View>
+                            )}
+                            {!closingChannel && closeChannelErr && (
+                                <ErrorMessage message={closeChannelErr} />
+                            )}
                             {BackendUtils.isLNDBased() && (
                                 <>
                                     <Text

@@ -223,9 +223,8 @@ export default class LightningNodeConnect {
             },
             force: urlParams && urlParams[2]
         };
-        return await this.lnc.lnd.lightning
-            .closeChannel(params)
-            .then((data: lnrpc.CloseStatusUpdate) => snakeize(data));
+
+        return this.lnc.lnd.lightning.closeChannel(params);
     };
     getNodeInfo = async (urlParams?: Array<string>) =>
         await this.lnc.lnd.lightning
