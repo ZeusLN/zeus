@@ -278,7 +278,7 @@ export default class NodeConfiguration extends React.Component<
         const tor = navigation.getParam('enableTor', false);
         const saved = navigation.getParam('saved', null);
         const newEntry = navigation.getParam('newEntry', null);
-        const photo = navigation.getParam('photo', null);
+        const newPhoto = navigation.getParam('photo', null);
 
         if (node) {
             const {
@@ -295,6 +295,7 @@ export default class NodeConfiguration extends React.Component<
                 implementation,
                 certVerification,
                 enableTor,
+                photo,
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -324,7 +325,7 @@ export default class NodeConfiguration extends React.Component<
                 saved,
                 newEntry,
                 enableTor: tor || enableTor,
-                photo,
+                photo: newPhoto ? newPhoto : photo || '',
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -340,7 +341,7 @@ export default class NodeConfiguration extends React.Component<
                 index,
                 active,
                 newEntry,
-                photo
+                photo: newPhoto || ''
             });
         }
     }
@@ -959,8 +960,7 @@ export default class NodeConfiguration extends React.Component<
                         <View style={styles.container}>
                             <TouchableOpacity
                                 onPress={
-                                    (node === null || !node.photo) &&
-                                    photo === null
+                                    (!node || !node.photo) && !photo
                                         ? () =>
                                               navigation.navigate(
                                                   'SetNodePicture',
