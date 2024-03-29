@@ -8,7 +8,8 @@ export const serviceNames = {
     litrpc: {
         Firewall: 'litrpc.Firewall',
         Autopilot: 'litrpc.Autopilot',
-        Sessions: 'litrpc.Sessions'
+        Sessions: 'litrpc.Sessions',
+        Status: 'litrpc.Status'
     },
     autopilotrpc: { Autopilot: 'autopilotrpc.Autopilot' },
     chainrpc: { ChainNotifier: 'chainrpc.ChainNotifier' },
@@ -69,5 +70,6 @@ export const subscriptionMethods = [
     'poolrpc.ChannelAuctioneer.SubscribeBatchAuction',
     'poolrpc.ChannelAuctioneer.SubscribeSidecar',
     'poolrpc.HashMail.RecvStream',
-    'taprpc.TaprootAssets.SubscribeSendAssetEventNtfns'
+    'taprpc.TaprootAssets.SubscribeSendAssetEventNtfns',
+    'taprpc.TaprootAssets.SubscribeReceiveAssetEventNtfns'
 ];

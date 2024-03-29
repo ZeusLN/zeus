@@ -98,6 +98,16 @@ export enum FailureReason {
      * because the amount extended by an external loop in htlc is insufficient.
      */
     FAILURE_REASON_INCORRECT_AMOUNT = 'FAILURE_REASON_INCORRECT_AMOUNT',
+    /**
+     * FAILURE_REASON_ABANDONED - FAILURE_REASON_ABANDONED indicates that a swap permanently failed because
+     * the client manually abandoned the swap.
+     */
+    FAILURE_REASON_ABANDONED = 'FAILURE_REASON_ABANDONED',
+    /**
+     * FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE - FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE indicates that a swap
+     * wasn't published due to insufficient confirmed balance.
+     */
+    FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE = 'FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
@@ -267,6 +277,12 @@ export interface LoopOutRequest {
     account: string;
     /** The address type of the account specified in the account field. */
     accountAddrType: AddressType;
+    /**
+     * A flag indicating whether the defined destination address does not belong to
+     * the wallet. This is used to flag whether this loop out swap could have its
+     * associated sweep batched.
+     */
+    isExternalAddr: boolean;
 }
 
 export interface LoopInRequest {
@@ -422,7 +438,33 @@ export interface SwapStatus {
     label: string;
 }
 
-export interface ListSwapsRequest {}
+export interface ListSwapsRequest {
+    /** Optional filter to only return swaps that match the filter. */
+    listSwapFilter: ListSwapsFilter | undefined;
+}
+
+export interface ListSwapsFilter {
+    /** The type of the swap. */
+    swapType: ListSwapsFilter_SwapTypeFilter;
+    /** If set, only pending swaps are returned. */
+    pendingOnly: boolean;
+    /** If specified on creation, the outgoing channel set of the swap. */
+    outgoingChanSet: string[];
+    /** Label of swap to filter for. */
+    label: string;
+    /** If specified on creation, the last hop of the swap. */
+    loopInLastHop: Uint8Array | string;
+}
+
+export enum ListSwapsFilter_SwapTypeFilter {
+    /** ANY - ANY indicates that no filter is applied. */
+    ANY = 'ANY',
+    /** LOOP_OUT - LOOP_OUT indicates an loop out swap (off-chain to on-chain). */
+    LOOP_OUT = 'LOOP_OUT',
+    /** LOOP_IN - LOOP_IN indicates a loop in swap (on-chain to off-chain). */
+    LOOP_IN = 'LOOP_IN',
+    UNRECOGNIZED = 'UNRECOGNIZED'
+}
 
 export interface ListSwapsResponse {
     /** The list of all currently known swaps and their status. */
@@ -814,6 +856,44 @@ export interface SuggestSwapsResponse {
     disqualified: Disqualified[];
 }
 
+export interface AbandonSwapRequest {
+    /**
+     * The swap identifier which currently is the hash that locks the HTLCs. When
+     * using REST, this field must be encoded as URL safe base64.
+     */
+    id: Uint8Array | string;
+    /**
+     * A flag that tries to ensure that the client understands that they are
+     * risking loss of funds by abandoning a swap. This could happen if an
+     * abandoned swap would wait on a timeout sweep by the client.
+     */
+    iKnowWhatIAmDoing: boolean;
+}
+
+export interface AbandonSwapResponse {}
+
+export interface ListReservationsRequest {}
+
+export interface ListReservationsResponse {
+    /** The list of all currently known reservations and their status. */
+    reservations: ClientReservation[];
+}
+
+export interface ClientReservation {
+    /** The reservation id that identifies this reservation. */
+    reservationId: Uint8Array | string;
+    /** The state the reservation is in. */
+    state: string;
+    /** The amount that the reservation is for. */
+    amount: string;
+    /** The transaction id of the reservation. */
+    txId: Uint8Array | string;
+    /** The vout of the reservation. */
+    vout: number;
+    /** The expiry of the reservation. */
+    expiry: number;
+}
+
 /**
  * SwapClient is a service that handles the client side process of onchain/offchain
  * swaps. The service is designed for a single client.
@@ -857,6 +937,13 @@ export interface SwapClient {
      * SwapInfo returns all known details about a single swap.
      */
     swapInfo(request?: DeepPartial<SwapInfoRequest>): Promise<SwapStatus>;
+    /**
+     * loop: `abandonswap`
+     * AbandonSwap allows the client to abandon a swap.
+     */
+    abandonSwap(
+        request?: DeepPartial<AbandonSwapRequest>
+    ): Promise<AbandonSwapResponse>;
     /**
      * loop: `terms`
      * LoopOutTerms returns the terms that the server enforces for a loop out swap.
@@ -932,6 +1019,13 @@ export interface SwapClient {
     suggestSwaps(
         request?: DeepPartial<SuggestSwapsRequest>
     ): Promise<SuggestSwapsResponse>;
+    /**
+     * loop: `listreservations`
+     * ListReservations returns a list of all reservations the server opened to us.
+     */
+    listReservations(
+        request?: DeepPartial<ListReservationsRequest>
+    ): Promise<ListReservationsResponse>;
 }
 
 type Builtin =

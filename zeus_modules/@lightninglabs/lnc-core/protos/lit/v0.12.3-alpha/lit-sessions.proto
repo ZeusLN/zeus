@@ -199,6 +199,19 @@ message Session {
     not revoked. Readers should instead first check the session_state field.
     */
     uint64 revoked_at = 16 [jstype = JS_STRING];
+
+    /*
+    The ID of the group of Session's that this Session is linked to. If this
+    session is not linked to any older Session, then this value will be the
+    same as the ID.
+    */
+    bytes group_id = 17;
+
+    /*
+    Configurations for each individual feature mapping from the feature name to
+    a JSON-serialized configuration.
+    */
+    map<string, string> feature_configs = 18;
 }
 
 message MacaroonRecipe {

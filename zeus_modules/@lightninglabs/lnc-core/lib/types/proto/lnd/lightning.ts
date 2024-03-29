@@ -1745,6 +1745,8 @@ export interface ChanPointShim {
      * the value is less than 500,000, or as an absolute height otherwise.
      */
     thawHeight: number;
+    /** Indicates that the funding output is using a MuSig2 multi-sig output. */
+    musig2: boolean;
 }
 
 export interface PsbtShim {
