@@ -34,6 +34,5 @@ function createRpc(packageName, lnc) {
     }
   });
 }
-var _default = createRpc;
-exports.default = _default;
+var _default = exports.default = createRpc;
 //# sourceMappingURL=createRpc.js.map
