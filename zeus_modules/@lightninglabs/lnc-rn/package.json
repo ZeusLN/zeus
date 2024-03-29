@@ -1,36 +1,10 @@
 {
   "name": "@lightninglabs/lnc-rn",
-  "version": "0.2.5-alpha",
+  "version": "0.3.1-alpha",
   "description": "Lightning Node Connect npm module for React Native",
   "main": "dist/commonjs/index.js",
   "types": "dist/typescript/index.d.ts",
-  "react-native": {
-    "dist/commonjs/index.js": "lib/index",
-    "zlib": "browserify-zlib",
-    "console": "console-browserify",
-    "constants": "constants-browserify",
-    "crypto": "react-native-crypto",
-    "dns": "dns.js",
-    "net": "react-native-tcp",
-    "domain": "domain-browser",
-    "http": "@tradle/react-native-http",
-    "https": "https-browserify",
-    "os": "react-native-os",
-    "path": "path-browserify",
-    "querystring": "querystring-es3",
-    "fs": "react-native-level-fs",
-    "_stream_transform": "readable-stream/transform",
-    "_stream_readable": "readable-stream/readable",
-    "_stream_writable": "readable-stream/writable",
-    "_stream_duplex": "readable-stream/duplex",
-    "_stream_passthrough": "readable-stream/passthrough",
-    "dgram": "react-native-udp",
-    "stream": "stream-browserify",
-    "timers": "timers-browserify",
-    "tty": "tty-browserify",
-    "vm": "vm-browserify",
-    "tls": false
-  },
+  "react-native": "lib/index",
   "source": "lib/index",
   "files": [
     "android/",
@@ -50,8 +24,7 @@
     "prepublishOnly": "yarn run lint",
     "preversion": "yarn run lint",
     "version": "yarn run prettier && git add -A lib",
-    "postversion": "git push && git push --tags",
-    "fetch-libraries": "bash fetch-libraries.sh"
+    "postversion": "git push && git push --tags"
   },
   "repository": {
     "type": "git",
@@ -70,7 +43,7 @@
   },
   "homepage": "https://github.com/lightninglabs/lnc-rn#readme",
   "dependencies": {
-    "@lightninglabs/lnc-core": "^0.2.5-alpha"
+    "@lightninglabs/lnc-core": "file:../../../zeus_modules/@lightninglabs/lnc-core"
   },
   "devDependencies": {
     "@babel/core": "7.18.10",
@@ -79,10 +52,10 @@
     "@types/node": "17.0.16",
     "@types/react-native": "0.70.2",
     "chai": "4.3.6",
-    "metro-react-native-babel-preset": "0.72.0",
+    "metro-react-native-babel-preset": "0.76.9",
     "mocha": "9.2.2",
     "prettier": "2.6.0",
-    "react-native": "0.68.2",
+    "react-native": "0.72.10",
     "react-native-builder-bob": "0.18.3",
     "ts-loader": "9.2.6",
     "ts-node": "10.7.0",
@@ -90,6 +63,9 @@
     "tslint": "6.1.3",
     "tslint-config-prettier": "1.18.0",
     "typescript": "4.5.5"
+  },
+  "jest": {
+    "preset": "react-native"
   },
   "peerDependencies": {
     "react": "*",
@@ -107,32 +83,5 @@
   "directories": {
     "lib": "lib"
   },
-  "license": "MIT",
-  "browser": {
-    "dist/commonjs/index.js": "lib/index",
-    "zlib": "browserify-zlib",
-    "console": "console-browserify",
-    "constants": "constants-browserify",
-    "crypto": "react-native-crypto",
-    "dns": "dns.js",
-    "net": "react-native-tcp",
-    "domain": "domain-browser",
-    "http": "@tradle/react-native-http",
-    "https": "https-browserify",
-    "os": "react-native-os",
-    "path": "path-browserify",
-    "querystring": "querystring-es3",
-    "fs": "react-native-level-fs",
-    "_stream_transform": "readable-stream/transform",
-    "_stream_readable": "readable-stream/readable",
-    "_stream_writable": "readable-stream/writable",
-    "_stream_duplex": "readable-stream/duplex",
-    "_stream_passthrough": "readable-stream/passthrough",
-    "dgram": "react-native-udp",
-    "stream": "stream-browserify",
-    "timers": "timers-browserify",
-    "tty": "tty-browserify",
-    "vm": "vm-browserify",
-    "tls": false
-  }
+  "license": "MIT"
 }

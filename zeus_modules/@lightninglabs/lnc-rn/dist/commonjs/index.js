@@ -19,6 +19,5 @@ Object.keys(_lncCore).forEach(function (key) {
   });
 });
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-var _default = _lnc.default;
-exports.default = _default;
+var _default = exports.default = _lnc.default;
 //# sourceMappingURL=index.js.map
