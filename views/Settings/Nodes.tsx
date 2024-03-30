@@ -186,7 +186,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 />
                 {loading && <LoadingIndicator />}
                 {!loading && !!nodes && nodes.length > 0 && (
-                    <View>
+                    <View style={{ marginBottom: 50 }}>
                         <DragList
                             onReordered={onReordered}
                             data={nodes}
