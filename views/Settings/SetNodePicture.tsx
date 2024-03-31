@@ -135,22 +135,10 @@ export default class SetNodePicture extends React.Component<
 
     handleImageTap = async (item) => {
         try {
-            // Fetch the local image
             let imageUri = Image.resolveAssetSource(item).uri;
-
-            // Convert the local image to Base64
-            let response = await fetch(imageUri);
-            let blob = await response.blob();
-
-            let reader = new FileReader();
-            reader.onload = async () => {
-                const dataUrl = reader.result;
-                // Set Base64 representation to state
-                this.setState({ photo: dataUrl });
-            };
-            reader.readAsDataURL(blob);
+            this.setState({ photo: imageUri });
         } catch (error) {
-            console.error('Error converting image to Base64:', error);
+            console.error('Error getting image uri', error);
         }
     };
 
