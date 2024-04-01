@@ -158,10 +158,16 @@ export default class TransactionsStore {
                         BackendUtils.publishTransaction({
                             tx_hex: raw_final_tx
                         })
-                            .then(() => {
-                                this.txid = txid;
-                                this.publishSuccess = true;
-                                this.loading = false;
+                            .then((data: any) => {
+                                if (data.publish_error) {
+                                    this.error_msg = data.publish_error;
+                                    this.error = true;
+                                    this.loading = false;
+                                } else {
+                                    this.txid = txid;
+                                    this.publishSuccess = true;
+                                    this.loading = false;
+                                }
                             })
                             .catch((error: any) => {
                                 // handle error
