@@ -134,11 +134,27 @@ export default class SetNodePicture extends React.Component<
     }
 
     handleImageTap = async (item) => {
+        let imageUri = Image.resolveAssetSource(item).uri;
+        const timestamp = new Date().getTime();
+        const fileName = `photo_${timestamp}.jpg`;
+
+        const filePath = RNFS.DocumentDirectoryPath + '/' + fileName;
         try {
-            let imageUri = Image.resolveAssetSource(item).uri;
-            this.setState({ photo: imageUri });
+            const downloadResult = await RNFS.downloadFile({
+                fromUrl: imageUri,
+                toFile: filePath
+            }).promise;
+
+            if (downloadResult.statusCode === 200) {
+                console.log('File downloaded to ', filePath);
+                this.setState({
+                    photo: 'rnfs://' + fileName
+                });
+            } else {
+                console.error('Download failed:', downloadResult.statusCode);
+            }
         } catch (error) {
-            console.error('Error getting image uri', error);
+            console.error('Error downloading image:', error);
         }
     };
 
