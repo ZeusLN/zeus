@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "L'attenzione è valida. Premere per vedere i dettagli.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Attestazioni non valide o contrastanti. Premere per vedere i dettagli.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Nessun attestazione NOSTR trovata. Il portafoglio del mittente probabilmente non lo supporta ancora.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Canale aperto",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "Ti è stato aperto un canale per aiutarti a riscattare il pagamento. Abilitato con \"richiedere automaticamente i canali da Olympus\" in Impostazioni dell'indirizzo Lightning.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Ulteriori informazioni su Zaplocker",
     "views.Settings.Attestations.title": "Attestazioni",
     "views.Settings.Attestations.noAttestationsFound": "Nessun attestazione trovata",
