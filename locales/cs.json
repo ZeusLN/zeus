@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "Osvědčení je platné. Klepněte pro zobrazení podrobností.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Neplatná nebo protichůdná osvědčení. Klepněte pro zobrazení podrobností.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Nenalezena žádná osvědčení Nostr. Peněženka odesílatele je pravděpodobně ještě nepodporuje.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Kanál otevřen",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "Byl vám otevřen kanál, aby vám pomohl platbu proplatit. Povoleno pomocí „Automaticky vyžádat kanály od OLYMPUS“ v nastavení Lightning adresy.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Více informací o Zaplockeru",
     "views.Settings.Attestations.title": "Osvědčení",
     "views.Settings.Attestations.noAttestationsFound": "Nenalezena žádná osvědčení",
