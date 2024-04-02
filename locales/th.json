@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "เป็นธุรกรรมจาก Nostr กดดูข้อมูลเพิ่มเติม",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "เหมือนจะเป็นธุรกรรมจาก Nostr แต่ข้อมูลไม่ถูกต้อง. กดดูข้อมูลเพิ่มเติม",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "ไม่พบข้อมูล Nostr จากธุรกรรมนี้",
-    "views.Settings.LightningAddressInfo.channelOpened": "แชนแนลที่เปิดแล้ว",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "มีการเปิดแชนแนลใหม่เพื่อรับเงินของคุณ โดยระบบร้องขอแชนแนลจาก Olympus อัตโนมัติ",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "เรียนรู้เพิ่มเติมเกี่ยวกับ Zaplocker",
     "views.Settings.Attestations.title": "ข้อมูลผู้ทำธุรกรรม",
     "views.Settings.Attestations.noAttestationsFound": "ไม่พบข้อมูลผู้ทำธุรกรรม",
