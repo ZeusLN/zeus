@@ -23,10 +23,17 @@ export interface PrivacyMapConversionRequest {
      * string will be assumed to be the pseudo value.
      */
     realToPseudo: boolean;
-    /** The session ID under which to search for the real-pseudo pair. */
+    /**
+     * Deprecated, use group_id.
+     * The session ID under which to search for the real-pseudo pair.
+     *
+     * @deprecated
+     */
     sessionId: Uint8Array | string;
     /** The input to be converted into the real or pseudo value. */
     input: string;
+    /** The group ID under which to search for the real-pseudo pair. */
+    groupId: Uint8Array | string;
 }
 
 export interface PrivacyMapConversionResponse {
@@ -89,6 +96,8 @@ export interface ListActionsRequest {
      * considered.
      */
     endTimestamp: string;
+    /** If specified, then only actions under the given group will be queried. */
+    groupId: Uint8Array | string;
 }
 
 export interface ListActionsResponse {

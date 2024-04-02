@@ -49,7 +49,7 @@ service AssetWallet {
     */
     rpc NextScriptKey (NextScriptKeyRequest) returns (NextScriptKeyResponse);
 
-    /*
+    /* tapcli: `proofs proveownership`
     ProveAssetOwnership creates an ownership proof embedded in an asset
     transition proof. That ownership proof is a signed virtual transaction
     spending the asset with a valid witness to prove the prover owns the keys
@@ -58,12 +58,19 @@ service AssetWallet {
     rpc ProveAssetOwnership (ProveAssetOwnershipRequest)
         returns (ProveAssetOwnershipResponse);
 
-    /*
+    /* tapcli: `proofs verifyownership`
     VerifyAssetOwnership verifies the asset ownership proof embedded in the
     given transition proof of an asset and returns true if the proof is valid.
     */
     rpc VerifyAssetOwnership (VerifyAssetOwnershipRequest)
         returns (VerifyAssetOwnershipResponse);
+
+    /*
+    RemoveUTXOLease removes the lease/lock/reservation of the given managed
+    UTXO.
+    */
+    rpc RemoveUTXOLease (RemoveUTXOLeaseRequest)
+        returns (RemoveUTXOLeaseResponse);
 }
 
 message FundVirtualPsbtRequest {
@@ -118,7 +125,7 @@ message PrevId {
     /*
     The bitcoin anchor output on chain that contains the input asset.
     */
-    OutPoint outpoint = 1;
+    taprpc.OutPoint outpoint = 1;
 
     /*
     The asset ID of the previous asset tree.
@@ -130,18 +137,6 @@ message PrevId {
     conditions of the asset.
     */
     bytes script_key = 3;
-}
-
-message OutPoint {
-    /*
-    Raw bytes representing the transaction id.
-    */
-    bytes txid = 1;
-
-    /*
-    The index of the output on the transaction.
-    */
-    uint32 output_index = 2;
 }
 
 message SignVirtualPsbtRequest {
@@ -193,6 +188,8 @@ message ProveAssetOwnershipRequest {
     bytes asset_id = 1;
 
     bytes script_key = 2;
+
+    taprpc.OutPoint outpoint = 3;
 }
 
 message ProveAssetOwnershipResponse {
@@ -205,4 +202,12 @@ message VerifyAssetOwnershipRequest {
 
 message VerifyAssetOwnershipResponse {
     bool valid_proof = 1;
+}
+
+message RemoveUTXOLeaseRequest {
+    // The outpoint of the UTXO to remove the lease for.
+    taprpc.OutPoint outpoint = 1;
+}
+
+message RemoveUTXOLeaseResponse {
 }

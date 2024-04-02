@@ -1,12 +1,11 @@
 syntax = "proto3";
 
-import "common.proto";
-
 // We can't change this to swapserverrpc, it would be a breaking change because
 // the package name is also contained in the HTTP URIs and old clients would
 // call the wrong endpoints. Luckily with the go_package option we can have
 // different golang and RPC package names to fix protobuf namespace conflicts.
 package looprpc;
+import "common.proto";
 
 option go_package = "github.com/lightninglabs/loop/swapserverrpc";
 
@@ -47,6 +46,10 @@ service SwapServer {
     rpc MuSig2SignSweep (MuSig2SignSweepReq) returns (MuSig2SignSweepRes);
 
     rpc PushKey (ServerPushKeyReq) returns (ServerPushKeyRes);
+
+    // FetchL402 is a simple non-l402-allowlisted request that is required
+    // in order to force the creation of an l402.
+    rpc FetchL402 (FetchL402Request) returns (FetchL402Response);
 }
 
 /**
@@ -511,7 +514,6 @@ message ServerProbeRequest {
     // The protocol version that the client adheres to.
     ProtocolVersion protocol_version = 1;
 
-    // The probe amount.
     uint64 amt = 2;
 
     // The target node for the probe.
@@ -594,6 +596,23 @@ message MuSig2SignSweepReq {
 
     // The psbt of the sweep txn.
     bytes sweep_tx_psbt = 6;
+
+    // The prevout information of the sweep txn.
+    repeated PrevoutInfo prevout_info = 7;
+}
+
+message PrevoutInfo {
+    // The value of the txout.
+    uint64 value = 1;
+
+    // The pk_script of the txout.
+    bytes pk_script = 2;
+
+    // The txid of the txout.
+    bytes txid_bytes = 3;
+
+    // The index of the txout.
+    uint32 output_index = 4;
 }
 
 message MuSig2SignSweepRes {
@@ -616,4 +635,14 @@ message ServerPushKeyReq {
 }
 
 message ServerPushKeyRes {
+}
+
+// FetchL402Request is an empty request sent from the client to the server to
+// fetch the lnd l402.
+message FetchL402Request {
+}
+
+// FetchL402Response is an empty response sent from the server to the client to
+// confirm the lnd l402.
+message FetchL402Response {
 }
