@@ -28,6 +28,7 @@ interface SetNodePictureProps {
 interface SetNodePictureState {
     images: string[];
     photo: string;
+    presetImageUri: string;
 }
 
 export default class SetNodePicture extends React.Component<
@@ -79,7 +80,8 @@ export default class SetNodePicture extends React.Component<
 
         this.state = {
             images,
-            photo: ''
+            photo: '',
+            presetImageUri: ''
         };
     }
 
@@ -114,7 +116,8 @@ export default class SetNodePicture extends React.Component<
 
                             // Set the local file path in the state
                             this.setState({
-                                photo: 'rnfs://' + fileName
+                                photo: 'rnfs://' + fileName,
+                                presetImageUri: ''
                             });
                         } catch (error) {
                             console.error('Error saving file: ', error);
@@ -134,33 +137,50 @@ export default class SetNodePicture extends React.Component<
     }
 
     handleImageTap = async (item) => {
-        let imageUri = Image.resolveAssetSource(item).uri;
-        const timestamp = new Date().getTime();
-        const fileName = `photo_${timestamp}.jpg`;
+        let presetImageUri = Image.resolveAssetSource(item).uri;
+        this.setState({
+            presetImageUri
+        });
+    };
 
-        const filePath = RNFS.DocumentDirectoryPath + '/' + fileName;
-        try {
-            const downloadResult = await RNFS.downloadFile({
-                fromUrl: imageUri,
-                toFile: filePath
-            }).promise;
+    onChoosePicturePress = async () => {
+        const { presetImageUri } = this.state;
+        const { navigation } = this.props;
+        if (presetImageUri) {
+            const timestamp = new Date().getTime();
+            const fileName = `photo_${timestamp}.jpg`;
+            const filePath = RNFS.DocumentDirectoryPath + '/' + fileName;
 
-            if (downloadResult.statusCode === 200) {
-                console.log('File downloaded to ', filePath);
-                this.setState({
-                    photo: 'rnfs://' + fileName
-                });
-            } else {
-                console.error('Download failed:', downloadResult.statusCode);
+            try {
+                const downloadResult = await RNFS.downloadFile({
+                    fromUrl: presetImageUri,
+                    toFile: filePath
+                }).promise;
+
+                if (downloadResult.statusCode === 200) {
+                    console.log('File downloaded to ', filePath);
+                    this.setState({
+                        photo: 'rnfs://' + fileName
+                    });
+                } else {
+                    console.error(
+                        'Download failed:',
+                        downloadResult.statusCode
+                    );
+                }
+            } catch (error) {
+                console.error('Error downloading image:', error);
             }
-        } catch (error) {
-            console.error('Error downloading image:', error);
         }
+        navigation.navigate('NodeConfiguration', {
+            photo: this.state.photo,
+            saved: false
+        });
     };
 
     render() {
         const { navigation } = this.props;
-        const { photo } = this.state;
+        const { photo, presetImageUri } = this.state;
 
         const AddPhotos = () => (
             <AddIcon
@@ -200,9 +220,13 @@ export default class SetNodePicture extends React.Component<
                                 borderColor: themeColor('separator')
                             }}
                         >
-                            {photo ? (
+                            {photo || presetImageUri ? (
                                 <Image
-                                    source={{ uri: this.getPhoto(photo) }}
+                                    source={{
+                                        uri:
+                                            this.getPhoto(presetImageUri) ||
+                                            this.getPhoto(photo)
+                                    }}
                                     style={styles.photo}
                                 />
                             ) : (
@@ -245,10 +269,7 @@ export default class SetNodePicture extends React.Component<
                 <Button
                     title={localeString('views.SetNodePicture.choosePicture')}
                     onPress={() => {
-                        navigation.navigate('NodeConfiguration', {
-                            photo,
-                            saved: false
-                        });
+                        this.onChoosePicturePress();
                     }}
                     containerStyle={{ paddingBottom: 10 }}
                 />
