@@ -75,7 +75,7 @@ const Row = ({ item }: { item: DataRow }) => (
             <Amount
                 sats={item.balance}
                 sensitive
-                color={themeColor('buttonText')}
+                colorOverride={themeColor('buttonText')}
             />
         </LinearGradient>
     </RectButton>
