@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import RNFS from 'react-native-fs';
 
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import BlockIcon from '../../assets/images/SVG/Block.svg';
@@ -41,6 +40,7 @@ import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { getPhoto } from '../../utils/PhotoUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -90,14 +90,6 @@ export default class Settings extends React.Component<
     componentWillUnmount() {
         this.props.navigation.removeListener &&
             this.props.navigation.removeListener('didFocus');
-    }
-
-    getPhoto(photo: string | null): string {
-        if (typeof photo === 'string' && photo.includes('rnfs://')) {
-            const fileName = photo.replace('rnfs://', '');
-            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
-        }
-        return photo || '';
     }
 
     render() {
@@ -190,9 +182,7 @@ export default class Settings extends React.Component<
                                 {selectedNode.photo ? (
                                     <Image
                                         source={{
-                                            uri: this.getPhoto(
-                                                selectedNode.photo
-                                            )
+                                            uri: getPhoto(selectedNode.photo)
                                         }}
                                         style={styles.photo}
                                     />

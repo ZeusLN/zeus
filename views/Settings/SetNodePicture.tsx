@@ -13,6 +13,8 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 
 import AddIcon from '../../assets/images/SVG/Add.svg';
+
+import { getPhoto } from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Screen from '../../components/Screen';
@@ -28,7 +30,6 @@ interface SetNodePictureProps {
 interface SetNodePictureState {
     images: string[];
     photo: string;
-    presetImageUri: string;
 }
 
 export default class SetNodePicture extends React.Component<
@@ -80,8 +81,7 @@ export default class SetNodePicture extends React.Component<
 
         this.state = {
             images,
-            photo: '',
-            presetImageUri: ''
+            photo: ''
         };
     }
 
@@ -116,8 +116,7 @@ export default class SetNodePicture extends React.Component<
 
                             // Set the local file path in the state
                             this.setState({
-                                photo: 'rnfs://' + fileName,
-                                presetImageUri: ''
+                                photo: 'rnfs://' + fileName
                             });
                         } catch (error) {
                             console.error('Error saving file: ', error);
@@ -128,50 +127,28 @@ export default class SetNodePicture extends React.Component<
         );
     };
 
-    getPhoto(photo: string | null): string {
-        if (typeof photo === 'string' && photo.includes('rnfs://')) {
-            const fileName = photo.replace('rnfs://', '');
-            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
-        }
-        return photo || '';
-    }
-
     handleImageTap = async (item) => {
         let presetImageUri = Image.resolveAssetSource(item).uri;
+        presetImageUri = presetImageUri
+            .replace('.png', '')
+            .replace('.jpg', '')
+            .replace(/-/g, '')
+            .replace(/\//g, '_')
+            .toLowerCase();
+
+        const splitDash = presetImageUri.split('_').reverse()[0];
+        const split = splitDash.split('?')[0];
+
+        const photo = `preset://${split}`;
+
         this.setState({
-            presetImageUri
+            photo
         });
     };
 
     onChoosePicturePress = async () => {
-        const { presetImageUri } = this.state;
         const { navigation } = this.props;
-        if (presetImageUri) {
-            const timestamp = new Date().getTime();
-            const fileName = `photo_${timestamp}.jpg`;
-            const filePath = RNFS.DocumentDirectoryPath + '/' + fileName;
 
-            try {
-                const downloadResult = await RNFS.downloadFile({
-                    fromUrl: presetImageUri,
-                    toFile: filePath
-                }).promise;
-
-                if (downloadResult.statusCode === 200) {
-                    console.log('File downloaded to ', filePath);
-                    this.setState({
-                        photo: 'rnfs://' + fileName
-                    });
-                } else {
-                    console.error(
-                        'Download failed:',
-                        downloadResult.statusCode
-                    );
-                }
-            } catch (error) {
-                console.error('Error downloading image:', error);
-            }
-        }
         navigation.navigate('NodeConfiguration', {
             photo: this.state.photo,
             saved: false
@@ -180,7 +157,7 @@ export default class SetNodePicture extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { photo, presetImageUri } = this.state;
+        const { photo } = this.state;
 
         const AddPhotos = () => (
             <AddIcon
@@ -220,12 +197,10 @@ export default class SetNodePicture extends React.Component<
                                 borderColor: themeColor('separator')
                             }}
                         >
-                            {photo || presetImageUri ? (
+                            {photo ? (
                                 <Image
                                     source={{
-                                        uri:
-                                            this.getPhoto(presetImageUri) ||
-                                            this.getPhoto(photo)
+                                        uri: getPhoto(photo)
                                     }}
                                     style={styles.photo}
                                 />
