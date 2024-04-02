@@ -15,7 +15,6 @@ import UrlUtils from '../../../utils/UrlUtils';
 
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 
-import Channel from '../../../assets/images/SVG/Channel.svg';
 import NostrichNotLoaded from '../../../assets/images/SVG/Nostrich_not-loaded.svg';
 import NostrichValid from '../../../assets/images/SVG/Nostrich_valid.svg';
 import NostrichInvalid from '../../../assets/images/SVG/Nostrich_invalid.svg';
@@ -341,46 +340,6 @@ export default class LightningAddressInfo extends React.Component<
                                                 fill={'#FFC300'}
                                                 width={32}
                                                 height={32}
-                                            />
-                                        </View>
-                                    </Row>
-                                </ListItem.Content>
-                            </ListItem>
-
-                            <ListItem containerStyle={styles.listItem}>
-                                <ListItem.Content>
-                                    <ListItem.Title>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.LightningAddressInfo.channelOpened'
-                                            )}
-                                        </Text>
-                                    </ListItem.Title>
-                                    <ListItem.Subtitle>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.LightningAddressInfo.channelOpenedDetails'
-                                            )}
-                                        </Text>
-                                    </ListItem.Subtitle>
-                                </ListItem.Content>
-                                <ListItem.Content right>
-                                    <Row>
-                                        <View style={styles.icon}>
-                                            <Channel
-                                                fill={themeColor('text')}
-                                                width={42}
-                                                height={42}
                                             />
                                         </View>
                                     </Row>

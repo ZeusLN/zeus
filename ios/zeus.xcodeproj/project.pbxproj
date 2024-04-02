@@ -91,7 +91,6 @@
 		7598B75F1F64426CAF420155 /* UnifiedSvg.tsx in Resources */ = {isa = PBXBuildFile; fileRef = C7FBAA85E56C4D5D92F74F11 /* UnifiedSvg.tsx */; };
 		7605A9F30F13492692B1AB4E /* Flash On.svg in Resources */ = {isa = PBXBuildFile; fileRef = DD1A9F0B9EF0475C81C53C8D /* Flash On.svg */; };
 		78FB5414F55B4D94804920B7 /* Caret Right-1.svg in Resources */ = {isa = PBXBuildFile; fileRef = 34845404A9F04B35ADA34F80 /* Caret Right-1.svg */; };
-		79831EB47D6D4FFB90985E0F /* Channel.svg in Resources */ = {isa = PBXBuildFile; fileRef = 3AB032A5D2204613B50EB1AA /* Channel.svg */; };
 		7C9A1A0DC41A4B56BC555750 /* Node On.svg in Resources */ = {isa = PBXBuildFile; fileRef = 62458EE70D8546B7AE7F87DF /* Node On.svg */; };
 		7D5F7108F3164222AE36A242 /* Filter Off.svg in Resources */ = {isa = PBXBuildFile; fileRef = 2EC02052907E453CB15DBADA /* Filter Off.svg */; };
 		7DDC8A1B32DC415DA3A3123B /* Nostrich.svg in Resources */ = {isa = PBXBuildFile; fileRef = A7D097DE19314D50ABD77607 /* Nostrich.svg */; };
@@ -373,7 +372,6 @@
 		34845404A9F04B35ADA34F80 /* Caret Right-1.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right-1.svg"; path = "../assets/images/SVG/Caret Right-1.svg"; sourceTree = "<group>"; };
 		34F2E3639E1D4C878EA1CC22 /* Gallery.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Gallery.svg; path = ../assets/images/SVG/Gallery.svg; sourceTree = "<group>"; };
 		3814F0A0F1A84AD1AFD7C587 /* POS.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = POS.svg; path = ../assets/images/SVG/POS.svg; sourceTree = "<group>"; };
-		3AB032A5D2204613B50EB1AA /* Channel.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Channel.svg; path = ../assets/images/SVG/Channel.svg; sourceTree = "<group>"; };
 		3BD89BEBA89A4B678A29E094 /* BitcoinIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = BitcoinIcon.svg; path = ../assets/images/SVG/BitcoinIcon.svg; sourceTree = "<group>"; };
 		3C37D42473A54AD981B549B4 /* NFC.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = NFC.svg; path = ../assets/images/SVG/NFC.svg; sourceTree = "<group>"; };
 		3C817E9DD0504569B85A84F1 /* Edit.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Edit.svg; path = ../assets/images/SVG/Edit.svg; sourceTree = "<group>"; };
@@ -919,7 +917,6 @@
 				956E2E16008F4EA0B54DF09B /* Add.svg */,
 				3BD89BEBA89A4B678A29E094 /* BitcoinIcon.svg */,
 				B10811B91C8044358B7EBE82 /* Block.svg */,
-				3AB032A5D2204613B50EB1AA /* Channel.svg */,
 				E475512AC9944749B58EEAC1 /* Clipboard.svg */,
 				C689AF9C5EFD42E891A1FFD3 /* Cloud.svg */,
 				7ABECF711E9D4F5AB912E1C0 /* Copy.svg */,
@@ -1380,7 +1377,6 @@
 				39D956D93D0846AF909F38DA /* Add.svg in Resources */,
 				92542E72F705458EBD582CC8 /* BitcoinIcon.svg in Resources */,
 				B7B3D0A8E3C8499892224242 /* Block.svg in Resources */,
-				79831EB47D6D4FFB90985E0F /* Channel.svg in Resources */,
 				CD17533A6E834DC3982FD216 /* Clipboard.svg in Resources */,
 				40C4AE0236564EDD8B689992 /* Cloud.svg in Resources */,
 				9E2B346F72A34EA3807BC843 /* Copy.svg in Resources */,
