@@ -26,6 +26,7 @@ interface AmountDisplayProps {
     jumboText?: boolean;
     defaultTextSize?: boolean;
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
+    colorOverride?: string;
     pending?: boolean;
     fee?: boolean;
     fiatRatesLoading?: boolean;
@@ -44,6 +45,7 @@ function AmountDisplay({
     jumboText = false,
     defaultTextSize = false,
     color = undefined,
+    colorOverride = undefined,
     pending = false,
     fee = false,
     fiatRatesLoading = false,
@@ -76,6 +78,7 @@ function AmountDisplay({
             secondary
             jumbo={jumboText}
             color={color}
+            colorOverride={colorOverride}
             accessible={accessible}
             accessibilityLabel={unit}
         >
@@ -84,7 +87,7 @@ function AmountDisplay({
     );
 
     const TextSpace = () => (
-        <Body jumbo={jumboText} color={color}>
+        <Body jumbo={jumboText} color={color} colorOverride={colorOverride}>
             {' '}
         </Body>
     );
@@ -104,6 +107,7 @@ function AmountDisplay({
                             jumbo={jumboText}
                             defaultSize={defaultTextSize}
                             color={color}
+                            colorOverride={colorOverride}
                             accessible={accessible}
                         >
                             {negative ? '-' : ''}
@@ -116,6 +120,7 @@ function AmountDisplay({
                                 small={!jumboText}
                                 defaultSize={defaultTextSize}
                                 color={color}
+                                colorOverride={colorOverride}
                                 accessible={accessible}
                             >
                                 {plural ? 'sats' : 'sat'}
@@ -147,6 +152,7 @@ function AmountDisplay({
                                         small={!jumboText}
                                         defaultSize={defaultTextSize}
                                         color={color}
+                                        colorOverride={colorOverride}
                                     >
                                         {localeString(
                                             'views.Payment.fee'
@@ -159,6 +165,7 @@ function AmountDisplay({
                                 jumbo={jumboText}
                                 defaultSize={defaultTextSize}
                                 color={color}
+                                colorOverride={colorOverride}
                                 accessible={accessible}
                             >
                                 {negative ? '-' : ''}
@@ -189,6 +196,7 @@ function AmountDisplay({
                                 jumbo={jumboText}
                                 defaultSize={defaultTextSize}
                                 color={color}
+                                colorOverride={colorOverride}
                                 accessible={accessible}
                             >
                                 {negative ? '-' : ''}
@@ -207,6 +215,7 @@ function AmountDisplay({
                                             small={!jumboText}
                                             defaultSize={defaultTextSize}
                                             color={color}
+                                            colorOverride={colorOverride}
                                         >
                                             {localeString(
                                                 'views.Payment.fee'
@@ -236,6 +245,7 @@ interface AmountProps {
     debit?: boolean;
     // If credit or debit doesn't cover the use case
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
+    colorOverride?: string;
     toggleable?: boolean;
     pending?: boolean;
     fee?: boolean;
@@ -259,6 +269,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
             debit = false,
             toggleable = false,
             color = undefined,
+            colorOverride = undefined,
             pending = false,
             fee = false,
             accessible,
@@ -364,6 +375,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         jumboText={jumboText}
                         defaultTextSize={defaultTextSize}
                         color={textColor}
+                        colorOverride={colorOverride}
                         pending={pending}
                         fee={fee}
                         fiatRatesLoading={FiatStore.loading}
@@ -381,6 +393,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 jumboText={jumboText}
                 defaultTextSize={defaultTextSize}
                 color={textColor}
+                colorOverride={colorOverride}
                 pending={pending}
                 fee={fee}
                 fiatRatesLoading={FiatStore.loading}
