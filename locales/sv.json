@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "Intyget är giltigt. Tryck för att se detaljer.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Ogiltiga eller motstridiga intyg. Tryck för att se detaljer.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Inga Nostr-intyg hittades. Avsändarens plånbok stöder det troligen inte än.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Kanal öppnad",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "En kanal har öppnats för att hjälpa dig att lösa in betalningen. Aktiverad med \"Begär automatiskt kanaler från OLYMPUS\" under Lightning Address-inställningar.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Lär dig mer om Zaplocker",
     "views.Settings.Attestations.title": "Intyg",
     "views.Settings.Attestations.noAttestationsFound": "Inga intyg hittades",
