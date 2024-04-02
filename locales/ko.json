@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "인증이 유효합니다. 상세 내역을 보려면 눌러주세요.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "유효하지 않거나 인증에 문제가 있습니다. 자세히 보려면 눌러주세요.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Nostr 인증을 찾을 수 없습니다. 송금자의 지갑에서 해당 기능을 아직 지원하지 않을 수 있습니다.",
-    "views.Settings.LightningAddressInfo.channelOpened": "채널 개설됨",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "결제 대금을 상환하는 것을 돕기 위해 채널이 개설되었습니다. 라이트닝 주소 설정 아래 '자동으로 OLYMPUS에게 채널 개설을 요청합니다' 기능으로 인해 활성화되었습니다.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Zaplocker에 대해 더 알아보기",
     "views.Settings.Attestations.title": "인증들",
     "views.Settings.Attestations.noAttestationsFound": "인증이 발견되지 않음",
