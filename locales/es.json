@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "La certificación es válida. Presione para ver los detalles.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Certificaciones inválidas o conflictivas. Presione para ver los detalles.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "No se encontraron certificaciones Nastr. La billetera del remitente probablemente aún no lo admite.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Canal abierto",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "Se le abrió un canal para ayudarlo a canjear el pago. Habilitado con 'solicitar canales automáticamente de Olympus' en la configuración de la dirección Lightning.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Aprenda más sobre Zaplocker",
     "views.Settings.Attestations.title": "Atestaciónes",
     "views.Settings.Attestations.noAttestationsFound": "No se encontraron certificaciones",
