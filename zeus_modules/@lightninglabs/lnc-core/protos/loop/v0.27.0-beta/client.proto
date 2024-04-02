@@ -43,6 +43,11 @@ service SwapClient {
     */
     rpc SwapInfo (SwapInfoRequest) returns (SwapStatus);
 
+    /* loop: `abandonswap`
+    AbandonSwap allows the client to abandon a swap.
+    */
+    rpc AbandonSwap (AbandonSwapRequest) returns (AbandonSwapResponse);
+
     /* loop: `terms`
     LoopOutTerms returns the terms that the server enforces for a loop out swap.
     */
@@ -104,6 +109,12 @@ service SwapClient {
     [EXPERIMENTAL]: endpoint is subject to change.
     */
     rpc SuggestSwaps (SuggestSwapsRequest) returns (SuggestSwapsResponse);
+
+    /* loop: `listreservations`
+    ListReservations returns a list of all reservations the server opened to us.
+    */
+    rpc ListReservations (ListReservationsRequest)
+        returns (ListReservationsResponse);
 }
 
 message LoopOutRequest {
@@ -224,6 +235,13 @@ message LoopOutRequest {
     The address type of the account specified in the account field.
      */
     AddressType account_addr_type = 16;
+
+    /*
+    A flag indicating whether the defined destination address does not belong to
+    the wallet. This is used to flag whether this loop out swap could have its
+    associated sweep batched.
+    */
+    bool is_external_addr = 17;
 }
 
 /*
@@ -524,9 +542,49 @@ enum FailureReason {
     because the amount extended by an external loop in htlc is insufficient.
     */
     FAILURE_REASON_INCORRECT_AMOUNT = 6;
+
+    /*
+    FAILURE_REASON_ABANDONED indicates that a swap permanently failed because
+    the client manually abandoned the swap.
+    */
+    FAILURE_REASON_ABANDONED = 7;
+
+    /*
+    FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE indicates that a swap
+    wasn't published due to insufficient confirmed balance.
+    */
+    FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE = 8;
 }
 
 message ListSwapsRequest {
+    // Optional filter to only return swaps that match the filter.
+    ListSwapsFilter list_swap_filter = 1;
+}
+
+message ListSwapsFilter {
+    enum SwapTypeFilter {
+        // ANY indicates that no filter is applied.
+        ANY = 0;
+        // LOOP_OUT indicates an loop out swap (off-chain to on-chain).
+        LOOP_OUT = 1;
+
+        // LOOP_IN indicates a loop in swap (on-chain to off-chain).
+        LOOP_IN = 2;
+    }
+    // The type of the swap.
+    SwapTypeFilter swap_type = 1;
+
+    // If set, only pending swaps are returned.
+    bool pending_only = 2;
+
+    // If specified on creation, the outgoing channel set of the swap.
+    repeated uint64 outgoing_chan_set = 3;
+
+    // Label of swap to filter for.
+    string label = 4;
+
+    // If specified on creation, the last hop of the swap.
+    bytes loop_in_last_hop = 5;
 }
 
 message ListSwapsResponse {
@@ -1179,4 +1237,60 @@ message SuggestSwapsResponse {
     for.
     */
     repeated Disqualified disqualified = 2;
+}
+
+message AbandonSwapRequest {
+    /*
+    The swap identifier which currently is the hash that locks the HTLCs. When
+    using REST, this field must be encoded as URL safe base64.
+    */
+    bytes id = 1;
+
+    /*
+    A flag that tries to ensure that the client understands that they are
+    risking loss of funds by abandoning a swap. This could happen if an
+    abandoned swap would wait on a timeout sweep by the client.
+     */
+    bool i_know_what_i_am_doing = 2;
+}
+
+message AbandonSwapResponse {
+}
+
+message ListReservationsRequest {
+}
+
+message ListReservationsResponse {
+    /*
+    The list of all currently known reservations and their status.
+    */
+    repeated ClientReservation reservations = 1;
+}
+
+message ClientReservation {
+    /*
+    The reservation id that identifies this reservation.
+    */
+    bytes reservation_id = 1;
+
+    /*
+    The state the reservation is in.
+    */
+    string state = 2;
+    /*
+        The amount that the reservation is for.
+    */
+    uint64 amount = 3;
+    /*
+        The transaction id of the reservation.
+    */
+    bytes tx_id = 4;
+    /*
+        The vout of the reservation.
+    */
+    uint32 vout = 5;
+    /*
+        The expiry of the reservation.
+    */
+    uint32 expiry = 6;
 }

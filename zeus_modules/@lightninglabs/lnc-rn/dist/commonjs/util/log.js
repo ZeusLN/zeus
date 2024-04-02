@@ -7,49 +7,39 @@ exports.log = exports.grpcLog = exports.actionLog = exports.Logger = exports.Log
 var _debug = _interopRequireDefault(require("debug"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-function _toPropertyKey(arg) { var key = _toPrimitive(arg, "string"); return typeof key === "symbol" ? key : String(key); }
-function _toPrimitive(input, hint) { if (typeof input !== "object" || input === null) return input; var prim = input[Symbol.toPrimitive]; if (prim !== undefined) { var res = prim.call(input, hint || "default"); if (typeof res !== "object") return res; throw new TypeError("@@toPrimitive must return a primitive value."); } return (hint === "string" ? String : Number)(input); }
-let LogLevel;
-/**
- * A logger class with support for multiple namespaces and log levels.
- */
-exports.LogLevel = LogLevel;
-(function (LogLevel) {
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : String(i); }
+function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+let LogLevel = exports.LogLevel = /*#__PURE__*/function (LogLevel) {
   LogLevel[LogLevel["debug"] = 1] = "debug";
   LogLevel[LogLevel["info"] = 2] = "info";
   LogLevel[LogLevel["warn"] = 3] = "warn";
   LogLevel[LogLevel["error"] = 4] = "error";
   LogLevel[LogLevel["none"] = 5] = "none";
-})(LogLevel || (exports.LogLevel = LogLevel = {}));
+  return LogLevel;
+}({});
+/**
+ * A logger class with support for multiple namespaces and log levels.
+ */
 class Logger {
   constructor(levelToOutput, namespace) {
-    var _this = this;
     _defineProperty(this, "_levelToOutput", void 0);
     _defineProperty(this, "_logger", void 0);
-    _defineProperty(this, "debug", function (message) {
-      for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-        args[_key - 1] = arguments[_key];
-      }
-      return _this._log(LogLevel.debug, message, args);
-    });
-    _defineProperty(this, "info", function (message) {
-      for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-        args[_key2 - 1] = arguments[_key2];
-      }
-      return _this._log(LogLevel.info, message, args);
-    });
-    _defineProperty(this, "warn", function (message) {
-      for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
-        args[_key3 - 1] = arguments[_key3];
-      }
-      return _this._log(LogLevel.warn, message, args);
-    });
-    _defineProperty(this, "error", function (message) {
-      for (var _len4 = arguments.length, args = new Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
-        args[_key4 - 1] = arguments[_key4];
-      }
-      return _this._log(LogLevel.error, message, args);
-    });
+    /**
+     * log a debug message
+     */
+    _defineProperty(this, "debug", (message, ...args) => this._log(LogLevel.debug, message, args));
+    /**
+     * log an info message
+     */
+    _defineProperty(this, "info", (message, ...args) => this._log(LogLevel.info, message, args));
+    /**
+     * log a warn message
+     */
+    _defineProperty(this, "warn", (message, ...args) => this._log(LogLevel.warn, message, args));
+    /**
+     * log an error message
+     */
+    _defineProperty(this, "error", (message, ...args) => this._log(LogLevel.error, message, args));
     this._levelToOutput = levelToOutput;
     this._logger = (0, _debug.default)(namespace);
   }
@@ -62,11 +52,6 @@ class Logger {
     const level = LogLevel.none;
     return new Logger(level, namespace);
   }
-
-  /**
-   * log a debug message
-   */
-
   /**
    * A shared logging function which will only output logs based on the level of this Logger instance
    * @param level the level of the message being logged
@@ -87,18 +72,15 @@ class Logger {
  * the main logger for the app
  */
 exports.Logger = Logger;
-const log = Logger.fromEnv('main');
+const log = exports.log = Logger.fromEnv('main');
 
 /**
  * the logger for GRPC requests and responses
  */
-exports.log = log;
-const grpcLog = Logger.fromEnv('grpc');
+const grpcLog = exports.grpcLog = Logger.fromEnv('grpc');
 
 /**
  * the logger for state updates via mobx actions
  */
-exports.grpcLog = grpcLog;
-const actionLog = Logger.fromEnv('action');
-exports.actionLog = actionLog;
+const actionLog = exports.actionLog = Logger.fromEnv('action');
 //# sourceMappingURL=log.js.map

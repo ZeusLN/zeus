@@ -53,4 +53,5 @@ curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/universerpc/universe.proto --create-
 
 curl ${LIT_URL}/${LIT_RELEASE_TAG}/litrpc/firewall.proto --create-dirs -o protos/lit/${LIT_RELEASE_TAG}/firewall.proto
 curl ${LIT_URL}/${LIT_RELEASE_TAG}/litrpc/lit-sessions.proto --create-dirs -o protos/lit/${LIT_RELEASE_TAG}/lit-sessions.proto
+curl ${LIT_URL}/${LIT_RELEASE_TAG}/litrpc/lit-status.proto --create-dirs -o protos/lit/${LIT_RELEASE_TAG}/lit-status.proto
 curl ${LIT_URL}/${LIT_RELEASE_TAG}/litrpc/lit-autopilot.proto --create-dirs -o protos/lit/${LIT_RELEASE_TAG}/lit-autopilot.proto

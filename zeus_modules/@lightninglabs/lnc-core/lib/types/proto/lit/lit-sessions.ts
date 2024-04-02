@@ -128,11 +128,27 @@ export interface Session {
      * not revoked. Readers should instead first check the session_state field.
      */
     revokedAt: string;
+    /**
+     * The ID of the group of Session's that this Session is linked to. If this
+     * session is not linked to any older Session, then this value will be the
+     * same as the ID.
+     */
+    groupId: Uint8Array | string;
+    /**
+     * Configurations for each individual feature mapping from the feature name to
+     * a JSON-serialized configuration.
+     */
+    featureConfigs: { [key: string]: string };
 }
 
 export interface Session_AutopilotFeatureInfoEntry {
     key: string;
     value: RulesMap | undefined;
+}
+
+export interface Session_FeatureConfigsEntry {
+    key: string;
+    value: string;
 }
 
 export interface MacaroonRecipe {

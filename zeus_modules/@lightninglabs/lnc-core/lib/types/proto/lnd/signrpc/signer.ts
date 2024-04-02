@@ -364,6 +364,15 @@ export interface MuSig2SessionRequest {
      * combined key and nonces are created.
      */
     version: MuSig2Version;
+    /**
+     * A set of pre generated secret local nonces to use in the musig2 session.
+     * This field is optional. This can be useful for protocols that need to send
+     * nonces ahead of time before the set of signer keys are known. This value
+     * MUST be 97 bytes and be the concatenation of two CSPRNG generated 32 byte
+     * values and local public key used for signing as specified in the key_loc
+     * field.
+     */
+    pregeneratedLocalNonce: Uint8Array | string;
 }
 
 export interface MuSig2SessionResponse {

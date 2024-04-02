@@ -129,7 +129,8 @@ protoc/bin/protoc \
   $TS_PROTO_OPTIONS \
   firewall.proto \
   lit-sessions.proto \
-  lit-autopilot.proto
+  lit-autopilot.proto \
+  lit-status.proto
 
 # Temporarily generate schema files in order to provide metadata
 # about the services and subscription methods to the api classes
@@ -217,7 +218,8 @@ protoc/bin/protoc \
   $SCHEMA_PROTO_OPTIONS \
   firewall.proto \
   lit-sessions.proto \
-  lit-autopilot.proto
+  lit-autopilot.proto \
+  lit-status.proto
 
 # Cleanup proto directory/files
 rm -rf *.proto protoc

@@ -11,8 +11,8 @@ var _credentialStore = _interopRequireDefault(require("./util/credentialStore"))
 var _log = require("./util/log");
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-function _toPropertyKey(arg) { var key = _toPrimitive(arg, "string"); return typeof key === "symbol" ? key : String(key); }
-function _toPrimitive(input, hint) { if (typeof input !== "object" || input === null) return input; var prim = input[Symbol.toPrimitive]; if (prim !== undefined) { var res = prim.call(input, hint || "default"); if (typeof res !== "object") return res; throw new TypeError("@@toPrimitive must return a primitive value."); } return (hint === "string" ? String : Number)(input); }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : String(i); }
+function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 /** The default values for the LncConfig options */
 const DEFAULT_CONFIG = {
   namespace: 'default',
@@ -54,23 +54,23 @@ class LNC {
     this.pool = new _lncCore.PoolApi(_createRpc.createRpc, this);
     this.faraday = new _lncCore.FaradayApi(_createRpc.createRpc, this);
     this.lit = new _lncCore.LitApi(_createRpc.createRpc, this);
-    _reactNative.NativeModules.LndModule.initLNC(this._namespace);
+    _reactNative.NativeModules.LncModule.initLNC(this._namespace);
   }
   async isConnected() {
-    return await _reactNative.NativeModules.LndModule.isConnected(this._namespace);
+    return await _reactNative.NativeModules.LncModule.isConnected(this._namespace);
   }
   async status() {
-    return await _reactNative.NativeModules.LndModule.status(this._namespace);
+    return await _reactNative.NativeModules.LncModule.status(this._namespace);
   }
   async expiry() {
-    const expiry = await _reactNative.NativeModules.LndModule.expiry(this._namespace);
+    const expiry = await _reactNative.NativeModules.LncModule.expiry(this._namespace);
     return new Date(expiry * 1000);
   }
   async isReadOnly() {
-    return await _reactNative.NativeModules.LndModule.isReadOnly(this._namespace);
+    return await _reactNative.NativeModules.LncModule.isReadOnly(this._namespace);
   }
   async hasPerms(permission) {
-    return await _reactNative.NativeModules.LndModule.hasPerms(this._namespace, permission);
+    return await _reactNative.NativeModules.LncModule.hasPerms(this._namespace, permission);
   }
 
   /**
@@ -81,9 +81,9 @@ class LNC {
     // do not attempt to connect multiple times
     const connected = await this.isConnected();
     if (connected) return;
-    _reactNative.NativeModules.LndModule.registerLocalPrivCreateCallback(this._namespace, this.onLocalPrivCreate);
-    _reactNative.NativeModules.LndModule.registerRemoteKeyReceiveCallback(this._namespace, this.onRemoteKeyReceive);
-    _reactNative.NativeModules.LndModule.registerAuthDataCallback(this._namespace, this.onAuthData);
+    _reactNative.NativeModules.LncModule.registerLocalPrivCreateCallback(this._namespace, this.onLocalPrivCreate);
+    _reactNative.NativeModules.LncModule.registerRemoteKeyReceiveCallback(this._namespace, this.onRemoteKeyReceive);
+    _reactNative.NativeModules.LncModule.registerAuthDataCallback(this._namespace, this.onAuthData);
     const {
       pairingPhrase,
       localKey,
@@ -92,7 +92,7 @@ class LNC {
     } = this.credentials;
 
     // connect to the server
-    const error = await _reactNative.NativeModules.LndModule.connectServer(this._namespace, serverHost, false, pairingPhrase, localKey, remoteKey);
+    const error = await _reactNative.NativeModules.LncModule.connectServer(this._namespace, serverHost, false, pairingPhrase, localKey, remoteKey);
     return error;
   }
 
@@ -100,7 +100,7 @@ class LNC {
    * Disconnects from the proxy server
    */
   disconnect() {
-    _reactNative.NativeModules.LndModule.disconnect(this._namespace);
+    _reactNative.NativeModules.LncModule.disconnect(this._namespace);
   }
 
   /**
@@ -112,7 +112,7 @@ class LNC {
     return new Promise((resolve, reject) => {
       _log.log.debug(`${method} request`, request);
       const reqJSON = JSON.stringify(request || {});
-      _reactNative.NativeModules.LndModule.invokeRPC(this._namespace, method, reqJSON, response => {
+      _reactNative.NativeModules.LncModule.invokeRPC(this._namespace, method, reqJSON, response => {
         try {
           const rawRes = JSON.parse(response);
           const res = (0, _lncCore.snakeKeysToCamel)(rawRes);
@@ -138,7 +138,7 @@ class LNC {
   subscribe(method, request) {
     _log.log.debug(`${method} request`, request);
     const reqJSON = JSON.stringify(request || {});
-    _reactNative.NativeModules.LndModule.initListener(this._namespace, method, reqJSON);
+    _reactNative.NativeModules.LncModule.initListener(this._namespace, method, reqJSON);
     return method;
   }
 }
