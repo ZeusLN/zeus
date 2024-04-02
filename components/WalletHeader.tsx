@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
-import RNFS from 'react-native-fs';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
@@ -28,6 +27,7 @@ import NodeIdenticon from '../components/NodeIdenticon';
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 import BackendUtils from '../utils/BackendUtils';
+import { getPhoto } from '../utils/PhotoUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { protectedNavigation } from '../utils/NavigationUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
@@ -205,14 +205,6 @@ export default class WalletHeader extends React.Component<
         }
     }
 
-    getPhoto(photo: string | null): string {
-        if (typeof photo === 'string' && photo.includes('rnfs://')) {
-            const fileName = photo.replace('rnfs://', '');
-            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
-        }
-        return photo || '';
-    }
-
     render() {
         const { clipboard } = this.state;
         const {
@@ -254,7 +246,7 @@ export default class WalletHeader extends React.Component<
                 {selectedNode && selectedNode.photo ? (
                     <Image
                         source={{
-                            uri: this.getPhoto(selectedNode.photo)
+                            uri: getPhoto(selectedNode.photo)
                         }}
                         style={styles.photo}
                     />
