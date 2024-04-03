@@ -3,9 +3,9 @@
 
 <p align="center"><img src="https://github-production-user-asset-6210df.s3.amazonaws.com/1878621/282665050-5d485734-ffd2-4926-be3d-ac15d08babc1.png"></p>
 
-ZEUS is a mobile Bitcoin/Lightning node manager and wallet application for LND, Core Lightning, and Eclair. ⚡️
+ZEUS is a mobile Bitcoin/Lightning wallet and remote node manager for LND and Core Lightning. ⚡️
 
-ZEUS is built on TypeScript and React Native. It runs on both iOS and Android.
+ZEUS is built on TypeScript and React Native. It runs on both Android and iOS.
 
 Read more on our [documentation site](https://docs.zeusln.app/).
 
