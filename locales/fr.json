@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "L'attestation est valide. Appuyez sur pour voir les détails.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Attestations invalides ou confrimants. Appuyez sur pour voir les détails.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Aucune attestation de la Nostr trouvée. Le portefeuille de l'expéditeur ne le soutient probablement pas encore.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Le canal ouvert",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "Un canal vous a été ouvert pour vous aider à racheter le paiement. Activé avec «Demandez automatiquement les canaux d'Olympus» dans les paramètres d'adresse Lightning.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "En savoir plus sur Zaplocker",
     "views.Settings.Attestations.title": "Attestations",
     "views.Settings.Attestations.noAttestationsFound": "Aucune attestation trouvée",
