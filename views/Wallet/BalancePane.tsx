@@ -14,10 +14,10 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import BalanceStore from '../../stores/BalanceStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 
-import { version, playStore } from '../../package.json';
+import { version } from '../../package.json';
 
 import LockIcon from '../../assets/images/SVG/Lock.svg';
 
@@ -148,6 +148,11 @@ export default class BalancePane extends React.PureComponent<
 
         let balancePane;
         const error = NodeInfoStore.error || SettingsStore.error;
+
+        const implementationDisplayValue = {};
+        INTERFACE_KEYS.forEach((item) => {
+            implementationDisplayValue[item.value] = item.key;
+        });
 
         if (!error) {
             balancePane = (
@@ -360,8 +365,7 @@ export default class BalancePane extends React.PureComponent<
                             'views.Wallet.MainPane.goToSettings'
                         )}
                         buttonStyle={{
-                            backgroundColor: 'gray',
-                            borderRadius: 30
+                            backgroundColor: 'gray'
                         }}
                         containerStyle={{
                             alignItems: 'center'
@@ -378,7 +382,7 @@ export default class BalancePane extends React.PureComponent<
                             marginBottom: -40
                         }}
                     >
-                        {playStore ? `v${version}-play` : `v${version}`}
+                        {`v${version} | ${implementationDisplayValue[implementation]}`}
                     </Text>
                 </View>
             );
