@@ -17,21 +17,22 @@ import { Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 
-import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
-import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
-import KeySecurity from '../../assets/images/SVG/Key Security.svg';
-import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
-import AddIcon from '../../assets/images/SVG/Add.svg';
-import Scan from '../../assets/images/SVG/Scan.svg';
-import { themeColor } from '../../utils/ThemeUtils';
-import AddressUtils from '../../utils/AddressUtils';
-
 import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import { Row } from '../../components/layout/Row';
 
+import AddressUtils from '../../utils/AddressUtils';
+import { getPhoto } from '../../utils/PhotoUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+
+import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
+import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
+import KeySecurity from '../../assets/images/SVG/Key Security.svg';
+import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
+import AddIcon from '../../assets/images/SVG/Add.svg';
+import Scan from '../../assets/images/SVG/Scan.svg';
 import Star from '../../assets/images/SVG/Star.svg';
 
 interface AddContactProps {
@@ -371,14 +372,6 @@ export default class AddContact extends React.Component<
         }
     }
 
-    getPhoto(photo): string {
-        if (photo?.includes('rnfs://')) {
-            const fileName = photo.replace('rnfs://', '');
-            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
-        }
-        return photo || '';
-    }
-
     render() {
         const { navigation } = this.props;
         const {
@@ -505,7 +498,7 @@ export default class AddContact extends React.Component<
                                     {photo ? (
                                         <Image
                                             source={{
-                                                uri: this.getPhoto(photo)
+                                                uri: getPhoto(photo)
                                             }}
                                             style={styles.photo}
                                         />

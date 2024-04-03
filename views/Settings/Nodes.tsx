@@ -3,20 +3,21 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import RNFS from 'react-native-fs';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 
-import BackendUtils from '../../utils/BackendUtils';
 import BalanceStore from '../../stores/BalanceStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import ChannelsStore from '../../stores/ChannelsStore';
+
+import { getPhoto } from '../../utils/PhotoUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import ChannelsStore from '../../stores/ChannelsStore';
+import BackendUtils from '../../utils/BackendUtils';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
@@ -93,14 +94,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             }}
         />
     );
-
-    getPhoto(photo: string | null): string {
-        if (typeof photo === 'string' && photo.includes('rnfs://')) {
-            const fileName = photo.replace('rnfs://', '');
-            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
-        }
-        return photo || '';
-    }
 
     render() {
         const {
@@ -262,7 +255,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             {item.photo ? (
                                                 <Image
                                                     source={{
-                                                        uri: this.getPhoto(
+                                                        uri: getPhoto(
                                                             item.photo
                                                         )
                                                     }}

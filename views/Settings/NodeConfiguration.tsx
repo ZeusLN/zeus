@@ -12,7 +12,6 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import cloneDeep from 'lodash/cloneDeep';
-import RNFS from 'react-native-fs';
 
 import { hash, STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
@@ -47,6 +46,7 @@ import SettingsStore, {
 import Scan from '../../assets/images/SVG/Scan.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
+import { getPhoto } from '../../utils/PhotoUtils';
 import { createLndWallet } from '../../utils/LndMobileUtils';
 
 interface NodeConfigurationProps {
@@ -583,14 +583,6 @@ export default class NodeConfiguration extends React.Component<
         }
     };
 
-    getPhoto(photo: string | null): string {
-        if (typeof photo === 'string' && photo.includes('rnfs://')) {
-            const fileName = photo.replace('rnfs://', '');
-            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
-        }
-        return photo || '';
-    }
-
     render() {
         const { navigation, SettingsStore } = this.props;
         const node = navigation.getParam('node', null);
@@ -986,7 +978,7 @@ export default class NodeConfiguration extends React.Component<
                                     {node?.photo || photo ? (
                                         <Image
                                             source={{
-                                                uri: this.getPhoto(
+                                                uri: getPhoto(
                                                     node?.photo || photo
                                                 )
                                             }}
