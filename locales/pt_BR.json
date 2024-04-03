@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "O atestado é válido. Pressione para ver detalhes.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Atestados inválidos ou conflitantes. Pressione para ver detalhes.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Nenhum atestado de nariz encontrado. A carteira do remetente provavelmente ainda não a suporta.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Canal aberto",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "Um canal foi aberto a você para ajudá -lo a resgatar o pagamento. Ativado com 'solicitar automaticamente canais da Olympus' em Configurações de Lightning Address.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Saiba mais sobre Zaplocker",
     "views.Settings.Attestations.title": "Atestados",
     "views.Settings.Attestations.noAttestationsFound": "Nenhum atestado encontrado",

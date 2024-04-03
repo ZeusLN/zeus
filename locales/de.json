@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "Nachweis ist gültig. Antippen, um Details anzuzeigen.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Nachweis ist ungültig oder es gibt widersprüchliche Nachweise. Antippen, um Details anzuzeigen.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Keine Nostr-Nachweise gefunden. Wahrscheinlich unterstützt die Wallet des Absenders diese Funktion noch nicht.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Kanal geöffnet",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "Es wurde ein Kanal zu dir geöffnet, um dir zu ermöglichen, die Zahlung anzunehmen. Aktiviert durch die Option 'Automatisch Kanäle von OLYMPUS anfordern' in den Lightning-Adresseinstellungen.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Erfahre mehr über Zaplocker",
     "views.Settings.Attestations.title": "Nachweise",
     "views.Settings.Attestations.noAttestationsFound": "Keine Nachweise gefunden",

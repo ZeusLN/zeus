@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "Todistus on voimassa. Paina nähdäksesi tiedot.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Virheellisiä tai ristiriitaisia todistuksia. Paina nähdäksesi yksityiskohdat.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Ei löytynyt Nostr-todistuksia. Lähettäjän lompakko ei todennäköisesti tue sitä vielä.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Kanava avattu",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "Sinulle avattiin kanava auttaaksemme sinua lunastamaan maksun. Ota käyttöön 'Pyydä kanavia automaattisesti OLYMPUS:sta' Salamaosoiteasetuksissa.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Opi lisää Zaplockerista",
     "views.Settings.Attestations.title": "Todistukset",
     "views.Settings.Attestations.noAttestationsFound": "Todistuksia ei löytynyt",

@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "Atestarea este valabilă. Apăsați pentru a vedea detalii.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Atestări invalide sau contradictorii. Apăsați pentru a vedea detalii.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Nu au fost găsite atestări de Noral. Portofelul expeditorului probabil nu îl acceptă încă.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Canal deschis",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "V -a fost deschis un canal pentru a vă ajuta să răscumpărați plata. Activat cu „Solicitați automat canale de la Olympus” în cadrul setărilor adreselor Lightning.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Aflați mai multe despre Zaplocker",
     "views.Settings.Attestations.title": "Atestări",
     "views.Settings.Attestations.noAttestationsFound": "Nu s -au găsit atestări",

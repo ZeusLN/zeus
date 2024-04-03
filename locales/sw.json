@@ -1015,8 +1015,6 @@
     "views.Settings.LightningAddressInfo.validAttestationDetails": "Uthibitisho ni sahihi. Bonyeza kuona maelezo.",
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Uthibitisho batili au unaopingana. Bonyeza kuona maelezo.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "Hakuna uthibitisho wa Nostr uliopatikana. Inaonekana pochi ya mtumaji haiisaidii bado.",
-    "views.Settings.LightningAddressInfo.channelOpened": "Channel imefunguliwa",
-    "views.Settings.LightningAddressInfo.channelOpenedDetails": "Channel imefunguliwa kwako kukusaidia kukomboa malipo. Imewezeshwa na 'Omba otomatiki channels kutoka OLYMPUS' chini ya mipangilio ya Anwani ya Umeme.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Jifunze zaidi kuhusu Zaplocker",
     "views.Settings.Attestations.title": "Uthibitisho",
     "views.Settings.Attestations.noAttestationsFound": "Hakuna uthibitisho uliopatikana",
