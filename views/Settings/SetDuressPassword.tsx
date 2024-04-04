@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
@@ -162,12 +162,17 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphraseInvalidError: false
                             })
                         }
-                        numberOfLines={1}
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            paddingLeft: 10
+                            paddingLeft: 10,
+                            paddingTop:
+                                this.state.duressPassphrase === ''
+                                    ? Platform.OS === 'android'
+                                        ? 6
+                                        : 8
+                                    : 2
                         }}
                     />
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
@@ -184,12 +189,17 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphraseInvalidError: false
                             })
                         }
-                        numberOfLines={1}
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            paddingLeft: 10
+                            paddingLeft: 10,
+                            paddingTop:
+                                this.state.duressPassphraseConfirm === ''
+                                    ? Platform.OS === 'android'
+                                        ? 6
+                                        : 8
+                                    : 0
                         }}
                     />
                     <Text
