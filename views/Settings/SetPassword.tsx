@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
@@ -166,12 +166,17 @@ export default class SetPassphrase extends React.Component<
                                 passphraseInvalidError: false
                             })
                         }
-                        numberOfLines={1}
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            paddingLeft: 10
+                            paddingLeft: 10,
+                            paddingTop:
+                                this.state.passphrase === ''
+                                    ? Platform.OS === 'android'
+                                        ? 6
+                                        : 8
+                                    : 2
                         }}
                     />
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
@@ -188,12 +193,17 @@ export default class SetPassphrase extends React.Component<
                                 passphraseInvalidError: false
                             })
                         }
-                        numberOfLines={1}
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            paddingLeft: 10
+                            paddingLeft: 10,
+                            paddingTop:
+                                this.state.passphraseConfirm === ''
+                                    ? Platform.OS === 'android'
+                                        ? 6
+                                        : 8
+                                    : 0
                         }}
                     />
                     <View style={{ paddingTop: 10, margin: 10 }}>
