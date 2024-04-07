@@ -931,7 +931,8 @@ export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
     'btcd2.lnolymp.us',
     'btcd-mainnet.lightning.computer',
     'node.eldamar.icu',
-    'noad.sathoarder.com'
+    'noad.sathoarder.com',
+    'sg.lnolymp.us'
 ];
 
 export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
@@ -1006,7 +1007,7 @@ export default class SettingsStore {
         expressGraphSync: true,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: true,
-        dontAllowOtherPeers: true,
+        dontAllowOtherPeers: false,
         neutrinoPeersMainnet: DEFAULT_NEUTRINO_PEERS_MAINNET,
         neutrinoPeersTestnet: DEFAULT_NEUTRINO_PEERS_TESTNET,
         zeroConfPeers: [],
@@ -1295,6 +1296,27 @@ export default class SettingsStore {
                     }
                     this.setSettings(JSON.stringify(this.settings));
                     await EncryptedStorage.setItem(MOD_KEY2, 'true');
+                }
+
+                const MOD_KEY3 = 'neutrino-peers-mod1';
+                const mod3 = await EncryptedStorage.getItem(MOD_KEY3);
+                if (!mod3) {
+                    const neutrinoPeersMainnetOld = [
+                        'btcd1.lnolymp.us',
+                        'btcd2.lnolymp.us',
+                        'btcd-mainnet.lightning.computer',
+                        'node.eldamar.icu',
+                        'noad.sathoarder.com'
+                    ];
+                    if (
+                        JSON.stringify(this.settings?.neutrinoPeersMainnet) ===
+                        JSON.stringify(neutrinoPeersMainnetOld)
+                    ) {
+                        this.settings.neutrinoPeersMainnet =
+                            DEFAULT_NEUTRINO_PEERS_MAINNET;
+                    }
+                    this.setSettings(JSON.stringify(this.settings));
+                    await EncryptedStorage.setItem(MOD_KEY3, 'true');
                 }
 
                 // migrate old POS squareEnabled setting to posEnabled
