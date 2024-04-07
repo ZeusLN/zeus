@@ -1007,7 +1007,7 @@ export default class SettingsStore {
         expressGraphSync: true,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: true,
-        dontAllowOtherPeers: true,
+        dontAllowOtherPeers: false,
         neutrinoPeersMainnet: DEFAULT_NEUTRINO_PEERS_MAINNET,
         neutrinoPeersTestnet: DEFAULT_NEUTRINO_PEERS_TESTNET,
         zeroConfPeers: [],
