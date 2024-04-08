@@ -701,6 +701,7 @@
     "views.Settings.SetPassword.save": "Save",
     "views.Settings.SetPassword.noMatch": "Passwords do not match",
     "views.Settings.SetPassword.invalid": "Password and duress password cannot be the same",
+    "views.Settings.SetPassword.empty": "Password can not be empty",
     "views.Settings.SetPassword.deletePassword": "Delete Password",
     "views.Settings.SetDuressPassword.title": "Set / Change Duress Password",
     "views.Settings.SetDuressPassword.deletePassword": "Delete Duress Password",

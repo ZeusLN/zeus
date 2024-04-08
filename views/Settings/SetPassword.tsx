@@ -23,6 +23,7 @@ interface SetPassphraseState {
     savedPassphrase: string;
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
+    passphraseEmptyError: boolean;
     confirmDelete: boolean;
 }
 
@@ -38,6 +39,7 @@ export default class SetPassphrase extends React.Component<
         savedPassphrase: '',
         passphraseMismatchError: false,
         passphraseInvalidError: false,
+        passphraseEmptyError: false,
         confirmDelete: false
     };
 
@@ -75,11 +77,18 @@ export default class SetPassphrase extends React.Component<
 
         const settings = await getSettings();
 
-        if (passphrase === settings.duressPassphrase) {
+        if (passphrase !== '' && passphrase === settings.duressPassphrase) {
             this.setState({
                 passphraseInvalidError: true
             });
 
+            return;
+        }
+
+        if (passphrase === '') {
+            this.setState({
+                passphraseEmptyError: true
+            });
             return;
         }
 
@@ -115,7 +124,8 @@ export default class SetPassphrase extends React.Component<
             passphraseConfirm,
             savedPassphrase,
             passphraseMismatchError,
-            passphraseInvalidError
+            passphraseInvalidError,
+            passphraseEmptyError
         } = this.state;
 
         return (
@@ -152,6 +162,13 @@ export default class SetPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {passphraseEmptyError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.empty'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newPassword')}
                     </Text>
@@ -163,7 +180,8 @@ export default class SetPassphrase extends React.Component<
                             this.setState({
                                 passphrase: text,
                                 passphraseMismatchError: false,
-                                passphraseInvalidError: false
+                                passphraseInvalidError: false,
+                                passphraseEmptyError: false
                             })
                         }
                         autoCapitalize="none"
@@ -190,7 +208,8 @@ export default class SetPassphrase extends React.Component<
                             this.setState({
                                 passphraseConfirm: text,
                                 passphraseMismatchError: false,
-                                passphraseInvalidError: false
+                                passphraseInvalidError: false,
+                                passphraseEmptyError: false
                             })
                         }
                         autoCapitalize="none"
