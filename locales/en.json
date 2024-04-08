@@ -427,7 +427,7 @@
     "views.LncQRScanner.error": "Error parsing LNC config",
     "views.LNDHubQRScanner.text": "Scan a LNDHub or Blue Wallet QR code",
     "views.Lockscreen.incorrect": "Incorrect Passphrase",
-    "views.Lockscreen.passphrase": "Passphrase",
+    "views.Lockscreen.enterPassphrase": " Enter Passphrase",
     "views.Lockscreen.login": "Log In",
     "views.Lockscreen.pin": "Enter PIN",
     "views.Lockscreen.incorrectPin": "Incorrect PIN",

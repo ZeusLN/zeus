@@ -334,7 +334,19 @@ export default class Lockscreen extends React.Component<
         return (
             <Screen>
                 {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
-                    <Header leftComponent="Back" navigation={navigation} />
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString(
+                                'views.Lockscreen.enterPassphrase'
+                            ),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }
+                        }}
+                        navigation={navigation}
+                    />
                 )}
                 {!!passphrase && (
                     <ScrollView
@@ -356,14 +368,6 @@ export default class Lockscreen extends React.Component<
                                     message={this.generateErrorMessage()}
                                 />
                             )}
-                            <Text
-                                style={{
-                                    color: '#A7A9AC',
-                                    fontFamily: 'PPNeueMontreal-Book'
-                                }}
-                            >
-                                {localeString('views.Lockscreen.passphrase')}
-                            </Text>
                             <View style={styles.inputContainer}>
                                 <TextInput
                                     placeholder={'****************'}
