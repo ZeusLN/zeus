@@ -320,9 +320,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             embeddedTor,
             initialLoad
         } = settings;
-        const expressGraphSyncEnabled = settings.expressGraphSync;
+        const expressGraphSyncEnabled =
+            settings.expressGraphSync && embeddedLndNetwork === 'Mainnet';
 
+        let start;
         if (connecting) {
+            start = new Date().getTime();
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
@@ -455,6 +458,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         if (connecting) {
+            console.log(
+                'connect time: ' + (new Date().getTime() - start) / 1000 + 's'
+            );
             setConnectingStatus(false);
         }
 
@@ -794,9 +800,35 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     </View>
                                 </View>
                             </View>
+                            {false && isInExpressGraphSync && (
+                                <View
+                                    style={{
+                                        bottom: 70,
+                                        position: 'absolute',
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    <Button
+                                        title={localeString('general.skip')}
+                                        containerStyle={{
+                                            width: 320
+                                        }}
+                                        titleStyle={{
+                                            color: themeColor('text')
+                                        }}
+                                        onPress={() => {
+                                            SyncStore.setExpressGraphSyncStatus(
+                                                false
+                                            );
+                                        }}
+                                        adaptiveWidth
+                                        iconOnly
+                                    />
+                                </View>
+                            )}
                             <View
                                 style={{
-                                    bottom: 56,
+                                    bottom: 15,
                                     position: 'absolute',
                                     alignSelf: 'center'
                                 }}
