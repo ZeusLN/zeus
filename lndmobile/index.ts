@@ -87,9 +87,17 @@ export const startLnd = async (
  * @throws
  */
 export const gossipSync = async (
+    serviceUrl: string,
     networkType: string
 ): Promise<{ data: string }> => {
-    return await LndMobile.gossipSync(networkType);
+    return await LndMobile.gossipSync(serviceUrl, networkType);
+};
+
+/**
+ * @throws
+ */
+export const cancelGossipSync = async () => {
+    return LndMobile.cancelGossipSync();
 };
 
 export const checkICloudEnabled = async (): Promise<boolean> => {
