@@ -73,6 +73,8 @@ public class LndMobileService extends Service {
   static final int MSG_GRPC_STREAM_WRITE_RESULT = 22;
   static final int MSG_GOSSIP_SYNC = 23;
   static final int MSG_GOSSIP_SYNC_RESULT = 24;
+  static final int MSG_CANCEL_GOSSIP_SYNC = 25;
+  static final int MSG_CANCEL_GOSSIP_SYNC_RESULT = 26;
 
   private Map<String, Method> syncMethods = new HashMap<>();
   private Map<String, Method> streamMethods = new HashMap<>();
@@ -236,8 +238,13 @@ public class LndMobileService extends Service {
             break;
 
           case MSG_GOSSIP_SYNC:
+            final String serviceUrl = bundle.getString("serviceUrl", "");
             final String networkType = bundle.getString("networkType", "");
-            gossipSync(msg.replyTo, networkType, request);
+            gossipSync(msg.replyTo, serviceUrl, networkType, request);
+            break;
+
+          case MSG_CANCEL_GOSSIP_SYNC:
+            cancelGossipSync(msg.replyTo, request);
             break;
 
           case MSG_PING:
@@ -367,10 +374,11 @@ public class LndMobileService extends Service {
     }
   }
 
-  void gossipSync(Messenger recipient, String networkType, int request) {
+  void gossipSync(Messenger recipient, String serviceUrl, String networkType, int request) {
     Runnable gossipSync = new Runnable() {
       public void run() {
         Lndmobile.gossipSync(
+          serviceUrl,
           getApplicationContext().getCacheDir().getAbsolutePath(),
           getApplicationContext().getFilesDir().getAbsolutePath(),
           networkType,
@@ -630,5 +638,12 @@ public class LndMobileService extends Service {
         }
       }
     );
+  }
+
+  private void cancelGossipSync(Messenger recipient, int request) {
+    if (notificationManager != null) {
+      notificationManager.cancelAll();
+    }
+    Lndmobile.cancelGossipSync();
   }
 }
