@@ -146,6 +146,7 @@ export interface Settings {
     requestSimpleTaproot: boolean;
     // Lightning Address
     lightningAddress: LightningAddressSettings;
+    selectNodeOnStartup: boolean;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -1033,7 +1034,8 @@ export default class SettingsStore {
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
             notifications: 0
-        }
+        },
+        selectNodeOnStartup: false
     };
     @observable public posStatus: string = 'unselected';
     @observable public loading = false;
@@ -1073,6 +1075,12 @@ export default class SettingsStore {
     @observable public walletPassword: string;
     @observable public adminMacaroon: string;
     @observable public embeddedLndNetwork: string;
+    @observable public initialStart: boolean = true;
+
+    @action
+    public setInitialStart = (status: boolean) => {
+        this.initialStart = status;
+    };
 
     @action
     public changeLocale = (locale: string) => {

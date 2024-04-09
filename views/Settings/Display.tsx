@@ -25,6 +25,7 @@ interface DisplayState {
     displayNickname: boolean;
     bigKeypadButtons: boolean;
     showAllDecimalPlaces: boolean;
+    selectNodeOnStartup: boolean;
 }
 
 @inject('SettingsStore')
@@ -38,7 +39,8 @@ export default class Display extends React.Component<
         defaultView: 'Keypad',
         displayNickname: false,
         bigKeypadButtons: false,
-        showAllDecimalPlaces: false
+        showAllDecimalPlaces: false,
+        selectNodeOnStartup: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -57,7 +59,8 @@ export default class Display extends React.Component<
                 false,
             showAllDecimalPlaces:
                 (settings.display && settings.display.showAllDecimalPlaces) ||
-                false
+                false,
+            selectNodeOnStartup: settings.selectNodeOnStartup || false
         });
     }
 
@@ -77,7 +80,8 @@ export default class Display extends React.Component<
             displayNickname,
             bigKeypadButtons,
             theme,
-            showAllDecimalPlaces
+            showAllDecimalPlaces,
+            selectNodeOnStartup
         } = this.state;
         const { updateSettings }: any = SettingsStore;
 
@@ -268,6 +272,45 @@ export default class Display extends React.Component<
                                             showAllDecimalPlaces:
                                                 !showAllDecimalPlaces
                                         }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                left: -10
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Display.selectNodeOnStartup'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={selectNodeOnStartup}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        selectNodeOnStartup:
+                                            !selectNodeOnStartup
+                                    });
+                                    await updateSettings({
+                                        selectNodeOnStartup:
+                                            !selectNodeOnStartup
                                     });
                                 }}
                             />
