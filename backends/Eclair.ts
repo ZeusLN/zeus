@@ -520,6 +520,8 @@ const mapInvoice =
         if (!isPending) {
             isPending = { [paymentHash]: true };
         }
+        const now = new Date();
+        const expiryDate = new Date(now.getTime() + expiry * 1000);
         return {
             memo: description,
             r_hash: paymentHash,
@@ -529,7 +531,7 @@ const mapInvoice =
             settle_date: null,
             payment_request: serialized,
             timestamp,
-            expiry,
+            expiry: expiryDate,
             amt_paid: isPending[paymentHash] ? 0 : amount / 1000,
             amt_paid_sat: isPending[paymentHash] ? 0 : amount / 1000,
             amt_paid_msat: isPending[paymentHash] ? 0 : amount
