@@ -225,10 +225,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore.loginMethodConfigured() &&
             loginBackground
         ) {
-            // In case the lock screen is visible and a valid PIN is entered and home button is pressed,
-            // unauthorized access would be possible because the PIN is not cleared on next launch.
-            // By calling pop, the lock screen is closed to clear the PIN.
-            this.props.navigation.pop();
             SettingsStore.setLoginStatus(false);
         } else if (nextAppState === 'active' && SettingsStore.loginRequired()) {
             this.props.navigation.navigate('Lockscreen');

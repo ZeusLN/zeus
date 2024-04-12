@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, Pressable, View } from 'react-native';
+import { StyleSheet, Text, Pressable, View, AppState } from 'react-native';
 import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
 import Success from '../assets/images/SVG/Success.svg';
@@ -35,6 +35,20 @@ export default function PinPad({
     // PinPad state only depends on pin value length, not the actual pin/amount value
     // Parent component to PinPad can store pin/amount value
     const [pinValueLength, setPinValueLength] = useState(0);
+
+    React.useEffect(() => {
+        const subscription = AppState.addEventListener(
+            'change',
+            (nextAppState) => {
+                if (nextAppState === 'background') {
+                    clearPinValueLength();
+                    clearValue();
+                }
+            }
+        );
+
+        return () => subscription.remove();
+    }, []);
 
     const bigKeypadButtons =
         Stores.settingsStore.settings &&
