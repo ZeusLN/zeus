@@ -736,6 +736,16 @@ export const CURRENCY_KEYS = [
         key: '🇻🇳 Vietnamese Dong (VND)',
         value: 'VND',
         supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: 'Gold (XAU)',
+        value: 'XAU',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: 'Silver (XAG)',
+        value: 'XAG',
+        supportedSources: ['Zeus', 'Yadio']
     }
 ];
 
