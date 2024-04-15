@@ -48,11 +48,23 @@ export default class SendingOnChain extends React.Component<
     }
     render() {
         const { NodeInfoStore, TransactionsStore, navigation } = this.props;
-        const { loading, publishSuccess, error, error_msg, txid } =
-            TransactionsStore;
+        const {
+            loading,
+            crafting,
+            publishSuccess,
+            error,
+            error_msg,
+            txid,
+            funded_psbt
+        } = TransactionsStore;
         const { testnet } = NodeInfoStore;
         const { storedNotes } = this.state;
         const windowSize = Dimensions.get('window');
+
+        if (funded_psbt)
+            navigation.navigate('PSBT', {
+                psbt: funded_psbt
+            });
 
         return (
             <Screen>
@@ -76,7 +88,11 @@ export default class SendingOnChain extends React.Component<
                                     windowSize.width * windowSize.scale * 0.014
                             }}
                         >
-                            {localeString('views.SendingOnChain.broadcasting')}
+                            {crafting
+                                ? localeString('views.SendingOnChain.crafting')
+                                : localeString(
+                                      'views.SendingOnChain.broadcasting'
+                                  )}
                         </Text>
                     </View>
                 )}

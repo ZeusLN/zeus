@@ -38,6 +38,9 @@ const npubFormat = /^npub1[0-9a-z]{58}$/;
 /* xpub,ypub,zpub,vpub */
 const xpubFormat = /(xpub|ypub|zpub|vpub)(.*)/;
 
+/* psbt */
+const psbt = /^((cHN)|(psbt))[,:]?.*$/;
+
 export const CUSTODIAL_LNDHUBS = [
     'https://lndhub.io',
     'https://lndhub.herokuapp.com',
@@ -161,6 +164,8 @@ class AddressUtils {
     isValidNpub = (input: string) => npubFormat.test(input);
 
     isValidXpub = (input: string) => xpubFormat.test(input);
+
+    isPsbt = (input: string) => psbt.test(input);
 }
 
 const addressUtils = new AddressUtils();
