@@ -11,6 +11,7 @@ import {
 import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import AccountIcon from '../../assets/images/SVG/Account.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
@@ -558,34 +559,43 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {/* Coming Soon */}
-                    {false && (
+                    {BackendUtils.supportsAccounts() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                // borderRadius: 10,
-                                alignSelf: 'center'
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
                             }}
                         >
-                            {/* <View style={styles.columnField}>
-                                <View style={styles.icon}>
-                                    <AccountIcon stroke={themeColor('text')} />
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Accounts')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <AccountIcon
+                                            fill={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Accounts.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
                                 </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    Accounts
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardIconColor} />
-                                </View>
-                            </View> */}
+                            </TouchableOpacity>
                         </View>
                     )}
+
                     {selectedNode && (
                         <View
                             style={{

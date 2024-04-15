@@ -23,6 +23,7 @@ interface OnchainSwipeableRowProps {
     value?: string;
     amount?: string;
     locked?: boolean;
+    account?: string;
 }
 
 export default class OnchainSwipeableRow extends Component<
@@ -34,6 +35,7 @@ export default class OnchainSwipeableRow extends Component<
         x: number,
         progress: Animated.AnimatedInterpolation
     ) => {
+        const { account, navigation } = this.props;
         const transTranslateX = progress.interpolate({
             inputRange: [0.25, 1],
             outputRange: [x, 0]
@@ -46,14 +48,15 @@ export default class OnchainSwipeableRow extends Component<
             this.close();
 
             if (text === localeString('general.receive')) {
-                this.props.navigation.navigate('Receive', {
+                navigation.navigate('Receive', {
+                    account: account === 'On-chain' ? 'default' : account,
                     selectedIndex: 2,
                     autoGenerateOnChain: true
                 });
             } else if (text === localeString('general.coins')) {
-                this.props.navigation.navigate('CoinControl');
+                navigation.navigate('CoinControl', { account });
             } else if (text === localeString('general.send')) {
-                this.props.navigation.navigate('Send');
+                navigation.navigate('Send');
             }
         };
 

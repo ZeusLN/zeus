@@ -98,6 +98,7 @@ import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
 import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
+import ImportingAccount from './views/Accounts/ImportingAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 import BumpFee from './views/BumpFee';
 import QR from './views/QR';
@@ -285,6 +286,9 @@ const AppScenes = {
     },
     ImportAccount: {
         screen: ImportAccount
+    },
+    ImportingAccount: {
+        screen: ImportingAccount
     },
     HandleAnythingQRScanner: {
         screen: HandleAnythingQRScanner
