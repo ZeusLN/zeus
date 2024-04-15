@@ -78,7 +78,9 @@ import {
     bumpFee,
     fundPsbt,
     finalizePsbt,
-    publishTransaction
+    publishTransaction,
+    listAccounts,
+    importAccount
 } from './wallet';
 import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
@@ -143,7 +145,11 @@ export interface ILndMobileInjections {
         ) => Promise<lnrpc.DisconnectPeerResponse>;
         decodePayReq: (bolt11: string) => Promise<lnrpc.PayReq>;
         getRecoveryInfo: () => Promise<lnrpc.GetRecoveryInfoResponse>;
-        listUnspent: () => Promise<lnrpc.ListUnspentResponse>;
+        listUnspent: ({
+            account
+        }: {
+            account?: string;
+        }) => Promise<lnrpc.ListUnspentResponse>;
         resetMissionControl: () => Promise<routerrpc.ResetMissionControlResponse>;
         getInfo: () => Promise<lnrpc.GetInfoResponse>;
         getNetworkInfo: () => Promise<lnrpc.NetworkInfo>;
@@ -273,7 +279,8 @@ export interface ILndMobileInjections {
     onchain: {
         getTransactions: () => Promise<lnrpc.TransactionDetails>;
         newAddress: (
-            type: lnrpc.AddressType
+            type: lnrpc.AddressType,
+            account?: string
         ) => Promise<lnrpc.NewAddressResponse>;
         sendCoins: (
             address: string,
@@ -286,7 +293,11 @@ export interface ILndMobileInjections {
             address: string,
             feeRate?: number
         ) => Promise<lnrpc.SendCoinsResponse>;
-        walletBalance: () => Promise<lnrpc.WalletBalanceResponse>;
+        walletBalance: ({
+            account
+        }: {
+            account?: string;
+        }) => Promise<lnrpc.WalletBalanceResponse>;
         subscribeTransactions: () => Promise<string>;
     };
     wallet: {
@@ -335,10 +346,12 @@ export interface ILndMobileInjections {
             sat_per_vbyte?: Long;
         }) => Promise<walletrpc.BumpFeeResponse>;
         fundPsbt: ({
+            account,
             raw,
             spend_unconfirmed,
             sat_per_vbyte
         }: {
+            account?: string;
             raw: walletrpc.TxTemplate;
             spend_unconfirmed?: boolean;
             sat_per_vbyte?: Long;
@@ -353,6 +366,20 @@ export interface ILndMobileInjections {
         }: {
             tx_hex: Uint8Array;
         }) => Promise<walletrpc.PublishResponse>;
+        listAccounts: () => Promise<walletrpc.ListAccountsResponse>;
+        importAccount: ({
+            name,
+            extended_public_key,
+            master_key_fingerprint,
+            address_type,
+            dry_run
+        }: {
+            name: string;
+            extended_public_key: string;
+            master_key_fingerprint?: Uint8Array;
+            address_type?: number;
+            dry_run: boolean;
+        }) => Promise<walletrpc.ImportAccountResponse>;
     };
     autopilot: {
         status: () => Promise<autopilotrpc.StatusResponse>;
@@ -446,7 +473,9 @@ export default {
         bumpFee,
         fundPsbt,
         finalizePsbt,
-        publishTransaction
+        publishTransaction,
+        listAccounts,
+        importAccount
     },
     autopilot: {
         status,

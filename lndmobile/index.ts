@@ -757,7 +757,11 @@ export const getRecoveryInfo =
 /**
  * @throws
  */
-export const listUnspent = async (): Promise<lnrpc.ListUnspentResponse> => {
+export const listUnspent = async ({
+    account = 'default'
+}: {
+    account: string;
+}): Promise<lnrpc.ListUnspentResponse> => {
     const response = await sendCommand<
         lnrpc.IListUnspentRequest,
         lnrpc.ListUnspentRequest,
@@ -766,7 +770,9 @@ export const listUnspent = async (): Promise<lnrpc.ListUnspentResponse> => {
         request: lnrpc.ListUnspentRequest,
         response: lnrpc.ListUnspentResponse,
         method: 'WalletKitListUnspent',
-        options: {}
+        options: {
+            account
+        }
     });
     return response;
 };

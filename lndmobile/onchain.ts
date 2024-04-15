@@ -23,7 +23,8 @@ export const getTransactions = async (): Promise<lnrpc.TransactionDetails> => {
  * @throws
  */
 export const newAddress = async (
-    type: lnrpc.AddressType = lnrpc.AddressType.UNUSED_WITNESS_PUBKEY_HASH
+    type: lnrpc.AddressType = lnrpc.AddressType.UNUSED_WITNESS_PUBKEY_HASH,
+    account: string = 'default'
 ): Promise<lnrpc.NewAddressResponse> => {
     const response = await sendCommand<
         lnrpc.INewAddressRequest,
@@ -34,7 +35,8 @@ export const newAddress = async (
         response: lnrpc.NewAddressResponse,
         method: 'NewAddress',
         options: {
-            type
+            type,
+            account
         }
     });
     return response;
@@ -43,7 +45,11 @@ export const newAddress = async (
 /**
  * @throws
  */
-export const walletBalance = async (): Promise<lnrpc.WalletBalanceResponse> => {
+export const walletBalance = async ({
+    account
+}: {
+    account?: string;
+}): Promise<lnrpc.WalletBalanceResponse> => {
     const response = await sendCommand<
         lnrpc.IWalletBalanceRequest,
         lnrpc.WalletBalanceRequest,
@@ -52,7 +58,9 @@ export const walletBalance = async (): Promise<lnrpc.WalletBalanceResponse> => {
         request: lnrpc.WalletBalanceRequest,
         response: lnrpc.WalletBalanceResponse,
         method: 'WalletBalance',
-        options: {}
+        options: {
+            account
+        }
     });
     return response;
 };

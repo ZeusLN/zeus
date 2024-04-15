@@ -102,13 +102,13 @@ export default class LightningNodeConnect {
             .getChanInfo(request)
             .then((data: lnrpc.ChannelEdge) => snakeize(data));
     };
-    getBlockchainBalance = async () =>
+    getBlockchainBalance = async (req: lnrpc.WalletBalanceRequest) =>
         await this.lnc.lnd.lightning
-            .walletBalance({})
+            .walletBalance(req)
             .then((data: lnrpc.WalletBalanceResponse) => snakeize(data));
-    getLightningBalance = async () =>
+    getLightningBalance = async (req: lnrpc.ChannelBalanceRequest) =>
         await this.lnc.lnd.lightning
-            .channelBalance({})
+            .channelBalance(req)
             .then((data: lnrpc.ChannelBalanceResponse) => snakeize(data));
     sendCoins = async (data: any) =>
         await this.lnc.lnd.lightning
@@ -311,9 +311,9 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .publishTransaction(req)
             .then((data: walletrpc.PublishResponse) => snakeize(data));
-    getUTXOs = async () =>
+    getUTXOs = async (req: walletrpc.ListUnspentRequest) =>
         await this.lnc.lnd.walletKit
-            .listUnspent({ min_confs: 0, max_confs: 200000 })
+            .listUnspent(req)
             .then((data: walletrpc.ListUnspentResponse) => snakeize(data));
     bumpFee = async (req: walletrpc.BumpFeeRequest) =>
         await this.lnc.lnd.walletKit
