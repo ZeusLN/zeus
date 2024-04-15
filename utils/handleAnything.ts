@@ -72,7 +72,8 @@ const handleAnything = async (
             {
                 value,
                 amount,
-                lightning
+                lightning,
+                locked: true
             }
         ];
     } else if (
@@ -410,6 +411,13 @@ const handleAnything = async (
                 }
             ];
         }
+    } else if (AddressUtils.isValidXpub(value)) {
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: value
+            }
+        ];
     } else {
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));

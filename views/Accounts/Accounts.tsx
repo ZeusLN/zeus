@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Icon } from 'react-native-elements';
+import { TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
@@ -17,6 +17,8 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import Add from '../../assets/images/SVG/Add.svg';
+
 interface AccountsProps {
     navigation: any;
     BalanceStore: BalanceStore;
@@ -29,6 +31,7 @@ interface AccountsState {
     value: string;
     amount: string;
     lightning: string;
+    locked: boolean;
 }
 
 @inject('BalanceStore', 'UTXOsStore', 'UnitsStore', 'SettingsStore')
@@ -40,7 +43,8 @@ export default class Accounts extends React.Component<
     state = {
         value: '',
         amount: '',
-        lightning: ''
+        lightning: '',
+        locked: false
     };
 
     UNSAFE_componentWillMount() {
@@ -53,6 +57,7 @@ export default class Accounts extends React.Component<
         const value: string = navigation.getParam('value');
         const amount: string = navigation.getParam('amount');
         const lightning: string = navigation.getParam('lightning');
+        const locked: boolean = navigation.getParam('locked');
 
         if (value) {
             this.setState({
@@ -71,6 +76,12 @@ export default class Accounts extends React.Component<
                 lightning
             });
         }
+
+        if (locked) {
+            this.setState({
+                locked
+            });
+        }
     }
 
     render() {
@@ -81,16 +92,21 @@ export default class Accounts extends React.Component<
             SettingsStore,
             navigation
         } = this.props;
-        const { value, amount, lightning } = this.state;
+        const { value, amount, lightning, locked } = this.state;
         const { loadingAccounts } = UTXOsStore;
 
         const AddButton = () => (
-            <Icon
-                name="add"
+            <TouchableOpacity
                 onPress={() => navigation.navigate('ImportAccount')}
-                color={themeColor('text')}
-                underlayColor="transparent"
-            />
+                accessibilityLabel={localeString('general.add')}
+            >
+                <Add
+                    fill={themeColor('text')}
+                    width="30"
+                    height="30"
+                    style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
         );
 
         return (
@@ -136,7 +152,7 @@ export default class Accounts extends React.Component<
                         value={value}
                         amount={amount}
                         lightning={lightning}
-                        locked
+                        locked={locked}
                     />
                 )}
                 {!loadingAccounts && !!value && !!lightning && (

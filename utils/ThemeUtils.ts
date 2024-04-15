@@ -26,6 +26,7 @@ export function themeColor(themeString: string): any {
         buttonBackground: '#FFA900',
         buttonGradient: ['#FF9000', '#FFA900'],
         buttonText: '#000000',
+        buttonTextSecondary: 'gray',
         qr: '#FFA900',
         action: '#FFF'
     };

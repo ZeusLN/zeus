@@ -541,4 +541,32 @@ describe('AddressUtils', () => {
             ).toBeFalsy();
         });
     });
+    describe('isValidXpub', () => {
+        it('validates xpub properly', () => {
+            expect(
+                AddressUtils.isValidXpub(
+                    'xpub5Y6A79VDz9HKqnZfg2jGKtxKBYq6XG7zzbfjnifSUEWAkiHSiWSYxaFHz3iGfVeHW7y7KrgfnZBE9RNvZ6iWoadBRzwzPSBWVYsK7rb3zdr'
+                )
+            ).toBeTruthy();
+        });
+        it('validates vpub properly', () => {
+            expect(
+                AddressUtils.isValidXpub(
+                    'vpub5Y6A79VDz9HKqnZfg2jGKtxKBYq6XG7zzbfjnifSUEWAkiHSiWSYxaFHz3iGfVeHW7y7KrgfnZBE9RNvZ6iWoadBRzwzPSBWVYsK7rb3zdr'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidXpub(
+                    'jpub18sqwdw687krnx0d23qa6a4mq38743xx5nfd3f9h5yts39srcl8qsf6k5jy'
+                )
+            ).toBeFalsy();
+        });
+        it('validates tpub properly', () => {
+            expect(
+                AddressUtils.isValidXpub(
+                    'vpub5Y6A79VDz9HKqnZfg2jGKtxKBYq6XG7zzbfjnifSUEWAkiHSiWSYxaFHz3iGfVeHW7y7KrgfnZBE9RNvZ6iWoadBRzwzPSBWVYsK7rb3zdr'
+                )
+            ).toBeTruthy();
+        });
+    });
 });

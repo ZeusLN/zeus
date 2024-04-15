@@ -10,6 +10,7 @@ export default interface TransactionRequest {
     conf_target?: number;
     spend_unconfirmed?: boolean;
     send_all?: boolean;
+    account?: string;
 }
 
 export type SendPaymentRequest =
