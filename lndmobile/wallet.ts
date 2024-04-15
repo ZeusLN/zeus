@@ -25,7 +25,7 @@ export const bumpFee = async ({
         outpoint,
         target_conf,
         force,
-        sat_per_vbyte
+        sat_per_vbyte: sat_per_vbyte ? Long.fromValue(sat_per_vbyte) : undefined
     };
     const response = await sendCommand<
         walletrpc.IBumpFeeRequest,
@@ -44,18 +44,21 @@ export const bumpFee = async ({
  * @throws
  */
 export const fundPsbt = async ({
+    account,
     raw,
     spend_unconfirmed,
     sat_per_vbyte
 }: {
+    account?: string;
     raw: walletrpc.TxTemplate;
     spend_unconfirmed?: boolean;
     sat_per_vbyte?: Long;
 }): Promise<walletrpc.FundPsbtResponse> => {
     const options: walletrpc.IFundPsbtRequest = {
+        account,
         raw,
         spend_unconfirmed,
-        sat_per_vbyte
+        sat_per_vbyte: sat_per_vbyte ? Long.fromValue(sat_per_vbyte) : undefined
     };
     const response = await sendCommand<
         walletrpc.IFundPsbtRequest,
@@ -89,6 +92,60 @@ export const finalizePsbt = async ({
         request: walletrpc.FinalizePsbtRequest,
         response: walletrpc.FinalizePsbtResponse,
         method: 'FinalizePsbt',
+        options
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
+export const listAccounts =
+    async (): Promise<walletrpc.ListAccountsResponse> => {
+        const response = await sendCommand<
+            walletrpc.IListAccountsRequest,
+            walletrpc.ListAccountsRequest,
+            walletrpc.ListAccountsResponse
+        >({
+            request: walletrpc.ListAccountsRequest,
+            response: walletrpc.ListAccountsResponse,
+            method: 'ListAccounts',
+            options: {}
+        });
+        return response;
+    };
+
+/**
+ * @throws
+ */
+export const importAccount = async ({
+    name,
+    extended_public_key,
+    master_key_fingerprint,
+    address_type,
+    dry_run
+}: {
+    name: string;
+    extended_public_key: string;
+    master_key_fingerprint?: Uint8Array;
+    address_type?: number;
+    dry_run: boolean;
+}): Promise<walletrpc.ImportAccountResponse> => {
+    const options: walletrpc.IImportAccountRequest = {
+        name,
+        extended_public_key,
+        master_key_fingerprint,
+        address_type,
+        dry_run
+    };
+    const response = await sendCommand<
+        walletrpc.IImportAccountRequest,
+        walletrpc.ImportAccountRequest,
+        walletrpc.ImportAccountResponse
+    >({
+        request: walletrpc.ImportAccountRequest,
+        response: walletrpc.ImportAccountResponse,
+        method: 'ImportAccount',
         options
     });
     return response;

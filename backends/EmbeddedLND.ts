@@ -34,7 +34,9 @@ const {
     bumpFee,
     fundPsbt,
     finalizePsbt,
-    publishTransaction
+    publishTransaction,
+    listAccounts,
+    importAccount
 } = lndMobile.wallet;
 const { walletBalance, newAddress, getTransactions, sendCoins } =
     lndMobile.onchain;
@@ -45,7 +47,7 @@ export default class EmbeddedLND extends LND {
     getPendingChannels = async () => await pendingChannels();
     getClosedChannels = async () => await closedChannels();
     getChannelInfo = async (chanId: string) => await getChanInfo(chanId);
-    getBlockchainBalance = async () => await walletBalance();
+    getBlockchainBalance = async (data: any) => await walletBalance(data);
     getLightningBalance = async () => await channelBalance();
     sendCoins = async (data: any) =>
         await sendCoins(
@@ -69,7 +71,8 @@ export default class EmbeddedLND extends LND {
             preimage: data.preimage
         });
     getPayments = async () => await listPayments();
-    getNewAddress = async (data: any) => await newAddress(data.type);
+    getNewAddress = async (data: any) =>
+        await newAddress(data.type, data.account);
     openChannel = async (data: OpenChannelRequest) =>
         await openChannel(
             data.node_pubkey_string,
@@ -152,30 +155,16 @@ export default class EmbeddedLND extends LND {
         urlParams && (await queryRoutes(urlParams[0], urlParams[1]));
     // getForwardingHistory = () => N/A
     // // Coin Control
-    fundPsbt = async (data: any) =>
-        await fundPsbt({
-            raw: data.raw,
-            spend_unconfirmed: data.spend_unconfirmed,
-            sat_per_vbyte: data.sat_per_vbyte
-        });
-    finalizePsbt = async (data: any) =>
-        await finalizePsbt({
-            funded_psbt: data.funded_psbt
-        });
-    publishTransaction = async (data: any) =>
-        await publishTransaction({
-            tx_hex: data.tx_hex
-        });
+    fundPsbt = async (data: any) => await fundPsbt(data);
+    finalizePsbt = async (data: any) => await finalizePsbt(data);
+    publishTransaction = async (data: any) => await publishTransaction(data);
 
-    getUTXOs = async () => await listUnspent();
+    getUTXOs = async (data: any) => await listUnspent(data);
     bumpFee = async (data: any) => await bumpFee(data);
     lookupInvoice = async (data: any) => await lookupInvoice(data.r_hash);
 
-    // TODO inject
-    // listAccounts = () => this.getRequest('/v2/wallet/accounts');
-    // TODO inject
-    // importAccount = (data: any) =>
-    //     this.postRequest('/v2/wallet/accounts/import', data);
+    listAccounts = async () => await listAccounts();
+    importAccount = async (data: any) => await importAccount(data);
 
     // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>
@@ -199,7 +188,7 @@ export default class EmbeddedLND extends LND {
     supportsHopPicking = () => this.supports('v0.11.0');
     // TODO wire up accounts
     // supportsAccounts = () => this.supports('v0.13.0');
-    supportsAccounts = () => false;
+    supportsAccounts = () => true;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
