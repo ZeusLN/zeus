@@ -97,6 +97,7 @@ interface SendState {
     contactName: string;
     contacts: Contact[];
     clearOnBackPress: boolean;
+    account: string;
 }
 
 @inject(
@@ -151,7 +152,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             loading: false,
             contactName,
             contacts: [],
-            clearOnBackPress
+            clearOnBackPress,
+            account: 'default'
         };
     }
 
@@ -313,14 +315,21 @@ export default class Send extends React.Component<SendProps, SendState> {
         });
     };
 
-    selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
+    selectUTXOs = (
+        utxos: Array<string>,
+        utxoBalance: number,
+        account: string
+    ) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
         this.setState((prevState) => ({
             utxos,
             utxoBalance,
             amount:
-                implementation === 'c-lightning-REST' ? 'all' : prevState.amount
+                implementation === 'c-lightning-REST'
+                    ? 'all'
+                    : prevState.amount,
+            account
         }));
     };
 
@@ -361,7 +370,8 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, fee, utxos, confirmationTarget } = this.state;
+        const { destination, fee, utxos, confirmationTarget, account } =
+            this.state;
 
         let request;
         if (utxos && utxos.length > 0) {
@@ -371,7 +381,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amount: satAmount.toString(),
                 target_conf: Number(confirmationTarget),
                 utxos,
-                spend_unconfirmed: true
+                spend_unconfirmed: true,
+                account
             };
         } else {
             request = {
@@ -574,7 +585,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         } = this.state;
         const {
             confirmedBlockchainBalance,
-            unconfirmedBlockchainBalance,
+            totalBlockchainBalanceAccounts,
             lightningBalance
         } = BalanceStore;
         const { implementation } = SettingsStore;
@@ -674,8 +685,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {!!destination &&
                         transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() &&
-                        confirmedBlockchainBalance === 0 &&
-                        unconfirmedBlockchainBalance === 0 && (
+                        totalBlockchainBalanceAccounts === 0 && (
                             <View style={{ marginBottom: 10 }}>
                                 <WarningMessage
                                     message={localeString(
@@ -936,10 +946,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             name: 'send',
                                             size: 25,
                                             color:
-                                                confirmedBlockchainBalance ===
-                                                    0 &&
-                                                unconfirmedBlockchainBalance ===
-                                                    0
+                                                totalBlockchainBalanceAccounts ===
+                                                0
                                                     ? themeColor(
                                                           'secondaryText'
                                                       )
@@ -949,8 +957,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             this.sendCoins(satAmount)
                                         }
                                         disabled={
-                                            confirmedBlockchainBalance === 0 &&
-                                            unconfirmedBlockchainBalance === 0
+                                            totalBlockchainBalanceAccounts === 0
                                         }
                                     />
                                 </View>

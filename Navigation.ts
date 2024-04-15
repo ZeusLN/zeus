@@ -130,6 +130,8 @@ import RawTxHex from './views/RawTxHex';
 
 import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
 
+import PSBT from './views/PSBT';
+
 const AppScenes = {
     Wallet: {
         screen: Wallet
@@ -454,6 +456,9 @@ const AppScenes = {
     },
     CustodialWalletWarning: {
         screen: CustodialWalletWarning
+    },
+    PSBT: {
+        screen: PSBT
     }
 };
 

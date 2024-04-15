@@ -5,6 +5,7 @@ import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
+import FundedPsbt from '../models/FundedPsbt';
 import Transaction from '../models/Transaction';
 import TransactionRequest from '../models/TransactionRequest';
 import Payment from '../models/Payment';
@@ -40,6 +41,7 @@ export interface SendPaymentReq {
 
 export default class TransactionsStore {
     @observable loading = false;
+    @observable crafting = false;
     @observable error = false;
     @observable error_msg: string | null;
     @observable transactions: Array<Transaction> = [];
@@ -56,6 +58,8 @@ export default class TransactionsStore {
     @observable publishSuccess = false;
     @observable broadcast_txid: string;
     @observable broadcast_err: string | null;
+    // coin control
+    @observable funded_psbt: string = '';
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
@@ -91,6 +95,7 @@ export default class TransactionsStore {
         this.status = null;
         this.broadcast_txid = '';
         this.broadcast_err = null;
+        this.funded_psbt = '';
     };
 
     @action
@@ -111,10 +116,60 @@ export default class TransactionsStore {
             });
     };
 
+    @action
+    public finalizePsbtAndBroadcast = (funded_psbt: string) => {
+        this.funded_psbt = '';
+        this.loading = true;
+        return BackendUtils.finalizePsbt({ funded_psbt })
+            .then((data: any) => {
+                const raw_final_tx = data.raw_final_tx;
+
+                // Grok txid out from raw tx hex
+                const raw_final_tx_hex = Base64Utils.base64ToHex(raw_final_tx);
+                // Decode the raw transaction hex string
+                const tx = bitcoin.Transaction.fromHex(raw_final_tx_hex);
+                // Get the transaction ID (txid)
+                const txid = tx.getId();
+
+                BackendUtils.publishTransaction({
+                    tx_hex: raw_final_tx
+                })
+                    .then((data: any) => {
+                        if (data.publish_error) {
+                            this.error_msg = data.publish_error;
+                            this.error = true;
+                            this.loading = false;
+                        } else {
+                            this.txid = txid;
+                            this.publishSuccess = true;
+                            this.loading = false;
+                        }
+                    })
+                    .then(() => {
+                        this.txid = txid;
+                        this.publishSuccess = true;
+                        this.loading = false;
+                    })
+                    .catch((error: any) => {
+                        // handle error
+                        this.error_msg = error.publish_error || error.message;
+                        this.error = true;
+                        this.loading = false;
+                    });
+            })
+            .catch((error: any) => {
+                // handle error
+                this.error_msg = error.message;
+                this.error = true;
+                this.loading = false;
+            });
+    };
+
     public sendCoinsLNDCoinControl = (
         transactionRequest: TransactionRequest
     ) => {
-        const { utxos, addr, amount, sat_per_vbyte } = transactionRequest;
+        const { utxos, addr, amount, sat_per_vbyte, account } =
+            transactionRequest;
         const inputs: any = [];
         const outputs: any = {};
 
@@ -135,69 +190,41 @@ export default class TransactionsStore {
                 inputs
             },
             sat_per_vbyte: Number(sat_per_vbyte),
-            spend_unconfirmed: true
+            spend_unconfirmed: true,
+            account
         };
 
         BackendUtils.fundPsbt(fundPsbtRequest)
             .then((data: any) => {
-                const funded_psbt = data.funded_psbt;
+                this.crafting = false;
+                const funded_psbt: string = new FundedPsbt(
+                    data.funded_psbt
+                ).getFormatted();
 
-                BackendUtils.finalizePsbt({ funded_psbt })
-                    .then((data: any) => {
-                        const raw_final_tx = data.raw_final_tx;
-
-                        // Grok txid out from raw tx hex
-                        const raw_final_tx_hex =
-                            Base64Utils.base64ToHex(raw_final_tx);
-                        // Decode the raw transaction hex string
-                        const tx =
-                            bitcoin.Transaction.fromHex(raw_final_tx_hex);
-                        // Get the transaction ID (txid)
-                        const txid = tx.getId();
-
-                        BackendUtils.publishTransaction({
-                            tx_hex: raw_final_tx
-                        })
-                            .then((data: any) => {
-                                if (data.publish_error) {
-                                    this.error_msg = data.publish_error;
-                                    this.error = true;
-                                    this.loading = false;
-                                } else {
-                                    this.txid = txid;
-                                    this.publishSuccess = true;
-                                    this.loading = false;
-                                }
-                            })
-                            .catch((error: any) => {
-                                // handle error
-                                this.error_msg =
-                                    error.publish_error || error.message;
-                                this.error = true;
-                                this.loading = false;
-                            });
-                    })
-                    .catch((error: any) => {
-                        // handle error
-                        this.error_msg = error.message;
-                        this.error = true;
-                        this.loading = false;
-                    });
+                if (account !== 'default') {
+                    this.funded_psbt = funded_psbt;
+                    this.loading = false;
+                } else {
+                    this.finalizePsbtAndBroadcast(funded_psbt);
+                }
             })
             .catch((error: any) => {
                 // handle error
                 this.error_msg = error.message;
                 this.error = true;
+                this.crafting = false;
                 this.loading = false;
             });
     };
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
+        this.funded_psbt = '';
         this.error = false;
         this.error_msg = null;
         this.txid = null;
         this.publishSuccess = false;
+        this.crafting = true;
         this.loading = true;
 
         if (
@@ -207,6 +234,8 @@ export default class TransactionsStore {
         ) {
             return this.sendCoinsLNDCoinControl(transactionRequest);
         }
+
+        this.crafting = false;
 
         BackendUtils.sendCoins(transactionRequest)
             .then((data: any) => {
