@@ -2,13 +2,16 @@ import * as React from 'react';
 import { Alert, View } from 'react-native';
 import { Header } from 'react-native-elements';
 import { observer } from 'mobx-react';
+import { URDecoder } from '@ngraveio/bc-ur';
 
+import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
 
 import handleAnything from '../utils/handleAnything';
+import Base64Utils from '../utils/Base64Utils';
+import { joinQRs } from '../utils/BbqrUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import LoadingIndicator from '../components/LoadingIndicator';
 
 interface handleAnythingQRProps {
     navigation: any;
@@ -16,6 +19,9 @@ interface handleAnythingQRProps {
 
 interface handleAnythingQRState {
     loading: boolean;
+    mode: string;
+    totalParts: number;
+    parts: Array<string>;
 }
 
 @observer
@@ -23,20 +29,96 @@ export default class handleAnythingQRScanner extends React.Component<
     handleAnythingQRProps,
     handleAnythingQRState
 > {
+    decoder: any;
     constructor(props: any) {
         super(props);
 
         this.state = {
-            loading: false
+            loading: false,
+            mode: 'default',
+            totalParts: 0,
+            parts: []
         };
     }
 
     handleAnythingScanned = async (data: string) => {
         const { navigation } = this.props;
+
+        let handleData;
+
+        // BBQR
+        if (data.toUpperCase().startsWith('B$')) {
+            let parts = this.state.parts;
+            parts.push(data);
+
+            this.setState({
+                parts,
+                mode: 'BBQr'
+            });
+
+            try {
+                const joined = joinQRs(parts);
+                if (joined?.raw) {
+                    handleData = Base64Utils.bytesToBase64(joined.raw);
+                } else {
+                    return;
+                }
+            } catch (e) {
+                console.log('Error found while decoding BBQr', e);
+                return;
+            }
+        }
+
+        // BC-UR
+        if (data.toUpperCase().startsWith('UR:')) {
+            if (!this.decoder) this.decoder = new URDecoder();
+            if (!this.decoder.isComplete()) {
+                let parts = this.state.parts;
+                parts.push(data);
+                this.decoder.receivePart(data);
+
+                this.setState({
+                    parts,
+                    mode: 'BC-UR'
+                });
+
+                if (this.decoder.isComplete()) {
+                    if (this.decoder.isSuccess()) {
+                        // Get the UR representation of the message
+                        const ur = this.decoder.resultUR();
+
+                        // Decode the CBOR message to a Buffer
+                        const decoded = ur.decodeCBOR();
+                        handleData = decoded.toString();
+                    } else {
+                        const error = this.decoder.resultError();
+                        console.log('Error found while decoding BC-UR', error);
+                    }
+                } else {
+                    if (!this.state.totalParts) {
+                        const [_, index] = data.split('/');
+                        if (index) {
+                            const [_, totalParts] = index.split('-');
+                            if (totalParts) {
+                                this.setState({
+                                    totalParts: Number(totalParts) || 0
+                                });
+                            }
+                        }
+                    }
+
+                    return;
+                }
+            }
+        }
+
+        if (!handleData) handleData = data;
+
         this.setState({
             loading: true
         });
-        handleAnything(data)
+
+        handleAnything(handleData)
             .then((response) => {
                 this.setState({
                     loading: false
@@ -72,7 +154,7 @@ export default class handleAnythingQRScanner extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { loading } = this.state;
+        const { loading, totalParts, parts, mode } = this.state;
 
         if (loading) {
             return (
@@ -107,6 +189,9 @@ export default class handleAnythingQRScanner extends React.Component<
                 handleQRScanned={this.handleAnythingScanned}
                 goBack={() => navigation.goBack()}
                 navigation={navigation}
+                parts={parts.length}
+                totalParts={totalParts}
+                mode={mode}
             />
         );
     }
