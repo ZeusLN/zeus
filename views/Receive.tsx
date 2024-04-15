@@ -1376,12 +1376,15 @@ export default class Receive extends React.Component<
                         >
                             {creatingInvoiceError && (
                                 <ErrorMessage
+                                    top={10}
                                     message={localeString(
                                         'views.Receive.errorCreate'
                                     )}
                                 />
                             )}
-                            {error_msg && <ErrorMessage message={error_msg} />}
+                            {error_msg && (
+                                <ErrorMessage top={10} message={error_msg} />
+                            )}
 
                             {showLspSettings && (
                                 <View style={{ margin: 10 }}>
@@ -1403,6 +1406,7 @@ export default class Receive extends React.Component<
                                             !!address &&
                                             !belowDustLimit && (
                                                 <WarningMessage
+                                                    top={10}
                                                     message={localeString(
                                                         'views.Receive.warningLndHub'
                                                     )}
@@ -1410,6 +1414,7 @@ export default class Receive extends React.Component<
                                             )}
                                         {!!lnurl && (
                                             <SuccessMessage
+                                                top={10}
                                                 message={
                                                     !!lnurl &&
                                                     `${localeString(
