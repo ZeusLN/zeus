@@ -108,6 +108,8 @@ const handleAnything = async (
         if (isClipboardValue) return true;
         await invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
+    } else if (AddressUtils.isPsbt(value)) {
+        return ['PSBT', { psbt: value }];
     } else if (value.includes('c-lightning-rest://')) {
         if (isClipboardValue) return true;
         const { host, port, macaroonHex, implementation, enableTor } =

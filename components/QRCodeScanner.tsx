@@ -14,14 +14,14 @@ import { launchImageLibrary } from 'react-native-image-picker';
 
 const LocalQRCode = require('@remobile/react-native-qrcode-local-image');
 
-import Button from './../components/Button';
+import Button from '../components/Button';
 
-import { localeString } from './../utils/LocaleUtils';
+import { localeString } from '../utils/LocaleUtils';
 
-import FlashOffIcon from './../assets/images/SVG/Flash Off.svg';
-import FlashOnIcon from './../assets/images/SVG/Flash On.svg';
-import GalleryIcon from './../assets/images/SVG/Gallery.svg';
-import ScanFrameSvg from './../assets/images/SVG/DynamicSVG/ScanFrameSvg';
+import FlashOffIcon from '../assets/images/SVG/Flash Off.svg';
+import FlashOnIcon from '../assets/images/SVG/Flash On.svg';
+import GalleryIcon from '../assets/images/SVG/Gallery.svg';
+import ScanFrameSvg from '../assets/images/SVG/DynamicSVG/ScanFrameSvg';
 
 const createHash = require('create-hash');
 
@@ -30,6 +30,9 @@ interface QRProps {
     handleQRScanned: any;
     goBack: any;
     navigation: any;
+    parts?: number;
+    totalParts?: number;
+    mode?: string;
 }
 
 interface QRState {
@@ -178,7 +181,9 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
 
     render() {
         const { cameraStatus, isTorchOn } = this.state;
-        const { text, goBack } = this.props;
+        const { text, goBack, parts, totalParts, mode } = this.props;
+
+        const hasPartsCount = parts && totalParts && totalParts !== 0;
 
         return (
             <>
@@ -244,6 +249,13 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                         >
                             <View style={styles.scan}>
                                 <ScanFrameSvg height="100%" />
+                                <Text style={{ color: 'white' }}>
+                                    {mode === 'default'
+                                        ? ''
+                                        : hasPartsCount
+                                        ? `${mode}: ${parts} / ${totalParts}`
+                                        : mode}
+                                </Text>
                             </View>
                         </View>
                         <View style={styles.cancelOverlay}>
@@ -252,6 +264,9 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                                 onPress={() => goBack()}
                                 iconOnly
                                 noUppercase
+                                titleStyle={{
+                                    color: 'white'
+                                }}
                             />
                         </View>
                     </View>
