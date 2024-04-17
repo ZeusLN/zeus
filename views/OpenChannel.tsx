@@ -1,5 +1,7 @@
 import * as React from 'react';
 import {
+    NativeEventEmitter,
+    NativeModules,
     Platform,
     ScrollView,
     StyleSheet,
@@ -10,6 +12,7 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
+import { randomBytes } from 'react-native-randombytes';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
@@ -74,6 +77,8 @@ interface OpenChannelState {
     utxoBalance: number;
     connectPeerOnly: boolean;
     advancedSettingsToggle: boolean;
+    // external account funding
+    account: string;
 }
 
 @inject(
@@ -89,6 +94,7 @@ export default class OpenChannel extends React.Component<
     OpenChannelProps,
     OpenChannelState
 > {
+    listener: any;
     constructor(props: any) {
         super(props);
         this.state = {
@@ -107,7 +113,8 @@ export default class OpenChannel extends React.Component<
             utxos: [],
             utxoBalance: 0,
             connectPeerOnly: false,
-            advancedSettingsToggle: false
+            advancedSettingsToggle: false,
+            account: 'default'
         };
     }
 
@@ -206,9 +213,9 @@ export default class OpenChannel extends React.Component<
 
         const node_pubkey_string = navigation.getParam(
             'node_pubkey_string',
-            null
+            ''
         );
-        const host = navigation.getParam('host', null);
+        const host = navigation.getParam('host', '');
 
         this.setState({
             node_pubkey_string,
@@ -223,10 +230,15 @@ export default class OpenChannel extends React.Component<
         });
     };
 
-    selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
+    selectUTXOs = (
+        utxos: Array<string>,
+        utxoBalance: number,
+        account: string
+    ) => {
         const newState: any = {};
         newState.utxos = utxos;
         newState.utxoBalance = utxoBalance;
+        newState.account = account;
         this.setState(newState);
     };
 
@@ -258,6 +270,36 @@ export default class OpenChannel extends React.Component<
         this.setState({
             sat_per_vbyte
         });
+    };
+
+    subscribeOpenChannelStream = (request: any, streamingCall: string) => {
+        const { handleChannelOpen, handleChannelOpenError } =
+            this.props.ChannelsStore;
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        this.listener = eventEmitter.addListener(
+            streamingCall,
+            (event: any) => {
+                if (event.result && event.result !== 'EOF') {
+                    let result;
+                    try {
+                        result = JSON.parse(event.result);
+
+                        if (result?.psbt_fund) {
+                            handleChannelOpen(request, result);
+                        }
+                    } catch (e) {
+                        try {
+                            result = JSON.parse(event);
+                        } catch (e2) {
+                            result = event.result || event;
+                        }
+
+                        handleChannelOpenError(result);
+                    }
+                }
+            }
+        );
     };
 
     render() {
@@ -294,9 +336,15 @@ export default class OpenChannel extends React.Component<
             errorMsgChannel,
             errorMsgPeer,
             peerSuccess,
-            channelSuccess
+            channelSuccess,
+            funded_psbt
         } = ChannelsStore;
         const { confirmedBlockchainBalance } = BalanceStore;
+
+        if (funded_psbt)
+            navigation.navigate('PSBT', {
+                psbt: funded_psbt
+            });
 
         const ScanButton = () => (
             <TouchableOpacity
@@ -751,15 +799,58 @@ export default class OpenChannel extends React.Component<
                                         y: 0,
                                         animated: true
                                     });
-                                    connectPeer(
-                                        {
-                                            ...this.state,
-                                            local_funding_amount:
-                                                satAmount.toString()
-                                        },
-                                        false,
-                                        connectPeerOnly
-                                    );
+                                    if (
+                                        implementation ===
+                                            'lightning-node-connect' &&
+                                        this.state.account !== 'default' &&
+                                        !connectPeerOnly
+                                    ) {
+                                        ChannelsStore.setLoading(true);
+                                        connectPeer(
+                                            {
+                                                ...this.state,
+                                                local_funding_amount:
+                                                    satAmount.toString()
+                                            },
+                                            false,
+                                            true,
+                                            true
+                                        ).then(async () => {
+                                            const request = {
+                                                ...this.state,
+                                                local_funding_amount:
+                                                    satAmount.toString(),
+                                                funding_shim: {
+                                                    psbt_shim: {
+                                                        base_psbt: '',
+                                                        pending_chan_id:
+                                                            randomBytes(
+                                                                32
+                                                            ).toString('base64')
+                                                    }
+                                                }
+                                            };
+                                            const streamingCall =
+                                                BackendUtils.openChannelStream(
+                                                    request
+                                                );
+
+                                            await this.subscribeOpenChannelStream(
+                                                request,
+                                                streamingCall
+                                            );
+                                        });
+                                    } else {
+                                        connectPeer(
+                                            {
+                                                ...this.state,
+                                                local_funding_amount:
+                                                    satAmount.toString()
+                                            },
+                                            false,
+                                            connectPeerOnly
+                                        );
+                                    }
                                 }}
                             />
                         </View>

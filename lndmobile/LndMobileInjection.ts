@@ -36,13 +36,15 @@ import {
     listPayments,
     listInvoices,
     subscribeChannelGraph,
-    sendKeysendPaymentV2
+    sendKeysendPaymentV2,
+    fundingStateStep
 } from './index';
 import {
     channelBalance,
     closeChannel,
     listChannels,
     openChannel,
+    openChannelSync,
     openChannelAll,
     pendingChannels,
     subscribeChannelEvents,
@@ -50,6 +52,7 @@ import {
     channelAcceptorResponse,
     decodeChannelAcceptRequest,
     decodeChannelEvent,
+    decodeOpenStatusUpdate,
     exportAllChannelBackups,
     restoreChannelBackups,
     abandonChannel,
@@ -228,6 +231,12 @@ export interface ILndMobileInjections {
             dest: string;
             dest_custom_records?: any;
         }) => Promise<lnrpc.Payment>;
+        fundingStateStep: ({
+            shim_register,
+            shim_cancel,
+            psbt_verify,
+            psbt_finalize
+        }: any) => Promise<lnrpc.FundingStateStepResp>;
     };
     channel: {
         channelBalance: () => Promise<lnrpc.ChannelBalanceResponse>;
@@ -255,6 +264,19 @@ export interface ILndMobileInjections {
             spend_unconfirmed?: boolean,
             simpleTaprootChannel?: boolean,
             fund_max?: boolean,
+            utxos?: Array<string>,
+            funding_shim?: any
+        ) => Promise<string>;
+        openChannelSync: (
+            pubkey: string,
+            amount: number,
+            privateChannel: boolean,
+            feeRateSat?: number,
+            scidAlias?: boolean,
+            min_confs?: number,
+            spend_unconfirmed?: boolean,
+            simpleTaprootChannel?: boolean,
+            fund_max?: boolean,
             utxos?: Array<string>
         ) => Promise<lnrpc.ChannelPoint>;
         openChannelAll: (
@@ -267,6 +289,7 @@ export interface ILndMobileInjections {
         getChanInfo: (chanId: string) => Promise<lnrpc.ChannelEdge>;
         subscribeChannelEvents: () => Promise<string>;
         decodeChannelEvent: (data: string) => lnrpc.ChannelEventUpdate;
+        decodeOpenStatusUpdate: (data: string) => lnrpc.OpenStatusUpdate;
         exportAllChannelBackups: () => Promise<lnrpc.ChanBackupSnapshot>;
         restoreChannelBackups: (
             data: Uint8Array
@@ -431,17 +454,20 @@ export default {
         listPayments,
         listInvoices,
         subscribeChannelGraph,
-        sendKeysendPaymentV2
+        sendKeysendPaymentV2,
+        fundingStateStep
     },
     channel: {
         channelBalance,
         closeChannel,
         listChannels,
         openChannel,
+        openChannelSync,
         openChannelAll,
         pendingChannels,
         subscribeChannelEvents,
         decodeChannelEvent,
+        decodeOpenStatusUpdate,
         exportAllChannelBackups,
         restoreChannelBackups,
         abandonChannel,

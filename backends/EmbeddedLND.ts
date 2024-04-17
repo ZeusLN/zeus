@@ -4,6 +4,11 @@ import Base64Utils from './../utils/Base64Utils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 
+import {
+    checkLndStreamErrorResponse,
+    LndMobileEventEmitter
+} from '../utils/LndMobileUtils';
+
 const {
     addInvoice,
     getInfo,
@@ -17,7 +22,8 @@ const {
     listPayments,
     getNetworkInfo,
     queryRoutes,
-    lookupInvoice
+    lookupInvoice,
+    fundingStateStep
 } = lndMobile.index;
 const {
     channelBalance,
@@ -26,7 +32,9 @@ const {
     pendingChannels,
     closedChannels,
     closeChannel,
-    openChannel
+    openChannel,
+    openChannelSync,
+    decodeOpenStatusUpdate
 } = lndMobile.channel;
 const {
     signMessageNodePubkey,
@@ -42,6 +50,8 @@ const { walletBalance, newAddress, getTransactions, sendCoins } =
     lndMobile.onchain;
 
 export default class EmbeddedLND extends LND {
+    openChannelListener: any;
+
     getTransactions = async () => await getTransactions();
     getChannels = async () => await listChannels();
     getPendingChannels = async () => await pendingChannels();
@@ -73,8 +83,8 @@ export default class EmbeddedLND extends LND {
     getPayments = async () => await listPayments();
     getNewAddress = async (data: any) =>
         await newAddress(data.type, data.account);
-    openChannel = async (data: OpenChannelRequest) =>
-        await openChannel(
+    openChannelSync = async (data: OpenChannelRequest) =>
+        await openChannelSync(
             data.node_pubkey_string,
             Number(data.local_funding_amount),
             data.privateChannel || false,
@@ -86,6 +96,45 @@ export default class EmbeddedLND extends LND {
             data.fundMax,
             data.utxos
         );
+    openChannelStream = async (data: OpenChannelRequest) => {
+        return await new Promise((resolve, reject) => {
+            LndMobileEventEmitter.addListener('OpenChannel', (e: any) => {
+                try {
+                    const error = checkLndStreamErrorResponse('OpenChannel', e);
+                    if (error === 'EOF') {
+                        return;
+                    } else if (error) {
+                        console.error('Got error from OpenChannel', [error]);
+                        reject(error);
+                        return;
+                    }
+
+                    const result = decodeOpenStatusUpdate(e.data);
+                    if (result?.psbt_fund) {
+                        resolve({ result });
+                    }
+                } catch (error) {
+                    console.error(error);
+                }
+            });
+
+            openChannel(
+                data.node_pubkey_string,
+                Number(data.local_funding_amount),
+                data.privateChannel || false,
+                data.sat_per_vbyte && !data.funding_shim
+                    ? Number(data.sat_per_vbyte)
+                    : undefined,
+                data.scidAlias,
+                data.min_confs,
+                data.spend_unconfirmed,
+                data.simpleTaprootChannel,
+                data.fundMax,
+                data.utxos,
+                data.funding_shim
+            );
+        });
+    };
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
     decodePaymentRequest = async (urlParams?: string[]) =>
@@ -158,6 +207,23 @@ export default class EmbeddedLND extends LND {
     fundPsbt = async (data: any) => await fundPsbt(data);
     finalizePsbt = async (data: any) => await finalizePsbt(data);
     publishTransaction = async (data: any) => await publishTransaction(data);
+    fundingStateStep = async (data: any) => {
+        // Verify
+        if (data.psbt_finalize?.funded_psbt)
+            data.psbt_finalize.funded_psbt = Base64Utils.hexToBase64(
+                data.psbt_finalize.funded_psbt
+            );
+        // Finalize
+        if (data.psbt_finalize?.final_raw_tx)
+            data.psbt_finalize.final_raw_tx = Base64Utils.hexToBase64(
+                data.psbt_finalize.final_raw_tx
+            );
+        if (data.psbt_finalize?.signed_psbt)
+            data.psbt_finalize.signed_psbt = Base64Utils.hexToBase64(
+                data.psbt_finalize.signed_psbt
+            );
+        return await fundingStateStep(data);
+    };
 
     getUTXOs = async (data: any) => await listUnspent(data);
     bumpFee = async (data: any) => await bumpFee(data);
@@ -186,8 +252,6 @@ export default class EmbeddedLND extends LND {
     supportsCoinControl = () => this.supports('v0.12.0');
     supportsChannelCoinControl = () => this.supports('v0.17.0');
     supportsHopPicking = () => this.supports('v0.11.0');
-    // TODO wire up accounts
-    // supportsAccounts = () => this.supports('v0.13.0');
     supportsAccounts = () => true;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;

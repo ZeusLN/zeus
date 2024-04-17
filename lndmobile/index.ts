@@ -835,6 +835,33 @@ export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
 /**
  * @throws
  */
+export const fundingStateStep = async ({
+    shim_register,
+    shim_cancel,
+    psbt_verify,
+    psbt_finalize
+}: any): Promise<lnrpc.FundingStateStepResp> => {
+    const response = await sendCommand<
+        lnrpc.IFundingTransitionMsg,
+        lnrpc.FundingTransitionMsg,
+        lnrpc.FundingStateStepResp
+    >({
+        request: lnrpc.FundingTransitionMsg,
+        response: lnrpc.FundingStateStepResp,
+        method: 'FundingStateStep',
+        options: {
+            shim_register,
+            shim_cancel,
+            psbt_verify,
+            psbt_finalize
+        }
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
 export const subscribeChannelGraph = async (): Promise<string> => {
     const response = await sendStreamCommand<
         lnrpc.IGraphTopologySubscription,

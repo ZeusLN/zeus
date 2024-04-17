@@ -110,6 +110,8 @@ const handleAnything = async (
         return ['PaymentRequest', {}];
     } else if (AddressUtils.isPsbt(value)) {
         return ['PSBT', { psbt: value }];
+    } else if (AddressUtils.isValidTxHex(value)) {
+        return ['TxHex', { txHex: value }];
     } else if (value.includes('c-lightning-rest://')) {
         if (isClipboardValue) return true;
         const { host, port, macaroonHex, implementation, enableTor } =

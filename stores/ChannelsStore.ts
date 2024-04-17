@@ -1,20 +1,21 @@
 import { action, observable, reaction } from 'mobx';
 import BigNumber from 'bignumber.js';
+import _ from 'lodash';
+import { randomBytes } from 'react-native-randombytes';
 
-import Channel from './../models/Channel';
-import ClosedChannel from './../models/ClosedChannel';
-import ChannelInfo from './../models/ChannelInfo';
+import Channel from '../models/Channel';
+import ClosedChannel from '../models/ClosedChannel';
+import ChannelInfo from '../models/ChannelInfo';
+import FundedPsbt from '../models/FundedPsbt';
 
-import OpenChannelRequest from './../models/OpenChannelRequest';
-import CloseChannelRequest from './../models/CloseChannelRequest';
+import OpenChannelRequest from '../models/OpenChannelRequest';
+import CloseChannelRequest from '../models/CloseChannelRequest';
 
 import SettingsStore from './SettingsStore';
 
-import BackendUtils from './../utils/BackendUtils';
+import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
-
-import _ from 'lodash';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
@@ -72,6 +73,9 @@ export default class ChannelsStore {
     @observable public showSearch: boolean = false;
     // aliasMap
     @observable public aliasMap: any = observable.map({});
+    // external account funding
+    @observable public funded_psbt: string = '';
+    @observable public pending_chan_id: any;
 
     settingsStore: SettingsStore;
 
@@ -142,6 +146,8 @@ export default class ChannelsStore {
         this.errorOpenChannel = false;
         this.channelSuccess = false;
         this.channelRequest = null;
+        this.funded_psbt = '';
+        this.pending_chan_id = null;
     };
 
     @action
@@ -257,6 +263,11 @@ export default class ChannelsStore {
     @action
     filterClosedChannels = () => {
         this.filteredClosedChannels = this.filter(this.enrichedClosedChannels);
+    };
+
+    @action
+    setLoading = (state: boolean) => {
+        this.loading = state;
     };
 
     @action
@@ -551,6 +562,7 @@ export default class ChannelsStore {
                     this.channelSuccess = false;
                     // handle error
                     if (
+                        error &&
                         error.toString() &&
                         error.toString().includes('already')
                     ) {
@@ -574,24 +586,85 @@ export default class ChannelsStore {
         });
     };
 
-    openChannel = (request: OpenChannelRequest) => {
-        delete request.host;
+    handleChannelOpen = (request: any, result: any) => {
+        const { psbt_fund, pending_chan_id } = result;
+        this.pending_chan_id = pending_chan_id;
 
-        this.peerSuccess = false;
-        this.channelSuccess = false;
-        this.openingChannel = true;
+        const { account, sat_per_vbyte, utxos } = request;
 
-        BackendUtils.openChannel(request)
+        const inputs: any = [];
+        const outputs: any = {
+            [psbt_fund.funding_address]: Number(psbt_fund.funding_amount)
+        };
+
+        if (utxos) {
+            utxos.forEach((input: any) => {
+                const [txid_str, output_index] = input.split(':');
+                inputs.push({
+                    txid_str,
+                    output_index: Number(output_index)
+                });
+            });
+        }
+        const fundPsbtRequest = {
+            raw: {
+                outputs,
+                inputs
+            },
+            sat_per_vbyte: Number(sat_per_vbyte),
+            spend_unconfirmed: true,
+            account
+        };
+
+        BackendUtils.fundPsbt(fundPsbtRequest)
             .then((data: any) => {
-                this.output_index = data.output_index;
-                this.funding_txid_str = data.funding_txid_str;
-                this.errorOpenChannel = false;
-                this.openingChannel = false;
-                this.errorMsgChannel = null;
-                this.channelRequest = null;
-                this.channelSuccess = true;
+                const funded_psbt: string = new FundedPsbt(
+                    data.funded_psbt
+                ).getFormatted();
+
+                BackendUtils.fundingStateStep({
+                    psbt_verify: {
+                        funded_psbt,
+                        pending_chan_id
+                    }
+                })
+                    .then((data: any) => {
+                        if (data.publish_error) {
+                            this.errorMsgChannel = errorToUserFriendly(
+                                data.publish_error
+                            );
+                            this.output_index = null;
+                            this.funding_txid_str = null;
+                            this.errorOpenChannel = true;
+                            this.openingChannel = false;
+                            this.channelRequest = null;
+                            this.peerSuccess = false;
+                            this.channelSuccess = false;
+                        } else {
+                            this.funded_psbt = funded_psbt;
+                            this.output_index = null;
+                            this.funding_txid_str = null;
+                            this.errorOpenChannel = true;
+                            this.openingChannel = false;
+                            this.channelRequest = null;
+                            this.peerSuccess = false;
+                            this.channelSuccess = false;
+                        }
+                    })
+                    .catch((error: any) => {
+                        // handle error
+                        this.errorMsgChannel = errorToUserFriendly(error);
+                        this.output_index = null;
+                        this.funding_txid_str = null;
+                        this.errorOpenChannel = true;
+                        this.openingChannel = false;
+                        this.channelRequest = null;
+                        this.peerSuccess = false;
+                        this.channelSuccess = false;
+                    });
             })
-            .catch((error: Error) => {
+            .catch((error: any) => {
+                // handle error
                 this.errorMsgChannel = errorToUserFriendly(error);
                 this.output_index = null;
                 this.funding_txid_str = null;
@@ -601,6 +674,62 @@ export default class ChannelsStore {
                 this.peerSuccess = false;
                 this.channelSuccess = false;
             });
+    };
+
+    handleChannelOpenError = (error: Error) => {
+        this.errorMsgChannel = errorToUserFriendly(error);
+        this.output_index = null;
+        this.funding_txid_str = null;
+        this.errorOpenChannel = true;
+        this.openingChannel = false;
+        this.channelRequest = null;
+        this.peerSuccess = false;
+        this.channelSuccess = false;
+    };
+
+    openChannel = (request: OpenChannelRequest) => {
+        delete request.host;
+
+        this.peerSuccess = false;
+        this.channelSuccess = false;
+        this.openingChannel = true;
+
+        if (request?.account !== 'default') {
+            request.funding_shim = {
+                psbt_shim: {
+                    base_psbt: '',
+                    pending_chan_id: randomBytes(32).toString('base64')
+                }
+            };
+            BackendUtils.openChannelStream(request)
+                .then((data: any) => {
+                    this.handleChannelOpen(request, data.result);
+                })
+                .catch((error: Error) => {
+                    this.handleChannelOpenError(error);
+                });
+        } else {
+            BackendUtils.openChannel(request)
+                .then((data: any) => {
+                    this.output_index = data.output_index;
+                    this.funding_txid_str = data.funding_txid_str;
+                    this.errorOpenChannel = false;
+                    this.openingChannel = false;
+                    this.errorMsgChannel = null;
+                    this.channelRequest = null;
+                    this.channelSuccess = true;
+                })
+                .catch((error: Error) => {
+                    this.errorMsgChannel = errorToUserFriendly(error);
+                    this.output_index = null;
+                    this.funding_txid_str = null;
+                    this.errorOpenChannel = true;
+                    this.openingChannel = false;
+                    this.channelRequest = null;
+                    this.peerSuccess = false;
+                    this.channelSuccess = false;
+                });
+        }
     };
 
     @action

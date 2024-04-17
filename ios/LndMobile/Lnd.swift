@@ -89,6 +89,7 @@ open class Lnd {
     "QueryRoutes": { bytes, cb in LndmobileQueryRoutes(bytes, cb) },
     "ListPayments": { bytes, cb in LndmobileListPayments(bytes, cb) },
     "ListInvoices": { bytes, cb in LndmobileListInvoices(bytes, cb) },
+    "FundingStateStep": { bytes, cb in LndmobileFundingStateStep(bytes, cb) },
 
     // channel
     //
@@ -141,6 +142,7 @@ open class Lnd {
     "RouterSendPaymentV2": { req, cb in return LndmobileRouterSendPaymentV2(req, cb) },
     "SubscribeState": { req, cb in return LndmobileSubscribeState(req, cb) },
     "RouterTrackPaymentV2": { req, cb in return LndmobileRouterTrackPaymentV2(req, cb) },
+    "OpenChannel": { bytes, cb in LndmobileOpenChannel(bytes, cb) },
     // channel
     //
     "CloseChannel": { req, cb in return LndmobileCloseChannel(req, cb)},

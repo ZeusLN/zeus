@@ -19,7 +19,7 @@ const errorToUserFriendly = (error: Error, localize = true) => {
     let errorObject: any;
 
     try {
-        errorObject = JSON.parse(errorMessage);
+        errorObject = JSON.parse(errorMessage || error.toString());
     } catch (err) {
         console.log(err);
     }
