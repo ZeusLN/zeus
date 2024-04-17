@@ -344,10 +344,12 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .finalizePsbt(req)
             .then((data: walletrpc.FinalizePsbtResponse) => snakeize(data));
-    publishTransaction = async (req: walletrpc.Transaction) =>
-        await this.lnc.lnd.walletKit
+    publishTransaction = async (req: walletrpc.Transaction) => {
+        if (req.tx_hex) req.tx_hex = Base64Utils.hexToBase64(req.tx_hex);
+        return await this.lnc.lnd.walletKit
             .publishTransaction(req)
             .then((data: walletrpc.PublishResponse) => snakeize(data));
+    };
     fundingStateStep = async (req: lnrpc.FundingTransitionMsg) => {
         // Verify
         if (req.psbt_finalize?.funded_psbt)
