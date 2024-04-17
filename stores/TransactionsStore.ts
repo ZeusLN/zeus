@@ -19,6 +19,7 @@ import { localeString } from '../utils/LocaleUtils';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
+import ChannelsStore from './ChannelsStore';
 
 const keySendPreimageType = '5482373484';
 const keySendMessageType = '34349334';
@@ -63,10 +64,16 @@ export default class TransactionsStore {
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
+    channelsStore: ChannelsStore;
 
-    constructor(settingsStore: SettingsStore, nodeInfoStore: NodeInfoStore) {
+    constructor(
+        settingsStore: SettingsStore,
+        nodeInfoStore: NodeInfoStore,
+        channelsStore: ChannelsStore
+    ) {
         this.settingsStore = settingsStore;
         this.nodeInfoStore = nodeInfoStore;
+        this.channelsStore = channelsStore;
 
         reaction(
             () => this.settingsStore.settings,
@@ -117,6 +124,42 @@ export default class TransactionsStore {
     };
 
     @action
+    public broadcast = (raw_final_tx: string) => {
+        this.loading = true;
+
+        // Grok txid out from raw tx hex
+        const raw_final_tx_hex = Base64Utils.base64ToHex(raw_final_tx);
+        // Decode the raw transaction hex string
+        const tx = bitcoin.Transaction.fromHex(raw_final_tx_hex);
+        // Get the transaction ID (txid)
+        const txid = tx.getId();
+
+        return BackendUtils.publishTransaction({
+            tx_hex: raw_final_tx
+        })
+            .then((data: any) => {
+                if (data.publish_error) {
+                    this.error_msg = errorToUserFriendly(data.publish_error);
+                    this.error = true;
+                    this.loading = false;
+                } else {
+                    this.txid = txid;
+                    this.publishSuccess = true;
+                    this.loading = false;
+                    this.channelsStore.resetOpenChannel();
+                }
+            })
+            .catch((error: any) => {
+                // handle error
+                this.error_msg = errorToUserFriendly(
+                    error.publish_error || error.message
+                );
+                this.error = true;
+                this.loading = false;
+            });
+    };
+
+    @action
     public finalizePsbtAndBroadcast = (funded_psbt: string) => {
         this.funded_psbt = '';
         this.loading = true;
@@ -124,42 +167,94 @@ export default class TransactionsStore {
             .then((data: any) => {
                 const raw_final_tx = data.raw_final_tx;
 
-                // Grok txid out from raw tx hex
-                const raw_final_tx_hex = Base64Utils.base64ToHex(raw_final_tx);
-                // Decode the raw transaction hex string
-                const tx = bitcoin.Transaction.fromHex(raw_final_tx_hex);
-                // Get the transaction ID (txid)
-                const txid = tx.getId();
-
-                BackendUtils.publishTransaction({
-                    tx_hex: raw_final_tx
-                })
-                    .then((data: any) => {
-                        if (data.publish_error) {
-                            this.error_msg = data.publish_error;
-                            this.error = true;
-                            this.loading = false;
-                        } else {
-                            this.txid = txid;
-                            this.publishSuccess = true;
-                            this.loading = false;
-                        }
-                    })
-                    .then(() => {
-                        this.txid = txid;
-                        this.publishSuccess = true;
-                        this.loading = false;
-                    })
-                    .catch((error: any) => {
-                        // handle error
-                        this.error_msg = error.publish_error || error.message;
-                        this.error = true;
-                        this.loading = false;
-                    });
+                this.broadcast(raw_final_tx);
             })
             .catch((error: any) => {
                 // handle error
-                this.error_msg = error.message;
+                this.error_msg = errorToUserFriendly(error.message);
+                this.error = true;
+                this.loading = false;
+            });
+    };
+
+    @action
+    public finalizePsbtAndBroadcastChannel = (
+        signed_psbt: string,
+        pending_chan_id: any
+    ) => {
+        this.loading = true;
+
+        return BackendUtils.fundingStateStep({
+            psbt_finalize: {
+                signed_psbt,
+                pending_chan_id
+            }
+        })
+            .then((data: any) => {
+                if (data.publish_error) {
+                    this.error_msg = errorToUserFriendly(data.publish_error);
+                    this.error = true;
+                    this.loading = false;
+                } else {
+                    try {
+                        // Parse the PSBT
+                        const psbt = bitcoin.Psbt.fromBase64(signed_psbt);
+
+                        // Extract the finalized transaction from the PSBT
+                        const finalizedTx = psbt.extractTransaction();
+
+                        // Serialize the transaction and calculate its hash to obtain the txid
+                        const txid = finalizedTx.getId();
+                        this.txid = txid;
+                    } catch (e) {}
+                    this.publishSuccess = true;
+                    this.loading = false;
+                    this.channelsStore.resetOpenChannel();
+                }
+            })
+            .catch((error: any) => {
+                // handle error
+                this.error_msg = errorToUserFriendly(error.message);
+                this.error = true;
+                this.loading = false;
+            });
+    };
+
+    @action
+    public finalizeTxHexAndBroadcastChannel = (
+        tx_hex: string,
+        pending_chan_id: any
+    ) => {
+        this.loading = true;
+
+        return BackendUtils.fundingStateStep({
+            psbt_finalize: {
+                final_raw_tx: tx_hex,
+                pending_chan_id
+            }
+        })
+            .then((data: any) => {
+                if (data.publish_error) {
+                    this.error_msg = errorToUserFriendly(data.publish_error);
+                    this.error = true;
+                    this.loading = false;
+                } else {
+                    try {
+                        // Parse the tx
+                        const tx = bitcoin.Transaction.fromHex(tx_hex);
+
+                        // Serialize the transaction and calculate its hash
+                        const txid = tx.getId();
+                        this.txid = txid;
+                    } catch (e) {}
+                    this.publishSuccess = true;
+                    this.loading = false;
+                    this.channelsStore.resetOpenChannel();
+                }
+            })
+            .catch((error: any) => {
+                // handle error
+                this.error_msg = errorToUserFriendly(error.message);
                 this.error = true;
                 this.loading = false;
             });
@@ -210,7 +305,7 @@ export default class TransactionsStore {
             })
             .catch((error: any) => {
                 // handle error
-                this.error_msg = error.message;
+                this.error_msg = errorToUserFriendly(error.message);
                 this.error = true;
                 this.crafting = false;
                 this.loading = false;

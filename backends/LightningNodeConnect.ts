@@ -149,7 +149,10 @@ export default class LightningNodeConnect {
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
-            .newAddress({ type: ADDRESS_TYPES[data.type] })
+            .newAddress({
+                type: ADDRESS_TYPES[data.type],
+                account: data.account || 'default'
+            })
             .then((data: lnrpc.NewAddressResponse) => snakeize(data));
 
     openChannel = async (data: OpenChannelRequest) => {
@@ -185,9 +188,43 @@ export default class LightningNodeConnect {
             .then((data: lnrpc.ChannelPoint) => snakeize(data));
     };
 
-    // TODO add with external accounts
-    // openChannelStream = (data: OpenChannelRequest) =>
-    //     this.wsReq('/v1/channels/stream', 'POST', data);
+    openChannelStream = (data: OpenChannelRequest) => {
+        let request: lnrpc.OpenChannelRequest = {
+            private: data.privateChannel || false,
+            scid_alias: data.scidAlias,
+            local_funding_amount: data.local_funding_amount,
+            min_confs: data.min_confs,
+            node_pubkey: Base64Utils.hexToBase64(data.node_pubkey_string),
+            sat_per_vbyte: !data.funding_shim ? data.sat_per_vbyte : undefined,
+            spend_unconfirmed: data.spend_unconfirmed,
+            funding_shim: data.funding_shim
+        };
+
+        if (data.fundMax) {
+            request.fund_max = true;
+        }
+
+        if (data.simpleTaprootChannel) {
+            request.commitment_type = lnrpc.CommitmentType['SIMPLE_TAPROOT'];
+        }
+
+        if (data.utxos && data.utxos.length > 0) {
+            request.outpoints = data.utxos.map((utxo: string) => {
+                const [txid_str, output_index] = utxo.split(':');
+                return {
+                    txid_str,
+                    output_index: Number(output_index)
+                };
+            });
+        }
+
+        if (data.funding_shim) {
+            request.funding_shim = data.funding_shim;
+            delete request.sat_per_vbyte;
+        }
+
+        return this.lnc.lnd.lightning.openChannel(request);
+    };
     connectPeer = async (data: any) =>
         await this.lnc.lnd.lightning
             .connectPeer(data)
@@ -311,6 +348,26 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .publishTransaction(req)
             .then((data: walletrpc.PublishResponse) => snakeize(data));
+    fundingStateStep = async (req: lnrpc.FundingTransitionMsg) => {
+        // Verify
+        if (req.psbt_finalize?.funded_psbt)
+            req.psbt_finalize.funded_psbt = Base64Utils.hexToBase64(
+                req.psbt_finalize.funded_psbt
+            );
+        // Finalize
+        if (req.psbt_finalize?.final_raw_tx)
+            req.psbt_finalize.final_raw_tx = Base64Utils.hexToBase64(
+                req.psbt_finalize.final_raw_tx
+            );
+        if (req.psbt_finalize?.signed_psbt)
+            req.psbt_finalize.signed_psbt = Base64Utils.hexToBase64(
+                req.psbt_finalize.signed_psbt
+            );
+
+        return await this.lnc.lnd.lightning
+            .fundingStateStep(req)
+            .then((data: lnrpc.FundingStateStepResp) => snakeize(data));
+    };
     getUTXOs = async (req: walletrpc.ListUnspentRequest) =>
         await this.lnc.lnd.walletKit
             .listUnspent(req)

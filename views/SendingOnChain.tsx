@@ -158,6 +158,7 @@ export default class SendingOnChain extends React.Component<
                                                 windowSize.scale *
                                                 0.014,
                                             textAlign: 'center',
+                                            margin: 15,
                                             marginTop: windowSize.height * 0.025
                                         }}
                                     >

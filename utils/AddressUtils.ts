@@ -1,4 +1,6 @@
 import BigNumber from 'bignumber.js';
+const bitcoin = require('bitcoinjs-lib');
+
 import { SATS_PER_BTC } from '../stores/UnitsStore';
 
 const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
@@ -166,6 +168,15 @@ class AddressUtils {
     isValidXpub = (input: string) => xpubFormat.test(input);
 
     isPsbt = (input: string) => psbt.test(input);
+
+    isValidTxHex = (txHex: string) => {
+        try {
+            bitcoin.Transaction.fromHex(txHex);
+            return true; // Parsing succeeded, so it's a valid transaction hex
+        } catch (error) {
+            return false; // Parsing failed, so it's not a valid transaction hex
+        }
+    };
 }
 
 const addressUtils = new AddressUtils();

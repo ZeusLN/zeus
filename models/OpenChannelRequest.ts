@@ -21,6 +21,14 @@ export default class OpenChannelRequest extends BaseModel {
     public scidAlias?: boolean;
     public simpleTaprootChannel?: boolean;
     public fundMax?: boolean;
+    // external accoutn funding
+    public account?: string;
+    public funding_shim?: {
+        psbt_shim: {
+            pending_chan_id: any;
+            base_psbt: string;
+        };
+    };
 
     constructor(data?: any) {
         super(data);
