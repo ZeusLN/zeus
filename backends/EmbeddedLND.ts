@@ -206,7 +206,10 @@ export default class EmbeddedLND extends LND {
     // // Coin Control
     fundPsbt = async (data: any) => await fundPsbt(data);
     finalizePsbt = async (data: any) => await finalizePsbt(data);
-    publishTransaction = async (data: any) => await publishTransaction(data);
+    publishTransaction = async (data: any) => {
+        if (data.tx_hex) data.tx_hex = Base64Utils.hexToBase64(data.tx_hex);
+        return await publishTransaction(data);
+    };
     fundingStateStep = async (data: any) => {
         // Verify
         if (data.psbt_finalize?.funded_psbt)

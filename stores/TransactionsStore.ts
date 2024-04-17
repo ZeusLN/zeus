@@ -127,10 +127,8 @@ export default class TransactionsStore {
     public broadcast = (raw_final_tx: string) => {
         this.loading = true;
 
-        // Grok txid out from raw tx hex
-        const raw_final_tx_hex = Base64Utils.base64ToHex(raw_final_tx);
         // Decode the raw transaction hex string
-        const tx = bitcoin.Transaction.fromHex(raw_final_tx_hex);
+        const tx = bitcoin.Transaction.fromHex(raw_final_tx);
         // Get the transaction ID (txid)
         const txid = tx.getId();
 
