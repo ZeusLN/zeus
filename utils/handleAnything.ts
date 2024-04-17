@@ -108,10 +108,6 @@ const handleAnything = async (
         if (isClipboardValue) return true;
         await invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
-    } else if (AddressUtils.isPsbt(value)) {
-        return ['PSBT', { psbt: value }];
-    } else if (AddressUtils.isValidTxHex(value)) {
-        return ['TxHex', { txHex: value }];
     } else if (value.includes('c-lightning-rest://')) {
         if (isClipboardValue) return true;
         const { host, port, macaroonHex, implementation, enableTor } =
@@ -415,6 +411,19 @@ const handleAnything = async (
                 }
             ];
         }
+    } else if (AddressUtils.isPsbt(value)) {
+        return ['PSBT', { psbt: value }];
+    } else if (AddressUtils.isValidTxHex(value)) {
+        return ['TxHex', { txHex: value }];
+    } else if (AddressUtils.isWalletExport(value)) {
+        const { MasterFingerprint, ExtPubKey } = JSON.parse(value);
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint
+            }
+        ];
     } else if (AddressUtils.isValidXpub(value)) {
         return [
             'ImportAccount',

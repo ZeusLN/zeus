@@ -67,35 +67,20 @@ export default class ImportAccount extends React.Component<
 
     UNSAFE_componentWillMount = () => {
         const { navigation } = this.props;
-        const qrResponse = navigation.getParam('qrResponse');
-
-        if (qrResponse) {
-            try {
-                const parsed = JSON.parse(qrResponse);
-                const name = (parsed.keystore && parsed.keystore.label) || '';
-                const extended_public_key =
-                    parsed.ExtPubKey ||
-                    (parsed.keystore && parsed.keystore.xpub) ||
-                    '';
-                const master_key_fingerprint =
-                    parsed.MasterFingerprint ||
-                    (parsed.keystore && parsed.keystore.ckcc_xfp.toString()) ||
-                    '';
-                const address_type = parsed.wallet_type || '';
-
-                this.setState({
-                    name,
-                    extended_public_key,
-                    master_key_fingerprint,
-                    address_type
-                });
-            } catch (e) {}
-        }
 
         const extended_public_key = navigation.getParam('extended_public_key');
         if (extended_public_key) {
             this.setState({
                 extended_public_key
+            });
+        }
+
+        const master_key_fingerprint = navigation.getParam(
+            'master_key_fingerprint'
+        );
+        if (master_key_fingerprint) {
+            this.setState({
+                master_key_fingerprint
             });
         }
     };
@@ -217,7 +202,7 @@ export default class ImportAccount extends React.Component<
                 <View style={{ bottom: 10 }}>
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            ...styles.label,
                             color: themeColor('text'),
                             padding: 15
                         }}

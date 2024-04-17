@@ -99,7 +99,6 @@ import Utxo from './views/UTXOs/UTXO';
 import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportingAccount from './views/Accounts/ImportingAccount';
-import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 import BumpFee from './views/BumpFee';
 import QR from './views/QR';
 import AddNotes from './views/AddNotes';
@@ -298,9 +297,6 @@ const AppScenes = {
     },
     NodeQRCodeScanner: {
         screen: NodeQRScanner
-    },
-    ImportAccountQRScanner: {
-        screen: ImportAccountQRScanner
     },
     SparkQRScanner: {
         screen: SparkQRScanner
