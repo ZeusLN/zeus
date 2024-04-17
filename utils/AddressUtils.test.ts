@@ -612,4 +612,18 @@ describe('AddressUtils', () => {
             ).toBeFalsy();
         });
     });
+    describe('isWalletExport', () => {
+        it('validates wallet export properly', () => {
+            expect(
+                AddressUtils.isWalletExport(
+                    '{"MasterFingerprint": "4BDCB6A0", "ExtPubKey": "xpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh"}'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isWalletExport(
+                    'HECAAAAAUUciaQyD+SNWEpxgGtzTu+oDD0Cz5ruBd8p/f8oJcLAAAAAAAAAAAAAAhYWBQAAAAAAFgAUyAKI5CC+f/qmH/pwnWbWGp7jMXWdKwoAAAAAABYAFNOI441ynZKMY1nHncivhuWOrtE9AAAAAAABAMEBAAAAAAEBYMD9yaTYz+jWmkvNnmWzTDnV+5ipWwAgds0YQZV4lPgBAAAAAP////8CQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIg3s3PAAAAAAAIlEgAKq3khGSJ+6leSdrl5p3YU46/KMwhdxB3wnMZNci6isBQJWsI+EnbOw8UufplAEngcL/rwF5ZFg774Fsyy0o1TaTk2oieRvsf+yjovUNimvaEp0a7dbqJPlbjv1q7aiE8ScAAAAAAQEfQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIgwEDBAEAAAAiBgLg8Q2B0fNznWOcgQ9IUBh8HAWuwoxqh1VzybPsUOurDhgAAAAAVAAAgAAAAIAAAACAAAAAAAUAAAAAACICA1PNZFtRnJQVrZZUDR631uBtwEpY7rCwpciT2cPRSFHzGAAAAABUAACAAAAAgAAAAIABAAAAAQAAAAA='
+                )
+            ).toBeFalsy();
+        });
+    });
 });

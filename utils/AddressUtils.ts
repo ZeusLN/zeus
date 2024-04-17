@@ -177,6 +177,16 @@ class AddressUtils {
             return false; // Parsing failed, so it's not a valid transaction hex
         }
     };
+
+    isWalletExport = (walletExport: string) => {
+        try {
+            const parsed = JSON.parse(walletExport);
+            if (parsed.MasterFingerprint && parsed.ExtPubKey) return true;
+            return false;
+        } catch (error) {
+            return false;
+        }
+    };
 }
 
 const addressUtils = new AddressUtils();
