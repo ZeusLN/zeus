@@ -71,7 +71,7 @@ export default class ChannelsStore {
     };
     @observable public showSearch: boolean = false;
     // aliasMap
-    @observable public aliasMap: any = observable.map({});
+    @observable public aliasMap = observable.map({});
 
     settingsStore: SettingsStore;
 
