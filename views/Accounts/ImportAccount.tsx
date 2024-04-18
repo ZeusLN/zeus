@@ -83,6 +83,13 @@ export default class ImportAccount extends React.Component<
                 master_key_fingerprint
             });
         }
+
+        const address_type = navigation.getParam('address_type');
+        if (address_type) {
+            this.setState({
+                address_type
+            });
+        }
     };
 
     render() {

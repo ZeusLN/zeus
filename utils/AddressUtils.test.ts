@@ -6,6 +6,7 @@ jest.mock('react-native-encrypted-storage', () => ({
 }));
 
 import AddressUtils from './AddressUtils';
+import { walletrpc } from '../proto/lightning';
 
 describe('AddressUtils', () => {
     describe('isValidBitcoinAddress', () => {
@@ -612,18 +613,219 @@ describe('AddressUtils', () => {
             ).toBeFalsy();
         });
     });
-    describe('isWalletExport', () => {
-        it('validates wallet export properly', () => {
+    describe('isJsonWalletExport', () => {
+        it('validates wallet json export properly', () => {
             expect(
-                AddressUtils.isWalletExport(
+                AddressUtils.isJsonWalletExport(
                     '{"MasterFingerprint": "4BDCB6A0", "ExtPubKey": "xpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh"}'
                 )
             ).toBeTruthy();
             expect(
-                AddressUtils.isWalletExport(
+                AddressUtils.isJsonWalletExport(
                     'HECAAAAAUUciaQyD+SNWEpxgGtzTu+oDD0Cz5ruBd8p/f8oJcLAAAAAAAAAAAAAAhYWBQAAAAAAFgAUyAKI5CC+f/qmH/pwnWbWGp7jMXWdKwoAAAAAABYAFNOI441ynZKMY1nHncivhuWOrtE9AAAAAAABAMEBAAAAAAEBYMD9yaTYz+jWmkvNnmWzTDnV+5ipWwAgds0YQZV4lPgBAAAAAP////8CQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIg3s3PAAAAAAAIlEgAKq3khGSJ+6leSdrl5p3YU46/KMwhdxB3wnMZNci6isBQJWsI+EnbOw8UufplAEngcL/rwF5ZFg774Fsyy0o1TaTk2oieRvsf+yjovUNimvaEp0a7dbqJPlbjv1q7aiE8ScAAAAAAQEfQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIgwEDBAEAAAAiBgLg8Q2B0fNznWOcgQ9IUBh8HAWuwoxqh1VzybPsUOurDhgAAAAAVAAAgAAAAIAAAACAAAAAAAUAAAAAACICA1PNZFtRnJQVrZZUDR631uBtwEpY7rCwpciT2cPRSFHzGAAAAABUAACAAAAAgAAAAIABAAAAAQAAAAA='
                 )
             ).toBeFalsy();
+        });
+    });
+    describe('isStringWalletExport', () => {
+        it('validates wallet string export properly', () => {
+            expect(
+                AddressUtils.isStringWalletExport(
+                    "[1234abcd/84'/0'/0']xpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh"
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isStringWalletExport(
+                    "[1234abcd/84'/0'/0']vpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh"
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isStringWalletExport(
+                    "[1234abcd/84'/0'/0']tpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh"
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isStringWalletExport(
+                    'sh(wpkh([0f056943/84h/1h/0h]tpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*))#sjuyyvve'
+                )
+            ).toBeFalsy();
+            expect(
+                AddressUtils.isStringWalletExport(
+                    'HECAAAAAUUciaQyD+SNWEpxgGtzTu+oDD0Cz5ruBd8p/f8oJcLAAAAAAAAAAAAAAhYWBQAAAAAAFgAUyAKI5CC+f/qmH/pwnWbWGp7jMXWdKwoAAAAAABYAFNOI441ynZKMY1nHncivhuWOrtE9AAAAAAABAMEBAAAAAAEBYMD9yaTYz+jWmkvNnmWzTDnV+5ipWwAgds0YQZV4lPgBAAAAAP////8CQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIg3s3PAAAAAAAIlEgAKq3khGSJ+6leSdrl5p3YU46/KMwhdxB3wnMZNci6isBQJWsI+EnbOw8UufplAEngcL/rwF5ZFg774Fsyy0o1TaTk2oieRvsf+yjovUNimvaEp0a7dbqJPlbjv1q7aiE8ScAAAAAAQEfQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIgwEDBAEAAAAiBgLg8Q2B0fNznWOcgQ9IUBh8HAWuwoxqh1VzybPsUOurDhgAAAAAVAAAgAAAAIAAAACAAAAAAAUAAAAAACICA1PNZFtRnJQVrZZUDR631uBtwEpY7rCwpciT2cPRSFHzGAAAAABUAACAAAAAgAAAAIABAAAAAQAAAAA='
+                )
+            ).toBeFalsy();
+        });
+    });
+    describe('decodeStringWalletExport', () => {
+        it('validates wallet string export properly', () => {
+            expect(
+                AddressUtils.processStringWalletExport(
+                    "[1234abcd/84'/0'/0']xpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh"
+                )
+            ).toEqual({
+                MasterFingerprint: '1234abcd',
+                ExtPubKey:
+                    'xpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh'
+            });
+            expect(
+                AddressUtils.processStringWalletExport(
+                    "[1234abcd/84'/0'/0']vpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh"
+                )
+            ).toEqual({
+                MasterFingerprint: '1234abcd',
+                ExtPubKey:
+                    'vpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh'
+            });
+            expect(
+                AddressUtils.processStringWalletExport(
+                    "[1234abcd/84'/0'/0']tpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh"
+                )
+            ).toEqual({
+                MasterFingerprint: '1234abcd',
+                ExtPubKey:
+                    'tpub6CMKK1icAQg3SxtRS8iW8agXBcoAAhYWBQAAAAAAFgiAYhm6fL4Sy8hoHncivhuWOrtE16HaS8AQNwAixnBk67q5dYh'
+            });
+            expect(
+                AddressUtils.processStringWalletExport(
+                    'HECAAAAAUUciaQyD+SNWEpxgGtzTu+oDD0Cz5ruBd8p/f8oJcLAAAAAAAAAAAAAAhYWBQAAAAAAFgAUyAKI5CC+f/qmH/pwnWbWGp7jMXWdKwoAAAAAABYAFNOI441ynZKMY1nHncivhuWOrtE9AAAAAAABAMEBAAAAAAEBYMD9yaTYz+jWmkvNnmWzTDnV+5ipWwAgds0YQZV4lPgBAAAAAP////8CQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIg3s3PAAAAAAAIlEgAKq3khGSJ+6leSdrl5p3YU46/KMwhdxB3wnMZNci6isBQJWsI+EnbOw8UufplAEngcL/rwF5ZFg774Fsyy0o1TaTk2oieRvsf+yjovUNimvaEp0a7dbqJPlbjv1q7aiE8ScAAAAAAQEfQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIgwEDBAEAAAAiBgLg8Q2B0fNznWOcgQ9IUBh8HAWuwoxqh1VzybPsUOurDhgAAAAAVAAAgAAAAIAAAACAAAAAAAUAAAAAACICA1PNZFtRnJQVrZZUDR631uBtwEpY7rCwpciT2cPRSFHzGAAAAABUAACAAAAAgAAAAIABAAAAAQAAAAA='
+                )
+            ).toEqual({
+                MasterFingerprint: '',
+                ExtPubKey: ''
+            });
+        });
+    });
+    describe('isWpkhDescriptor', () => {
+        it('validates wpkh descriptor properly', () => {
+            expect(
+                AddressUtils.isWpkhDescriptor(
+                    'wpkh([0f056943/84h/1h/0h]xpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*)#sjuyyvve'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isWpkhDescriptor(
+                    'wpkh([0f056943/84h/1h/0h]vpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*)#sjuyyvve'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isWpkhDescriptor(
+                    'wpkh([0f056943/84h/1h/0h]tpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*)#sjuyyvve'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isWpkhDescriptor(
+                    'HECAAAAAUUciaQyD+SNWEpxgGtzTu+oDD0Cz5ruBd8p/f8oJcLAAAAAAAAAAAAAAhYWBQAAAAAAFgAUyAKI5CC+f/qmH/pwnWbWGp7jMXWdKwoAAAAAABYAFNOI441ynZKMY1nHncivhuWOrtE9AAAAAAABAMEBAAAAAAEBYMD9yaTYz+jWmkvNnmWzTDnV+5ipWwAgds0YQZV4lPgBAAAAAP////8CQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIg3s3PAAAAAAAIlEgAKq3khGSJ+6leSdrl5p3YU46/KMwhdxB3wnMZNci6isBQJWsI+EnbOw8UufplAEngcL/rwF5ZFg774Fsyy0o1TaTk2oieRvsf+yjovUNimvaEp0a7dbqJPlbjv1q7aiE8ScAAAAAAQEfQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIgwEDBAEAAAAiBgLg8Q2B0fNznWOcgQ9IUBh8HAWuwoxqh1VzybPsUOurDhgAAAAAVAAAgAAAAIAAAACAAAAAAAUAAAAAACICA1PNZFtRnJQVrZZUDR631uBtwEpY7rCwpciT2cPRSFHzGAAAAABUAACAAAAAgAAAAIABAAAAAQAAAAA='
+                )
+            ).toBeFalsy();
+        });
+    });
+    describe('processWpkhDescriptor', () => {
+        it('processes wpkh descriptor properly', () => {
+            expect(
+                AddressUtils.processWpkhDescriptor(
+                    'wpkh([0f056943/84h/1h/0h]xpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*)#sjuyyvve'
+                )
+            ).toEqual({
+                MasterFingerprint: '0f056943',
+                ExtPubKey:
+                    'xpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r',
+                AddressType: walletrpc.AddressType.WITNESS_PUBKEY_HASH
+            });
+            expect(
+                AddressUtils.processWpkhDescriptor(
+                    'wpkh([0f056943/84h/1h/0h]vpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*)#sjuyyvve'
+                )
+            ).toEqual({
+                MasterFingerprint: '0f056943',
+                ExtPubKey:
+                    'vpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r',
+                AddressType: walletrpc.AddressType.WITNESS_PUBKEY_HASH
+            });
+            expect(
+                AddressUtils.processWpkhDescriptor(
+                    'wpkh([0f056943/84h/1h/0h]tpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*)#sjuyyvve'
+                )
+            ).toEqual({
+                MasterFingerprint: '0f056943',
+                ExtPubKey:
+                    'tpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r',
+                AddressType: walletrpc.AddressType.WITNESS_PUBKEY_HASH
+            });
+            expect(
+                AddressUtils.processWpkhDescriptor(
+                    'HECAAAAAUUciaQyD+SNWEpxgGtzTu+oDD0Cz5ruBd8p/f8oJcLAAAAAAAAAAAAAAhYWBQAAAAAAFgAUyAKI5CC+f/qmH/pwnWbWGp7jMXWdKwoAAAAAABYAFNOI441ynZKMY1nHncivhuWOrtE9AAAAAAABAMEBAAAAAAEBYMD9yaTYz+jWmkvNnmWzTDnV+5ipWwAgds0YQZV4lPgBAAAAAP////8CQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIg3s3PAAAAAAAIlEgAKq3khGSJ+6leSdrl5p3YU46/KMwhdxB3wnMZNci6isBQJWsI+EnbOw8UufplAEngcL/rwF5ZFg774Fsyy0o1TaTk2oieRvsf+yjovUNimvaEp0a7dbqJPlbjv1q7aiE8ScAAAAAAQEfQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIgwEDBAEAAAAiBgLg8Q2B0fNznWOcgQ9IUBh8HAWuwoxqh1VzybPsUOurDhgAAAAAVAAAgAAAAIAAAACAAAAAAAUAAAAAACICA1PNZFtRnJQVrZZUDR631uBtwEpY7rCwpciT2cPRSFHzGAAAAABUAACAAAAAgAAAAIABAAAAAQAAAAA='
+                )
+            ).toEqual({
+                MasterFingerprint: '',
+                ExtPubKey: ''
+            });
+        });
+    });
+    describe('isNestedWpkhDescriptor', () => {
+        it('validates wpkh descriptor properly', () => {
+            expect(
+                AddressUtils.isNestedWpkhDescriptor(
+                    'sh(wpkh([0f056943/84h/1h/0h]xpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*))#sjuyyvve'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isNestedWpkhDescriptor(
+                    'sh(wpkh([0f056943/84h/1h/0h]vpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*))#sjuyy1ve'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isNestedWpkhDescriptor(
+                    'sh(wpkh([0f056943/49h/0h/0h]tpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*))#4juyyvve'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isNestedWpkhDescriptor(
+                    'HECAAAAAUUciaQyD+SNWEpxgGtzTu+oDD0Cz5ruBd8p/f8oJcLAAAAAAAAAAAAAAhYWBQAAAAAAFgAUyAKI5CC+f/qmH/pwnWbWGp7jMXWdKwoAAAAAABYAFNOI441ynZKMY1nHncivhuWOrtE9AAAAAAABAMEBAAAAAAEBYMD9yaTYz+jWmkvNnmWzTDnV+5ipWwAgds0YQZV4lPgBAAAAAP////8CQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIg3s3PAAAAAAAIlEgAKq3khGSJ+6leSdrl5p3YU46/KMwhdxB3wnMZNci6isBQJWsI+EnbOw8UufplAEngcL/rwF5ZFg774Fsyy0o1TaTk2oieRvsf+yjovUNimvaEp0a7dbqJPlbjv1q7aiE8ScAAAAAAQEfQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIgwEDBAEAAAAiBgLg8Q2B0fNznWOcgQ9IUBh8HAWuwoxqh1VzybPsUOurDhgAAAAAVAAAgAAAAIAAAACAAAAAAAUAAAAAACICA1PNZFtRnJQVrZZUDR631uBtwEpY7rCwpciT2cPRSFHzGAAAAABUAACAAAAAgAAAAIABAAAAAQAAAAA='
+                )
+            ).toBeFalsy();
+        });
+    });
+
+    describe('processNestedWpkhDescriptor', () => {
+        it('processes wpkh descriptor properly', () => {
+            expect(
+                AddressUtils.processNestedWpkhDescriptor(
+                    'sh(wpkh([0f056943/84h/1h/0h]xpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*))#sjuyyvve'
+                )
+            ).toEqual({
+                MasterFingerprint: '0f056943',
+                ExtPubKey:
+                    'xpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r',
+                AddressType: walletrpc.AddressType.NESTED_WITNESS_PUBKEY_HASH
+            });
+            expect(
+                AddressUtils.processNestedWpkhDescriptor(
+                    'sh(wpkh([0f056943/84h/1h/0h]vpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*))#sjuyyvve'
+                )
+            ).toEqual({
+                MasterFingerprint: '0f056943',
+                ExtPubKey:
+                    'vpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r',
+                AddressType: walletrpc.AddressType.NESTED_WITNESS_PUBKEY_HASH
+            });
+            expect(
+                AddressUtils.processNestedWpkhDescriptor(
+                    'sh(wpkh([0f056943/84h/1h/0h]tpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r/<0;1>/*))#sjuyyvve'
+                )
+            ).toEqual({
+                MasterFingerprint: '0f056943',
+                ExtPubKey:
+                    'tpubDC7jGaaSE66Pn4dgtbAAstde4bCyhSUs4r3P8WhMVvPByvcRrzrwqSvpF9Ghx83Z1LfVugGRrSBko5UEKELCz9HoMv5qKmGq3fqnnbS5E9r',
+                AddressType: walletrpc.AddressType.NESTED_WITNESS_PUBKEY_HASH
+            });
+            expect(
+                AddressUtils.processNestedWpkhDescriptor(
+                    'HECAAAAAUUciaQyD+SNWEpxgGtzTu+oDD0Cz5ruBd8p/f8oJcLAAAAAAAAAAAAAAhYWBQAAAAAAFgAUyAKI5CC+f/qmH/pwnWbWGp7jMXWdKwoAAAAAABYAFNOI441ynZKMY1nHncivhuWOrtE9AAAAAAABAMEBAAAAAAEBYMD9yaTYz+jWmkvNnmWzTDnV+5ipWwAgds0YQZV4lPgBAAAAAP////8CQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIg3s3PAAAAAAAIlEgAKq3khGSJ+6leSdrl5p3YU46/KMwhdxB3wnMZNci6isBQJWsI+EnbOw8UufplAEngcL/rwF5ZFg774Fsyy0o1TaTk2oieRvsf+yjovUNimvaEp0a7dbqJPlbjv1q7aiE8ScAAAAAAQEfQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIgwEDBAEAAAAiBgLg8Q2B0fNznWOcgQ9IUBh8HAWuwoxqh1VzybPsUOurDhgAAAAAVAAAgAAAAIAAAACAAAAAAAUAAAAAACICA1PNZFtRnJQVrZZUDR631uBtwEpY7rCwpciT2cPRSFHzGAAAAABUAACAAAAAgAAAAIABAAAAAQAAAAA='
+                )
+            ).toEqual({
+                MasterFingerprint: '',
+                ExtPubKey: ''
+            });
         });
     });
 });
