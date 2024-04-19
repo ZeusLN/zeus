@@ -261,7 +261,6 @@ export default class ProductCategoryDetails extends React.Component<
                                             'secondaryText'
                                         )}
                                         style={styles.textInput}
-                                        autoCapitalize="none"
                                     />
                                 </View>
                                 <Divider
