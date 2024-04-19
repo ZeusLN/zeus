@@ -236,7 +236,8 @@ export interface ILndMobileInjections {
             fundingTxId: string,
             outputIndex: number,
             force?: boolean,
-            sat_per_vbyte?: number
+            sat_per_vbyte?: number,
+            delivery_address?: string
         ) => Promise<string>;
         listChannels: () => Promise<lnrpc.ListChannelsResponse>;
         openChannel: (

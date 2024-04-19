@@ -123,7 +123,8 @@ export const closeChannel = async (
     funding_txid: string,
     output_index: number,
     force?: boolean,
-    sat_per_vbyte?: number
+    sat_per_vbyte?: number,
+    delivery_address?: string
 ): Promise<string> => {
     const response = await sendStreamCommand<
         lnrpc.ICloseChannelRequest,
@@ -140,6 +141,7 @@ export const closeChannel = async (
                 sat_per_vbyte: sat_per_vbyte
                     ? Long.fromValue(sat_per_vbyte)
                     : undefined,
+                delivery_address,
                 force
             }
         },
