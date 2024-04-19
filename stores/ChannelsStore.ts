@@ -439,7 +439,8 @@ export default class ChannelsStore {
         channelPoint?: CloseChannelRequest | null,
         channelId?: string | null,
         satPerVbyte?: string | null,
-        forceClose?: boolean | string | null
+        forceClose?: boolean | string | null,
+        deliveryAddress?: string | null
     ) => {
         this.closeChannelErr = null;
         this.closingChannel = true;
@@ -452,16 +453,13 @@ export default class ChannelsStore {
             // lnd
             const { funding_txid_str, output_index } = channelPoint;
 
-            urlParams = [funding_txid_str, output_index, forceClose];
-
-            if (satPerVbyte) {
-                urlParams = [
-                    funding_txid_str,
-                    output_index,
-                    forceClose,
-                    satPerVbyte
-                ];
-            }
+            urlParams = [
+                funding_txid_str,
+                output_index,
+                forceClose,
+                satPerVbyte,
+                deliveryAddress
+            ];
         }
 
         if (this.settingsStore.implementation === 'lightning-node-connect') {
