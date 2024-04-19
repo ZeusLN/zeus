@@ -102,5 +102,11 @@ describe('ErrorUtils', () => {
                 )
             ).toEqual('Random message');
         });
+
+        it('Return string if error is sent as a string', () => {
+            expect(errorToUserFriendly('Payment timed out', false)).toEqual(
+                'Payment timed out'
+            );
+        });
     });
 });

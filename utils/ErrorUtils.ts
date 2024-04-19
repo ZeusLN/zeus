@@ -11,11 +11,12 @@ const userFriendlyErrors: any = {
     FAILURE_REASON_INCORRECT_PAYMENT_DETAILS:
         'error.failureReasonIncorrectPaymentDetails',
     FAILURE_REASON_INSUFFICIENT_BALANCE:
-        'error.failureReasonInsufficientBalance'
+        'error.failureReasonInsufficientBalance',
+    Error: 'general.error'
 };
 
 const errorToUserFriendly = (error: Error, localize = true) => {
-    let errorMessage: string = error.message;
+    let errorMessage: string = error?.message;
     let errorObject: any;
 
     try {
