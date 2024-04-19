@@ -4,6 +4,7 @@ import {
     AppState,
     AppStateStatus,
     NativeEventSubscription,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -377,27 +378,40 @@ export default class Lockscreen extends React.Component<
         return (
             <Screen>
                 {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
-                    <Header leftComponent="Back" navigation={navigation} />
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString(
+                                'views.Lockscreen.enterPassphrase'
+                            ),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }
+                        }}
+                        navigation={navigation}
+                    />
                 )}
                 {!!passphrase && (
                     <ScrollView
                         style={styles.container}
                         keyboardShouldPersistTaps="handled"
                     >
-                        <View style={styles.content}>
+                        <View
+                            style={{
+                                ...styles.content,
+                                marginTop:
+                                    Platform.OS === 'android' &&
+                                    SettingsStore.loginRequired()
+                                        ? 30
+                                        : 0
+                            }}
+                        >
                             {error && (
                                 <ErrorMessage
                                     message={this.generateErrorMessage()}
                                 />
                             )}
-                            <Text
-                                style={{
-                                    color: '#A7A9AC',
-                                    fontFamily: 'PPNeueMontreal-Book'
-                                }}
-                            >
-                                {localeString('views.Lockscreen.passphrase')}
-                            </Text>
                             <View style={styles.inputContainer}>
                                 <TextInput
                                     placeholder={'****************'}
@@ -409,12 +423,15 @@ export default class Lockscreen extends React.Component<
                                             error: false
                                         })
                                     }
-                                    numberOfLines={1}
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                     secureTextEntry={hidden}
                                     autoFocus={true}
-                                    style={styles.textInput}
+                                    style={{
+                                        ...styles.textInput,
+                                        paddingTop:
+                                            passphraseAttempt === '' ? 6 : 2
+                                    }}
                                 />
                                 <View style={styles.showHideToggle}>
                                     <ShowHideToggle
@@ -512,7 +529,6 @@ export default class Lockscreen extends React.Component<
 
 const styles = StyleSheet.create({
     content: {
-        marginTop: 100,
         paddingLeft: 20,
         paddingRight: 20,
         alignItems: 'center'
