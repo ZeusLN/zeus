@@ -25,7 +25,10 @@ const errorToUserFriendly = (error: Error, localize = true) => {
     }
 
     const userFriendlyErrorMessage =
-        errorObject?.error?.message || errorObject?.message || errorMessage;
+        errorObject?.error?.message ||
+        errorObject?.message ||
+        errorMessage ||
+        error;
 
     if (localize) {
         const localeString = require('./LocaleUtils').localeString;

@@ -225,10 +225,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore.loginMethodConfigured() &&
             loginBackground
         ) {
-            // In case the lock screen is visible and a valid PIN is entered and home button is pressed,
-            // unauthorized access would be possible because the PIN is not cleared on next launch.
-            // By calling pop, the lock screen is closed to clear the PIN.
-            this.props.navigation.pop();
             SettingsStore.setLoginStatus(false);
         } else if (nextAppState === 'active' && SettingsStore.loginRequired()) {
             this.props.navigation.navigate('Lockscreen');
@@ -241,7 +237,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async getSettingsAndNavigate() {
         const { SettingsStore, navigation } = this.props;
-        const { posStatus, setPosStatus } = SettingsStore;
+        const { posStatus, setPosStatus, initialStart, setInitialStart } =
+            SettingsStore;
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
@@ -268,6 +265,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 settings.nodes &&
                 settings.nodes.length > 0
             ) {
+                if (settings.selectNodeOnStartup && initialStart) {
+                    setInitialStart(false);
+                    navigation.navigate('Nodes');
+                }
                 if (!this.state.unlocked) {
                     this.startListeners();
                     this.setState({ unlocked: true });
@@ -458,7 +459,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         if (BackendUtils.supportsLSPs()) {
-            if (SettingsStore.settings.enableLSP) {
+            if (
+                SettingsStore.settings.enableLSP &&
+                !this.props.NodeInfoStore.lspNotConfigured
+            ) {
                 await LSPStore.getLSPInfo();
             }
             LSPStore.initChannelAcceptor();

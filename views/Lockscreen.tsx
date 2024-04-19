@@ -1,6 +1,15 @@
 import { inject, observer } from 'mobx-react';
 import * as React from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    AppState,
+    AppStateStatus,
+    NativeEventSubscription,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
+} from 'react-native';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -45,6 +54,8 @@ export default class Lockscreen extends React.Component<
     LockscreenProps,
     LockscreenState
 > {
+    private subscription: NativeEventSubscription;
+
     constructor(props: any) {
         super(props);
         this.state = {
@@ -62,6 +73,21 @@ export default class Lockscreen extends React.Component<
             authenticationAttempts: 0
         };
     }
+
+    proceed = (navigationTarget?: string) => {
+        const { SettingsStore, navigation } = this.props;
+        if (navigationTarget) {
+            navigation.navigate(navigationTarget);
+        } else if (
+            SettingsStore.settings.selectNodeOnStartup &&
+            SettingsStore.initialStart
+        ) {
+            SettingsStore.setInitialStart(false);
+            navigation.navigate('Nodes');
+        } else {
+            navigation.pop();
+        }
+    };
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore, navigation } = this.props;
@@ -97,19 +123,20 @@ export default class Lockscreen extends React.Component<
             if (isVerified) {
                 this.resetAuthenticationAttempts();
                 SettingsStore.setLoginStatus(true);
-                navigation.navigate('Wallet');
+                this.proceed();
                 return;
             }
         }
 
         if (
             posEnabled !== PosEnabled.Disabled &&
+            SettingsStore.posStatus === 'active' &&
             !attemptAdminLogin &&
             !deletePin &&
             !deleteDuressPin
         ) {
             SettingsStore.setLoginStatus(true);
-            navigation.navigate('Wallet');
+            this.proceed('Wallet');
         }
 
         if (settings.authenticationAttempts) {
@@ -146,12 +173,29 @@ export default class Lockscreen extends React.Component<
                     duressPin: settings.duressPin
                 });
             }
-        } else if (settings && settings.nodes && settings.nodes.length > 0) {
-            navigation.navigate('Wallet');
+        } else if (settings && settings.nodes && settings?.nodes?.length > 0) {
+            this.proceed();
         } else {
             navigation.navigate('IntroSplash');
         }
     }
+
+    componentDidMount() {
+        this.subscription = AppState.addEventListener(
+            'change',
+            this.handleAppStateChange
+        );
+    }
+
+    componentWillUnmount() {
+        this.subscription?.remove();
+    }
+
+    handleAppStateChange = (nextAppState: AppStateStatus) => {
+        if (nextAppState === 'background') {
+            this.setState({ passphraseAttempt: '' });
+        }
+    };
 
     onInputLabelPressed = () => {
         this.setState({ hidden: !this.state.hidden });
@@ -192,7 +236,7 @@ export default class Lockscreen extends React.Component<
             } else {
                 setPosStatus('inactive');
                 this.resetAuthenticationAttempts();
-                navigation.navigate('Wallet');
+                this.proceed();
             }
         } else if (
             (duressPassphrase && passphraseAttempt === duressPassphrase) ||
@@ -262,7 +306,7 @@ export default class Lockscreen extends React.Component<
     };
 
     deleteNodes = () => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore } = this.props;
         const { updateSettings } = SettingsStore;
 
         updateSettings({
@@ -270,12 +314,12 @@ export default class Lockscreen extends React.Component<
             selectedNode: undefined,
             authenticationAttempts: 0
         }).then(() => {
-            navigation.navigate('Wallet');
+            this.proceed('IntroSplash');
         });
     };
 
     authenticationFailure = () => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore } = this.props;
         const { updateSettings } = SettingsStore;
 
         updateSettings({
@@ -287,7 +331,7 @@ export default class Lockscreen extends React.Component<
             duressPin: '',
             authenticationAttempts: 0
         }).then(() => {
-            navigation.navigate('Wallet');
+            this.proceed('IntroSplash');
         });
     };
 
