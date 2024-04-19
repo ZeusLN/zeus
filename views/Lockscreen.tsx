@@ -1,6 +1,14 @@
 import { inject, observer } from 'mobx-react';
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    AppState,
+    AppStateStatus,
+    NativeEventSubscription,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
+} from 'react-native';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -45,6 +53,8 @@ export default class Lockscreen extends React.Component<
     LockscreenProps,
     LockscreenState
 > {
+    private subscription: NativeEventSubscription;
+
     constructor(props: any) {
         super(props);
         this.state = {
@@ -63,13 +73,18 @@ export default class Lockscreen extends React.Component<
         };
     }
 
-    proceed = () => {
+    proceed = (navigationTarget?: string) => {
         const { SettingsStore, navigation } = this.props;
-        SettingsStore.setInitialStart(false);
-        if (SettingsStore.settings.selectNodeOnStartup) {
+        if (navigationTarget) {
+            navigation.navigate(navigationTarget);
+        } else if (
+            SettingsStore.settings.selectNodeOnStartup &&
+            SettingsStore.initialStart
+        ) {
+            SettingsStore.setInitialStart(false);
             navigation.navigate('Nodes');
         } else {
-            navigation.navigate('Wallet');
+            navigation.pop();
         }
     };
 
@@ -119,7 +134,7 @@ export default class Lockscreen extends React.Component<
             !deleteDuressPin
         ) {
             SettingsStore.setLoginStatus(true);
-            this.proceed();
+            this.proceed('Wallet');
         }
 
         if (settings.authenticationAttempts) {
@@ -156,12 +171,29 @@ export default class Lockscreen extends React.Component<
                     duressPin: settings.duressPin
                 });
             }
-        } else if (settings && settings.nodes && settings.nodes.length > 0) {
+        } else if (settings && settings.nodes && settings?.nodes?.length > 0) {
             this.proceed();
         } else {
             navigation.navigate('IntroSplash');
         }
     }
+
+    componentDidMount() {
+        this.subscription = AppState.addEventListener(
+            'change',
+            this.handleAppStateChange
+        );
+    }
+
+    componentWillUnmount() {
+        this.subscription?.remove();
+    }
+
+    handleAppStateChange = (nextAppState: AppStateStatus) => {
+        if (nextAppState === 'background') {
+            this.setState({ passphraseAttempt: '' });
+        }
+    };
 
     onInputLabelPressed = () => {
         this.setState({ hidden: !this.state.hidden });
@@ -280,7 +312,7 @@ export default class Lockscreen extends React.Component<
             selectedNode: undefined,
             authenticationAttempts: 0
         }).then(() => {
-            this.proceed();
+            this.proceed('IntroSplash');
         });
     };
 
@@ -297,7 +329,7 @@ export default class Lockscreen extends React.Component<
             duressPin: '',
             authenticationAttempts: 0
         }).then(() => {
-            this.proceed();
+            this.proceed('IntroSplash');
         });
     };
 
