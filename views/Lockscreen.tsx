@@ -75,10 +75,13 @@ export default class Lockscreen extends React.Component<
 
     proceed = (navigationTarget?: string) => {
         const { SettingsStore, navigation } = this.props;
-        SettingsStore.setInitialStart(false);
         if (navigationTarget) {
             navigation.navigate(navigationTarget);
-        } else if (SettingsStore.settings.selectNodeOnStartup) {
+        } else if (
+            SettingsStore.settings.selectNodeOnStartup &&
+            SettingsStore.initialStart
+        ) {
+            SettingsStore.setInitialStart(false);
             navigation.navigate('Nodes');
         } else {
             navigation.pop();
