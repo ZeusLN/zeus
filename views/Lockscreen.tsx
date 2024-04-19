@@ -5,7 +5,6 @@ import {
     AppStateStatus,
     NativeEventSubscription,
     Platform,
-    ScrollView,
     StyleSheet,
     Text,
     View
@@ -393,66 +392,58 @@ export default class Lockscreen extends React.Component<
                     />
                 )}
                 {!!passphrase && (
-                    <ScrollView
-                        style={styles.container}
-                        keyboardShouldPersistTaps="handled"
+                    <View
+                        style={{
+                            ...styles.content,
+                            flex: 1,
+                            justifyContent: 'center',
+                            marginTop:
+                                Platform.OS === 'android' &&
+                                SettingsStore.loginRequired()
+                                    ? 30
+                                    : 0
+                        }}
                     >
-                        <View
-                            style={{
-                                ...styles.content,
-                                marginTop:
-                                    Platform.OS === 'android' &&
-                                    SettingsStore.loginRequired()
-                                        ? 30
-                                        : 0
-                            }}
-                        >
-                            {error && (
-                                <ErrorMessage
-                                    message={this.generateErrorMessage()}
-                                />
-                            )}
-                            <View style={styles.inputContainer}>
-                                <TextInput
-                                    placeholder={'****************'}
-                                    placeholderTextColor="darkgray"
-                                    value={passphraseAttempt}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            passphraseAttempt: text,
-                                            error: false
-                                        })
-                                    }
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                    secureTextEntry={hidden}
-                                    autoFocus={true}
-                                    style={{
-                                        ...styles.textInput,
-                                        paddingTop:
-                                            passphraseAttempt === '' ? 6 : 2
-                                    }}
-                                />
-                                <View style={styles.showHideToggle}>
-                                    <ShowHideToggle
-                                        onPress={() =>
-                                            this.onInputLabelPressed()
-                                        }
-                                    />
-                                </View>
-                            </View>
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.Lockscreen.login'
-                                    )}
-                                    onPress={() => this.onAttemptLogIn()}
-                                    containerStyle={{ width: 300 }}
-                                    adaptiveWidth
+                        {error && (
+                            <ErrorMessage
+                                message={this.generateErrorMessage()}
+                            />
+                        )}
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                placeholder={'****************'}
+                                placeholderTextColor="darkgray"
+                                value={passphraseAttempt}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        passphraseAttempt: text,
+                                        error: false
+                                    })
+                                }
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                secureTextEntry={hidden}
+                                autoFocus={true}
+                                style={{
+                                    ...styles.textInput,
+                                    paddingTop: passphraseAttempt === '' ? 6 : 2
+                                }}
+                            />
+                            <View style={styles.showHideToggle}>
+                                <ShowHideToggle
+                                    onPress={() => this.onInputLabelPressed()}
                                 />
                             </View>
                         </View>
-                    </ScrollView>
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('views.Lockscreen.login')}
+                                onPress={() => this.onAttemptLogIn()}
+                                containerStyle={{ width: 300 }}
+                                adaptiveWidth
+                            />
+                        </View>
+                    </View>
                 )}
                 {!!pin && (
                     <View style={styles.container}>
