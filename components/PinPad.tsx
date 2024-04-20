@@ -20,6 +20,9 @@ interface PinPadProps {
     amount?: boolean;
 }
 
+const DEFAULT_SIZE = 24;
+const BIG_SIZE = 50;
+
 export default function PinPad({
     appendValue,
     clearValue,
@@ -101,7 +104,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[1]}
@@ -119,7 +122,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[2]}
@@ -137,7 +140,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[3]}
@@ -157,7 +160,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[4]}
@@ -175,7 +178,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[5]}
@@ -193,7 +196,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[6]}
@@ -213,7 +216,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[7]}
@@ -231,7 +234,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[8]}
@@ -249,7 +252,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[9]}
@@ -269,7 +272,9 @@ export default function PinPad({
                             style={{
                                 ...styles.pinPadNumber,
                                 color: themeColor('text'),
-                                fontSize: bigKeypadButtons ? 50 : 20
+                                fontSize: bigKeypadButtons
+                                    ? BIG_SIZE
+                                    : DEFAULT_SIZE
                             }}
                         >
                             {'.'}
@@ -288,7 +293,9 @@ export default function PinPad({
                             style={{
                                 ...styles.pinPadNumber,
                                 color: themeColor('text'),
-                                fontSize: bigKeypadButtons ? 50 : 20
+                                fontSize: bigKeypadButtons
+                                    ? BIG_SIZE
+                                    : DEFAULT_SIZE
                             }}
                         >
                             {'<'}
@@ -307,7 +314,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[0]}
@@ -327,7 +334,9 @@ export default function PinPad({
                                 style={{
                                     ...styles.pinPadNumber,
                                     color: themeColor('text'),
-                                    fontSize: bigKeypadButtons ? 50 : 20
+                                    fontSize: bigKeypadButtons
+                                        ? BIG_SIZE
+                                        : DEFAULT_SIZE
                                 }}
                             >
                                 {'<'}
@@ -346,7 +355,9 @@ export default function PinPad({
                                 style={{
                                     ...styles.pinPadNumber,
                                     color: themeColor('text'),
-                                    fontSize: bigKeypadButtons ? 50 : 20
+                                    fontSize: bigKeypadButtons
+                                        ? BIG_SIZE
+                                        : DEFAULT_SIZE
                                 }}
                             >
                                 C
