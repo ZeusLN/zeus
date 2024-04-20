@@ -55,6 +55,7 @@ import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 
 import Invoice from '../models/Invoice';
+import Channel from '../models/Channel';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import ModalStore from '../stores/ModalStore';
@@ -85,6 +86,7 @@ import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
 import Gear from '../assets/images/SVG/Gear.svg';
 import DropdownSetting from '../components/DropdownSetting';
+import HopPicker from '../components/HopPicker';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -125,6 +127,13 @@ interface ReceiveState {
     enableLSP: boolean;
     lspIsActive: boolean;
     lspNotConfigured: boolean;
+    routeHintMode: RouteHintMode;
+    selectedRouteHintChannels?: Channel[];
+}
+
+enum RouteHintMode {
+    Automatic = 0,
+    Custom = 1
 }
 
 @inject(
@@ -146,7 +155,8 @@ export default class Receive extends React.Component<
     listenerSecondary: any;
     lnInterval: any;
     onChainInterval: any;
-    state = {
+    hopPickerRef: HopPicker | null;
+    state: ReceiveState = {
         selectedIndex: 0,
         expirationIndex: 1,
         addressType: '0',
@@ -170,7 +180,9 @@ export default class Receive extends React.Component<
         needInbound: false,
         enableLSP: true,
         lspIsActive: false,
-        lspNotConfigured: true
+        lspNotConfigured: true,
+        routeHintMode: RouteHintMode.Automatic,
+        selectedRouteHintChannels: undefined
     };
 
     async UNSAFE_componentWillMount() {
@@ -425,6 +437,7 @@ export default class Receive extends React.Component<
             undefined,
             lspIsActive ? false : ampInvoice || false,
             lspIsActive ? false : routeHints || false,
+            undefined,
             BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
                 : undefined,
@@ -539,6 +552,7 @@ export default class Receive extends React.Component<
                             amount.toString(),
                             '3600',
                             lnurlParams,
+                            undefined,
                             undefined,
                             undefined,
                             undefined,
@@ -971,7 +985,9 @@ export default class Receive extends React.Component<
             needInbound,
             enableLSP,
             lspIsActive,
-            lspNotConfigured
+            lspNotConfigured,
+            routeHintMode,
+            selectedRouteHintChannels
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1290,6 +1306,55 @@ export default class Receive extends React.Component<
             { element: oneDButton },
             { element: oneWButton }
         ];
+
+        const routeHintModeButtons = [
+            {
+                element: () => (
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color:
+                                routeHintMode === RouteHintMode.Automatic
+                                    ? themeColor('background')
+                                    : themeColor('text')
+                        }}
+                    >
+                        {localeString('general.automatic')}
+                    </Text>
+                )
+            },
+            {
+                element: () => (
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color:
+                                routeHintMode === RouteHintMode.Custom
+                                    ? themeColor('background')
+                                    : themeColor('text')
+                        }}
+                    >
+                        {localeString('general.custom')}
+                    </Text>
+                )
+            }
+        ];
+
+        const setRouteHintMode = (mode: RouteHintMode) => {
+            if (this.state.routeHintMode === mode) {
+                return;
+            }
+            this.setState({
+                routeHintMode: mode
+            });
+            if (
+                mode === RouteHintMode.Custom &&
+                (!selectedRouteHintChannels ||
+                    selectedRouteHintChannels.length === 0)
+            ) {
+                this.hopPickerRef?.openPicker();
+            }
+        };
 
         const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
 
@@ -2353,6 +2418,99 @@ export default class Receive extends React.Component<
                                                 </>
                                             )}
 
+                                        {BackendUtils.isLNDBased() &&
+                                            routeHints && (
+                                                <Row>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'general.mode'
+                                                        )}
+                                                    </Text>
+                                                    <ButtonGroup
+                                                        onPress={
+                                                            setRouteHintMode
+                                                        }
+                                                        selectedIndex={
+                                                            routeHintMode
+                                                        }
+                                                        buttons={
+                                                            routeHintModeButtons
+                                                        }
+                                                        selectedButtonStyle={{
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'highlight'
+                                                                ),
+                                                            borderRadius: 12
+                                                        }}
+                                                        containerStyle={{
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'secondary'
+                                                                ),
+                                                            borderRadius: 12,
+                                                            borderWidth: 0,
+                                                            height: 30,
+                                                            flex: 1
+                                                        }}
+                                                        innerBorderStyle={{
+                                                            color: themeColor(
+                                                                'secondary'
+                                                            )
+                                                        }}
+                                                    />
+                                                </Row>
+                                            )}
+
+                                        {BackendUtils.isLNDBased() && (
+                                            <HopPicker
+                                                ref={(ref) =>
+                                                    (this.hopPickerRef = ref)
+                                                }
+                                                onValueChange={(channels) => {
+                                                    this.setState({
+                                                        selectedRouteHintChannels:
+                                                            channels
+                                                    });
+                                                }}
+                                                onCancel={() => {
+                                                    if (
+                                                        !selectedRouteHintChannels?.length
+                                                    ) {
+                                                        setRouteHintMode(
+                                                            RouteHintMode.Automatic
+                                                        );
+                                                    }
+                                                }}
+                                                title={localeString(
+                                                    'views.Receive.customRouteHints'
+                                                )}
+                                                ChannelsStore={
+                                                    this.props.ChannelsStore
+                                                }
+                                                UnitsStore={UnitsStore}
+                                                containerStyle={{
+                                                    display:
+                                                        routeHintMode ===
+                                                        RouteHintMode.Automatic
+                                                            ? 'none'
+                                                            : 'flex'
+                                                }}
+                                                clearOnTap={false}
+                                                selectionMode={'multiple'}
+                                                selectedChannels={
+                                                    selectedRouteHintChannels
+                                                }
+                                            />
+                                        )}
+
                                         {BackendUtils.supportsAMP() &&
                                             !lspIsActive && (
                                                 <>
@@ -2414,6 +2572,10 @@ export default class Receive extends React.Component<
                                                             : ampInvoice ||
                                                                   false,
                                                         routeHints,
+                                                        routeHintMode ===
+                                                            RouteHintMode.Custom
+                                                            ? selectedRouteHintChannels
+                                                            : undefined,
                                                         BackendUtils.supportsAddressTypeSelection()
                                                             ? addressType
                                                             : undefined,

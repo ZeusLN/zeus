@@ -7,12 +7,15 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
 
 import Invoice from '../models/Invoice';
+import Channel from '../models/Channel';
+import ChannelInfo from '../models/ChannelInfo';
 import SettingsStore from './SettingsStore';
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import ChannelsStore from './ChannelsStore';
+import NodeInfoStore from './NodeInfoStore';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -34,6 +37,7 @@ export default class InvoicesStore {
     settingsStore: SettingsStore;
     lspStore: LSPStore;
     channelsStore: ChannelsStore;
+    nodeInfoStore: NodeInfoStore;
 
     // lnd
     @observable loadingFeeEstimate = false;
@@ -43,11 +47,13 @@ export default class InvoicesStore {
     constructor(
         settingsStore: SettingsStore,
         lspStore: LSPStore,
-        channelsStore: ChannelsStore
+        channelsStore: ChannelsStore,
+        nodeInfoStore: NodeInfoStore
     ) {
         this.settingsStore = settingsStore;
         this.lspStore = lspStore;
         this.channelsStore = channelsStore;
+        this.nodeInfoStore = nodeInfoStore;
 
         reaction(
             () => this.pay_req,
@@ -121,6 +127,7 @@ export default class InvoicesStore {
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
         routeHints?: boolean,
+        routeHintChannels?: Channel[],
         addressType?: string,
         customPreimage?: string,
         noLsp?: boolean
@@ -133,6 +140,7 @@ export default class InvoicesStore {
             lnurl,
             ampInvoice,
             routeHints,
+            routeHintChannels,
             true,
             customPreimage,
             noLsp
@@ -178,6 +186,7 @@ export default class InvoicesStore {
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
         routeHints?: boolean,
+        routeHintChannels?: Channel[],
         unified?: boolean,
         customPreimage?: string,
         noLsp?: boolean
@@ -196,7 +205,41 @@ export default class InvoicesStore {
         };
 
         if (ampInvoice) req.is_amp = true;
-        if (routeHints) req.private = true;
+        if (routeHints) {
+            if (routeHintChannels?.length) {
+                const routeHints = [];
+                for (const routeHintChannel of routeHintChannels) {
+                    const channelInfo = new ChannelInfo(
+                        await BackendUtils.getChannelInfo(
+                            routeHintChannel.channelId
+                        )
+                    );
+                    const remotePolicy =
+                        channelInfo.node1Pub ===
+                        this.nodeInfoStore.nodeInfo.nodeId
+                            ? channelInfo.node2Policy
+                            : channelInfo.node1Policy;
+                    routeHints.push({
+                        hop_hints: [
+                            {
+                                node_id: routeHintChannel.remotePubkey,
+                                chan_id: routeHintChannel.channelId, // must not be converted to Number as this might lead to a loss of precision
+                                fee_base_msat: Number(
+                                    remotePolicy?.fee_base_msat
+                                ),
+                                fee_proportional_millionths: Number(
+                                    remotePolicy?.fee_rate_milli_msat
+                                ),
+                                cltv_expiry_delta: remotePolicy?.time_lock_delta
+                            }
+                        ]
+                    });
+                }
+                req.route_hints = routeHints;
+            } else {
+                req.private = true;
+            }
+        }
 
         if (customPreimage) req.preimage = customPreimage;
 
