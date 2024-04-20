@@ -461,7 +461,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (BackendUtils.supportsLSPs()) {
             if (
                 SettingsStore.settings.enableLSP &&
-                !this.props.NodeInfoStore.lspNotConfigured
+                (implementation !== 'lnd' ||
+                    !this.props.NodeInfoStore.lspNotConfigured)
             ) {
                 await LSPStore.getLSPInfo();
             }
