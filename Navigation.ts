@@ -125,6 +125,10 @@ import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWr
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
 import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelBackups';
 
+// Chantools
+import Chantools from './views/Settings/EmbeddedNode/Chantools';
+import Sweepremoteclosed from './views/Settings/EmbeddedNode/Chantools/Sweepremoteclosed';
+
 import RawTxHex from './views/RawTxHex';
 
 import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
@@ -450,6 +454,12 @@ const AppScenes = {
     },
     CustodialWalletWarning: {
         screen: CustodialWalletWarning
+    },
+    Chantools: {
+        screen: Chantools
+    },
+    Sweepremoteclosed: {
+        screen: Sweepremoteclosed
     }
 };
 
