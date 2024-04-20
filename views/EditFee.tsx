@@ -307,9 +307,7 @@ export default class EditFee extends React.Component<
                                                 color: themeColor('text')
                                             }}
                                         >
-                                            {localeString(
-                                                'views.EditFee.custom'
-                                            )}
+                                            {localeString('general.custom')}
                                         </Text>
                                         <TouchableWithoutFeedback>
                                             <TextInput

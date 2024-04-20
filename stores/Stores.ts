@@ -70,7 +70,8 @@ class Stores {
         this.invoicesStore = new InvoicesStore(
             this.settingsStore,
             this.lspStore,
-            this.channelsStore
+            this.channelsStore,
+            this.nodeInfoStore
         );
         this.transactionsStore = new TransactionsStore(
             this.settingsStore,

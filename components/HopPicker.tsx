@@ -7,7 +7,8 @@ import {
     View,
     Text,
     TouchableOpacity,
-    TouchableHighlight
+    TouchableHighlight,
+    ViewStyle
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
@@ -27,13 +28,18 @@ import UnitsStore from '../stores/UnitsStore';
 interface ChannelPickerProps {
     title?: string;
     displayValue?: string;
-    onValueChange: (value: any) => void;
+    onValueChange: (channels: Channel[]) => void;
+    onCancel?: () => void;
     ChannelsStore: ChannelsStore;
     UnitsStore: UnitsStore;
+    containerStyle: ViewStyle;
+    clearOnTap: boolean;
+    selectionMode?: 'single' | 'multiple';
+    selectedChannels?: Channel[];
 }
 
 interface ChannelPickerState {
-    channelSelected: Channel | null;
+    selectedChannels: Channel[];
     valueSet: string;
     showChannelModal: boolean;
 }
@@ -46,37 +52,90 @@ export default class ChannelPicker extends React.Component<
     ChannelPickerProps,
     ChannelPickerState
 > {
-    state = {
-        channelSelected: null,
+    state: ChannelPickerState = {
+        selectedChannels: [],
         valueSet: '',
         showChannelModal: false
     };
 
-    openPicker() {
-        stores.channelsStore.getChannels();
+    componentDidMount(): void {
+        if (this.props.selectedChannels != null) {
+            this.setState(
+                { selectedChannels: this.props.selectedChannels },
+                this.updateValueSet
+            );
+        }
+    }
+
+    refreshChannels(): void {
+        stores.channelsStore.getChannels().then(() => {
+            this.setState({
+                selectedChannels: this.state.selectedChannels
+                    .map((c1) =>
+                        stores.channelsStore.channels.find(
+                            (c2) => c2.channelId === c1.channelId
+                        )
+                    )
+                    .filter((chan) => chan != null) as Channel[]
+            });
+        });
+    }
+
+    updateValueSet(): void {
+        const nodes = this.props.ChannelsStore.nodes;
+        const displayNames = this.state.selectedChannels
+            .map(
+                (chan) =>
+                    chan.alias ||
+                    (nodes[chan.remote_pubkey] &&
+                        nodes[chan.remote_pubkey].alias) ||
+                    (chan && chan.remote_pubkey) ||
+                    (chan && chan.channelId)
+            )
+            .join(', ');
+
         this.setState({
-            channelSelected: null,
+            showChannelModal: false,
+            valueSet: displayNames
+        });
+    }
+
+    openPicker() {
+        this.refreshChannels();
+        this.setState({
             showChannelModal: true
         });
     }
 
     clearSelection() {
+        const selectedChannels: Channel[] = [];
         this.setState({
-            channelSelected: null,
+            selectedChannels,
             valueSet: ''
         });
+        this.props.onValueChange(selectedChannels);
     }
 
-    toggleItem(item: any) {
-        this.setState({ channelSelected: item });
+    toggleItem(item: Channel) {
+        if (this.props.selectionMode === 'multiple') {
+            const selectedChannels = this.state.selectedChannels;
+            if (selectedChannels.includes(item)) {
+                selectedChannels.splice(selectedChannels.indexOf(item), 1);
+            } else {
+                selectedChannels.push(item);
+            }
+            this.setState({ selectedChannels });
+        } else {
+            this.setState({ selectedChannels: [item] });
+        }
     }
 
     renderItem = ({ item }: { item: Channel }) => {
         const { ChannelsStore } = this.props;
-        const { channelSelected } = this.state;
+        const { selectedChannels } = this.state;
         const { largestChannelSats, channelsType } = ChannelsStore;
 
-        const selected = channelSelected === item;
+        const selected = selectedChannels.includes(item);
 
         if (channelsType === ChannelsType.Open) {
             return (
@@ -105,9 +164,17 @@ export default class ChannelPicker extends React.Component<
     };
 
     render() {
-        const { title, onValueChange, ChannelsStore } = this.props;
-        const { showChannelModal, valueSet } = this.state;
-        const { filteredChannels, nodes, loading, getChannels } = ChannelsStore;
+        const {
+            title,
+            onValueChange,
+            onCancel,
+            ChannelsStore,
+            containerStyle,
+            selectionMode
+        } = this.props;
+        const clearOnTap = this.props.clearOnTap ?? true;
+        const { showChannelModal, valueSet, selectedChannels } = this.state;
+        const { filteredChannels, loading } = ChannelsStore;
 
         const channels = filteredChannels;
 
@@ -132,9 +199,13 @@ export default class ChannelPicker extends React.Component<
                                     fontSize: 25
                                 }}
                             >
-                                {localeString(
-                                    'components.ChannelPicker.modal.title'
-                                )}
+                                {selectionMode === 'multiple'
+                                    ? localeString(
+                                          'components.ChannelPicker.modal.title.multiple'
+                                      )
+                                    : localeString(
+                                          'components.ChannelPicker.modal.title'
+                                      )}
                             </Text>
                             <Text
                                 style={{
@@ -144,9 +215,13 @@ export default class ChannelPicker extends React.Component<
                                     paddingBottom: 20
                                 }}
                             >
-                                {localeString(
-                                    'components.ChannelPicker.modal.description'
-                                )}
+                                {selectionMode === 'multiple'
+                                    ? localeString(
+                                          'components.ChannelPicker.modal.description.multiple'
+                                      )
+                                    : localeString(
+                                          'components.ChannelPicker.modal.description'
+                                      )}
                             </Text>
 
                             <ChannelsFilter width="86%" />
@@ -156,45 +231,19 @@ export default class ChannelPicker extends React.Component<
                                 renderItem={(item) => this.renderItem(item)}
                                 onEndReachedThreshold={50}
                                 refreshing={loading}
-                                onRefresh={() => getChannels()}
+                                onRefresh={() => this.refreshChannels()}
                             />
 
                             <View style={styles.button}>
                                 <Button
-                                    title={localeString(
-                                        'components.ChannelPicker.modal.set'
-                                    )}
+                                    title={localeString('general.confirm')}
+                                    disabled={selectedChannels.length === 0}
                                     onPress={() => {
-                                        const { channelSelected }: any =
-                                            this.state;
-
-                                        if (channelSelected) {
-                                            const displayName =
-                                                channelSelected.alias ||
-                                                (nodes[
-                                                    channelSelected
-                                                        .remote_pubkey
-                                                ] &&
-                                                    nodes[
-                                                        channelSelected
-                                                            .remote_pubkey
-                                                    ].alias) ||
-                                                (channelSelected &&
-                                                    channelSelected.remote_pubkey) ||
-                                                (channelSelected &&
-                                                    channelSelected.channelId);
-
-                                            this.setState({
-                                                showChannelModal: false,
-                                                valueSet: displayName
-                                            });
-
-                                            onValueChange(channelSelected);
-                                        } else {
-                                            this.setState({
-                                                showChannelModal: false
-                                            });
-                                        }
+                                        this.updateValueSet();
+                                        this.setState({
+                                            showChannelModal: false
+                                        });
+                                        onValueChange(selectedChannels);
                                     }}
                                 />
                             </View>
@@ -202,11 +251,12 @@ export default class ChannelPicker extends React.Component<
                             <View style={styles.button}>
                                 <Button
                                     title={localeString('general.cancel')}
-                                    onPress={() =>
+                                    onPress={() => {
                                         this.setState({
                                             showChannelModal: false
-                                        })
-                                    }
+                                        });
+                                        onCancel?.();
+                                    }}
                                     secondary
                                 />
                             </View>
@@ -214,7 +264,7 @@ export default class ChannelPicker extends React.Component<
                     </View>
                 </Modal>
 
-                <View style={styles.field}>
+                <View style={{ ...containerStyle, ...styles.field }}>
                     <Text
                         style={{
                             ...styles.text,
@@ -225,7 +275,15 @@ export default class ChannelPicker extends React.Component<
                         {title || DEFAULT_TITLE}
                     </Text>
                     {valueSet ? (
-                        <TouchableOpacity onPress={() => this.clearSelection()}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                if (clearOnTap) {
+                                    this.clearSelection();
+                                } else {
+                                    this.openPicker();
+                                }
+                            }}
+                        >
                             <Text
                                 style={{
                                     ...styles.text,
