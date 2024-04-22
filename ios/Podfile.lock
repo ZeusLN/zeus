@@ -1419,7 +1419,7 @@ SPEC CHECKSUMS:
   hermes-engine: 39589e9c297d024e90fe68f6830ff86c4e01498a
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
   lottie-ios: e047b1d2e6239b787cc5e9755b988869cf190494
-  lottie-react-native: 3b9199d34e014bcb71c46728992ef5c8026538bb
+  lottie-react-native: 2d9efc8a5ffabe688b55a1a1ac1fb94b9d971995
   RCT-Folly: 7169b2b1c44399c76a47b5deaaba715eeeb476c0
   RCTRequired: 77f73950d15b8c1a2b48ba5b79020c3003d1c9b5
   RCTTypeSafety: ede1e2576424d89471ef553b2aed09fbbcc038e3
