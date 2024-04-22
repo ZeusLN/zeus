@@ -29,6 +29,11 @@ import LightningIcon from '../assets/images/lightning-black.png';
 import OnChainIcon from '../assets/images/onchain-black.png';
 import ZPayIcon from '../assets/images/pay-z-black.png';
 
+import ZIconWhite from '../assets/images/icon-white.png';
+import LightningIconWhite from '../assets/images/lightning-white.png';
+import OnChainIconWhite from '../assets/images/onchain-white.png';
+import ZPayIconWhite from '../assets/images/pay-z-white.png';
+
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
 import Button from '../components/Button';
@@ -1543,7 +1548,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
-                                                    logo={ZIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? ZIconWhite
+                                                            : ZIcon
+                                                    }
                                                 />
                                             )}
                                         {selectedIndex == 1 &&
@@ -1560,7 +1571,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
-                                                    logo={LightningIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? LightningIconWhite
+                                                            : LightningIcon
+                                                    }
                                                 />
                                             )}
                                         {selectedIndex == 2 &&
@@ -1577,7 +1594,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
-                                                    logo={OnChainIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? OnChainIconWhite
+                                                            : OnChainIcon
+                                                    }
                                                 />
                                             )}
 
@@ -1639,7 +1662,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     hideText
-                                                    logo={ZPayIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? ZPayIconWhite
+                                                            : ZPayIcon
+                                                    }
                                                 />
                                             )}
 

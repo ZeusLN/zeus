@@ -26,7 +26,8 @@ export function themeColor(themeString: string): any {
         buttonBackground: '#FFA900',
         buttonGradient: ['#FF9000', '#FFA900'],
         buttonText: '#000000',
-        qr: '#FFA900',
+        qrBackground: '#FFA900',
+        qrLogoBackground: '#FFA900',
         action: '#FFF'
     };
 
@@ -71,7 +72,8 @@ export function themeColor(themeString: string): any {
         qrFrame: '#FFD93F',
         bolt: '#FFD93F',
         chain: '#FFD93F',
-        disabled: '#767577'
+        disabled: '#767577',
+        invertQrIcons: false
     };
 
     const Junkie: { [key: string]: any } = {
@@ -218,13 +220,16 @@ export function themeColor(themeString: string): any {
         warning: '#E14C4C',
         bitcoin: '#FFB040',
         delete: '#992600',
+        qr: '#4C09F4',
+        qrBackground: '#FFF',
+        qrLogoBackground: '#4C09F4',
+        invertQrIcons: true,
         qrFrame: '#FFD93F',
         bolt: '#FFF',
         chain: '#FFF',
         disabled: '#767577',
         buttonBackground: '#4C09F4',
-        buttonText: '#000000',
-        qr: '#dccfff',
+        buttonText: '#FFF',
         action: '#FFF'
     };
 
