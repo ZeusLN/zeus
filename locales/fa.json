@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "تاریخ ایجاد",
     "views.Payment.path": "مسیر",
     "views.Payment.paths": "مسیرها",
-    "views.Payment.notes": "یادداشت ها",
     "views.Payment.writeNote": "یادداشت تان را اینجا بنویسید",
     "views.PaymentRequest.title": "صورتحساب لایتینگ",
     "views.PaymentRequest.error": "اشکال در لود کردن صورت‌حساب‌ها",
