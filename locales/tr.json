@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Oluşturulma tarihi",
     "views.Payment.path": "Rota",
     "views.Payment.paths": "Yollar",
-    "views.Payment.notes": "Notlar",
     "views.Payment.writeNote": "Notunuzu buraya yazın",
     "views.PaymentRequest.title": "Lightning faturası",
     "views.PaymentRequest.error": "Faturayı yüklemede hata",
