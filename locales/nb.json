@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Opprettelsesdato",
     "views.Payment.path": "Rute",
     "views.Payment.paths": "Paths",
-    "views.Payment.notes": "Notes",
     "views.Payment.writeNote": "Write your note here",
     "views.PaymentRequest.title": "Lightning faktura",
     "views.PaymentRequest.error": "Feil ved innlasting av faktura",
