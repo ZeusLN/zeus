@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Data creării",
     "views.Payment.path": "Cale",
     "views.Payment.paths": "Căi",
-    "views.Payment.notes": "Note",
     "views.Payment.writeNote": "Scrie nota ta aici",
     "views.PaymentRequest.title": "Factură Lightning",
     "views.PaymentRequest.error": "Eroare la încărcare Factură",
