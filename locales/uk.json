@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Дата створення",
     "views.Payment.path": "Шлях",
     "views.Payment.paths": "Paths",
-    "views.Payment.notes": "Notes",
     "views.Payment.writeNote": "Write your note here",
     "views.PaymentRequest.title": "Рахунок Lightning",
     "views.PaymentRequest.error": "Не вдалося завантажити рахунок",
