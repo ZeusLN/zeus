@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "تاريخ الإنشاء",
     "views.Payment.path": "مسار",
     "views.Payment.paths": "Paths",
-    "views.Payment.notes": "Notes",
     "views.Payment.writeNote": "Write your note here",
     "views.PaymentRequest.title": "فاتورة Lightning",
     "views.PaymentRequest.error": "خطأ في تحميل الفاتورة",
