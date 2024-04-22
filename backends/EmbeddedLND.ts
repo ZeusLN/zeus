@@ -267,5 +267,6 @@ export default class EmbeddedLND extends LND {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
+    supportsOnchainBatching = () => true;
     isLNDBased = () => true;
 }
