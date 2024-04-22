@@ -81,91 +81,95 @@ export default class SendingOnChain extends React.Component<
                     </View>
                 )}
                 {!loading && (
-                    <View
-                        style={{
-                            ...styles.content,
-                            paddingTop: windowSize.height * 0.05
-                        }}
-                    >
-                        {publishSuccess && (
-                            <>
-                                <Wordmark
-                                    height={windowSize.width * 0.25}
-                                    width={windowSize.width}
-                                    fill={themeColor('highlight')}
-                                />
+                    <View style={{ flex: 1 }}>
+                        <View
+                            style={{
+                                ...styles.content,
+                                paddingTop: windowSize.height * 0.05
+                            }}
+                        >
+                            {publishSuccess && (
+                                <>
+                                    <Wordmark
+                                        height={windowSize.width * 0.25}
+                                        width={windowSize.width}
+                                        fill={themeColor('highlight')}
+                                    />
+                                    <View style={{ alignItems: 'center' }}>
+                                        <SuccessAnimation />
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text'),
+                                                paddingTop:
+                                                    windowSize.height * 0.03,
+                                                fontSize:
+                                                    windowSize.width *
+                                                    windowSize.scale *
+                                                    0.017,
+                                                alignSelf: 'center'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.SendingOnChain.success'
+                                            )}
+                                        </Text>
+                                    </View>
+                                </>
+                            )}
+                            {(error || error_msg) && (
                                 <View style={{ alignItems: 'center' }}>
-                                    <SuccessAnimation />
+                                    <Error
+                                        width={windowSize.height * 0.13}
+                                        height={windowSize.height * 0.13}
+                                    />
                                     <Text
                                         style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            paddingTop:
-                                                windowSize.height * 0.03,
-                                            fontSize:
-                                                windowSize.width *
-                                                windowSize.scale *
-                                                0.017,
-                                            alignSelf: 'center'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.SendingOnChain.success'
-                                        )}
-                                    </Text>
-                                </View>
-                            </>
-                        )}
-                        {(error || error_msg) && (
-                            <View style={{ alignItems: 'center' }}>
-                                <Error
-                                    width={windowSize.height * 0.13}
-                                    height={windowSize.height * 0.13}
-                                />
-                                <Text
-                                    style={{
-                                        color: '#FF9090',
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 32,
-                                        marginTop: windowSize.height * 0.07
-                                    }}
-                                >
-                                    {localeString('general.error')}
-                                </Text>
-                                {error_msg && (
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
+                                            color: '#FF9090',
                                             fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize:
-                                                windowSize.width *
-                                                windowSize.scale *
-                                                0.014,
-                                            textAlign: 'center',
-                                            marginTop: windowSize.height * 0.025
+                                            fontSize: 32,
+                                            marginTop: windowSize.height * 0.07
                                         }}
                                     >
-                                        {error_msg}
+                                        {localeString('general.error')}
                                     </Text>
-                                )}
-                            </View>
-                        )}
-                        {txid && (
-                            <View style={{ width: '90%' }}>
-                                <CopyBox
-                                    heading={localeString(
-                                        'views.SendingOnChain.txid'
+                                    {error_msg && (
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize:
+                                                    windowSize.width *
+                                                    windowSize.scale *
+                                                    0.014,
+                                                textAlign: 'center',
+                                                marginTop:
+                                                    windowSize.height * 0.025
+                                            }}
+                                        >
+                                            {error_msg}
+                                        </Text>
                                     )}
-                                    headingCopied={`${localeString(
-                                        'views.SendingOnChain.txid'
-                                    )} ${localeString(
-                                        'components.ExternalLinkModal.copied'
-                                    )}`}
-                                    URL={txid}
-                                    theme="dark"
-                                />
-                            </View>
-                        )}
+                                </View>
+                            )}
+                            {txid && (
+                                <View style={{ width: '90%' }}>
+                                    <CopyBox
+                                        heading={localeString(
+                                            'views.SendingOnChain.txid'
+                                        )}
+                                        headingCopied={`${localeString(
+                                            'views.SendingOnChain.txid'
+                                        )} ${localeString(
+                                            'components.ExternalLinkModal.copied'
+                                        )}`}
+                                        URL={txid}
+                                        theme="dark"
+                                    />
+                                </View>
+                            )}
+                        </View>
 
                         <View style={styles.buttons}>
                             {txid && (
@@ -261,6 +265,7 @@ const styles = StyleSheet.create({
         flex: 1
     },
     content: {
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'space-evenly',
         height: '100%'
@@ -268,6 +273,7 @@ const styles = StyleSheet.create({
     buttons: {
         justifyContent: 'flex-end',
         width: '100%',
-        gap: 15
+        gap: 15,
+        bottom: 15
     }
 });
