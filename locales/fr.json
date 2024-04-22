@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Date de création",
     "views.Payment.path": "Chemin",
     "views.Payment.paths": "Chemins",
-    "views.Payment.notes": "Notes",
     "views.Payment.writeNote": "Écrivez votre note ici",
     "views.PaymentRequest.title": "Facture Lightning",
     "views.PaymentRequest.error": "Erreur de chargement de la facture",
