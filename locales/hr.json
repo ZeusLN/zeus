@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Datum izrade",
     "views.Payment.path": "Staza",
     "views.Payment.paths": "Staze",
-    "views.Payment.notes": "Bilješke",
     "views.Payment.writeNote": "Ovdje napišite svoju bilješku",
     "views.PaymentRequest.title": "Lightning faktura",
     "views.PaymentRequest.error": "Pogreška pri učitavanju fakture",
