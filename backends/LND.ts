@@ -492,7 +492,10 @@ export default class LND {
     fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
     finalizePsbt = (data: any) =>
         this.postRequest('/v2/wallet/psbt/finalize', data);
-    publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
+    publishTransaction = (data: any) => {
+        if (data.tx_hex) data.tx_hex = Base64Utils.hexToBase64(data.tx_hex);
+        return this.postRequest('/v2/wallet/tx', data);
+    };
     fundingStateStep = (data: any) =>
         this.postRequest('/v1/funding/step', data);
     getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
@@ -610,5 +613,6 @@ export default class LND {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
+    supportsOnchainBatching = () => true;
     isLNDBased = () => true;
 }

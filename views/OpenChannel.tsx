@@ -835,7 +835,7 @@ export default class OpenChannel extends React.Component<
                                                     request
                                                 );
 
-                                            await this.subscribeOpenChannelStream(
+                                            this.subscribeOpenChannelStream(
                                                 request,
                                                 streamingCall
                                             );
