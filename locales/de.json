@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Erstellungsdatum",
     "views.Payment.path": "Pfad",
     "views.Payment.paths": "Pfade",
-    "views.Payment.notes": "Notizen",
     "views.Payment.writeNote": "Schreibe deine Notiz hier",
     "views.PaymentRequest.title": "Lightning-Rechnung",
     "views.PaymentRequest.error": "Fehler beim Laden der Rechnung",
