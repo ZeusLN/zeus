@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Skapelsedatum",
     "views.Payment.path": "Sökväg",
     "views.Payment.paths": "Sökvägar",
-    "views.Payment.notes": "Anteckningar",
     "views.Payment.writeNote": "Skriv din anteckning här",
     "views.PaymentRequest.title": "Lightning-invoice",
     "views.PaymentRequest.error": "Kunde inte ladda invoice",

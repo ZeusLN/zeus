@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Létrehozási dátum",
     "views.Payment.path": "Útvonal",
     "views.Payment.paths": "Paths",
-    "views.Payment.notes": "Notes",
     "views.Payment.writeNote": "Write your note here",
     "views.PaymentRequest.title": "Villám Számla",
     "views.PaymentRequest.error": "Hibatörtént a számla betöltésekor",

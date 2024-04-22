@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "创建日期",
     "views.Payment.path": "路由",
     "views.Payment.paths": "Paths",
-    "views.Payment.notes": "Notes",
     "views.Payment.writeNote": "Write your note here",
     "views.PaymentRequest.title": "闪电发票",
     "views.PaymentRequest.error": "加载发票时出错",
