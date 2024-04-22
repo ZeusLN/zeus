@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Data de Criação",
     "views.Payment.path": "Caminho",
     "views.Payment.paths": "Caminhos",
-    "views.Payment.notes": "Notas",
     "views.Payment.writeNote": "Escreva sua anotação aqui",
     "views.PaymentRequest.title": "Boleto Relâmpago",
     "views.PaymentRequest.error": "Erro ao carregar cobrança",
