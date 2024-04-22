@@ -44,6 +44,11 @@ interface CurrencyConverterState {
     fadeAnim: Animated.Value;
 }
 
+const EMOJI_REPLACEMENTS = {
+    XAU: 'Au',
+    XAG: 'Ag'
+};
+
 @inject('FiatStore', 'SettingsStore')
 @observer
 export default class CurrencyConverter extends React.Component<
@@ -403,6 +408,9 @@ export default class CurrencyConverter extends React.Component<
         );
 
         const getFlagEmoji = (currencyValue: string) => {
+            if (EMOJI_REPLACEMENTS[currencyValue])
+                return EMOJI_REPLACEMENTS[currencyValue];
+
             const currency = CURRENCY_KEYS.find(
                 (currency) => currency.value === currencyValue
             );
