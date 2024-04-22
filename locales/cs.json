@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Datum vzniku",
     "views.Payment.path": "Cesta",
     "views.Payment.paths": "Cesty",
-    "views.Payment.notes": "Poznámky",
     "views.Payment.writeNote": "Zde napište svou poznámku",
     "views.PaymentRequest.title": "Lightning faktura",
     "views.PaymentRequest.error": "Při načítání faktury došlo k chybě",

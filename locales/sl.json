@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Ustvarjeno",
     "views.Payment.path": "Pot",
     "views.Payment.paths": "Paths",
-    "views.Payment.notes": "Notes",
     "views.Payment.writeNote": "Write your note here",
     "views.PaymentRequest.title": "Lightning račun",
     "views.PaymentRequest.error": "Napaka pri nalaganju računa",

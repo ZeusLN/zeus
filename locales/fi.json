@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Luontipäivä",
     "views.Payment.path": "Reitti",
     "views.Payment.paths": "Reitit",
-    "views.Payment.notes": "Merkinnät",
     "views.Payment.writeNote": "Kirjoita merkintäsi tähän",
     "views.PaymentRequest.title": "Lightning-lasku",
     "views.PaymentRequest.error": "Virhe laskun lataamisessa",

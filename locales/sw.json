@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Tarehe ya Kuundwa",
     "views.Payment.path": "Njia",
     "views.Payment.paths": "Njia",
-    "views.Payment.notes": "Maelezo",
     "views.Payment.writeNote": "Andika maelezo yako hapa",
     "views.PaymentRequest.title": "Ombi la Lightning",
     "views.PaymentRequest.error": "Kosa la kupakia ankara",

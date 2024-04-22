@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "תאריך יצירה",
     "views.Payment.path": "נתיב",
     "views.Payment.paths": "נתיבים",
-    "views.Payment.notes": "הערות",
     "views.Payment.writeNote": "כתבו את הערכתם כאן",
     "views.PaymentRequest.title": "חשבונית לייטנינג",
     "views.PaymentRequest.error": "שגיאה בטעינת חשבונית",

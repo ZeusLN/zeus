@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Дата Создания",
     "views.Payment.path": "Путь",
     "views.Payment.paths": "Пути",
-    "views.Payment.notes": "Заметки",
     "views.Payment.writeNote": "Добавьте заметку",
     "views.PaymentRequest.title": "Лайтнинг-инвойс",
     "views.PaymentRequest.error": "Ошибка загрузки инвойса",

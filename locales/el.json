@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "Ημερομηνία δημιουργίας",
     "views.Payment.path": "Διαδρομή",
     "views.Payment.paths": "Διαδρομές",
-    "views.Payment.notes": "Σημειώσεις",
     "views.Payment.writeNote": "Γράψτε την σημείωσή σας εδώ",
     "views.PaymentRequest.title": "Τιμολόγιο Lightning",
     "views.PaymentRequest.error": "Αδυναμία φόρτωσης τιμολογίου",
