@@ -499,7 +499,6 @@
     "views.Payment.creationDate": "생성일",
     "views.Payment.path": "경로",
     "views.Payment.paths": "결제 경로",
-    "views.Payment.notes": "결제 메모",
     "views.Payment.writeNote": "여기에 메모를 작성하세요",
     "views.PaymentRequest.title": "라이트닝 인보이스",
     "views.PaymentRequest.error": "인보이스 불러오기 오류",
