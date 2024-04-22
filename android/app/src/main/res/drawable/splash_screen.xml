@@ -2,12 +2,6 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:drawable="@color/navydark"/>
-
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/ic_splash"/>
-    </item>
+        android:drawable="@color/zeus_background"/>
 
 </layer-list>
