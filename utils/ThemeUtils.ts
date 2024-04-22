@@ -204,12 +204,28 @@ export function themeColor(themeString: string): any {
 
     const Pub: { [key: string]: any } = {
         generalStyle: 'dark',
-        background: '#4C09F4',
-        secondary: '#141414',
-        separator: '#141414',
-        highlight: '#ffd24b',
-        bolt: '#fff',
-        chain: '#fff'
+        background: '#000',
+        gradientBackground: ['#1E2022', '#000000'],
+        secondary: '#31363F',
+        text: 'white',
+        secondaryText: '#A7A9AC',
+        highlight: '#dccfff',
+        error: '#992600',
+        separator: '#31363F',
+        outbound: '#4C09F4',
+        inbound: '#dccfff',
+        success: '#46BE43',
+        warning: '#E14C4C',
+        bitcoin: '#FFB040',
+        delete: '#992600',
+        qrFrame: '#FFD93F',
+        bolt: '#FFF',
+        chain: '#FFF',
+        disabled: '#767577',
+        buttonBackground: '#4C09F4',
+        buttonText: '#000000',
+        qr: '#dccfff',
+        action: '#FFF'
     };
 
     const Popsicle: { [key: string]: any } = {
