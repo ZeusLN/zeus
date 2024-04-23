@@ -231,7 +231,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                     navigation={navigation}
                 />
                 <ScrollView>
-                    {pending_chan_ids && (
+                    {pending_chan_ids.length > 0 && (
                         <>
                             <Text
                                 style={{
@@ -267,7 +267,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                             </Text>
                         </>
                     )}
-                    {!loading && pending_chan_ids && (
+                    {!loading && pending_chan_ids.length > 0 && (
                         <WarningMessage
                             message={
                                 pending_chan_ids.length > 1
@@ -371,7 +371,9 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                 'views.PSBT.finalizePsbtAndBroadcast'
                                             )}
                                             onPress={() => {
-                                                if (pending_chan_ids) {
+                                                if (
+                                                    pending_chan_ids.length > 0
+                                                ) {
                                                     TransactionsStore.finalizePsbtAndBroadcastChannel(
                                                         fundedPsbt,
                                                         pending_chan_ids
