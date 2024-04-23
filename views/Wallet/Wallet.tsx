@@ -225,10 +225,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore.loginMethodConfigured() &&
             loginBackground
         ) {
-            // In case the lock screen is visible and a valid PIN is entered and home button is pressed,
-            // unauthorized access would be possible because the PIN is not cleared on next launch.
-            // By calling pop, the lock screen is closed to clear the PIN.
-            this.props.navigation.pop();
             SettingsStore.setLoginStatus(false);
         } else if (nextAppState === 'active' && SettingsStore.loginRequired()) {
             this.props.navigation.navigate('Lockscreen');
@@ -417,7 +413,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (!error) {
                 await BackendUtils.checkPerms();
                 await NodeInfoStore.getNodeInfo();
-                if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
+                if (BackendUtils.supportsAccounts())
+                    await UTXOsStore.listAccounts();
                 await BalanceStore.getCombinedBalance();
                 if (BackendUtils.supportsChannelManagement())
                     ChannelsStore.getChannels();
@@ -465,7 +462,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (BackendUtils.supportsLSPs()) {
             if (
                 SettingsStore.settings.enableLSP &&
-                !this.props.NodeInfoStore.lspNotConfigured
+                (implementation !== 'lnd' ||
+                    !this.props.NodeInfoStore.lspNotConfigured)
             ) {
                 await LSPStore.getLSPInfo();
             }
@@ -557,11 +555,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 UnitsStore={UnitsStore}
                                 onRefresh={() => this.getSettingsAndNavigate()}
                                 locked={isSyncing}
+                                consolidated
                             />
 
                             <Animated.View
                                 style={{
                                     flex: 1,
+                                    maxHeight: 80,
                                     justifyContent: 'flex-end',
                                     alignSelf: 'center',
                                     bottom: 10,

@@ -4,7 +4,6 @@ import {
     NativeEventEmitter,
     ScrollView,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -24,6 +23,8 @@ import OnchainFeeInput from '../../components/OnchainFeeInput';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -49,6 +50,7 @@ interface ChannelState {
     confirmCloseChannel: boolean;
     satPerByte: string;
     forceCloseChannel: boolean;
+    deliveryAddress: string;
     channel: Channel;
 }
 
@@ -68,6 +70,7 @@ export default class ChannelView extends React.Component<
             confirmCloseChannel: false,
             satPerByte: '',
             forceCloseChannel: false,
+            deliveryAddress: '',
             channel
         };
 
@@ -80,7 +83,8 @@ export default class ChannelView extends React.Component<
         channelPoint?: string,
         channelId?: string,
         satPerVbyte?: string | null,
-        forceClose?: boolean | null
+        forceClose?: boolean | null,
+        deliveryAddress?: string | null
     ) => {
         const { ChannelsStore, SettingsStore, navigation } = this.props;
         const { implementation } = SettingsStore;
@@ -96,11 +100,12 @@ export default class ChannelView extends React.Component<
             channelPoint ? { funding_txid_str, output_index } : null,
             channelId ? channelId : null,
             satPerVbyte ? satPerVbyte : null,
-            forceClose
+            forceClose,
+            deliveryAddress ? deliveryAddress : null
         );
 
         if (implementation === 'lightning-node-connect') {
-            await this.subscribeChannelClose(streamingCall);
+            this.subscribeChannelClose(streamingCall);
         } else {
             if (!ChannelsStore.closeChannelErr) navigation.navigate('Wallet');
         }
@@ -150,8 +155,13 @@ export default class ChannelView extends React.Component<
     render() {
         const { navigation, SettingsStore, NodeInfoStore, ChannelsStore } =
             this.props;
-        const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
-            this.state;
+        const {
+            channel,
+            confirmCloseChannel,
+            satPerByte,
+            forceCloseChannel,
+            deliveryAddress
+        } = this.state;
         const { settings } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
@@ -640,6 +650,31 @@ export default class ChannelView extends React.Component<
                                             });
                                         }}
                                     />
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                            infoText={localeString(
+                                                'views.Channel.externalAddress.info'
+                                            )}
+                                        >
+                                            {localeString(
+                                                'views.Channel.externalAddress'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'bc1...'}
+                                            value={deliveryAddress}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    deliveryAddress: text
+                                                })
+                                            }
+                                            locked={closingChannel}
+                                        />
+                                    </>
                                     <View style={{ marginBottom: 10 }}>
                                         <Text
                                             style={{
@@ -674,7 +709,8 @@ export default class ChannelView extends React.Component<
                                             channel_point,
                                             channelId,
                                             satPerByte,
-                                            forceCloseChannel
+                                            forceCloseChannel,
+                                            deliveryAddress
                                         )
                                     }
                                     quaternary

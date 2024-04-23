@@ -1,6 +1,14 @@
 import { inject, observer } from 'mobx-react';
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    AppState,
+    AppStateStatus,
+    NativeEventSubscription,
+    Platform,
+    StyleSheet,
+    Text,
+    View
+} from 'react-native';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -45,6 +53,8 @@ export default class Lockscreen extends React.Component<
     LockscreenProps,
     LockscreenState
 > {
+    private subscription: NativeEventSubscription;
+
     constructor(props: any) {
         super(props);
         this.state = {
@@ -63,13 +73,18 @@ export default class Lockscreen extends React.Component<
         };
     }
 
-    proceed = () => {
+    proceed = (navigationTarget?: string) => {
         const { SettingsStore, navigation } = this.props;
-        SettingsStore.setInitialStart(false);
-        if (SettingsStore.settings.selectNodeOnStartup) {
+        if (navigationTarget) {
+            navigation.navigate(navigationTarget);
+        } else if (
+            SettingsStore.settings.selectNodeOnStartup &&
+            SettingsStore.initialStart
+        ) {
+            SettingsStore.setInitialStart(false);
             navigation.navigate('Nodes');
         } else {
-            navigation.navigate('Wallet');
+            navigation.pop();
         }
     };
 
@@ -114,12 +129,13 @@ export default class Lockscreen extends React.Component<
 
         if (
             posEnabled !== PosEnabled.Disabled &&
+            SettingsStore.posStatus === 'active' &&
             !attemptAdminLogin &&
             !deletePin &&
             !deleteDuressPin
         ) {
             SettingsStore.setLoginStatus(true);
-            this.proceed();
+            this.proceed('Wallet');
         }
 
         if (settings.authenticationAttempts) {
@@ -156,12 +172,29 @@ export default class Lockscreen extends React.Component<
                     duressPin: settings.duressPin
                 });
             }
-        } else if (settings && settings.nodes && settings.nodes.length > 0) {
+        } else if (settings && settings.nodes && settings?.nodes?.length > 0) {
             this.proceed();
         } else {
             navigation.navigate('IntroSplash');
         }
     }
+
+    componentDidMount() {
+        this.subscription = AppState.addEventListener(
+            'change',
+            this.handleAppStateChange
+        );
+    }
+
+    componentWillUnmount() {
+        this.subscription?.remove();
+    }
+
+    handleAppStateChange = (nextAppState: AppStateStatus) => {
+        if (nextAppState === 'background') {
+            this.setState({ passphraseAttempt: '' });
+        }
+    };
 
     onInputLabelPressed = () => {
         this.setState({ hidden: !this.state.hidden });
@@ -280,7 +313,7 @@ export default class Lockscreen extends React.Component<
             selectedNode: undefined,
             authenticationAttempts: 0
         }).then(() => {
-            this.proceed();
+            this.proceed('IntroSplash');
         });
     };
 
@@ -297,7 +330,7 @@ export default class Lockscreen extends React.Component<
             duressPin: '',
             authenticationAttempts: 0
         }).then(() => {
-            this.proceed();
+            this.proceed('IntroSplash');
         });
     };
 
@@ -344,65 +377,73 @@ export default class Lockscreen extends React.Component<
         return (
             <Screen>
                 {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
-                    <Header leftComponent="Back" navigation={navigation} />
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString(
+                                'views.Lockscreen.enterPassphrase'
+                            ),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }
+                        }}
+                        navigation={navigation}
+                    />
                 )}
                 {!!passphrase && (
-                    <ScrollView
-                        style={styles.container}
-                        keyboardShouldPersistTaps="handled"
+                    <View
+                        style={{
+                            ...styles.content,
+                            flex: 1,
+                            justifyContent: 'center',
+                            marginTop:
+                                Platform.OS === 'android' &&
+                                SettingsStore.loginRequired()
+                                    ? 30
+                                    : 0
+                        }}
                     >
-                        <View style={styles.content}>
-                            {error && (
-                                <ErrorMessage
-                                    message={this.generateErrorMessage()}
-                                />
-                            )}
-                            <Text
+                        {error && (
+                            <ErrorMessage
+                                message={this.generateErrorMessage()}
+                            />
+                        )}
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                placeholder={'****************'}
+                                placeholderTextColor="darkgray"
+                                value={passphraseAttempt}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        passphraseAttempt: text,
+                                        error: false
+                                    })
+                                }
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                secureTextEntry={hidden}
+                                autoFocus={true}
                                 style={{
-                                    color: '#A7A9AC',
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    ...styles.textInput,
+                                    paddingTop: passphraseAttempt === '' ? 6 : 2
                                 }}
-                            >
-                                {localeString('views.Lockscreen.passphrase')}
-                            </Text>
-                            <View style={styles.inputContainer}>
-                                <TextInput
-                                    placeholder={'****************'}
-                                    placeholderTextColor="darkgray"
-                                    value={passphraseAttempt}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            passphraseAttempt: text,
-                                            error: false
-                                        })
-                                    }
-                                    numberOfLines={1}
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                    secureTextEntry={hidden}
-                                    autoFocus={true}
-                                    style={styles.textInput}
-                                />
-                                <View style={styles.showHideToggle}>
-                                    <ShowHideToggle
-                                        onPress={() =>
-                                            this.onInputLabelPressed()
-                                        }
-                                    />
-                                </View>
-                            </View>
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.Lockscreen.login'
-                                    )}
-                                    onPress={() => this.onAttemptLogIn()}
-                                    containerStyle={{ width: 300 }}
-                                    adaptiveWidth
+                            />
+                            <View style={styles.showHideToggle}>
+                                <ShowHideToggle
+                                    onPress={() => this.onInputLabelPressed()}
                                 />
                             </View>
                         </View>
-                    </ScrollView>
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('views.Lockscreen.login')}
+                                onPress={() => this.onAttemptLogIn()}
+                                containerStyle={{ width: 300 }}
+                                adaptiveWidth
+                            />
+                        </View>
+                    </View>
                 )}
                 {!!pin && (
                     <View style={styles.container}>
@@ -479,7 +520,6 @@ export default class Lockscreen extends React.Component<
 
 const styles = StyleSheet.create({
     content: {
-        marginTop: 100,
         paddingLeft: 20,
         paddingRight: 20,
         alignItems: 'center'

@@ -1,6 +1,13 @@
 import React, { Component } from 'react';
-import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
-
+import {
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    I18nManager
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { RectButton } from 'react-native-gesture-handler';
 
 import { inject, observer } from 'mobx-react';
@@ -11,6 +18,7 @@ import LightningSwipeableRow from './LightningSwipeableRow';
 
 import BalanceStore from './../../stores/BalanceStore';
 import UnitsStore from './../../stores/UnitsStore';
+import UTXOsStore from '../../stores/UTXOsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -18,10 +26,11 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
-import LinearGradient from 'react-native-linear-gradient';
+import MatiSvg from '../../assets/images/SVG/DynamicSVG/MatiSvg';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
+    UTXOsStore: UTXOsStore;
     UnitsStore: UnitsStore;
     navigation: any;
     onRefresh?: any;
@@ -29,6 +38,7 @@ interface LayerBalancesProps {
     amount?: string;
     lightning?: string;
     locked?: boolean;
+    consolidated?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -36,50 +46,104 @@ I18nManager.allowRTL(false);
 
 type DataRow = {
     layer: string;
+    subtitle?: string;
     balance: string | number;
+    // TODO check if exists
+    count: number;
+    watchOnly?: boolean;
 };
 
-const Row = ({ item }: { item: DataRow }) => (
-    <RectButton>
-        <LinearGradient
-            colors={
-                themeColor('buttonGradient')
-                    ? themeColor('buttonGradient')
-                    : themeColor('buttonBackground')
-                    ? [
-                          themeColor('buttonBackground'),
-                          themeColor('buttonBackground')
-                      ]
-                    : [themeColor('secondary'), themeColor('secondary')]
-            }
-            style={{
-                ...styles.rectButton,
-                flex: 1
-            }}
-        >
-            <View style={styles.left}>
-                {item.layer === 'On-chain' ? <OnChainSvg /> : <LightningSvg />}
-                <Spacer width={5} />
-                <Text
-                    style={{
-                        ...styles.layerText,
-                        color: themeColor('buttonText') || themeColor('text')
-                    }}
-                >
-                    {item.layer === 'Lightning'
-                        ? localeString('general.lightning')
-                        : localeString('general.onchain')}
-                </Text>
-            </View>
+const Row = ({ item }: { item: DataRow }) => {
+    const moreAccounts =
+        item.layer === localeString('components.LayerBalances.moreAccounts');
+    return (
+        <RectButton>
+            <LinearGradient
+                colors={
+                    themeColor('buttonGradient')
+                        ? themeColor('buttonGradient')
+                        : themeColor('buttonBackground')
+                        ? [
+                              themeColor('buttonBackground'),
+                              themeColor('buttonBackground')
+                          ]
+                        : [themeColor('secondary'), themeColor('secondary')]
+                }
+                style={
+                    moreAccounts
+                        ? {
+                              ...styles.rectButton,
+                              height: 40
+                          }
+                        : styles.rectButton
+                }
+            >
+                <View style={styles.left}>
+                    {item.watchOnly ? (
+                        <MatiSvg />
+                    ) : item.layer === 'On-chain' ? (
+                        <OnChainSvg />
+                    ) : item.layer === 'Lightning' ? (
+                        <LightningSvg />
+                    ) : moreAccounts ? null : (
+                        <OnChainSvg />
+                    )}
+                    <Spacer width={5} />
+                    <View
+                        style={{
+                            flexDirection: 'column',
+                            left: moreAccounts ? 5 : 0
+                        }}
+                    >
+                        <Text
+                            style={{
+                                ...styles.layerText,
+                                color:
+                                    themeColor('buttonText') ||
+                                    themeColor('text')
+                            }}
+                        >
+                            {item.layer === 'Lightning'
+                                ? localeString('general.lightning')
+                                : item.layer === 'On-chain'
+                                ? localeString('general.onchain')
+                                : item.layer}
+                        </Text>
+                        {item.subtitle && (
+                            <Text
+                                style={{
+                                    ...styles.layerText,
+                                    color:
+                                        themeColor('buttonTextSecondary') ||
+                                        themeColor('secondaryText')
+                                }}
+                            >
+                                {item.subtitle}
+                            </Text>
+                        )}
+                    </View>
+                </View>
 
-            <Amount
-                sats={item.balance}
-                sensitive
-                colorOverride={themeColor('buttonText')}
-            />
-        </LinearGradient>
-    </RectButton>
-);
+                {!moreAccounts ? (
+                    <Amount
+                        sats={item.balance}
+                        sensitive
+                        colorOverride={themeColor('buttonText')}
+                    />
+                ) : (
+                    <Text
+                        style={{
+                            ...styles.layerText,
+                            color: themeColor('buttonText')
+                        }}
+                    >
+                        {`+${item.count - 1}`}
+                    </Text>
+                )}
+            </LinearGradient>
+        </RectButton>
+    );
+};
 
 const SwipeableRow = ({
     item,
@@ -99,6 +163,18 @@ const SwipeableRow = ({
     lightning?: string;
     locked?: boolean;
 }) => {
+    if (index === 0) {
+        return (
+            <LightningSwipeableRow
+                navigation={navigation}
+                lightning={lightning}
+                locked={locked}
+            >
+                <Row item={item} />
+            </LightningSwipeableRow>
+        );
+    }
+
     if (index === 1) {
         return (
             <OnchainSwipeableRow
@@ -112,18 +188,28 @@ const SwipeableRow = ({
         );
     }
 
+    if (item.layer === localeString('components.LayerBalances.moreAccounts')) {
+        return (
+            <TouchableOpacity onPress={() => navigation.navigate('Accounts')}>
+                <Row item={item} />
+            </TouchableOpacity>
+        );
+    }
+
     return (
-        <LightningSwipeableRow
+        <OnchainSwipeableRow
             navigation={navigation}
-            lightning={lightning}
+            value={value}
+            amount={amount}
             locked={locked}
+            account={item.layer}
         >
             <Row item={item} />
-        </LightningSwipeableRow>
+        </OnchainSwipeableRow>
     );
 };
 
-@inject()
+@inject('BalanceStore', 'UTXOsStore')
 @observer
 export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
@@ -134,10 +220,13 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             amount,
             lightning,
             onRefresh,
-            locked
+            locked,
+            consolidated
         } = this.props;
 
         const { totalBlockchainBalance, lightningBalance } = BalanceStore;
+
+        const otherAccounts = this.props.UTXOsStore.accounts;
 
         let DATA: DataRow[] = [
             {
@@ -154,8 +243,41 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             });
         }
 
+        if (Object.keys(otherAccounts).length > 0 && !consolidated) {
+            for (let i = 0; i < otherAccounts.length; i++) {
+                DATA.push({
+                    layer: otherAccounts[i].name,
+                    subtitle: otherAccounts[i].XFP,
+                    balance: otherAccounts[i].balance || 0,
+                    watchOnly: otherAccounts[i].watch_only || false
+                });
+            }
+        }
+
+        if (Object.keys(otherAccounts).length > 0 && consolidated) {
+            let n = 0;
+            for (let i = 0; i < otherAccounts.length; i++) {
+                while (n < 1) {
+                    DATA.push({
+                        layer: otherAccounts[i].name,
+                        subtitle: otherAccounts[i].XFP,
+                        balance: otherAccounts[i].balance || 0,
+                        watchOnly: otherAccounts[i].watch_only || false
+                    });
+                    n++;
+                }
+            }
+        }
+
+        if (Object.keys(otherAccounts).length > 1 && consolidated) {
+            DATA.push({
+                layer: localeString('components.LayerBalances.moreAccounts'),
+                count: Object.keys(otherAccounts).length
+            });
+        }
+
         return (
-            <>
+            <View style={{ flex: 1 }}>
                 <FlatList
                     data={DATA}
                     ItemSeparatorComponent={() => (
@@ -174,17 +296,18 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                         />
                     )}
                     keyExtractor={(_item, index) => `message ${index}`}
-                    style={{ top: 20 }}
+                    style={{ marginTop: 20 }}
                     onRefresh={() => onRefresh()}
                     refreshing={false}
                 />
-            </>
+            </View>
         );
     }
 }
 
 const styles = StyleSheet.create({
     rectButton: {
+        flex: 1,
         height: 80,
         paddingVertical: 10,
         paddingLeft: 6,
@@ -195,6 +318,17 @@ const styles = StyleSheet.create({
         marginLeft: 15,
         marginRight: 15,
         borderRadius: 50
+    },
+    moreButton: {
+        height: 40,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexDirection: 'row',
+        marginLeft: 15,
+        marginRight: 15,
+        borderRadius: 15
     },
     left: {
         flexDirection: 'row',

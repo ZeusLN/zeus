@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { View } from 'react-native';
 import Lottie from 'lottie-react-native';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -13,25 +12,22 @@ function LoadingIndicator(props: LoadingIndicatorProps) {
     const { size } = props;
 
     return (
-        <View
+        <Lottie
+            source={loader}
+            autoPlay
+            loop
+            colorFilters={[
+                {
+                    keypath: 'Comp 2',
+                    color: themeColor('highlight')
+                }
+            ]}
             style={{
                 alignSelf: 'center',
                 width: size || 40,
                 height: size || 40
             }}
-        >
-            <Lottie
-                source={loader}
-                autoPlay
-                loop
-                colorFilters={[
-                    {
-                        keypath: 'Comp 2',
-                        color: themeColor('highlight')
-                    }
-                ]}
-            />
-        </View>
+        />
     );
 }
 

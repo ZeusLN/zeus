@@ -272,5 +272,7 @@ export default class CLightningREST extends LND {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
+    supportsOnchainBatching = () => false;
+    supportsChannelBatching = () => false;
     isLNDBased = () => false;
 }

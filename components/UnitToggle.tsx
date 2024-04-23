@@ -1,10 +1,12 @@
 import * as React from 'react';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../components/Button';
+import Button from '../components/Button';
 
-import UnitsStore from './../stores/UnitsStore';
-import SettingsStore from './../stores/SettingsStore';
+import UnitsStore from '../stores/UnitsStore';
+import SettingsStore from '../stores/SettingsStore';
+
+import { themeColor } from '../utils/ThemeUtils';
 
 interface UnitToggleProps {
     UnitsStore: UnitsStore;
@@ -27,7 +29,8 @@ export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
                     title={units === 'fiat' ? fiat : units}
                     icon={{
                         name: 'import-export',
-                        size: 25
+                        size: 25,
+                        color: themeColor('buttonText')
                     }}
                     adaptiveWidth
                     quaternary

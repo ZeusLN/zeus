@@ -151,15 +151,9 @@ export default class AddNotes extends React.Component<
                         }}
                     >
                         <Button
-                            title={
-                                isNoteStored
-                                    ? localeString(
-                                          'views.SendingLightning.UpdateNote'
-                                      )
-                                    : localeString(
-                                          'views.SendingLightning.AddANote'
-                                      )
-                            }
+                            title={localeString(
+                                'views.Settings.SetPassword.save'
+                            )}
                             onPress={() => saveNote()}
                             buttonStyle={{
                                 padding: 15

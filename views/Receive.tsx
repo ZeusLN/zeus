@@ -29,6 +29,11 @@ import LightningIcon from '../assets/images/lightning-black.png';
 import OnChainIcon from '../assets/images/onchain-black.png';
 import ZPayIcon from '../assets/images/pay-z-black.png';
 
+import ZIconWhite from '../assets/images/icon-white.png';
+import LightningIconWhite from '../assets/images/lightning-white.png';
+import OnChainIconWhite from '../assets/images/onchain-white.png';
+import ZPayIconWhite from '../assets/images/pay-z-white.png';
+
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
 import Button from '../components/Button';
@@ -108,6 +113,7 @@ interface ReceiveState {
     customPreimage: string;
     ampInvoice: boolean;
     routeHints: boolean;
+    account: string;
     // POS
     orderId: string;
     orderTotal: string;
@@ -153,6 +159,7 @@ export default class Receive extends React.Component<
         customPreimage: '',
         ampInvoice: false,
         routeHints: false,
+        account: 'default',
         // POS
         orderId: '',
         orderTip: '',
@@ -235,6 +242,14 @@ export default class Receive extends React.Component<
         const autoGenerateOnChain: boolean = navigation.getParam(
             'autoGenerateOnChain'
         );
+        const account: string = navigation.getParam('account');
+
+        if (account) {
+            this.setState({
+                account
+            });
+        }
+
         const selectedIndex: number = navigation.getParam('selectedIndex');
 
         if (selectedIndex) {
@@ -319,7 +334,7 @@ export default class Receive extends React.Component<
         }
 
         if (autoGenerateOnChain) {
-            this.autoGenerateOnChainAddress();
+            this.autoGenerateOnChainAddress(account);
         }
     }
 
@@ -428,12 +443,20 @@ export default class Receive extends React.Component<
         );
     };
 
-    autoGenerateOnChainAddress = () => {
+    autoGenerateOnChainAddress = (account?: string) => {
         const { InvoicesStore } = this.props;
         const { addressType } = this.state;
         const { getNewAddress } = InvoicesStore;
 
-        getNewAddress({ type: addressType }).then((onChainAddress: string) => {
+        let request: any = {
+            type: addressType
+        };
+
+        if (account) {
+            request.account = account;
+        }
+
+        getNewAddress(request).then((onChainAddress: string) => {
             this.subscribeInvoice(undefined, onChainAddress);
         });
     };
@@ -944,6 +967,7 @@ export default class Receive extends React.Component<
             customPreimage,
             ampInvoice,
             routeHints,
+            account,
             needInbound,
             enableLSP,
             lspIsActive,
@@ -973,6 +997,8 @@ export default class Receive extends React.Component<
         const { lightningAddress } = LightningAddressStore;
         const lightningAddressLoading = LightningAddressStore.loading;
 
+        console.log('address', address);
+
         const error_msg = LSPStore.error_msg || InvoicesStore.error_msg;
 
         const showCustomPreimageField =
@@ -992,7 +1018,12 @@ export default class Receive extends React.Component<
         const ClearButton = () => (
             <Icon
                 name="cancel"
-                onPress={() => InvoicesStore.clearUnified()}
+                onPress={() => {
+                    this.setState({
+                        account: 'default'
+                    });
+                    InvoicesStore.clearUnified();
+                }}
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
@@ -1427,6 +1458,13 @@ export default class Receive extends React.Component<
                                         <LoadingIndicator />
                                     </View>
                                 )}
+                                {haveInvoice && account !== 'default' && (
+                                    <WarningMessage
+                                        message={`${localeString(
+                                            'general.externalAccount'
+                                        )}: ${account}`}
+                                    />
+                                )}
                                 {haveInvoice &&
                                     lspIsActive &&
                                     satAmount === '0' &&
@@ -1543,7 +1581,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
-                                                    logo={ZIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? ZIconWhite
+                                                            : ZIcon
+                                                    }
                                                 />
                                             )}
                                         {selectedIndex == 1 &&
@@ -1560,7 +1604,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
-                                                    logo={LightningIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? LightningIconWhite
+                                                            : LightningIcon
+                                                    }
                                                 />
                                             )}
                                         {selectedIndex == 2 &&
@@ -1577,7 +1627,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
-                                                    logo={OnChainIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? OnChainIconWhite
+                                                            : OnChainIcon
+                                                    }
                                                 />
                                             )}
 
@@ -1639,7 +1695,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     hideText
-                                                    logo={ZPayIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? ZPayIconWhite
+                                                            : ZPayIcon
+                                                    }
                                                 />
                                             )}
 
