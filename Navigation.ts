@@ -98,7 +98,7 @@ import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
 import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
-import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
+import ImportingAccount from './views/Accounts/ImportingAccount';
 import BumpFee from './views/BumpFee';
 import QR from './views/QR';
 import AddNotes from './views/AddNotes';
@@ -128,6 +128,9 @@ import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelB
 import RawTxHex from './views/RawTxHex';
 
 import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
+
+import PSBT from './views/PSBT';
+import TxHex from './views/TxHex';
 
 const AppScenes = {
     Wallet: {
@@ -286,14 +289,14 @@ const AppScenes = {
     ImportAccount: {
         screen: ImportAccount
     },
+    ImportingAccount: {
+        screen: ImportingAccount
+    },
     HandleAnythingQRScanner: {
         screen: HandleAnythingQRScanner
     },
     NodeQRCodeScanner: {
         screen: NodeQRScanner
-    },
-    ImportAccountQRScanner: {
-        screen: ImportAccountQRScanner
     },
     SparkQRScanner: {
         screen: SparkQRScanner
@@ -450,6 +453,12 @@ const AppScenes = {
     },
     CustodialWalletWarning: {
         screen: CustodialWalletWarning
+    },
+    PSBT: {
+        screen: PSBT
+    },
+    TxHex: {
+        screen: TxHex
     }
 };
 

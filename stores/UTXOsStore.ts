@@ -1,12 +1,16 @@
 import { action, observable } from 'mobx';
+
 import SettingsStore from './SettingsStore';
-import BackendUtils from './../utils/BackendUtils';
-import Base64Utils from './../utils/Base64Utils';
-import Utxo from './../models/Utxo';
+
+import BackendUtils from '../utils/BackendUtils';
+
+import Account from '../models/Account';
+import Utxo from '../models/Utxo';
 
 export default class UTXOsStore {
     // utxos
     @observable public loading = false;
+    @observable public success = false;
     @observable public error = false;
     @observable public errorMsg: string;
     @observable public utxos: Array<Utxo> = [];
@@ -14,6 +18,7 @@ export default class UTXOsStore {
     @observable public loadingAccounts = false;
     @observable public importingAccount = false;
     @observable public accounts: any = [];
+    @observable public accountToImport: any | null;
     //
     settingsStore: SettingsStore;
 
@@ -28,10 +33,20 @@ export default class UTXOsStore {
     };
 
     @action
-    public getUTXOs = () => {
+    public getUTXOs = (data: any) => {
         this.errorMsg = '';
         this.loading = true;
-        BackendUtils.getUTXOs()
+
+        const request: any = {
+            min_confs: 0,
+            max_confs: 200000
+        };
+
+        if (data && data.account) {
+            request.account = data.account;
+        }
+
+        BackendUtils.getUTXOs(data)
             .then((data: any) => {
                 this.loading = false;
                 const utxos = data.utxos || data.outputs;
@@ -49,11 +64,38 @@ export default class UTXOsStore {
     public listAccounts = (data?: any) => {
         this.errorMsg = '';
         this.loadingAccounts = true;
-        BackendUtils.listAccounts(data)
-            .then((data: any) => {
+        return BackendUtils.listAccounts(data)
+            .then(async (data: any) => {
                 this.loadingAccounts = false;
-                this.accounts = data.accounts;
+                const accounts: any = [];
+                for (const i in data.accounts) {
+                    const account = new Account(data.accounts[i]);
+                    const { name } = account;
+                    if (name && name !== 'default' && !name.includes('act:')) {
+                        await BackendUtils.getBlockchainBalance({
+                            account: name
+                        })
+                            .then((data: any) => {
+                                accounts.push({
+                                    ...account,
+                                    XFP: account.XFP,
+                                    balance: data.total_balance
+                                });
+
+                                return;
+                            })
+                            .catch((e: Error) => {
+                                console.error(
+                                    'error fetching account balance',
+                                    e
+                                );
+                                return;
+                            });
+                    }
+                }
+                this.accounts = accounts;
                 this.error = false;
+                return this.accounts;
             })
             .catch((error: any) => {
                 // handle error
@@ -65,22 +107,27 @@ export default class UTXOsStore {
     @action
     public importAccount = (data: any) => {
         this.errorMsg = '';
+        this.success = false;
         this.importingAccount = true;
-        const mfk = Base64Utils.hexToBase64(data.master_key_fingerprint);
-        const newData = {
-            name: data.name,
-            extended_public_key: data.extended_public_key,
-            master_key_fingerprint: mfk,
-            dry_run: true
-        };
-        BackendUtils.importAccount(newData)
-            .then(() => {
+
+        return BackendUtils.importAccount(data)
+            .then((response: any) => {
                 this.importingAccount = false;
                 this.error = false;
+                if (response === this.accountToImport && !data.dry_run) {
+                    this.success = true;
+                    return;
+                } else {
+                    this.accountToImport = response;
+                    return this.accountToImport;
+                }
             })
             .catch((error: any) => {
                 // handle error
                 this.errorMsg = error.toString();
+                this.success = false;
+                this.accountToImport = null;
+                this.importingAccount = false;
                 this.getUtxosError();
             });
     };

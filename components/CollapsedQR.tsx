@@ -20,6 +20,7 @@ import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 
 const defaultLogo = require('../assets/images/icon-black.png');
+const defaultLogoWhite = require('../assets/images/icon-white.png');
 
 let simulation: any;
 
@@ -186,9 +187,21 @@ export default class CollapsedQR extends React.Component<
                                             <QRCode
                                                 value={value}
                                                 size={width}
-                                                logo={logo || defaultLogo}
+                                                logo={
+                                                    logo
+                                                        ? logo
+                                                        : themeColor(
+                                                              'invertQrIcons'
+                                                          )
+                                                        ? defaultLogoWhite
+                                                        : defaultLogo
+                                                }
                                                 backgroundColor={'white'}
-                                                logoBackgroundColor={'white'}
+                                                logoBackgroundColor={
+                                                    themeColor('invertQrIcons')
+                                                        ? 'black'
+                                                        : 'white'
+                                                }
                                                 logoMargin={10}
                                                 quietZone={width / 20}
                                             />
@@ -200,9 +213,20 @@ export default class CollapsedQR extends React.Component<
                         <QRCode
                             value={value}
                             size={height > width ? width * 0.75 : height * 0.6}
-                            logo={logo || defaultLogo}
-                            backgroundColor={themeColor('qr') || 'white'}
-                            logoBackgroundColor={themeColor('qr') || 'white'}
+                            logo={
+                                logo
+                                    ? logo
+                                    : themeColor('invertQrIcons')
+                                    ? defaultLogoWhite
+                                    : defaultLogo
+                            }
+                            color={themeColor('qr') || 'black'}
+                            backgroundColor={
+                                themeColor('qrBackground') || 'white'
+                            }
+                            logoBackgroundColor={
+                                themeColor('qrLogoBackground') || 'white'
+                            }
                             logoMargin={10}
                             quietZone={width / 40}
                         />

@@ -72,7 +72,8 @@ const handleAnything = async (
             {
                 value,
                 amount,
-                lightning
+                lightning,
+                locked: true
             }
         ];
     } else if (
@@ -410,6 +411,58 @@ const handleAnything = async (
                 }
             ];
         }
+    } else if (AddressUtils.isPsbt(value)) {
+        return ['PSBT', { psbt: value }];
+    } else if (AddressUtils.isValidTxHex(value)) {
+        return ['TxHex', { txHex: value }];
+    } else if (AddressUtils.isJsonWalletExport(value)) {
+        const { MasterFingerprint, ExtPubKey } = JSON.parse(value);
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint
+            }
+        ];
+    } else if (AddressUtils.isStringWalletExport(value)) {
+        const { MasterFingerprint, ExtPubKey } =
+            AddressUtils.processStringWalletExport(value);
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint
+            }
+        ];
+    } else if (AddressUtils.isWpkhDescriptor(value)) {
+        const { MasterFingerprint, ExtPubKey, AddressType } =
+            AddressUtils.processWpkhDescriptor(value);
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint,
+                address_type: AddressType
+            }
+        ];
+    } else if (AddressUtils.isNestedWpkhDescriptor(value)) {
+        const { MasterFingerprint, ExtPubKey, AddressType } =
+            AddressUtils.processNestedWpkhDescriptor(value);
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint,
+                address_type: AddressType
+            }
+        ];
+    } else if (AddressUtils.isValidXpub(value)) {
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: value
+            }
+        ];
     } else {
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));

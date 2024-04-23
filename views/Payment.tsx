@@ -277,7 +277,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         )}
                         {storedNotes && (
                             <KeyValue
-                                keyValue={localeString('views.Payment.notes')}
+                                keyValue={localeString('general.note')}
                                 value={storedNotes}
                                 sensitive
                                 mempoolLink={() =>
@@ -287,29 +287,30 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 }
                             />
                         )}
-                        {noteKey && (
-                            <Button
-                                title={
-                                    storedNotes
-                                        ? localeString(
-                                              'views.SendingLightning.UpdateNote'
-                                          )
-                                        : localeString(
-                                              'views.SendingLightning.AddANote'
-                                          )
-                                }
-                                onPress={() =>
-                                    navigation.navigate('AddNotes', {
-                                        payment_hash: noteKey
-                                    })
-                                }
-                                containerStyle={{ marginTop: 15 }}
-                                secondary
-                                noUppercase
-                            />
-                        )}
                     </View>
                 </ScrollView>
+                <View style={{ bottom: 15 }}>
+                    {noteKey && (
+                        <Button
+                            title={
+                                storedNotes
+                                    ? localeString(
+                                          'views.SendingLightning.UpdateNote'
+                                      )
+                                    : localeString(
+                                          'views.SendingLightning.AddANote'
+                                      )
+                            }
+                            onPress={() =>
+                                navigation.navigate('AddNotes', {
+                                    payment_hash: noteKey
+                                })
+                            }
+                            containerStyle={{ marginTop: 15 }}
+                            noUppercase
+                        />
+                    )}
+                </View>
             </Screen>
         );
     }
