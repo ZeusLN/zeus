@@ -11,10 +11,12 @@ import { ListItem } from 'react-native-elements';
 import remove from 'lodash/remove';
 import { inject, observer } from 'mobx-react';
 
+import AccountFilter from '../components/AccountFilter';
 import Amount from './Amount';
 import Button from '../components/Button';
 import LoadingIndicator from './LoadingIndicator';
 
+import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -24,7 +26,7 @@ import UTXOsStore from '../stores/UTXOsStore';
 interface UTXOPickerProps {
     title?: string;
     displayValue?: string;
-    onValueChange: (value: any, balance: number) => void;
+    onValueChange: (value: any, balance: number, account: string) => void;
     UTXOsStore: UTXOsStore;
 }
 
@@ -34,6 +36,7 @@ interface UTXOPickerState {
     showUtxoModal: boolean;
     selectedBalance: number;
     setBalance: number;
+    account: string;
 }
 
 const DEFAULT_TITLE = localeString('components.UTXOPicker.defaultTitle');
@@ -49,11 +52,17 @@ export default class UTXOPicker extends React.Component<
         utxosSet: [],
         showUtxoModal: false,
         selectedBalance: 0,
-        setBalance: 0
+        setBalance: 0,
+        account: 'default'
     };
 
+    UNSAFE_componentWillMount() {
+        if (BackendUtils.supportsAccounts())
+            this.props.UTXOsStore.listAccounts();
+    }
+
     openPicker() {
-        stores.utxosStore.getUTXOs();
+        stores.utxosStore.getUTXOs(this.state.account);
         this.setState({
             utxosSelected: [],
             showUtxoModal: true,
@@ -68,7 +77,7 @@ export default class UTXOPicker extends React.Component<
             selectedBalance: 0,
             setBalance: 0
         });
-        this.props.onValueChange([], 0);
+        this.props.onValueChange([], 0, 'default');
     }
 
     displayValues(): string {
@@ -103,9 +112,14 @@ export default class UTXOPicker extends React.Component<
 
     render() {
         const { title, onValueChange, UTXOsStore } = this.props;
-        const { utxosSelected, utxosSet, showUtxoModal, selectedBalance } =
-            this.state;
-        const { utxos, loading, getUTXOs } = UTXOsStore;
+        const {
+            utxosSelected,
+            utxosSet,
+            showUtxoModal,
+            selectedBalance,
+            account
+        } = this.state;
+        const { utxos, loading, getUTXOs, accounts } = UTXOsStore;
 
         const utxosPicked: string[] = [];
         utxosSelected.forEach((utxo: string) => utxosPicked.push(utxo));
@@ -163,11 +177,33 @@ export default class UTXOPicker extends React.Component<
                                         />
                                     </View>
 
+                                    {BackendUtils.supportsAccounts() && (
+                                        <AccountFilter
+                                            default={account}
+                                            items={accounts}
+                                            refresh={(newAccount: string) => {
+                                                getUTXOs({
+                                                    account: newAccount
+                                                });
+                                                this.setState({
+                                                    account: newAccount
+                                                });
+                                            }}
+                                            onChangeAccount={() => {
+                                                this.setState({
+                                                    utxosSelected: [],
+                                                    selectedBalance: 0
+                                                });
+                                            }}
+                                        />
+                                    )}
+
                                     {loading && <LoadingIndicator />}
 
                                     {!loading && utxos.length === 0 && (
                                         <View
                                             style={{
+                                                flex: 1,
                                                 marginTop: 10,
                                                 alignSelf: 'center'
                                             }}
@@ -251,38 +287,41 @@ export default class UTXOPicker extends React.Component<
                                             ) => `${item.txid}-${index}`}
                                             onEndReachedThreshold={50}
                                             refreshing={loading}
-                                            onRefresh={() => getUTXOs()}
+                                            onRefresh={() => getUTXOs(account)}
                                         />
                                     )}
 
-                                    {!loading && utxos.length > 0 && (
+                                    {!loading && (
                                         <>
-                                            <View style={styles.button}>
-                                                <Button
-                                                    title={localeString(
-                                                        'components.UTXOPicker.modal.set'
-                                                    )}
-                                                    onPress={() => {
-                                                        const {
-                                                            utxosSelected,
-                                                            selectedBalance
-                                                        } = this.state;
-                                                        this.setState({
-                                                            showUtxoModal:
-                                                                false,
-                                                            utxosSet:
+                                            {utxos.length > 0 && (
+                                                <View style={styles.button}>
+                                                    <Button
+                                                        title={localeString(
+                                                            'components.UTXOPicker.modal.set'
+                                                        )}
+                                                        onPress={() => {
+                                                            const {
                                                                 utxosSelected,
-                                                            setBalance:
                                                                 selectedBalance
-                                                        });
+                                                            } = this.state;
+                                                            this.setState({
+                                                                showUtxoModal:
+                                                                    false,
+                                                                utxosSet:
+                                                                    utxosSelected,
+                                                                setBalance:
+                                                                    selectedBalance
+                                                            });
 
-                                                        onValueChange(
-                                                            utxosSelected,
-                                                            selectedBalance
-                                                        );
-                                                    }}
-                                                />
-                                            </View>
+                                                            onValueChange(
+                                                                utxosSelected,
+                                                                selectedBalance,
+                                                                account
+                                                            );
+                                                        }}
+                                                    />
+                                                </View>
+                                            )}
 
                                             <View style={styles.button}>
                                                 <Button

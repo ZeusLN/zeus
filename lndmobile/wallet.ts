@@ -25,7 +25,7 @@ export const bumpFee = async ({
         outpoint,
         target_conf,
         force,
-        sat_per_vbyte
+        sat_per_vbyte: sat_per_vbyte ? Long.fromValue(sat_per_vbyte) : undefined
     };
     const response = await sendCommand<
         walletrpc.IBumpFeeRequest,
@@ -44,18 +44,24 @@ export const bumpFee = async ({
  * @throws
  */
 export const fundPsbt = async ({
+    account,
+    psbt,
     raw,
     spend_unconfirmed,
     sat_per_vbyte
 }: {
-    raw: walletrpc.TxTemplate;
+    account?: string;
+    psbt?: Uint8Array;
+    raw?: walletrpc.TxTemplate;
     spend_unconfirmed?: boolean;
     sat_per_vbyte?: Long;
 }): Promise<walletrpc.FundPsbtResponse> => {
     const options: walletrpc.IFundPsbtRequest = {
+        account,
         raw,
+        psbt,
         spend_unconfirmed,
-        sat_per_vbyte
+        sat_per_vbyte: sat_per_vbyte ? Long.fromValue(sat_per_vbyte) : undefined
     };
     const response = await sendCommand<
         walletrpc.IFundPsbtRequest,
@@ -65,6 +71,30 @@ export const fundPsbt = async ({
         request: walletrpc.FundPsbtRequest,
         response: walletrpc.FundPsbtResponse,
         method: 'FundPsbt',
+        options
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
+export const signPsbt = async ({
+    funded_psbt
+}: {
+    funded_psbt?: Uint8Array;
+}): Promise<walletrpc.SignPsbtResponse> => {
+    const options: walletrpc.ISignPsbtRequest = {
+        funded_psbt
+    };
+    const response = await sendCommand<
+        walletrpc.ISignPsbtRequest,
+        walletrpc.SignPsbtRequest,
+        walletrpc.SignPsbtResponse
+    >({
+        request: walletrpc.SignPsbtRequest,
+        response: walletrpc.SignPsbtResponse,
+        method: 'SignPsbt',
         options
     });
     return response;
@@ -89,6 +119,60 @@ export const finalizePsbt = async ({
         request: walletrpc.FinalizePsbtRequest,
         response: walletrpc.FinalizePsbtResponse,
         method: 'FinalizePsbt',
+        options
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
+export const listAccounts =
+    async (): Promise<walletrpc.ListAccountsResponse> => {
+        const response = await sendCommand<
+            walletrpc.IListAccountsRequest,
+            walletrpc.ListAccountsRequest,
+            walletrpc.ListAccountsResponse
+        >({
+            request: walletrpc.ListAccountsRequest,
+            response: walletrpc.ListAccountsResponse,
+            method: 'ListAccounts',
+            options: {}
+        });
+        return response;
+    };
+
+/**
+ * @throws
+ */
+export const importAccount = async ({
+    name,
+    extended_public_key,
+    master_key_fingerprint,
+    address_type,
+    dry_run
+}: {
+    name: string;
+    extended_public_key: string;
+    master_key_fingerprint?: Uint8Array;
+    address_type?: number;
+    dry_run: boolean;
+}): Promise<walletrpc.ImportAccountResponse> => {
+    const options: walletrpc.IImportAccountRequest = {
+        name,
+        extended_public_key,
+        master_key_fingerprint,
+        address_type,
+        dry_run
+    };
+    const response = await sendCommand<
+        walletrpc.IImportAccountRequest,
+        walletrpc.ImportAccountRequest,
+        walletrpc.ImportAccountResponse
+    >({
+        request: walletrpc.ImportAccountRequest,
+        response: walletrpc.ImportAccountResponse,
+        method: 'ImportAccount',
         options
     });
     return response;
