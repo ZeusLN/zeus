@@ -15,6 +15,7 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import TextInput from '../../components/TextInput';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
@@ -28,6 +29,7 @@ import Add from '../../assets/images/SVG/Add.svg';
 import Edit from '../../assets/images/SVG/Pen.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import BitcoinIcon from '../../assets/images/SVG/bitcoin-icon.svg';
+import { isEmpty } from 'lodash';
 
 interface CurrencyConverterProps {
     navigation: any;
@@ -41,6 +43,11 @@ interface CurrencyConverterState {
     editMode: boolean;
     fadeAnim: Animated.Value;
 }
+
+const EMOJI_REPLACEMENTS = {
+    XAU: 'Au',
+    XAG: 'Ag'
+};
 
 @inject('FiatStore', 'SettingsStore')
 @observer
@@ -356,10 +363,14 @@ export default class CurrencyConverter extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, FiatStore } = this.props;
         const { inputValues, editMode, fadeAnim } = this.state;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
+        const { fiatRates, loading, getFiatRates } = FiatStore!;
+
+        let ratesNotFetched;
+        if (isEmpty(fiatRates)) ratesNotFetched = true;
 
         const AddButton = () => (
             <TouchableOpacity
@@ -397,6 +408,9 @@ export default class CurrencyConverter extends React.Component<
         );
 
         const getFlagEmoji = (currencyValue: string) => {
+            if (EMOJI_REPLACEMENTS[currencyValue])
+                return EMOJI_REPLACEMENTS[currencyValue];
+
             const currency = CURRENCY_KEYS.find(
                 (currency) => currency.value === currencyValue
             );
@@ -460,6 +474,25 @@ export default class CurrencyConverter extends React.Component<
                             keyboardShouldPersistTaps="handled"
                             keyboardDismissMode="on-drag"
                         >
+                            {loading && (
+                                <View style={{ flex: 1, padding: 15 }}>
+                                    <LoadingIndicator />
+                                </View>
+                            )}
+                            {ratesNotFetched && !loading && (
+                                <TouchableOpacity
+                                    style={{ flex: 1, padding: 15 }}
+                                    onPress={() => {
+                                        getFiatRates();
+                                    }}
+                                >
+                                    <ErrorMessage
+                                        message={localeString(
+                                            'views.Settings.CurrencyConverter.error'
+                                        )}
+                                    />
+                                </TouchableOpacity>
+                            )}
                             <View
                                 style={{
                                     marginHorizontal: 16,

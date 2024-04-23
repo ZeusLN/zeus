@@ -28,6 +28,8 @@ export function themeColor(themeString: string): any {
         buttonText: '#000000',
         buttonTextSecondary: 'gray',
         qr: '#FFA900',
+        qrBackground: '#FFA900',
+        qrLogoBackground: '#FFA900',
         action: '#FFF'
     };
 
@@ -72,7 +74,8 @@ export function themeColor(themeString: string): any {
         qrFrame: '#FFD93F',
         bolt: '#FFD93F',
         chain: '#FFD93F',
-        disabled: '#767577'
+        disabled: '#767577',
+        invertQrIcons: false
     };
 
     const Junkie: { [key: string]: any } = {
@@ -205,12 +208,31 @@ export function themeColor(themeString: string): any {
 
     const Pub: { [key: string]: any } = {
         generalStyle: 'dark',
-        background: '#4C09F4',
-        secondary: '#141414',
-        separator: '#141414',
-        highlight: '#ffd24b',
-        bolt: '#fff',
-        chain: '#fff'
+        background: '#000',
+        gradientBackground: ['#1E2022', '#000000'],
+        secondary: '#31363F',
+        text: 'white',
+        secondaryText: '#A7A9AC',
+        highlight: '#dccfff',
+        error: '#992600',
+        separator: '#31363F',
+        outbound: '#4C09F4',
+        inbound: '#dccfff',
+        success: '#46BE43',
+        warning: '#E14C4C',
+        bitcoin: '#FFB040',
+        delete: '#992600',
+        qr: '#4C09F4',
+        qrBackground: '#FFF',
+        qrLogoBackground: '#4C09F4',
+        invertQrIcons: true,
+        qrFrame: '#FFD93F',
+        bolt: '#FFF',
+        chain: '#FFF',
+        disabled: '#767577',
+        buttonBackground: '#4C09F4',
+        buttonText: '#FFF',
+        action: '#FFF'
     };
 
     const Popsicle: { [key: string]: any } = {
