@@ -41,6 +41,7 @@ const {
     verifyMessageNodePubkey,
     bumpFee,
     fundPsbt,
+    signPsbt,
     finalizePsbt,
     publishTransaction,
     listAccounts,
@@ -205,6 +206,7 @@ export default class EmbeddedLND extends LND {
     // getForwardingHistory = () => N/A
     // // Coin Control
     fundPsbt = async (data: any) => await fundPsbt(data);
+    signPsbt = async (data: any) => await signPsbt(data);
     finalizePsbt = async (data: any) => await finalizePsbt(data);
     publishTransaction = async (data: any) => {
         if (data.tx_hex) data.tx_hex = Base64Utils.hexToBase64(data.tx_hex);
@@ -212,16 +214,25 @@ export default class EmbeddedLND extends LND {
     };
     fundingStateStep = async (data: any) => {
         // Verify
-        if (data.psbt_finalize?.funded_psbt)
+        if (
+            data.psbt_finalize?.funded_psbt &&
+            Base64Utils.isHex(data.psbt_finalize?.funded_psbt)
+        )
             data.psbt_finalize.funded_psbt = Base64Utils.hexToBase64(
                 data.psbt_finalize.funded_psbt
             );
         // Finalize
-        if (data.psbt_finalize?.final_raw_tx)
+        if (
+            data.psbt_finalize?.final_raw_tx &&
+            Base64Utils.isHex(data.psbt_finalize?.final_raw_tx)
+        )
             data.psbt_finalize.final_raw_tx = Base64Utils.hexToBase64(
                 data.psbt_finalize.final_raw_tx
             );
-        if (data.psbt_finalize?.signed_psbt)
+        if (
+            data.psbt_finalize?.signed_psbt &&
+            Base64Utils.isHex(data.psbt_finalize?.signed_psbt)
+        )
             data.psbt_finalize.signed_psbt = Base64Utils.hexToBase64(
                 data.psbt_finalize.signed_psbt
             );
@@ -268,5 +279,6 @@ export default class EmbeddedLND extends LND {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     supportsOnchainBatching = () => true;
+    supportsChannelBatching = () => true;
     isLNDBased = () => true;
 }

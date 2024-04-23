@@ -1,5 +1,12 @@
 import BaseModel from './BaseModel';
 
+export interface AdditionalChannel {
+    node_pubkey_string: string;
+    host: string;
+    local_funding_amount: string;
+    satAmount: string | number;
+}
+
 export default class OpenChannelRequest extends BaseModel {
     public min_confs?: number;
     public spend_unconfirmed?: boolean;
@@ -27,8 +34,10 @@ export default class OpenChannelRequest extends BaseModel {
         psbt_shim: {
             pending_chan_id: any;
             base_psbt: string;
+            no_publish?: boolean;
         };
     };
+    public additionalChannels?: Array<AdditionalChannel>;
 
     constructor(data?: any) {
         super(data);

@@ -83,6 +83,11 @@ class Base64Utils {
         const byteArray = mfp.match(/.{2}/g) || [];
         return byteArray.reverse().join('');
     };
+
+    isHex = (str: string) => {
+        const hexRegex = /^[0-9A-Fa-f]+$/g;
+        return hexRegex.test(str);
+    };
 }
 
 const base64Utils = new Base64Utils();

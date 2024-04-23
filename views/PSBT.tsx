@@ -130,7 +130,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
     render() {
         const { ChannelsStore, TransactionsStore, navigation } = this.props;
-        const { pending_chan_id } = ChannelsStore;
+        const { pending_chan_ids } = ChannelsStore;
         const { loading } = TransactionsStore;
         const {
             infoIndex,
@@ -231,7 +231,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                     navigation={navigation}
                 />
                 <ScrollView>
-                    {pending_chan_id && (
+                    {pending_chan_ids && (
                         <>
                             <Text
                                 style={{
@@ -241,7 +241,9 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                     alignSelf: 'center'
                                 }}
                             >
-                                {localeString('views.Channel.channelId')}
+                                {pending_chan_ids.length > 1
+                                    ? localeString('views.Channel.channelIds')
+                                    : localeString('views.Channel.channelId')}
                             </Text>
                             <Text
                                 style={{
@@ -251,13 +253,27 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                     paddingBottom: 0
                                 }}
                             >
-                                {Base64Utils.base64ToHex(pending_chan_id)}
+                                {pending_chan_ids.map(
+                                    (pending_chan_id, index) =>
+                                        `${Base64Utils.base64ToHex(
+                                            pending_chan_id
+                                        )}${
+                                            index !==
+                                            pending_chan_ids.length - 1
+                                                ? ', '
+                                                : ''
+                                        }`
+                                )}
                             </Text>
                         </>
                     )}
-                    {!loading && pending_chan_id && (
+                    {!loading && pending_chan_ids && (
                         <WarningMessage
-                            message={localeString('views.PSBT.channelWarning')}
+                            message={
+                                pending_chan_ids.length > 1
+                                    ? localeString('views.PSBT.channelsWarning')
+                                    : localeString('views.PSBT.channelWarning')
+                            }
                             fontSize={13}
                         />
                     )}
@@ -355,10 +371,10 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                 'views.PSBT.finalizePsbtAndBroadcast'
                                             )}
                                             onPress={() => {
-                                                if (pending_chan_id) {
+                                                if (pending_chan_ids) {
                                                     TransactionsStore.finalizePsbtAndBroadcastChannel(
                                                         fundedPsbt,
-                                                        pending_chan_id
+                                                        pending_chan_ids
                                                     ).then(() => {
                                                         navigation.navigate(
                                                             'SendingOnChain'

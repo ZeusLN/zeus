@@ -505,6 +505,7 @@ export default class Eclair {
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
     supportsOnchainBatching = () => false;
+    supportsChannelBatching = () => false;
     isLNDBased = () => false;
 }
 

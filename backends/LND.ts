@@ -490,6 +490,7 @@ export default class LND {
     };
     // Coin Control
     fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
+    signPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/sign', data);
     finalizePsbt = (data: any) =>
         this.postRequest('/v2/wallet/psbt/finalize', data);
     publishTransaction = (data: any) => {
@@ -614,5 +615,6 @@ export default class LND {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     supportsOnchainBatching = () => true;
+    supportsChannelBatching = () => true;
     isLNDBased = () => true;
 }
