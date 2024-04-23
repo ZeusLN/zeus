@@ -1047,6 +1047,7 @@ export default class PaymentRequest extends React.Component<
 
                 {!!pay_req &&
                     !loading &&
+                    !loadingFeeEstimate &&
                     BackendUtils.supportsLightningSends() && (
                         <View style={{ bottom: 10 }}>
                             <View style={styles.button}>

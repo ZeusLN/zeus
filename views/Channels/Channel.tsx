@@ -100,7 +100,7 @@ export default class ChannelView extends React.Component<
         );
 
         if (implementation === 'lightning-node-connect') {
-            await this.subscribeChannelClose(streamingCall);
+            this.subscribeChannelClose(streamingCall);
         } else {
             if (!ChannelsStore.closeChannelErr) navigation.navigate('Wallet');
         }

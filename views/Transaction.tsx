@@ -356,25 +356,25 @@ export default class TransactionView extends React.Component<
                             }
                         >
                             <KeyValue
-                                keyValue={localeString('views.Payment.notes')}
+                                keyValue={localeString('general.note')}
                                 value={storedNotes}
                                 sensitive
                             />
                         </TouchableOpacity>
                     )}
-
+                </ScrollView>
+                <View style={{ bottom: 15 }}>
                     {!isConfirmed && BackendUtils.supportsBumpFee() && (
-                        <View style={{ marginTop: 20 }}>
-                            <Button
-                                title={localeString('views.BumpFee.title')}
-                                onPress={() =>
-                                    navigation.navigate('BumpFee', {
-                                        outpoint: getOutpoint
-                                    })
-                                }
-                                noUppercase
-                            />
-                        </View>
+                        <Button
+                            title={localeString('views.BumpFee.title')}
+                            onPress={() =>
+                                navigation.navigate('BumpFee', {
+                                    outpoint: getOutpoint
+                                })
+                            }
+                            noUppercase
+                            containerStyle={{ marginTop: 20 }}
+                        />
                     )}
 
                     {tx && (
@@ -395,7 +395,7 @@ export default class TransactionView extends React.Component<
                             noUppercase
                         />
                     )}
-                </ScrollView>
+                </View>
             </Screen>
         );
     }

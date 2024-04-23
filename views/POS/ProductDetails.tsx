@@ -327,7 +327,6 @@ export default class ProductDetails extends React.Component<
                                                     'secondaryText'
                                                 )}
                                                 style={styles.textInput}
-                                                autoCapitalize="none"
                                             />
                                             <TextInput
                                                 onChangeText={(
