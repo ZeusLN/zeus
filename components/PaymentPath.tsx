@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { inject, observer } from 'mobx-react';
+import { observer } from 'mobx-react';
 
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -86,7 +86,7 @@ const Hop = (props: any) => {
                                 fontFamily: 'PPNeueMontreal-Medium'
                             }}
                         >
-                            {path.length}
+                            {path.length + 1}
                         </Text>
                     </View>
                 </Row>
@@ -97,6 +97,8 @@ const Hop = (props: any) => {
 
 const ExpandedHop = (props: any) => {
     const { pathIndex, hop, path, aliasMap, loading } = props;
+    const isOrigin = hop.sent != null;
+    const isDestination = pathIndex === path.length;
     return (
         <View
             key={pathIndex}
@@ -105,10 +107,9 @@ const ExpandedHop = (props: any) => {
                 marginRight: 20,
                 borderStyle: 'dotted',
                 borderLeftWidth: 3,
-                borderColor:
-                    path.length == pathIndex + 1
-                        ? 'transparent'
-                        : themeColor('secondaryText')
+                borderColor: isDestination
+                    ? 'transparent'
+                    : themeColor('secondaryText')
             }}
         >
             <Row>
@@ -154,7 +155,9 @@ const ExpandedHop = (props: any) => {
                             }}
                         >
                             {`${
-                                aliasMap.get(hop.pubKey)
+                                isOrigin
+                                    ? localeString('views.Channel.yourNode')
+                                    : aliasMap.get(hop.pubKey)
                                     ? PrivacyUtils.sensitiveValue(
                                           aliasMap.get(hop.pubKey)
                                       )
@@ -176,31 +179,43 @@ const ExpandedHop = (props: any) => {
             </Row>
 
             <View style={{ marginLeft: 50, marginBottom: 15 }}>
-                <KeyValue
-                    keyValue={localeString('models.Payment.forwarded')}
-                    value={<Amount sats={hop.forwarded} toggleable />}
-                    sensitive
-                />
-
-                <KeyValue
-                    keyValue={localeString('models.Payment.fee')}
-                    value={<Amount sats={hop.fee} toggleable />}
-                    sensitive
-                />
+                {hop.sent ? (
+                    <KeyValue
+                        keyValue={localeString('general.sent')}
+                        value={<Amount sats={hop.sent} toggleable />}
+                        sensitive
+                    />
+                ) : (
+                    <KeyValue
+                        keyValue={
+                            isDestination
+                                ? localeString('general.received')
+                                : localeString('models.Payment.forwarded')
+                        }
+                        value={<Amount sats={hop.forwarded} toggleable />}
+                        sensitive
+                    />
+                )}
+                {!isOrigin && !isDestination && (
+                    <KeyValue
+                        keyValue={localeString('models.Payment.fee')}
+                        value={<Amount sats={hop.fee} toggleable />}
+                        sensitive
+                    />
+                )}
             </View>
         </View>
     );
 };
 
 interface PaymentPathProps {
-    enhancedPath: any;
+    enhancedPath: any[];
 }
 
 interface PaymentPathState {
     expanded: any;
 }
 
-@inject('ChannelsStore')
 @observer
 export default class PaymentPath extends React.Component<
     PaymentPathProps,
@@ -218,28 +233,27 @@ export default class PaymentPath extends React.Component<
         const { expanded } = this.state;
 
         const aliasMap = stores.channelsStore.aliasMap;
+        const ourPubKey = stores.nodeInfoStore.nodeInfo.nodeId;
 
-        const paths: any = [];
+        const paths: any[] = [];
         const updateMap = (k: number, v: boolean) => {
             this.setState({
                 expanded: new Map(expanded.set(k, v))
             });
         };
-        enhancedPath.map((path: any, index: number) => {
+        enhancedPath.forEach((path: any[], index: number) => {
             const hops: any = [];
-            let title = '';
-            path.map((hop: any, key: number) => {
+            let title = localeString('views.Channel.yourNode');
+            path.forEach((hop) => {
                 const displayName = aliasMap.get(hop.pubKey) || hop.node;
+                title += ', ';
                 title +=
-                    hop.node.length >= 66
+                    displayName.length >= 66
                         ? `${PrivacyUtils.sensitiveValue(displayName).slice(
                               0,
                               6
                           )}...`
                         : PrivacyUtils.sensitiveValue(displayName);
-                if (key + 1 !== path.length) {
-                    title += ', ';
-                }
             });
             if (enhancedPath.length > 1) {
                 hops.push(
@@ -252,7 +266,21 @@ export default class PaymentPath extends React.Component<
                     />
                 );
             }
-            path.map((hop: any, pathIndex: number) => {
+            const origin = {
+                sent: Number(path[0].forwarded) + Number(path[0].fee),
+                pubKey: ourPubKey
+            };
+            if (expanded.get(index) || enhancedPath.length === 1) {
+                hops.push(
+                    <ExpandedHop
+                        pathIndex={0}
+                        path={path}
+                        hop={origin}
+                        aliasMap={aliasMap}
+                    />
+                );
+            }
+            path.forEach((hop: any, pathIndex: number) => {
                 let loading = false;
                 if (!hop.alias && !aliasMap.get(hop.pubKey)) {
                     loading = true;
@@ -263,7 +291,7 @@ export default class PaymentPath extends React.Component<
                 (expanded.get(index) || enhancedPath.length === 1) &&
                     hops.push(
                         <ExpandedHop
-                            pathIndex={pathIndex}
+                            pathIndex={pathIndex + 1}
                             path={path}
                             hop={hop}
                             aliasMap={aliasMap}

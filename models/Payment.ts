@@ -13,7 +13,7 @@ import { lnrpc } from '../proto/lightning';
 export default class Payment extends BaseModel {
     private payment_hash: string | { data: number[]; type: string }; // object if lndhub
     creation_date?: string;
-    value: string | number;
+    value?: string | number;
     fee_sat?: string;
     fee_msat?: string;
     payment_preimage: string;
