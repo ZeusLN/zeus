@@ -62,6 +62,7 @@ import Scan from '../assets/images/SVG/Scan.svg';
 import Sweep from '../assets/images/SVG/Sweep.svg';
 
 import Contact from '../models/Contact';
+import { AdditionalOutput } from '../models/TransactionRequest';
 
 interface SendProps {
     exitSetup: any;
@@ -97,6 +98,8 @@ interface SendState {
     contactName: string;
     contacts: Contact[];
     clearOnBackPress: boolean;
+    account: string;
+    additionalOutputs: Array<AdditionalOutput>;
 }
 
 @inject(
@@ -151,7 +154,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             loading: false,
             contactName,
             contacts: [],
-            clearOnBackPress
+            clearOnBackPress,
+            account: 'default',
+            additionalOutputs: []
         };
     }
 
@@ -313,14 +318,21 @@ export default class Send extends React.Component<SendProps, SendState> {
         });
     };
 
-    selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
+    selectUTXOs = (
+        utxos: Array<string>,
+        utxoBalance: number,
+        account: string
+    ) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
         this.setState((prevState) => ({
             utxos,
             utxoBalance,
             amount:
-                implementation === 'c-lightning-REST' ? 'all' : prevState.amount
+                implementation === 'c-lightning-REST'
+                    ? 'all'
+                    : prevState.amount,
+            account
         }));
     };
 
@@ -361,7 +373,14 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, fee, utxos, confirmationTarget } = this.state;
+        const {
+            destination,
+            fee,
+            utxos,
+            confirmationTarget,
+            account,
+            additionalOutputs
+        } = this.state;
 
         let request;
         if (utxos && utxos.length > 0) {
@@ -371,7 +390,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amount: satAmount.toString(),
                 target_conf: Number(confirmationTarget),
                 utxos,
-                spend_unconfirmed: true
+                spend_unconfirmed: true,
+                additional_outputs: additionalOutputs,
+                account
             };
         } else {
             request = {
@@ -379,7 +400,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                 sat_per_vbyte: fee,
                 amount: satAmount.toString(),
                 target_conf: Number(confirmationTarget),
-                spend_unconfirmed: true
+                spend_unconfirmed: true,
+                additional_outputs: additionalOutputs,
+                account
             };
         }
         TransactionsStore.sendCoins(request);
@@ -570,11 +593,12 @@ export default class Send extends React.Component<SendProps, SendState> {
             clipboard,
             loading,
             contactName,
-            contacts
+            contacts,
+            additionalOutputs
         } = this.state;
         const {
             confirmedBlockchainBalance,
-            unconfirmedBlockchainBalance,
+            totalBlockchainBalanceAccounts,
             lightningBalance
         } = BalanceStore;
         const { implementation } = SettingsStore;
@@ -614,7 +638,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                             )}
                             {BackendUtils.supportsSweep() &&
                                 isValid &&
-                                transactionType === 'On-chain' && (
+                                transactionType === 'On-chain' &&
+                                additionalOutputs.length === 0 && (
                                     <View
                                         style={{
                                             marginTop: 3,
@@ -674,8 +699,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {!!destination &&
                         transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() &&
-                        confirmedBlockchainBalance === 0 &&
-                        unconfirmedBlockchainBalance === 0 && (
+                        totalBlockchainBalanceAccounts === 0 && (
                             <View style={{ marginBottom: 10 }}>
                                 <WarningMessage
                                     message={localeString(
@@ -901,6 +925,155 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     )}
                                 </View>
 
+                                {additionalOutputs.map((output, index) => {
+                                    return (
+                                        <View key={`additionalOutput-${index}`}>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'general.destination'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                value={output?.address}
+                                                multiline={true}
+                                                textInputStyle={{
+                                                    fontSize: 100,
+                                                    marginTop: 10,
+                                                    marginBottom: 10
+                                                }}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    let newOutputs =
+                                                        additionalOutputs;
+
+                                                    newOutputs[index].address =
+                                                        text;
+
+                                                    this.setState({
+                                                        additionalOutputs:
+                                                            newOutputs
+                                                    });
+                                                }}
+                                            />
+                                            <AmountInput
+                                                amount={output?.amount.toString()}
+                                                title={localeString(
+                                                    'views.Send.amount'
+                                                )}
+                                                onAmountChange={(
+                                                    amount: string,
+                                                    satAmount: string | number
+                                                ) => {
+                                                    let newOutputs =
+                                                        additionalOutputs;
+
+                                                    newOutputs[index].amount =
+                                                        amount;
+                                                    newOutputs[
+                                                        index
+                                                    ].satAmount = satAmount;
+
+                                                    this.setState({
+                                                        additionalOutputs:
+                                                            newOutputs
+                                                    });
+                                                }}
+                                            />
+                                            <View
+                                                style={{
+                                                    marginTop: 10,
+                                                    marginBottom: 20
+                                                }}
+                                            >
+                                                <Button
+                                                    title={localeString(
+                                                        'views.Send.removeOutput'
+                                                    )}
+                                                    icon={{
+                                                        name: 'remove',
+                                                        size: 25,
+                                                        color: themeColor(
+                                                            'background'
+                                                        )
+                                                    }}
+                                                    onPress={() => {
+                                                        let newOutputs =
+                                                            additionalOutputs;
+
+                                                        newOutputs =
+                                                            newOutputs.filter(
+                                                                (item) =>
+                                                                    item !==
+                                                                    output
+                                                            );
+
+                                                        this.setState({
+                                                            additionalOutputs:
+                                                                newOutputs
+                                                        });
+                                                    }}
+                                                    tertiary
+                                                />
+                                            </View>
+                                        </View>
+                                    );
+                                })}
+
+                                {transactionType === 'On-chain' &&
+                                    BackendUtils.supportsOnchainBatching() && (
+                                        <View
+                                            style={{
+                                                marginTop: 0,
+                                                marginBottom: 20
+                                            }}
+                                        >
+                                            <Button
+                                                title={localeString(
+                                                    'views.Send.addOutput'
+                                                )}
+                                                icon={{
+                                                    name: 'add',
+                                                    size: 25,
+                                                    color: themeColor(
+                                                        'background'
+                                                    )
+                                                }}
+                                                onPress={() => {
+                                                    const additionalOutputs =
+                                                        this.state
+                                                            .additionalOutputs;
+
+                                                    additionalOutputs.push({
+                                                        address: '',
+                                                        amount: '',
+                                                        satAmount: ''
+                                                    });
+
+                                                    this.setState({
+                                                        additionalOutputs
+                                                    });
+                                                }}
+                                            />
+                                        </View>
+                                    )}
+
+                                {BackendUtils.supportsCoinControl() && (
+                                    <View style={{ marginBottom: 20 }}>
+                                        <UTXOPicker
+                                            onValueChange={this.selectUTXOs}
+                                            UTXOsStore={UTXOsStore}
+                                        />
+                                    </View>
+                                )}
+
                                 <Text
                                     style={{
                                         ...styles.text,
@@ -916,12 +1089,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         this.setState({ fee: text })
                                     }
                                 />
-                                {BackendUtils.supportsCoinControl() && (
-                                    <UTXOPicker
-                                        onValueChange={this.selectUTXOs}
-                                        UTXOsStore={UTXOsStore}
-                                    />
-                                )}
+
                                 <View
                                     style={{
                                         ...styles.button,
@@ -936,10 +1104,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             name: 'send',
                                             size: 25,
                                             color:
-                                                confirmedBlockchainBalance ===
-                                                    0 &&
-                                                unconfirmedBlockchainBalance ===
-                                                    0
+                                                totalBlockchainBalanceAccounts ===
+                                                0
                                                     ? themeColor(
                                                           'secondaryText'
                                                       )
@@ -949,8 +1115,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             this.sendCoins(satAmount)
                                         }
                                         disabled={
-                                            confirmedBlockchainBalance === 0 &&
-                                            unconfirmedBlockchainBalance === 0
+                                            totalBlockchainBalanceAccounts === 0
                                         }
                                     />
                                 </View>

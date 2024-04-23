@@ -113,6 +113,7 @@ interface ReceiveState {
     customPreimage: string;
     ampInvoice: boolean;
     routeHints: boolean;
+    account: string;
     // POS
     orderId: string;
     orderTotal: string;
@@ -158,6 +159,7 @@ export default class Receive extends React.Component<
         customPreimage: '',
         ampInvoice: false,
         routeHints: false,
+        account: 'default',
         // POS
         orderId: '',
         orderTip: '',
@@ -240,6 +242,14 @@ export default class Receive extends React.Component<
         const autoGenerateOnChain: boolean = navigation.getParam(
             'autoGenerateOnChain'
         );
+        const account: string = navigation.getParam('account');
+
+        if (account) {
+            this.setState({
+                account
+            });
+        }
+
         const selectedIndex: number = navigation.getParam('selectedIndex');
 
         if (selectedIndex) {
@@ -324,7 +334,7 @@ export default class Receive extends React.Component<
         }
 
         if (autoGenerateOnChain) {
-            this.autoGenerateOnChainAddress();
+            this.autoGenerateOnChainAddress(account);
         }
     }
 
@@ -433,12 +443,20 @@ export default class Receive extends React.Component<
         );
     };
 
-    autoGenerateOnChainAddress = () => {
+    autoGenerateOnChainAddress = (account?: string) => {
         const { InvoicesStore } = this.props;
         const { addressType } = this.state;
         const { getNewAddress } = InvoicesStore;
 
-        getNewAddress({ type: addressType }).then((onChainAddress: string) => {
+        let request: any = {
+            type: addressType
+        };
+
+        if (account) {
+            request.account = account;
+        }
+
+        getNewAddress(request).then((onChainAddress: string) => {
             this.subscribeInvoice(undefined, onChainAddress);
         });
     };
@@ -949,6 +967,7 @@ export default class Receive extends React.Component<
             customPreimage,
             ampInvoice,
             routeHints,
+            account,
             needInbound,
             enableLSP,
             lspIsActive,
@@ -997,7 +1016,12 @@ export default class Receive extends React.Component<
         const ClearButton = () => (
             <Icon
                 name="cancel"
-                onPress={() => InvoicesStore.clearUnified()}
+                onPress={() => {
+                    this.setState({
+                        account: 'default'
+                    });
+                    InvoicesStore.clearUnified();
+                }}
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
@@ -1431,6 +1455,13 @@ export default class Receive extends React.Component<
                                     <View style={{ marginTop: 40 }}>
                                         <LoadingIndicator />
                                     </View>
+                                )}
+                                {haveInvoice && account !== 'default' && (
+                                    <WarningMessage
+                                        message={`${localeString(
+                                            'general.externalAccount'
+                                        )}: ${account}`}
+                                    />
                                 )}
                                 {haveInvoice &&
                                     lspIsActive &&

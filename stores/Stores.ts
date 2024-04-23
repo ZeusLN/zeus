@@ -74,7 +74,8 @@ class Stores {
         );
         this.transactionsStore = new TransactionsStore(
             this.settingsStore,
-            this.nodeInfoStore
+            this.nodeInfoStore,
+            this.channelsStore
         );
         this.balanceStore = new BalanceStore(this.settingsStore);
         this.unitsStore = new UnitsStore(this.settingsStore, this.fiatStore);

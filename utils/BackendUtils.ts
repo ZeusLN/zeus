@@ -101,9 +101,11 @@ class BackendUtils {
     lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
+    signPsbt = (...args: any[]) => this.call('signPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
     publishTransaction = (...args: any[]) =>
         this.call('publishTransaction', args);
+    fundingStateStep = (...args: any[]) => this.call('fundingStateStep', args);
     bumpFee = (...args: any[]) => this.call('bumpFee', args);
     lookupInvoice = (...args: any[]) => this.call('lookupInvoice', args);
     subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
@@ -143,6 +145,8 @@ class BackendUtils {
         this.call('supportsSimpleTaprootChannels');
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsSweep = () => this.call('supportsSweep');
+    supportsOnchainBatching = () => this.call('supportsOnchainBatching');
+    supportsChannelBatching = () => this.call('supportsChannelBatching');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC

@@ -89,6 +89,7 @@ open class Lnd {
     "QueryRoutes": { bytes, cb in LndmobileQueryRoutes(bytes, cb) },
     "ListPayments": { bytes, cb in LndmobileListPayments(bytes, cb) },
     "ListInvoices": { bytes, cb in LndmobileListInvoices(bytes, cb) },
+    "FundingStateStep": { bytes, cb in LndmobileFundingStateStep(bytes, cb) },
 
     // channel
     //
@@ -117,9 +118,13 @@ open class Lnd {
     "UnlockWallet": { bytes, cb in LndmobileUnlockWallet(bytes, cb) },
     "WalletKitDeriveKey": { bytes, cb in LndmobileWalletKitDeriveKey(bytes, cb) },
     "FundPsbt": { bytes, cb in LndmobileWalletKitFundPsbt(bytes, cb) },
+    "SignPsbt": { bytes, cb in LndmobileWalletKitSignPsbt(bytes, cb) },
     "FinalizePsbt": { bytes, cb in LndmobileWalletKitFinalizePsbt(bytes, cb) },
     "PublishTransaction": { bytes, cb in LndmobileWalletKitPublishTransaction(bytes, cb) },
-  //    derivePrivateKey
+    "ListAccounts": { bytes, cb in LndmobileWalletKitListAccounts(bytes, cb) },
+    "ImportAccount": { bytes, cb in LndmobileWalletKitImportAccount(bytes, cb) },
+  
+    //    derivePrivateKey
     "VerifyMessage": { bytes, cb in LndmobileVerifyMessage(bytes, cb) },
     "SignMessage": { bytes, cb in LndmobileSignMessage(bytes, cb) },
     "SignerSignMessage": { bytes, cb in LndmobileSignerSignMessage(bytes, cb) },
@@ -138,6 +143,7 @@ open class Lnd {
     "RouterSendPaymentV2": { req, cb in return LndmobileRouterSendPaymentV2(req, cb) },
     "SubscribeState": { req, cb in return LndmobileSubscribeState(req, cb) },
     "RouterTrackPaymentV2": { req, cb in return LndmobileRouterTrackPaymentV2(req, cb) },
+    "OpenChannel": { bytes, cb in LndmobileOpenChannel(bytes, cb) },
     // channel
     //
     "CloseChannel": { req, cb in return LndmobileCloseChannel(req, cb)},

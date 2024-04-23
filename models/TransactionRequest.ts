@@ -1,5 +1,11 @@
 type FeeLimit = { percent: string } | { fixed: string };
 
+export interface AdditionalOutput {
+    address: string;
+    amount: string;
+    satAmount: string | number;
+}
+
 export default interface TransactionRequest {
     target_conf?: number | null; // optional
     addr?: string;
@@ -10,6 +16,8 @@ export default interface TransactionRequest {
     conf_target?: number;
     spend_unconfirmed?: boolean;
     send_all?: boolean;
+    account?: string;
+    additional_outputs: Array<AdditionalOutput>;
 }
 
 export type SendPaymentRequest =

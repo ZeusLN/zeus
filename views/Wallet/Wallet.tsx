@@ -413,7 +413,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (!error) {
                 await BackendUtils.checkPerms();
                 await NodeInfoStore.getNodeInfo();
-                if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
+                if (BackendUtils.supportsAccounts())
+                    await UTXOsStore.listAccounts();
                 await BalanceStore.getCombinedBalance();
                 if (BackendUtils.supportsChannelManagement())
                     ChannelsStore.getChannels();
@@ -554,11 +555,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 UnitsStore={UnitsStore}
                                 onRefresh={() => this.getSettingsAndNavigate()}
                                 locked={isSyncing}
+                                consolidated
                             />
 
                             <Animated.View
                                 style={{
                                     flex: 1,
+                                    maxHeight: 80,
                                     justifyContent: 'flex-end',
                                     alignSelf: 'center',
                                     bottom: 10,

@@ -757,7 +757,11 @@ export const getRecoveryInfo =
 /**
  * @throws
  */
-export const listUnspent = async (): Promise<lnrpc.ListUnspentResponse> => {
+export const listUnspent = async ({
+    account = 'default'
+}: {
+    account: string;
+}): Promise<lnrpc.ListUnspentResponse> => {
     const response = await sendCommand<
         lnrpc.IListUnspentRequest,
         lnrpc.ListUnspentRequest,
@@ -766,7 +770,9 @@ export const listUnspent = async (): Promise<lnrpc.ListUnspentResponse> => {
         request: lnrpc.ListUnspentRequest,
         response: lnrpc.ListUnspentResponse,
         method: 'WalletKitListUnspent',
-        options: {}
+        options: {
+            account
+        }
     });
     return response;
 };
@@ -821,6 +827,33 @@ export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
         options: {
             reversed: true,
             num_max_invoices: Long.fromValue(1000)
+        }
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
+export const fundingStateStep = async ({
+    shim_register,
+    shim_cancel,
+    psbt_verify,
+    psbt_finalize
+}: any): Promise<lnrpc.FundingStateStepResp> => {
+    const response = await sendCommand<
+        lnrpc.IFundingTransitionMsg,
+        lnrpc.FundingTransitionMsg,
+        lnrpc.FundingStateStepResp
+    >({
+        request: lnrpc.FundingTransitionMsg,
+        response: lnrpc.FundingStateStepResp,
+        method: 'FundingStateStep',
+        options: {
+            shim_register,
+            shim_cancel,
+            psbt_verify,
+            psbt_finalize
         }
     });
     return response;
