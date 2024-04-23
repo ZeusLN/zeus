@@ -272,25 +272,21 @@ export default class LightningNodeConnect {
         });
     };
     closeChannel = async (urlParams?: Array<string>) => {
-        let params;
-        if (urlParams && urlParams.length === 4) {
-            params = {
-                channel_point: {
-                    funding_txid_str: urlParams && urlParams[0],
-                    output_index:
-                        urlParams && urlParams[1] && Number(urlParams[1])
-                },
-                force: urlParams && urlParams[2],
-                sat_per_vbyte: urlParams && urlParams[3] && Number(urlParams[3])
-            };
-        }
-        params = {
+        let params: any = {
             channel_point: {
                 funding_txid_str: urlParams && urlParams[0],
                 output_index: urlParams && urlParams[1] && Number(urlParams[1])
             },
             force: urlParams && urlParams[2]
         };
+
+        if (urlParams && urlParams[3]) {
+            params.sat_per_vbyte = Number(urlParams[3]);
+        }
+
+        if (urlParams && urlParams[4]) {
+            params.delivery_address = urlParams[4];
+        }
 
         return this.lnc.lnd.lightning.closeChannel(params);
     };

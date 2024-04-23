@@ -420,20 +420,19 @@ export default class LND {
         return result;
     };
     closeChannel = (urlParams?: Array<string>) => {
-        if (urlParams && urlParams.length === 4) {
-            return this.deleteRequest(
-                `/v1/channels/${urlParams && urlParams[0]}/${
-                    urlParams && urlParams[1]
-                }?force=${urlParams && urlParams[2]}&sat_per_vbyte=${
-                    urlParams && urlParams[3]
-                }`
-            );
+        let requestString = `/v1/channels/${urlParams && urlParams[0]}/${
+            urlParams && urlParams[1]
+        }?force=${urlParams && urlParams[2]}`;
+
+        if (urlParams && urlParams[3]) {
+            requestString += `&sat_per_vbyte=${urlParams && urlParams[3]}`;
         }
-        return this.deleteRequest(
-            `/v1/channels/${urlParams && urlParams[0]}/${
-                urlParams && urlParams[1]
-            }?force=${urlParams && urlParams[2]}`
-        );
+
+        if (urlParams && urlParams[4]) {
+            requestString += `&delivery_address=${urlParams && urlParams[4]}`;
+        }
+
+        return this.deleteRequest(requestString);
     };
     getNodeInfo = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
