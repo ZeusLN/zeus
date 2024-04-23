@@ -1,3 +1,5 @@
+import { NativeModules, NativeEventEmitter } from 'react-native';
+
 import LNC, { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-rn';
 
 import stores from '../stores/Stores';
@@ -22,6 +24,7 @@ const ADDRESS_TYPES = [
 
 export default class LightningNodeConnect {
     lnc: any;
+    listener: any;
 
     permOpenChannel: boolean;
     permSendCoins: boolean;
@@ -223,7 +226,35 @@ export default class LightningNodeConnect {
             delete request.sat_per_vbyte;
         }
 
-        return this.lnc.lnd.lightning.openChannel(request);
+        const streamingCall = this.lnc.lnd.lightning.openChannel(request);
+
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        return new Promise((resolve, reject) => {
+            this.listener = eventEmitter.addListener(
+                streamingCall,
+                (event: any) => {
+                    if (event.result && event.result !== 'EOF') {
+                        let result;
+                        try {
+                            result = JSON.parse(event.result);
+
+                            resolve({ result });
+                            this.listener.remove();
+                        } catch (e) {
+                            try {
+                                result = JSON.parse(event);
+                            } catch (e2) {
+                                result = event.result || event;
+                            }
+
+                            reject(result);
+                            this.listener.remove();
+                        }
+                    }
+                }
+            );
+        });
     };
     connectPeer = async (data: any) =>
         await this.lnc.lnd.lightning
@@ -340,6 +371,10 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .fundPsbt(req)
             .then((data: walletrpc.FundPsbtResponse) => snakeize(data));
+    signPsbt = async (req: walletrpc.SignPsbtRequest) =>
+        await this.lnc.lnd.walletKit
+            .signPsbt(req)
+            .then((data: walletrpc.SignPsbtResponse) => snakeize(data));
     finalizePsbt = async (req: walletrpc.FinalizePsbtRequest) =>
         await this.lnc.lnd.walletKit
             .finalizePsbt(req)
@@ -351,19 +386,10 @@ export default class LightningNodeConnect {
             .then((data: walletrpc.PublishResponse) => snakeize(data));
     };
     fundingStateStep = async (req: lnrpc.FundingTransitionMsg) => {
-        // Verify
-        if (req.psbt_finalize?.funded_psbt)
-            req.psbt_finalize.funded_psbt = Base64Utils.hexToBase64(
-                req.psbt_finalize.funded_psbt
-            );
         // Finalize
         if (req.psbt_finalize?.final_raw_tx)
             req.psbt_finalize.final_raw_tx = Base64Utils.hexToBase64(
                 req.psbt_finalize.final_raw_tx
-            );
-        if (req.psbt_finalize?.signed_psbt)
-            req.psbt_finalize.signed_psbt = Base64Utils.hexToBase64(
-                req.psbt_finalize.signed_psbt
             );
 
         return await this.lnc.lnd.lightning
@@ -452,5 +478,6 @@ export default class LightningNodeConnect {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     supportsOnchainBatching = () => true;
+    supportsChannelBatching = () => true;
     isLNDBased = () => true;
 }

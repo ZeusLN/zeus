@@ -143,7 +143,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
     render() {
         const { ChannelsStore, NodeInfoStore, TransactionsStore, navigation } =
             this.props;
-        const { pending_chan_id } = ChannelsStore;
+        const { pending_chan_ids } = ChannelsStore;
         const { testnet } = NodeInfoStore;
         const { loading } = TransactionsStore;
         const {
@@ -245,7 +245,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                     navigation={navigation}
                 />
                 <ScrollView>
-                    {pending_chan_id && (
+                    {pending_chan_ids && (
                         <>
                             <Text
                                 style={{
@@ -255,7 +255,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                     alignSelf: 'center'
                                 }}
                             >
-                                {localeString('views.Channel.channelId')}
+                                {pending_chan_ids.length > 1
+                                    ? localeString('views.Channel.channelIds')
+                                    : localeString('views.Channel.channelId')}
                             </Text>
                             <Text
                                 style={{
@@ -264,7 +266,17 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                     padding: 15
                                 }}
                             >
-                                {Base64Utils.base64ToHex(pending_chan_id)}
+                                {pending_chan_ids.map(
+                                    (pending_chan_id, index) =>
+                                        `${Base64Utils.base64ToHex(
+                                            pending_chan_id
+                                        )}${
+                                            index !==
+                                            pending_chan_ids.length - 1
+                                                ? ', '
+                                                : ''
+                                        }`
+                                )}
                             </Text>
                         </>
                     )}
@@ -291,7 +303,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                             </Text>
                         </>
                     )}
-                    {!loading && !pending_chan_id && (
+                    {!loading && !pending_chan_ids && (
                         <WarningMessage
                             message={localeString('views.TxHex.channelWarning')}
                             fontSize={13}
@@ -369,15 +381,15 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                     <View style={styles.button}>
                                         <Button
                                             title={localeString(
-                                                pending_chan_id
+                                                pending_chan_ids
                                                     ? 'views.TxHex.finalizeFlowAndBroadcast'
                                                     : 'views.TxHex.broadcast'
                                             )}
                                             onPress={() => {
-                                                if (pending_chan_id) {
+                                                if (pending_chan_ids) {
                                                     TransactionsStore.finalizeTxHexAndBroadcastChannel(
                                                         txHex,
-                                                        pending_chan_id
+                                                        pending_chan_ids
                                                     ).then(() => {
                                                         navigation.navigate(
                                                             'SendingOnChain'

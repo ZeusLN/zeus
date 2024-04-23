@@ -75,7 +75,7 @@ export default class ChannelsStore {
     @observable public aliasMap: any = observable.map({});
     // external account funding
     @observable public funded_psbt: string = '';
-    @observable public pending_chan_id: any;
+    @observable public pending_chan_ids: Array<string>;
 
     settingsStore: SettingsStore;
 
@@ -147,7 +147,7 @@ export default class ChannelsStore {
         this.channelSuccess = false;
         this.channelRequest = null;
         this.funded_psbt = '';
-        this.pending_chan_id = null;
+        this.pending_chan_ids = [];
     };
 
     @action
@@ -536,6 +536,20 @@ export default class ChannelsStore {
             });
         }
 
+        // connect to additional channel peers
+        if (request.additionalChannels) {
+            for (let i = 0; i < request.additionalChannels?.length; i++) {
+                const channel = request.additionalChannels[i];
+                await BackendUtils.connectPeer({
+                    addr: {
+                        pubkey: channel.node_pubkey_string,
+                        host: channel.host
+                    },
+                    perm
+                }).catch(() => {});
+            }
+        }
+
         return await new Promise((resolve, reject) => {
             BackendUtils.connectPeer({
                 addr: {
@@ -544,7 +558,7 @@ export default class ChannelsStore {
                 },
                 perm
             })
-                .then(() => {
+                .then(async () => {
                     if (!silent) {
                         this.errorPeerConnect = false;
                         this.connectingToPeer = false;
@@ -586,16 +600,10 @@ export default class ChannelsStore {
         });
     };
 
-    handleChannelOpen = (request: any, result: any) => {
-        const { psbt_fund, pending_chan_id } = result;
-        this.pending_chan_id = pending_chan_id;
-
+    handleChannelOpen = (request: any, outputs?: any) => {
         const { account, sat_per_vbyte, utxos } = request;
 
         const inputs: any = [];
-        const outputs: any = {
-            [psbt_fund.funding_address]: Number(psbt_fund.funding_amount)
-        };
 
         if (utxos) {
             utxos.forEach((input: any) => {
@@ -606,6 +614,7 @@ export default class ChannelsStore {
                 });
             });
         }
+
         const fundPsbtRequest = {
             raw: {
                 outputs,
@@ -617,15 +626,47 @@ export default class ChannelsStore {
         };
 
         BackendUtils.fundPsbt(fundPsbtRequest)
-            .then((data: any) => {
-                const funded_psbt: string = new FundedPsbt(
+            .then(async (data: any) => {
+                let funded_psbt: string = new FundedPsbt(
                     data.funded_psbt
                 ).getFormatted();
+
+                await BackendUtils.signPsbt({ funded_psbt })
+                    .then((data: any) => {
+                        if (data.signed_psbt) funded_psbt = data.signed_psbt;
+                        return;
+                    })
+                    .catch((e: any) => {
+                        console.log('signPsbt err', e);
+                        return;
+                    });
+
+                for (let i = 0; i < this.pending_chan_ids.length - 1; i++) {
+                    const pending_chan_id = this.pending_chan_ids[i];
+                    await BackendUtils.fundingStateStep({
+                        psbt_verify: {
+                            funded_psbt,
+                            pending_chan_id,
+                            skip_finalize: true
+                        }
+                    })
+                        .then((data: any) => {
+                            console.log(`fundingStateStep - data ${i}`, data);
+                            return;
+                        })
+                        .catch((e: any) => {
+                            console.log(`fundingStateStep - err ${i}`, e);
+                            return;
+                        });
+                }
 
                 BackendUtils.fundingStateStep({
                     psbt_verify: {
                         funded_psbt,
-                        pending_chan_id
+                        pending_chan_id:
+                            this.pending_chan_ids[
+                                this.pending_chan_ids.length - 1
+                            ]
                     }
                 })
                     .then((data: any) => {
@@ -641,14 +682,50 @@ export default class ChannelsStore {
                             this.peerSuccess = false;
                             this.channelSuccess = false;
                         } else {
-                            this.funded_psbt = funded_psbt;
-                            this.output_index = null;
-                            this.funding_txid_str = null;
-                            this.errorOpenChannel = true;
-                            this.openingChannel = false;
-                            this.channelRequest = null;
-                            this.peerSuccess = false;
-                            this.channelSuccess = false;
+                            const formattedPsbt = new FundedPsbt(
+                                funded_psbt
+                            ).getFormatted();
+
+                            // Attempt finalize here
+                            BackendUtils.fundingStateStep({
+                                psbt_finalize: {
+                                    signed_psbt: formattedPsbt,
+                                    pending_chan_id:
+                                        this.pending_chan_ids[
+                                            this.pending_chan_ids.length - 1
+                                        ]
+                                }
+                            })
+                                .then((data: any) => {
+                                    if (data.publish_error) {
+                                        this.funded_psbt = formattedPsbt;
+                                        this.output_index = null;
+                                        this.funding_txid_str = null;
+                                        this.errorOpenChannel = true;
+                                        this.openingChannel = false;
+                                        this.channelRequest = null;
+                                        this.peerSuccess = false;
+                                        this.channelSuccess = false;
+                                    } else {
+                                        // success case
+                                        this.errorOpenChannel = false;
+                                        this.openingChannel = false;
+                                        this.errorMsgChannel = null;
+                                        this.channelRequest = null;
+                                        this.channelSuccess = true;
+                                    }
+                                })
+                                .catch(() => {
+                                    // handle error
+                                    this.funded_psbt = formattedPsbt;
+                                    this.output_index = null;
+                                    this.funding_txid_str = null;
+                                    this.errorOpenChannel = true;
+                                    this.openingChannel = false;
+                                    this.channelRequest = null;
+                                    this.peerSuccess = false;
+                                    this.channelSuccess = false;
+                                });
                         }
                     })
                     .catch((error: any) => {
@@ -688,26 +765,136 @@ export default class ChannelsStore {
     };
 
     openChannel = (request: OpenChannelRequest) => {
+        const multipleChans =
+            request?.additionalChannels &&
+            request.additionalChannels?.length > 0;
+
         delete request.host;
+        if (!multipleChans) delete request.additionalChannels;
 
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.openingChannel = true;
 
-        if (request?.account !== 'default') {
-            request.funding_shim = {
-                psbt_shim: {
-                    base_psbt: '',
-                    pending_chan_id: randomBytes(32).toString('base64')
-                }
-            };
-            BackendUtils.openChannelStream(request)
-                .then((data: any) => {
-                    this.handleChannelOpen(request, data.result);
-                })
-                .catch((error: Error) => {
-                    this.handleChannelOpenError(error);
-                });
+        if (request?.account !== 'default' || multipleChans) {
+            const outputs: any = {};
+            if (multipleChans) {
+                let base_psbt = '';
+                request.funding_shim = {
+                    psbt_shim: {
+                        base_psbt,
+                        pending_chan_id: randomBytes(32).toString('base64'),
+                        no_publish: true
+                    }
+                };
+
+                BackendUtils.openChannelStream(request)
+                    .then((data: any) => {
+                        const { psbt_fund, pending_chan_id } = data.result;
+                        this.pending_chan_ids.push(pending_chan_id);
+                        outputs[psbt_fund.funding_address] =
+                            psbt_fund.funding_amount;
+
+                        base_psbt = psbt_fund.psbt;
+                        for (
+                            let i = 0;
+                            i < (request?.additionalChannels?.length || 0);
+                            i++
+                        ) {
+                            if (
+                                request.additionalChannels &&
+                                request.additionalChannels.length !== i + 1
+                            ) {
+                                request.funding_shim = {
+                                    psbt_shim: {
+                                        base_psbt,
+                                        pending_chan_id:
+                                            randomBytes(32).toString('base64'),
+                                        no_publish: true
+                                    }
+                                };
+                                request.node_pubkey_string =
+                                    request.additionalChannels[
+                                        i
+                                    ].node_pubkey_string;
+                                request.local_funding_amount =
+                                    request.additionalChannels[
+                                        i
+                                    ].satAmount.toString();
+
+                                BackendUtils.openChannelStream(request)
+                                    .then((data: any) => {
+                                        const { psbt_fund, pending_chan_id } =
+                                            data.result;
+                                        this.pending_chan_ids.push(
+                                            pending_chan_id
+                                        );
+                                        outputs[psbt_fund.funding_address] =
+                                            psbt_fund.funding_amount;
+                                        base_psbt = psbt_fund.psbt;
+                                    })
+                                    .catch((error: Error) => {
+                                        this.handleChannelOpenError(error);
+                                    });
+                            } else if (request.additionalChannels) {
+                                // final chan
+                                request.funding_shim = {
+                                    psbt_shim: {
+                                        base_psbt,
+                                        pending_chan_id:
+                                            randomBytes(32).toString('base64'),
+                                        no_publish: false
+                                    }
+                                };
+                                request.node_pubkey_string =
+                                    request.additionalChannels[
+                                        i
+                                    ].node_pubkey_string;
+                                request.local_funding_amount =
+                                    request.additionalChannels[
+                                        i
+                                    ].satAmount.toString();
+
+                                BackendUtils.openChannelStream(request)
+                                    .then((data: any) => {
+                                        const { psbt_fund, pending_chan_id } =
+                                            data.result;
+                                        this.pending_chan_ids.push(
+                                            pending_chan_id
+                                        );
+                                        outputs[psbt_fund.funding_address] =
+                                            psbt_fund.funding_amount;
+                                        this.handleChannelOpen(
+                                            request,
+                                            outputs
+                                        );
+                                    })
+                                    .catch((error: Error) => {
+                                        this.handleChannelOpenError(error);
+                                    });
+                            }
+                        }
+                    })
+                    .catch((error: Error) => {
+                        this.handleChannelOpenError(error);
+                    });
+            } else {
+                request.funding_shim = {
+                    psbt_shim: {
+                        base_psbt: '',
+                        pending_chan_id: randomBytes(32).toString('base64')
+                    }
+                };
+                BackendUtils.openChannelStream(request)
+                    .then((data: any) => {
+                        const { pending_chan_id } = data.result;
+                        this.pending_chan_ids.push(pending_chan_id);
+                        this.handleChannelOpen(request);
+                    })
+                    .catch((error: Error) => {
+                        this.handleChannelOpenError(error);
+                    });
+            }
         } else {
             BackendUtils.openChannel(request)
                 .then((data: any) => {

@@ -183,16 +183,16 @@ export default class TransactionsStore {
     };
 
     @action
-    public finalizePsbtAndBroadcastChannel = (
+    public finalizePsbtAndBroadcastChannel = async (
         signed_psbt: string,
-        pending_chan_id: any
+        pending_chan_ids: Array<string>
     ) => {
         this.loading = true;
 
         return BackendUtils.fundingStateStep({
             psbt_finalize: {
                 signed_psbt,
-                pending_chan_id
+                pending_chan_id: pending_chan_ids[pending_chan_ids.length - 1]
             }
         })
             .then((data: any) => {
@@ -226,16 +226,16 @@ export default class TransactionsStore {
     };
 
     @action
-    public finalizeTxHexAndBroadcastChannel = (
+    public finalizeTxHexAndBroadcastChannel = async (
         tx_hex: string,
-        pending_chan_id: any
+        pending_chan_ids: Array<string>
     ) => {
         this.loading = true;
 
         return BackendUtils.fundingStateStep({
             psbt_finalize: {
                 final_raw_tx: tx_hex,
-                pending_chan_id
+                pending_chan_id: pending_chan_ids[pending_chan_ids.length - 1]
             }
         })
             .then((data: any) => {

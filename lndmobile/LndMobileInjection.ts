@@ -80,6 +80,7 @@ import {
     signMessageNodePubkey,
     bumpFee,
     fundPsbt,
+    signPsbt,
     finalizePsbt,
     publishTransaction,
     listAccounts,
@@ -370,15 +371,22 @@ export interface ILndMobileInjections {
         }) => Promise<walletrpc.BumpFeeResponse>;
         fundPsbt: ({
             account,
+            psbt,
             raw,
             spend_unconfirmed,
             sat_per_vbyte
         }: {
             account?: string;
+            psbt?: Uint8Array;
             raw: walletrpc.TxTemplate;
             spend_unconfirmed?: boolean;
             sat_per_vbyte?: Long;
         }) => Promise<walletrpc.FundPsbtResponse>;
+        signPsbt: ({
+            funded_psbt
+        }: {
+            funded_psbt?: Uint8Array;
+        }) => Promise<walletrpc.SignPsbtResponse>;
         finalizePsbt: ({
             funded_psbt
         }: {
@@ -498,6 +506,7 @@ export default {
         signMessageNodePubkey,
         bumpFee,
         fundPsbt,
+        signPsbt,
         finalizePsbt,
         publishTransaction,
         listAccounts,
