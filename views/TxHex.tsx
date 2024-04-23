@@ -245,7 +245,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                     navigation={navigation}
                 />
                 <ScrollView>
-                    {pending_chan_ids && (
+                    {pending_chan_ids.length > 0 && (
                         <>
                             <Text
                                 style={{
@@ -303,7 +303,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                             </Text>
                         </>
                     )}
-                    {!loading && !pending_chan_ids && (
+                    {!loading && pending_chan_ids.length === 0 && (
                         <WarningMessage
                             message={localeString('views.TxHex.channelWarning')}
                             fontSize={13}
@@ -381,12 +381,14 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                     <View style={styles.button}>
                                         <Button
                                             title={localeString(
-                                                pending_chan_ids
+                                                pending_chan_ids.length > 0
                                                     ? 'views.TxHex.finalizeFlowAndBroadcast'
                                                     : 'views.TxHex.broadcast'
                                             )}
                                             onPress={() => {
-                                                if (pending_chan_ids) {
+                                                if (
+                                                    pending_chan_ids.length > 0
+                                                ) {
                                                     TransactionsStore.finalizeTxHexAndBroadcastChannel(
                                                         txHex,
                                                         pending_chan_ids
