@@ -377,6 +377,8 @@
     "views.Channel.cancelClose": "Cancel Channel Close",
     "views.Channel.close": "Close Channel",
     "views.Channel.closingRate": "(Optional) Sat per vbyte closing fee",
+    "views.Channel.externalAddress": "(Optional) External address",
+    "views.Channel.externalAddress.info": "If specified, your channel funds will be sent to this external address, instead of an address in the internal wallet.",
     "views.Channel.forceClose": "Force close",
     "views.Channel.confirmClose": "Confirm Channel Close",
     "views.Channel.aliasScid": "Alias SCID",

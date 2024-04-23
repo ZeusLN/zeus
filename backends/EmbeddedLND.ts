@@ -182,8 +182,16 @@ export default class EmbeddedLND extends LND {
         const force = urlParams && urlParams[2] ? true : false;
         const sat_per_vbyte =
             urlParams && urlParams[3] ? Number(urlParams[3]) : undefined;
+        const delivery_address =
+            urlParams && urlParams[4] ? urlParams[4] : undefined;
 
-        await closeChannel(fundingTxId, outputIndex, force, sat_per_vbyte);
+        return await closeChannel(
+            fundingTxId,
+            outputIndex,
+            force,
+            sat_per_vbyte,
+            delivery_address
+        );
     };
 
     getNodeInfo = async (urlParams?: Array<string>) =>
