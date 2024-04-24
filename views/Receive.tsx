@@ -1463,7 +1463,7 @@ export default class Receive extends React.Component<
                                         </View>
                                     )}
                                 {haveInvoice &&
-                                    !!zeroConfFee &&
+                                    zeroConfFee !== undefined &&
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (
                                         <TouchableOpacity

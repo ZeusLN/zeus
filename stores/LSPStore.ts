@@ -139,7 +139,7 @@ export default class LSPStore {
                     const status = response.info().status;
                     const data = response.json();
                     if (status == 200) {
-                        this.zeroConfFee = data.fee_amount_msat
+                        this.zeroConfFee = data.fee_amount_msat !== undefined
                             ? Number.parseInt(
                                   (
                                       Number(data.fee_amount_msat) / 1000
