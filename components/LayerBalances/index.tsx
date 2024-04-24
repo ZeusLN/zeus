@@ -15,15 +15,20 @@ import Amount from '../Amount';
 import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
 import LightningSwipeableRow from './LightningSwipeableRow';
+import { Row as LayoutRow } from '../layout/Row';
 
-import BalanceStore from './../../stores/BalanceStore';
-import UnitsStore from './../../stores/UnitsStore';
+import stores from '../../stores/Stores';
+
+import BalanceStore from '../../stores/BalanceStore';
+import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
+import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
+import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import MatiSvg from '../../assets/images/SVG/DynamicSVG/MatiSvg';
@@ -39,6 +44,7 @@ interface LayerBalancesProps {
     lightning?: string;
     locked?: boolean;
     consolidated?: boolean;
+    editMode?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -51,6 +57,7 @@ type DataRow = {
     // TODO check if exists
     count: number;
     watchOnly?: boolean;
+    hidden?: boolean;
 };
 
 const Row = ({ item }: { item: DataRow }) => {
@@ -152,7 +159,8 @@ const SwipeableRow = ({
     value,
     amount,
     lightning,
-    locked
+    locked,
+    editMode
 }: {
     item: DataRow;
     index: number;
@@ -162,6 +170,7 @@ const SwipeableRow = ({
     amount?: string;
     lightning?: string;
     locked?: boolean;
+    editMode?: boolean;
 }) => {
     if (index === 0) {
         return (
@@ -196,16 +205,46 @@ const SwipeableRow = ({
         );
     }
 
-    return (
-        <OnchainSwipeableRow
-            navigation={navigation}
-            value={value}
-            amount={amount}
-            locked={locked}
-            account={item.layer}
+    const HideButton = () => (
+        <TouchableOpacity
+            onPress={async () => {
+                item.hidden
+                    ? await stores.utxosStore.unhideAccount(item.layer)
+                    : await stores.utxosStore.hideAccount(item.layer);
+            }}
         >
-            <Row item={item} />
-        </OnchainSwipeableRow>
+            {item.hidden ? (
+                <EyeClosed
+                    style={styles.eyeIcon}
+                    fill={themeColor('text')}
+                    height={30}
+                    width={30}
+                />
+            ) : (
+                <EyeOpened
+                    style={styles.eyeIcon}
+                    fill={themeColor('text')}
+                    height={30}
+                    width={30}
+                />
+            )}
+        </TouchableOpacity>
+    );
+
+    return (
+        <LayoutRow>
+            {editMode && <HideButton />}
+            <OnchainSwipeableRow
+                navigation={navigation}
+                value={value}
+                amount={amount}
+                locked={locked}
+                account={item.layer}
+                hidden={item.hidden}
+            >
+                <Row item={item} />
+            </OnchainSwipeableRow>
+        </LayoutRow>
     );
 };
 
@@ -221,12 +260,17 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             lightning,
             onRefresh,
             locked,
-            consolidated
+            consolidated,
+            editMode
         } = this.props;
 
         const { totalBlockchainBalance, lightningBalance } = BalanceStore;
 
-        const otherAccounts = this.props.UTXOsStore.accounts;
+        const otherAccounts = editMode
+            ? this.props.UTXOsStore.accounts
+            : this.props.UTXOsStore.accounts.filter(
+                  (item: any) => !item.hidden
+              );
 
         let DATA: DataRow[] = [
             {
@@ -245,11 +289,13 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         if (Object.keys(otherAccounts).length > 0 && !consolidated) {
             for (let i = 0; i < otherAccounts.length; i++) {
+                if (!editMode && otherAccounts[i].hidden) i++;
                 DATA.push({
                     layer: otherAccounts[i].name,
                     subtitle: otherAccounts[i].XFP,
                     balance: otherAccounts[i].balance || 0,
-                    watchOnly: otherAccounts[i].watch_only || false
+                    watchOnly: otherAccounts[i].watch_only || false,
+                    hidden: otherAccounts[i].hidden || false
                 });
             }
         }
@@ -262,7 +308,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                         layer: otherAccounts[i].name,
                         subtitle: otherAccounts[i].XFP,
                         balance: otherAccounts[i].balance || 0,
-                        watchOnly: otherAccounts[i].watch_only || false
+                        watchOnly: otherAccounts[i].watch_only || false,
+                        hidden: otherAccounts[i].hidden || false
                     });
                     n++;
                 }
@@ -292,7 +339,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                             value={value}
                             amount={amount}
                             lightning={lightning}
-                            locked={locked}
+                            locked={locked || editMode}
+                            editMode={editMode}
                         />
                     )}
                     keyExtractor={(_item, index) => `message ${index}`}
@@ -343,5 +391,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         fontSize: 15,
         fontFamily: 'PPNeueMontreal-Medium'
-    }
+    },
+    eyeIcon: { alignSelf: 'center', margin: 15, marginLeft: 25 }
 });

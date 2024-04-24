@@ -7,6 +7,7 @@ import Header from '../../components/Header';
 import LayerBalances from '../../components/LayerBalances';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import { Row } from '../../components/layout/Row';
 
 import BalanceStore from '../../stores/BalanceStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -18,6 +19,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Add from '../../assets/images/SVG/Add.svg';
+import Filter from '../../assets/images/SVG/Filter On.svg';
 
 interface AccountsProps {
     navigation: any;
@@ -32,6 +34,7 @@ interface AccountsState {
     amount: string;
     lightning: string;
     locked: boolean;
+    editMode: boolean;
 }
 
 @inject('BalanceStore', 'UTXOsStore', 'UnitsStore', 'SettingsStore')
@@ -44,7 +47,8 @@ export default class Accounts extends React.Component<
         value: '',
         amount: '',
         lightning: '',
-        locked: false
+        locked: false,
+        editMode: false
     };
 
     UNSAFE_componentWillMount() {
@@ -92,8 +96,23 @@ export default class Accounts extends React.Component<
             SettingsStore,
             navigation
         } = this.props;
-        const { value, amount, lightning, locked } = this.state;
-        const { loadingAccounts } = UTXOsStore;
+        const { value, amount, lightning, locked, editMode } = this.state;
+        const { loadingAccounts, accounts } = UTXOsStore;
+
+        const FilterButton = () => (
+            <TouchableOpacity
+                onPress={() => {
+                    this.setState({
+                        editMode: !editMode
+                    });
+                }}
+            >
+                <Filter
+                    style={{ alignSelf: 'center', marginRight: 15 }}
+                    fill={themeColor('text')}
+                />
+            </TouchableOpacity>
+        );
 
         const AddButton = () => (
             <TouchableOpacity
@@ -119,7 +138,14 @@ export default class Accounts extends React.Component<
                             : localeString('views.Accounts.title'),
                         style: { color: themeColor('text') }
                     }}
-                    rightComponent={value ? null : <AddButton />}
+                    rightComponent={
+                        value ? null : (
+                            <Row>
+                                {accounts.length > 0 && <FilterButton />}
+                                <AddButton />
+                            </Row>
+                        )
+                    }
                     navigation={navigation}
                 />
                 {loadingAccounts && <LoadingIndicator />}
@@ -153,6 +179,7 @@ export default class Accounts extends React.Component<
                         amount={amount}
                         lightning={lightning}
                         locked={locked}
+                        editMode={editMode}
                     />
                 )}
                 {!loadingAccounts && !!value && !!lightning && (

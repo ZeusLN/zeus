@@ -1,4 +1,5 @@
 import { action, observable } from 'mobx';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 import SettingsStore from './SettingsStore';
 
@@ -61,7 +62,64 @@ export default class UTXOsStore {
     };
 
     @action
-    public listAccounts = (data?: any) => {
+    public hideAccount = async (name: string) => {
+        let hiddenAccounts: Array<string> = [];
+        try {
+            const hiddenString = await EncryptedStorage.getItem(
+                'hidden-accounts'
+            );
+            hiddenAccounts = JSON.parse(hiddenString || '[]');
+
+            if (!hiddenAccounts.includes(name)) hiddenAccounts.push(name);
+
+            await EncryptedStorage.setItem(
+                'hidden-accounts',
+                JSON.stringify(hiddenAccounts)
+            );
+
+            this.listAccounts();
+        } catch (error) {
+            console.log('Error loading hidden account list:', error);
+        }
+    };
+    @action
+    public unhideAccount = async (name: string) => {
+        let hiddenAccounts: Array<string> = [];
+        try {
+            const hiddenString = await EncryptedStorage.getItem(
+                'hidden-accounts'
+            );
+            hiddenAccounts = JSON.parse(hiddenString || '[]');
+
+            if (hiddenAccounts.includes(name)) {
+                hiddenAccounts = hiddenAccounts.filter((item) => item !== name);
+            }
+
+            await EncryptedStorage.setItem(
+                'hidden-accounts',
+                JSON.stringify(hiddenAccounts)
+            );
+
+            this.listAccounts();
+        } catch (error) {
+            console.log('Error loading hidden account list:', error);
+        }
+    };
+
+    @action
+    public listAccounts = async (data?: any) => {
+        let hiddenAccounts: Array<string> = [];
+        try {
+            const hiddenString = await EncryptedStorage.getItem(
+                'hidden-accounts'
+            );
+            if (hiddenString) {
+                hiddenAccounts = JSON.parse(hiddenString);
+            }
+        } catch (error) {
+            console.log('Error loading hidden account list:', error);
+        }
+
         this.errorMsg = '';
         this.loadingAccounts = true;
         return BackendUtils.listAccounts(data)
@@ -79,7 +137,8 @@ export default class UTXOsStore {
                                 accounts.push({
                                     ...account,
                                     XFP: account.XFP,
-                                    balance: data.total_balance
+                                    balance: data.total_balance,
+                                    hidden: hiddenAccounts.includes(name)
                                 });
 
                                 return;
