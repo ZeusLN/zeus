@@ -180,7 +180,9 @@ export default class UTXOPicker extends React.Component<
                                     {BackendUtils.supportsAccounts() && (
                                         <AccountFilter
                                             default={account}
-                                            items={accounts}
+                                            items={accounts.filter(
+                                                (item: any) => !item.hidden
+                                            )}
                                             refresh={(newAccount: string) => {
                                                 getUTXOs({
                                                     account: newAccount
