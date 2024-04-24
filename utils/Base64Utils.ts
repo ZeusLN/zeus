@@ -78,6 +78,18 @@ class Base64Utils {
         return arr.join('');
     };
 
+    mfpIntToBytes = (mfpInt: number) => {
+        // Convert the integer to hexadecimal string
+        let hexString = mfpInt.toString(16);
+
+        // Pad the string if necessary to ensure it has 8 characters
+        while (hexString.length < 8) {
+            hexString = '0' + hexString;
+        }
+
+        return this.reverseMfpBytes(hexString).toUpperCase();
+    };
+
     reverseMfpBytes = (mfp: string) => {
         // must be 8 characters
         const byteArray = mfp.match(/.{2}/g) || [];

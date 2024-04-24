@@ -1,6 +1,8 @@
 import BigNumber from 'bignumber.js';
 const bitcoin = require('bitcoinjs-lib');
 
+import Base64Utils from '../utils/Base64Utils';
+
 import { SATS_PER_BTC } from '../stores/UnitsStore';
 
 import { walletrpc } from '../proto/lightning';
@@ -188,6 +190,37 @@ class AddressUtils {
             return true; // Parsing succeeded, so it's a valid transaction hex
         } catch (error) {
             return false; // Parsing failed, so it's not a valid transaction hex
+        }
+    };
+
+    isKeystoreWalletExport = (walletExport: string) => {
+        try {
+            const parsed = JSON.parse(walletExport);
+            if (parsed.keystore?.xpub && parsed.keystore?.ckcc_xfp) return true;
+            return false;
+        } catch (error) {
+            return false;
+        }
+    };
+
+    processKeystoreWalletExport = (input: string) => {
+        try {
+            const parsed = JSON.parse(input);
+            const { keystore } = parsed;
+            const { xpub, label, ckcc_xfp } = keystore;
+
+            return {
+                MasterFingerprint: Base64Utils.mfpIntToBytes(ckcc_xfp),
+                ExtPubKey: xpub,
+                Label: label
+            };
+        } catch (e: any) {
+            // console.error('Error processing wallet export');
+            return {
+                MasterFingerprint: '',
+                ExtPubKey: '',
+                Label: ''
+            };
         }
     };
 

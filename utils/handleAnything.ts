@@ -415,6 +415,17 @@ const handleAnything = async (
         return ['PSBT', { psbt: value }];
     } else if (AddressUtils.isValidTxHex(value)) {
         return ['TxHex', { txHex: value }];
+    } else if (AddressUtils.isKeystoreWalletExport(value)) {
+        const { MasterFingerprint, ExtPubKey, Label } =
+            AddressUtils.processKeystoreWalletExport(value);
+        return [
+            'ImportAccount',
+            {
+                name: Label,
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint
+            }
+        ];
     } else if (AddressUtils.isJsonWalletExport(value)) {
         const { MasterFingerprint, ExtPubKey } = JSON.parse(value);
         return [

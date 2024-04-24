@@ -613,6 +613,34 @@ describe('AddressUtils', () => {
             ).toBeFalsy();
         });
     });
+    describe('isKeystoreWalletExport', () => {
+        it('validates keystore json export properly', () => {
+            expect(
+                AddressUtils.isKeystoreWalletExport(
+                    '{"keystore": {"ckcc_xpub": "xpub6CikkQWpo5GK4aDK8KCkmZcHKdANfNorMPfVz2QoS4x6FMg38SeTahR8i666uEUk1ZoZhyM5uctHf1Rpddbbf4YpoaVcieYvZWRG6UU7gzN", "xpub": "zpub6rPHMjrf6SMGmAbYo2n1BjoHfZTGYcnrBchwYpCaC5hrMZJVdkyappjQkW1Gu3napr3BCvYCpwbPRaex52RdFXv2YFtTtUBu6xYYscVK2n9", "label": "Passport (AB88DE89)", "ckcc_xfp": 2313062571, "type": "hardware", "hw_type": "passport", "derivation": "m/84\'/0\'/0\'"}, "wallet_type": "standard", "use_encryption": false, "seed_version": 17}'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isKeystoreWalletExport(
+                    'HECAAAAAUUciaQyD+SNWEpxgGtzTu+oDD0Cz5ruBd8p/f8oJcLAAAAAAAAAAAAAAhYWBQAAAAAAFgAUyAKI5CC+f/qmH/pwnWbWGp7jMXWdKwoAAAAAABYAFNOI441ynZKMY1nHncivhuWOrtE9AAAAAAABAMEBAAAAAAEBYMD9yaTYz+jWmkvNnmWzTDnV+5ipWwAgds0YQZV4lPgBAAAAAP////8CQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIg3s3PAAAAAAAIlEgAKq3khGSJ+6leSdrl5p3YU46/KMwhdxB3wnMZNci6isBQJWsI+EnbOw8UufplAEngcL/rwF5ZFg774Fsyy0o1TaTk2oieRvsf+yjovUNimvaEp0a7dbqJPlbjv1q7aiE8ScAAAAAAQEfQEIPAAAAAAAWABQYA4X8Va08XOA7BMSgTXpRRjsIgwEDBAEAAAAiBgLg8Q2B0fNznWOcgQ9IUBh8HAWuwoxqh1VzybPsUOurDhgAAAAAVAAAgAAAAIAAAACAAAAAAAUAAAAAACICA1PNZFtRnJQVrZZUDR631uBtwEpY7rCwpciT2cPRSFHzGAAAAABUAACAAAAAgAAAAIABAAAAAQAAAAA='
+                )
+            ).toBeFalsy();
+        });
+    });
+    describe('processesKeystoreWalletExport', () => {
+        it('validates keystore json export properly', () => {
+            expect(
+                AddressUtils.processKeystoreWalletExport(
+                    '{"keystore": {"ckcc_xpub": "xpub6CikkQWpo5GK4aDK8KCkmZcHKdANfNorMPfVz2QoS4x6FMg38SeTahR8i666uEUk1ZoZhyM5uctHf1Rpddbbf4YpoaVcieYvZWRG6UU7gzN", "xpub": "zpub6rPHMjrf6SMGmAbYo2n1BjoHfZTGYcnrBchwYpCaC5hrMZJVdkyappjQkW1Gu3napr3BCvYCpwbPRaex52RdFXv2YFtTtUBu6xYYscVK2n9", "label": "Passport (AB88DE89)", "ckcc_xfp": 2313062571, "type": "hardware", "hw_type": "passport", "derivation": "m/84\'/0\'/0\'"}, "wallet_type": "standard", "use_encryption": false, "seed_version": 17}'
+                )
+            ).toEqual({
+                ExtPubKey:
+                    'zpub6rPHMjrf6SMGmAbYo2n1BjoHfZTGYcnrBchwYpCaC5hrMZJVdkyappjQkW1Gu3napr3BCvYCpwbPRaex52RdFXv2YFtTtUBu6xYYscVK2n9',
+                Label: 'Passport (AB88DE89)',
+                MasterFingerprint: 'AB88DE89'
+            });
+        });
+    });
     describe('isJsonWalletExport', () => {
         it('validates wallet json export properly', () => {
             expect(

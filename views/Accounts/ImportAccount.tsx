@@ -68,6 +68,13 @@ export default class ImportAccount extends React.Component<
     UNSAFE_componentWillMount = () => {
         const { navigation } = this.props;
 
+        const name = navigation.getParam('name');
+        if (name) {
+            this.setState({
+                name
+            });
+        }
+
         const extended_public_key = navigation.getParam('extended_public_key');
         if (extended_public_key) {
             this.setState({
