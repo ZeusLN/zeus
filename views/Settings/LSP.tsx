@@ -59,13 +59,12 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
     render() {
         const { navigation, NodeInfoStore, SettingsStore } = this.props;
         const { enableLSP, lsp, accessKey, requestSimpleTaproot } = this.state;
-        const {
-            updateSettings,
-            embeddedLndNetwork,
-            certVerification,
-            settings
-        }: any = SettingsStore;
+        const { updateSettings, certVerification, settings }: any =
+            SettingsStore;
         const { nodes, selectedNode } = settings;
+        const { nodeInfo } = NodeInfoStore;
+
+        const isTestNet = nodeInfo?.isTestNet;
 
         const { lspNotConfigured, zeroConfConfig, scidAlias, zeroConf } =
             NodeInfoStore.lspNotConfigured();
@@ -74,8 +73,8 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
             !enableLSP ||
             accessKey !== '' ||
             requestSimpleTaproot ||
-            (embeddedLndNetwork === 'Mainnet' && lsp !== DEFAULT_LSP_MAINNET) ||
-            (embeddedLndNetwork === 'Testnet' && lsp !== DEFAULT_LSP_TESTNET);
+            (!isTestNet && lsp !== DEFAULT_LSP_MAINNET) ||
+            (isTestNet && lsp !== DEFAULT_LSP_TESTNET);
 
         return (
             <Screen>
@@ -236,12 +235,12 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     onChangeText={async (text: string) => {
                                         this.setState({ lsp: text });
                                         await updateSettings(
-                                            embeddedLndNetwork === 'Mainnet'
+                                            isTestNet
                                                 ? {
-                                                      lspMainnet: text
+                                                      lspTestnet: text
                                                   }
                                                 : {
-                                                      lspTestnet: text
+                                                      lspMainnet: text
                                                   }
                                         );
                                     }}
@@ -325,11 +324,9 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                         onPress={async () => {
                                             this.setState({
                                                 enableLSP: true,
-                                                lsp:
-                                                    embeddedLndNetwork ===
-                                                    'Mainnet'
-                                                        ? DEFAULT_LSP_MAINNET
-                                                        : DEFAULT_LSP_TESTNET,
+                                                lsp: isTestNet
+                                                    ? DEFAULT_LSP_TESTNET
+                                                    : DEFAULT_LSP_MAINNET,
                                                 accessKey: '',
                                                 requestSimpleTaproot: false
                                             });
