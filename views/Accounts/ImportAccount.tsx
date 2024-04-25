@@ -65,9 +65,7 @@ export default class ImportAccount extends React.Component<
         };
     }
 
-    UNSAFE_componentWillMount = () => {
-        const { navigation } = this.props;
-
+    handleParams = (navigation: any) => {
         const name = navigation.getParam('name');
         if (name) {
             this.setState({
@@ -97,6 +95,16 @@ export default class ImportAccount extends React.Component<
                 address_type
             });
         }
+    };
+
+    UNSAFE_componentWillMount = () => {
+        const { navigation } = this.props;
+        this.handleParams(navigation);
+    };
+
+    UNSAFE_componentWillReceiveProps = (newProps: any) => {
+        const { navigation } = newProps;
+        this.handleParams(navigation);
     };
 
     render() {
