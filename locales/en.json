@@ -262,7 +262,7 @@
     "views.SparkQRScanner.error": "Error fetching Spark config",
     "views.ImportAccount.title": "Import account",
     "views.ImportAccount.name": "Account name",
-    "views.ImportAccount.extendedPubKey": "Extended Public Key (Xpub)",
+    "views.ImportAccount.extendedPubKey": "Extended Public Key (xpub, zpub, tpub, etc.)",
     "views.ImportAccount.masterKeyFingerprint": "Master Key Fingerprint",
     "views.ImportAccount.addressType": "Address type",
     "views.ImportAccount.importAccount": "Import Account",
