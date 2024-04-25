@@ -1494,7 +1494,7 @@ export default class Receive extends React.Component<
                                         </View>
                                     )}
                                 {haveInvoice &&
-                                    !!zeroConfFee &&
+                                    zeroConfFee > 0 &&
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (
                                         <TouchableOpacity
@@ -1547,6 +1547,61 @@ export default class Receive extends React.Component<
                                                     sats={zeroConfFee}
                                                     fixedUnits="sats"
                                                 />
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontSize: 15,
+                                                        top: 5,
+                                                        textAlign: 'right'
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'general.tapToLearnMore'
+                                                    )}
+                                                </Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
+                                {haveInvoice &&
+                                    zeroConfFee === 0 &&
+                                    (selectedIndex == 0 ||
+                                        selectedIndex == 1) && (
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'LspExplanationWrappedInvoices'
+                                                )
+                                            }
+                                        >
+                                            <View
+                                                style={{
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderRadius: 10,
+                                                    top: 10,
+                                                    margin: 10,
+                                                    padding: 15,
+                                                    borderWidth: 0.5
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        marginBottom: 5
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Receive.lspExplainerZeroFeeWrapper'
+                                                    )}
+                                                </Text>
                                                 <Text
                                                     style={{
                                                         fontFamily:
