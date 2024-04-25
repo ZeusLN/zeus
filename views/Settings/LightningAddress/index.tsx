@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     Dimensions,
     FlatList,
+    ScrollView,
     StyleSheet,
     TouchableOpacity,
     View
@@ -543,9 +544,8 @@ export default class LightningAddress extends React.Component<
                             !lightningAddressHandle &&
                             !hasChannels && (
                                 <>
-                                    <View
+                                    <ScrollView
                                         style={{
-                                            flex: 1,
                                             marginLeft: 5,
                                             marginRight: 5
                                         }}
@@ -596,10 +596,12 @@ export default class LightningAddress extends React.Component<
                                                 )}
                                             </Text>
                                         )}
-                                    </View>
-                                    <View>
                                         <View
-                                            style={{ bottom: 15, margin: 10 }}
+                                            style={{
+                                                margin: 10,
+                                                marginTop: 25,
+                                                bottom: 15
+                                            }}
                                         >
                                             <Button
                                                 title={localeString(
@@ -676,7 +678,7 @@ export default class LightningAddress extends React.Component<
                                                 secondary
                                             />
                                         </View>
-                                    </View>
+                                    </ScrollView>
                                 </>
                             )}
                         {lightningAddressHandle && (
