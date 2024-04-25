@@ -561,6 +561,7 @@
     "views.Receive.lspExplainer": "LSP prendra le montant suivant comme frais de configuration:",
     "views.Receive.lspExplainerRoutingUnified": "LSP prendra le montant suivant comme frais, s'il est payé sur Lightning:",
     "views.Receive.lspExplainerRouting": "LSP prendra le montant suivant comme frais:",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
     "views.Receive.goToLspSettings": "Accédez aux paramètres LSP",
     "views.Receive.lspSwitchExplainer1": "Le LSP vous fournira des canaux 0-Conf qui vous permettront d'envoyer et de recevoir des paiements sur le réseau Lightning.",
     "views.Receive.lspSwitchExplainer2": "Le LSP enveloppera également vos factures, ce qui facilite la réception des paiements tout en protégeant votre vie privée.",
