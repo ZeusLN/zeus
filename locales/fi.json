@@ -560,6 +560,7 @@
     "views.Receive.lspExplainer": "LSP ottaa seuraavan summan asennusmaksuna:",
     "views.Receive.lspExplainerRoutingUnified": "LSP ottaa seuraavan summan maksuna, jos se maksetaan salaman kautta.",
     "views.Receive.lspExplainerRouting": "LSP ottaa seuraavan summan maksuna:",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
     "views.Receive.goToLspSettings": "Mene LSP-asetuksiin",
     "views.Receive.lspSwitchExplainer1": "LSP tarjoaa sinulle 0-vahvistuskanavia, joiden avulla voit lähettää ja vastaanottaa maksuja salamaverkossa.",
     "views.Receive.lspSwitchExplainer2": "LSP käärii myös laskusi, mikä helpottaa maksujen vastaanottamista samalla suojaten yksityisyyttäsi.",
