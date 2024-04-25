@@ -561,6 +561,7 @@
     "views.Receive.lspExplainer": "ผู้ให้บริการ LSP จะใช้จำนวนเงินดังต่อไปนี้ใช้เป็นค่าธรรมเนียมในการเปิดแชนแนล",
     "views.Receive.lspExplainerRoutingUnified": "ผู้ให้บริการ LSP จะใช้จำนวนเงินดังต่อไปนี้ใช้เป็นค่าธรรมเนียมในการเปิดแชนแนล หากจ่ายผ่าน Lightning.",
     "views.Receive.lspExplainerRouting": "ผู้ให้บริการ LSP จะใช้จำนวนเงินดังต่อไปนี้ใช้เป็นค่าธรรมเนียมในการเปิดแชนแนล",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
     "views.Receive.goToLspSettings": "ไปที่ตั้งค่า LSP",
     "views.Receive.lspSwitchExplainer1": "ผู้ให้บริการโหนดหรือ LSP จะทำการเชื่อมแชนแนลอย่างง่าย 0-conf เพื่อให้คุณสามารถรับส่งเงินผ่านระบบ Lightning Network",
     "views.Receive.lspSwitchExplainer2": "และสามารถครอบใบแจ้งหนี้ เพื่อให้รับเงินได้โดยที่ไม่เปิดเผยโหนดของโทรศัพท์",
