@@ -561,6 +561,7 @@
     "views.Receive.lspExplainer": "LSP возьмет следующую сумму в качестве платы за открытие канала:",
     "views.Receive.lspExplainerRoutingUnified": "LSP will take the following amount as a fee, if paid over lightning:",
     "views.Receive.lspExplainerRouting": "LSP возьмет следующую сумму в качестве комиссии:",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
     "views.Receive.goToLspSettings": "Открыть настройки LSP",
     "views.Receive.lspSwitchExplainer1": "LSP предоставит вам каналы с нулевыми подтверждениями, которые позволят вам отправлять и получать платежи в сети Лайтнинг.",
     "views.Receive.lspSwitchExplainer2": "LSP также обернет ваши инвойсы, что повысит вашу приватность при получении платежей.",
