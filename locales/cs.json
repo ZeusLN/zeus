@@ -561,7 +561,7 @@
     "views.Receive.lspExplainer": "LSP si bude účtovat následující částku jako zřizovací poplatek:",
     "views.Receive.lspExplainerRoutingUnified": "LSP si bude účtovat následující částku jako poplatek za platbu přes lightning:",
     "views.Receive.lspExplainerRouting": "LSP si bude účtovat následující částku jako poplatek:",
-    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zabalená faktura s nulovým poplatkem",
     "views.Receive.goToLspSettings": "Přejít do nastavení LSP",
     "views.Receive.lspSwitchExplainer1": "LSP vám poskytne 0-conf kanály, které vám umožní posílat a přijímat platby na Lightning network.",
     "views.Receive.lspSwitchExplainer2": "LSP také zabaluje vaše faktury, což zjednodušuje přijímání plateb a chrání vaše soukromí.",
