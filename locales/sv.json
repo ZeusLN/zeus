@@ -560,6 +560,7 @@
     "views.Receive.lspExplainer": "LSP tar följande belopp som en uppstarts avgift:",
     "views.Receive.lspExplainerRoutingUnified": "LSP tar följande belopp som avgift, om det betalas över lightning:",
     "views.Receive.lspExplainerRouting": "LSP tar följande belopp som avgift:",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
     "views.Receive.goToLspSettings": "Gå till LSP inställningar",
     "views.Receive.lspSwitchExplainer1": "LSP:n kommer att förse dig med 0-conf-kanaler som gör att du kan skicka och ta emot betalningar på Lightning-nätverket.",
     "views.Receive.lspSwitchExplainer2": "LSP kommer också att paketerade dina fakturor, vilket gör det lättare att ta emot betalningar samtidigt som du skyddar din integritet.",
