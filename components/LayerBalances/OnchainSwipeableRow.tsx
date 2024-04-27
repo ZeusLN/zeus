@@ -172,6 +172,7 @@ export default class OnchainSwipeableRow extends Component<
                 <TouchableOpacity
                     onPress={() => this.sendToAddress()}
                     activeOpacity={1}
+                    style={{ width: '100%' }}
                 >
                     {children}
                 </TouchableOpacity>
