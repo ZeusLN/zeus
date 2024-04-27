@@ -42,21 +42,21 @@ const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 const npubFormat = /^npub1[0-9a-z]{58}$/;
 
 /* xpub,ypub,zpub,vpub */
-const xpubFormat = /^(xpub|ypub|zpub|vpub)(.*)/;
+const xpubFormat = /^(xpub|ypub|zpub|vpub|tpub)(.*)/;
 
 /* psbt */
 const psbt = /^((cHN)|(psbt))[,:]?.*$/;
 
 /* string wallet export */
 const stringWalletExport =
-    /^\[[0-9a-fA-F]+\/\d+'\/\d+'\/\d+'\](xpub|vpub|tpub)[a-zA-Z0-9]+/;
+    /^\[[0-9a-fA-F]+\/\d+[',h]\/\d+[',h]\/\d+[',h]\](xpub|ypub|zpub|vpub|tpub)[a-zA-Z0-9]+/;
 
 /* descriptors */
 const wpkhDescriptor =
-    /^wpkh\(\[[a-zA-Z0-9]+\/[0-9]+h\/[0-9]+h\/[0-9]+h\](xpub|tpub|vpub)[a-zA-Z0-9]+\/<([0-9]+);([0-9]+)>\/[*]\)#([a-zA-Z0-9]+)$/;
+    /^wpkh\(\[[a-zA-Z0-9]+\/[0-9]+h\/[0-9]+h\/[0-9]+h\](xpub|ypub|zpub|vpub|tpub)[a-zA-Z0-9]+\/<([0-9]+);([0-9]+)>\/[*]\)#([a-zA-Z0-9]+)$/;
 
 const nestedWpkhDescriptor =
-    /^sh\(wpkh\(\[[a-zA-Z0-9]+\/[0-9]+h\/[0-9]+h\/[0-9]+h\](xpub|tpub|vpub)[a-zA-Z0-9]+\/<([0-9]+);([0-9]+)>\/[*]\)\)#([a-zA-Z0-9]+)$/;
+    /^sh\(wpkh\(\[[a-zA-Z0-9]+\/[0-9]+h\/[0-9]+h\/[0-9]+h\](xpub|ypub|zpub|vpub|tpub)[a-zA-Z0-9]+\/<([0-9]+);([0-9]+)>\/[*]\)\)#([a-zA-Z0-9]+)$/;
 
 export const CUSTODIAL_LNDHUBS = [
     'https://lndhub.io',

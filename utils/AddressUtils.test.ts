@@ -683,6 +683,14 @@ describe('AddressUtils', () => {
                 )
             ).toBeFalsy();
         });
+
+        it('validates wallet string export properly - alt - krux', () => {
+            expect(
+                AddressUtils.isStringWalletExport(
+                    '[41bb50e2/84h/0h/0h]xpub6CcD1VzTNViCWJy9Vc3ATAehTs2rzSsywddA6jbUzVx6M7LQUNCJjPVbYiUh3VohH9rh2sfnUvbh7hoRe2RRwbTK1K4jzqtGZdEjDTPnypm'
+                )
+            ).toBeTruthy();
+        });
     });
     describe('decodeStringWalletExport', () => {
         it('validates wallet string export properly', () => {
