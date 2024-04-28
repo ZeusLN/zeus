@@ -209,11 +209,28 @@ export default class InvoicesStore {
             if (routeHintChannels?.length) {
                 const routeHints = [];
                 for (const routeHintChannel of routeHintChannels) {
-                    const channelInfo = new ChannelInfo(
-                        await BackendUtils.getChannelInfo(
-                            routeHintChannel.channelId
-                        )
-                    );
+                    let channelInfo =
+                        this.channelsStore.chanInfo[
+                            routeHintChannel.channelId!
+                        ];
+                    if (!channelInfo) {
+                        try {
+                            channelInfo = new ChannelInfo(
+                                await BackendUtils.getChannelInfo(
+                                    routeHintChannel.channelId
+                                )
+                            );
+                        } catch (error: any) {
+                            this.creatingInvoiceError = true;
+                            this.creatingInvoice = false;
+                            this.error_msg =
+                                error.toString() ||
+                                localeString(
+                                    'stores.InvoicesStore.errorCreatingInvoice'
+                                );
+                            return;
+                        }
+                    }
                     const remotePolicy =
                         channelInfo.node1Pub ===
                         this.nodeInfoStore.nodeInfo.nodeId
