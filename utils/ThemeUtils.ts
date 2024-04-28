@@ -39,6 +39,7 @@ export function themeColor(themeString: string): any {
         secondary: '#f0f0f0',
         text: 'black',
         secondaryText: '#8a8999',
+        buttonText: 'black',
         highlight: 'orange',
         error: '#cc3300',
         separator: '#CED0CE',
@@ -75,7 +76,8 @@ export function themeColor(themeString: string): any {
         bolt: '#FFD93F',
         chain: '#FFD93F',
         disabled: '#767577',
-        invertQrIcons: false
+        invertQrIcons: false,
+        buttonText: '#FFF'
     };
 
     const Junkie: { [key: string]: any } = {
