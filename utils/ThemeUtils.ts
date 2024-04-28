@@ -19,7 +19,6 @@ export function themeColor(themeString: string): any {
         warning: '#E14C4C',
         bitcoin: '#FFB040',
         delete: '#992600',
-        qrFrame: '#FFD93F',
         bolt: '#FFF',
         chain: '#FFF',
         disabled: '#767577',
@@ -27,9 +26,10 @@ export function themeColor(themeString: string): any {
         buttonGradient: ['#FF9000', '#FFA900'],
         buttonText: '#000000',
         buttonTextSecondary: 'gray',
-        qr: '#FFA900',
+        qr: '#000',
         qrBackground: '#FFA900',
         qrLogoBackground: '#FFA900',
+        qrFrame: '#FFD93F',
         action: '#FFF'
     };
 
