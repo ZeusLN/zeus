@@ -560,6 +560,7 @@
     "views.Receive.lspExplainer": "LSP itachukua kiasi hiki kama ada ya usanidi:",
     "views.Receive.lspExplainerRoutingUnified": "LSP itachukua kiasi hiki kama ada, ikiwa italipwa kupitia mtandao wa lightning:",
     "views.Receive.lspExplainerRouting": "LSP itachukua kiasi hiki kama ada:",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
     "views.Receive.goToLspSettings": "Nenda kwa Mipangilio ya LSP",
     "views.Receive.lspSwitchExplainer1": "LSP itakupa vituo vya 0-uthibitisho ambavyo vitakuruhusu kutuma na kupokea malipo kwenye mtandao wa Lightning.",
     "views.Receive.lspSwitchExplainer2": "LSP pia itafunika ankara zako, hivyo kufanya iwe rahisi kupokea malipo wakati huo huo kuhifadhi faragha yako.",

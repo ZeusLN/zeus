@@ -560,6 +560,7 @@
     "views.Receive.lspExplainer": "این مقدار به عنوان کارمزد راه‌اندازی توسط LSP کسر خواهد شد:",
     "views.Receive.lspExplainerRoutingUnified": "LSP will take the following amount as a fee, if paid over lightning:",
     "views.Receive.lspExplainerRouting": "این مقدار به عنوان کارمزد توسط LSP کسر خواهد شد:",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
     "views.Receive.goToLspSettings": "برو به تنظیمات LSP",
     "views.Receive.lspSwitchExplainer1": "LSP برای شما  کانال 0-conf فراهم می کند که امکان ارسال و دریافت پرداخت ها در شبکه لایتنینگ را  در اختیارتان می گذارد.",
     "views.Receive.lspSwitchExplainer2": "LSP همچنین صورتحساب های شما را نیز می پیچد که علاوه بر حفظ حریم شما دریافت پرداخت را آسان تر می کند.",
