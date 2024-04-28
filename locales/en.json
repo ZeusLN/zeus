@@ -134,6 +134,7 @@
     "components.FeeBreakdown.nowClosed": "Now closed",
     "components.HopPicker.defaultTitle": "Channel to use",
     "components.HopPicker.selectChannel": "Select channel to use",
+    "components.HopPicker.routeHintsMax": "route hints max",
     "components.SetFeesForm.setNew": "Set New Fees",
     "components.SetFeesForm.hide": "Hide Set New Fees Form",
     "components.SetFeesForm.setting": "Setting fees, please wait...",
