@@ -108,48 +108,52 @@ export default class NostrContacts extends React.Component<
 
         const profilesEventsPromises = DEFAULT_NOSTR_RELAYS.map(
             async (relayItem) => {
-                const relay = relayInit(relayItem);
-                relay.on('connect', () => {
-                    console.log(`connected to ${relay.url}`);
-                });
-                relay.on('error', () => {
-                    console.log(`failed to connect to ${relay.url}`);
-                });
+                try {
+                    const relay = relayInit(relayItem);
+                    const tags: Array<string> = [];
 
-                await relay.connect();
-                let eventReceived = await relay.list([
-                    {
-                        authors: [pubkey],
-                        kinds: [3]
-                    }
-                ]);
+                    relay.on('connect', () => {
+                        console.log(`connected to ${relay.url}`);
+                    });
 
-                let latestContactEvent: any;
+                    relay.on('error', (): any => {
+                        console.log(`failed to connect to ${relay.url}`);
+                    });
 
-                eventReceived.forEach((content) => {
-                    if (
-                        !latestContactEvent ||
-                        content.created_at > latestContactEvent.created_at
-                    ) {
-                        latestContactEvent = content;
-                    }
-                });
+                    await relay.connect();
+                    let eventReceived = await relay.list([
+                        {
+                            authors: [pubkey],
+                            kinds: [3]
+                        }
+                    ]);
 
-                if (!latestContactEvent) return;
+                    let latestContactEvent: any;
 
-                const tags: Array<string> = [];
-                latestContactEvent.tags.forEach((tag: string) => {
-                    if (tag[0] === 'p') {
-                        tags.push(tag[1]);
-                    }
-                });
+                    eventReceived.forEach((content) => {
+                        if (
+                            !latestContactEvent ||
+                            content.created_at > latestContactEvent.created_at
+                        ) {
+                            latestContactEvent = content;
+                        }
+                    });
 
-                return relay.list([
-                    {
-                        authors: tags,
-                        kinds: [0]
-                    }
-                ]);
+                    if (!latestContactEvent) return;
+
+                    latestContactEvent.tags.forEach((tag: string) => {
+                        if (tag[0] === 'p') {
+                            tags.push(tag[1]);
+                        }
+                    });
+
+                    return relay.list([
+                        {
+                            authors: tags,
+                            kinds: [0]
+                        }
+                    ]);
+                } catch (e) {}
             }
         );
 

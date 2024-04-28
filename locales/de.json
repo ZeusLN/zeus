@@ -560,6 +560,7 @@
     "views.Receive.lspExplainer": "Der LSP wird folgende Einrichtungsgebühr erheben:",
     "views.Receive.lspExplainerRoutingUnified": "Der LSP wird folgende Gebühr berechnen, falls mit Lightning gezahlt wird:",
     "views.Receive.lspExplainerRouting": "Der LSP wird folgende Gebühr erheben:",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Gebührenfreie verpackte Rechnung",
     "views.Receive.goToLspSettings": "Gehe zu LSP-Einstellungen",
     "views.Receive.lspSwitchExplainer1": "Der LSP wird dir 0-Conf-Kanäle bereitstellen, die es dir ermöglichen, Zahlungen im Lightning-Netzwerk zu senden und zu empfangen.",
     "views.Receive.lspSwitchExplainer2": "Der LSP wird darüber hinaus deine Rechnungen verpacken (wrapped invoices), wodurch eingehende Zahlungen erleichert werden und deine Privatsphäre geschützt wird.",

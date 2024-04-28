@@ -1015,31 +1015,6 @@ export default class PaymentRequest extends React.Component<
                                         )}
                                     </>
                                 )}
-
-                                {!!pay_req &&
-                                    !lightningReadyToSend &&
-                                    !noBalance && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium',
-                                                    color: themeColor(
-                                                        'highlight'
-                                                    ),
-                                                    margin: 5,
-                                                    alignSelf: 'center',
-                                                    marginTop: 10,
-                                                    marginBottom: 10
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.PaymentRequest.lndGettingReady'
-                                                )}
-                                            </Text>
-                                            <LoadingIndicator size={30} />
-                                        </>
-                                    )}
                             </View>
                         )}
                     </ScrollView>
@@ -1050,6 +1025,26 @@ export default class PaymentRequest extends React.Component<
                     !loadingFeeEstimate &&
                     BackendUtils.supportsLightningSends() && (
                         <View style={{ bottom: 10 }}>
+                            {!!pay_req && !lightningReadyToSend && !noBalance && (
+                                <>
+                                    <Text
+                                        style={{
+                                            fontFamily: 'PPNeueMontreal-Medium',
+                                            color: themeColor('highlight'),
+                                            margin: 5,
+                                            alignSelf: 'center',
+                                            marginTop: 20,
+                                            marginBottom: 10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.PaymentRequest.lndGettingReady'
+                                        )}
+                                    </Text>
+                                    <LoadingIndicator size={30} />
+                                </>
+                            )}
+
                             <View style={styles.button}>
                                 <Button
                                     title={localeString(
