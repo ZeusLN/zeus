@@ -560,6 +560,7 @@
     "views.Receive.lspExplainer": "LSP va lua următoarea sumă ca taxă de configurare:",
     "views.Receive.lspExplainerRoutingUnified": "LSP va lua următoarea sumă ca taxă, dacă este plătită prin Lightning:",
     "views.Receive.lspExplainerRouting": "LSP va lua următoarea sumă ca taxă:",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
     "views.Receive.goToLspSettings": "Accesați setările LSP",
     "views.Receive.lspSwitchExplainer1": "LSP vă va oferi canale 0-conf care vă vor permite să trimiteți și să primiți plăți în rețeaua Lightning",
     "views.Receive.lspSwitchExplainer2": "LSP vă va înfășura facturile, ceea ce face mai ușor să primiți plăți în timp ce vă protejați confidențialitatea",
