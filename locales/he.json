@@ -560,6 +560,7 @@
     "views.Receive.lspExplainer": "LSP will take the following amount as a setup fee:",
     "views.Receive.lspExplainerRoutingUnified": "LSP will take the following amount as a fee, if paid over lightning:",
     "views.Receive.lspExplainerRouting": "LSP will take the following amount as a fee:",
+    "views.Receive.lspExplainerZeroFeeWrapper": "Zero-fee wrapped invoice",
     "views.Receive.goToLspSettings": "מעבר להגדרות LSP",
     "views.Receive.lspSwitchExplainer1": "The LSP will provide you with 0-conf channels that will allow you to send and receive payments on the Lightning network.",
     "views.Receive.lspSwitchExplainer2": "The LSP will also wrap your invoices, making it easier to receive payments while protecting your privacy.",
