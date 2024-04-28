@@ -14,6 +14,7 @@ import { inject, observer } from 'mobx-react';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import backendUtils from '../utils/BackendUtils';
 
 import Button from '../components/Button';
 import { ChannelItem } from './Channels/ChannelItem';
@@ -45,6 +46,7 @@ interface ChannelPickerState {
 }
 
 const DEFAULT_TITLE = localeString('components.HopPicker.defaultTitle');
+const MAX_NUMBER_ROUTE_HINTS_LND = 20;
 
 @inject('ChannelsStore', 'UnitsStore')
 @observer
@@ -212,7 +214,7 @@ export default class ChannelPicker extends React.Component<
                                     ...styles.text,
                                     color: themeColor('text'),
                                     paddingTop: 20,
-                                    paddingBottom: 20
+                                    paddingBottom: 10
                                 }}
                             >
                                 {selectionMode === 'multiple'
@@ -234,10 +236,36 @@ export default class ChannelPicker extends React.Component<
                                 onRefresh={() => this.refreshChannels()}
                             />
 
+                            {selectionMode === 'multiple' &&
+                                backendUtils.isLNDBased() &&
+                                selectedChannels.length >
+                                    MAX_NUMBER_ROUTE_HINTS_LND && (
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('warning'),
+                                            alignSelf: 'flex-end',
+                                            marginTop: 5,
+                                            marginEnd: 16
+                                        }}
+                                    >
+                                        {MAX_NUMBER_ROUTE_HINTS_LND}{' '}
+                                        {localeString(
+                                            'components.HopPicker.routeHintsMax'
+                                        )}
+                                    </Text>
+                                )}
+
                             <View style={styles.button}>
                                 <Button
                                     title={localeString('general.confirm')}
-                                    disabled={selectedChannels.length === 0}
+                                    disabled={
+                                        selectedChannels.length === 0 ||
+                                        (selectionMode === 'multiple' &&
+                                            backendUtils.isLNDBased() &&
+                                            selectedChannels.length >
+                                                MAX_NUMBER_ROUTE_HINTS_LND)
+                                    }
                                     onPress={() => {
                                         this.updateValueSet();
                                         this.setState({
@@ -326,8 +354,7 @@ const styles = StyleSheet.create({
         marginLeft: Platform.OS === 'ios' ? 0 : -8
     },
     button: {
-        paddingTop: 10,
-        paddingBottom: 10
+        paddingTop: 10
     },
     modal: {
         margin: 20,
