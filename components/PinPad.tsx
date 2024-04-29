@@ -1,11 +1,19 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, Pressable, View, AppState } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    Pressable,
+    View,
+    AppState,
+    Platform
+} from 'react-native';
 import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
 import Success from '../assets/images/SVG/Success.svg';
 import Touchable from './Touchable';
 import Stores from '../stores/Stores';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 interface PinPadProps {
     appendValue: (newValue: string) => void;
@@ -89,6 +97,14 @@ export default function PinPad({
         setPinValueLength(0);
     };
 
+    const triggerHapticFeedback = () => {
+        if (!amount) {
+            // effectClick is only avaiable on Android
+            const type = Platform.OS === 'android' ? 'effectClick' : 'soft';
+            ReactNativeHapticFeedback.trigger(type);
+        }
+    };
+
     return (
         <View style={styles.pad}>
             <Row align="flex-end" style={styles.pinPadRow}>
@@ -96,6 +112,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[1]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -114,6 +131,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[2]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -132,6 +150,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[3]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -152,6 +171,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[4]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -170,6 +190,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[5]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -188,6 +209,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[6]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -208,6 +230,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[7]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -226,6 +249,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[8]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -244,6 +268,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[9]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -285,6 +310,7 @@ export default function PinPad({
                         touch={() => {
                             decrementPinValueLength();
                             deleteValue();
+                            triggerHapticFeedback();
                         }}
                         highlight={numberHighlight}
                         style={styles.key}
@@ -306,6 +332,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[0]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -347,6 +374,7 @@ export default function PinPad({
                             touch={() => {
                                 clearPinValueLength();
                                 clearValue();
+                                triggerHapticFeedback();
                             }}
                             highlight={numberHighlight}
                             style={styles.key}
@@ -369,6 +397,7 @@ export default function PinPad({
                         touch={() => {
                             submitValue();
                             clearPinValueLength();
+                            triggerHapticFeedback();
                         }}
                         highlight={numberHighlight}
                         style={styles.key}
