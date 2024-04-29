@@ -106,6 +106,7 @@
     "react-native-fs": "2.20.0",
     "react-native-gesture-handler": "2.15.0",
     "react-native-get-random-values": "1.9.0",
+    "react-native-haptic-feedback": "2.2.0",
     "react-native-hce": "0.1.2",
     "react-native-image-picker": "5.0.1",
     "react-native-keychain": "8.1.1",
