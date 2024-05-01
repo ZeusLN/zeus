@@ -832,6 +832,7 @@
     "views.Settings.EmbeddedNode.AdvancedDisasterRecovery.noBackups": "No backups found",
     "views.Settings.EmbeddedNode.LNDLogs.title": "LND Logs",
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Copy logs to clipboard",
+    "views.Settings.EmbeddedNode.logLevel": "Log level",
     "views.Settings.LSP.enableLSP": "Enable Lightning Service Provider (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "The LSP will get you connected to the Lightning network by opening up payment channels for you.",
     "views.Settings.LSP.lspAccessKey": "LSP Access Key (if needed)",

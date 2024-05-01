@@ -72,7 +72,7 @@ const writeLndConfig = async (
         : 'addpeer';
 
     const config = `[Application Options]
-    debuglevel=info
+    debuglevel=${stores.settingsStore?.settings?.logLevel || 'info'}
     maxbackoff=2s
     sync-freelist=1
     accept-keysend=1
