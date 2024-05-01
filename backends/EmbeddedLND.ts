@@ -79,7 +79,8 @@ export default class EmbeddedLND extends LND {
             expiry: data.expiry,
             is_amp: data.is_amp,
             is_private: data.private,
-            preimage: data.preimage
+            preimage: data.preimage,
+            route_hints: data.route_hints
         });
     getPayments = async () => await listPayments();
     getNewAddress = async (data: any) =>

@@ -126,7 +126,8 @@ export interface ILndMobileInjections {
             expiry,
             is_amp,
             is_private,
-            preimage
+            preimage,
+            route_hints
         }: {
             amount?: number;
             amount_msat?: number;
@@ -135,6 +136,7 @@ export interface ILndMobileInjections {
             is_amp?: boolean;
             is_private?: boolean;
             preimage?: string;
+            route_hints?: lnrpc.IRouteHint[] | null;
         }) => Promise<lnrpc.AddInvoiceResponse>;
         cancelInvoice: (
             paymentHash: string
