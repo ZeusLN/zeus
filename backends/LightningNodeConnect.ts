@@ -158,7 +158,7 @@ export default class LightningNodeConnect {
             })
             .then((data: lnrpc.NewAddressResponse) => snakeize(data));
 
-    openChannel = async (data: OpenChannelRequest) => {
+    openChannelSync = async (data: OpenChannelRequest) => {
         let request: lnrpc.OpenChannelRequest = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
