@@ -894,7 +894,7 @@ export default class ChannelsStore {
                     });
             }
         } else {
-            BackendUtils.openChannel(request)
+            BackendUtils.openChannelSync(request)
                 .then((data: any) => {
                     this.output_index = data.output_index;
                     this.funding_txid_str = data.funding_txid_str;

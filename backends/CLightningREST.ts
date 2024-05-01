@@ -168,7 +168,7 @@ export default class CLightningREST extends LND {
             payments: data.pays
         }));
     getNewAddress = () => this.getRequest('/v1/newaddr?addrType=bech32');
-    openChannel = (data: OpenChannelRequest) => {
+    openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
         const feeRate = `${new BigNumber(data.sat_per_vbyte)
             .times(1000)
