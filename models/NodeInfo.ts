@@ -14,6 +14,7 @@ export default class NodeInfo extends BaseModel {
     synced_to_chain?: boolean;
     @observable testnet?: boolean;
     @observable regtest?: boolean;
+    @observable signet?: boolean;
     block_hash?: string;
     @observable block_height?: number;
     best_header_timestamp?: string;
@@ -45,6 +46,16 @@ export default class NodeInfo extends BaseModel {
             (this.chains &&
                 this.chains[0] &&
                 this.chains[0].network === 'regtest')
+        );
+    }
+
+    @computed public get isSigNet(): boolean {
+        return (
+            this.signet ||
+            this.network === 'signet' ||
+            (this.chains &&
+                this.chains[0] &&
+                this.chains[0].network === 'signet')
         );
     }
 
