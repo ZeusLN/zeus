@@ -1912,7 +1912,11 @@ export default class Receive extends React.Component<
                                                         onValueChange={async () => {
                                                             this.setState({
                                                                 enableLSP:
-                                                                    !enableLSP
+                                                                    !enableLSP,
+                                                                lspIsActive:
+                                                                    !enableLSP &&
+                                                                    BackendUtils.supportsLSPs() &&
+                                                                    !lspNotConfigured
                                                             });
                                                             await updateSettings(
                                                                 {
