@@ -138,6 +138,7 @@ export interface Settings {
     recovery: boolean;
     initialLoad: boolean;
     embeddedTor: boolean;
+    logLevel: string;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -195,6 +196,15 @@ export const INTERFACE_KEYS = [
     { key: 'LNDHub', value: 'lndhub' },
     { key: '[DEPRECATED] Core Lightning (Sparko)', value: 'spark' },
     { key: '[DEPRECATED] Eclair', value: 'eclair' }
+];
+
+export const LOG_LEVELS = [
+    { key: 'Info', value: 'info' },
+    { key: 'Debug', value: 'debug' },
+    { key: 'Trace', value: 'trace' },
+    { key: 'Warn', value: 'warn' },
+    { key: 'Error', value: 'error' },
+    { key: 'Critical', value: 'critical' }
 ];
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
@@ -1027,6 +1037,7 @@ export default class SettingsStore {
         recovery: false,
         initialLoad: true,
         embeddedTor: false,
+        logLevel: 'info',
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
@@ -1335,6 +1346,16 @@ export default class SettingsStore {
                     }
                     this.setSettings(JSON.stringify(this.settings));
                     await EncryptedStorage.setItem(MOD_KEY3, 'true');
+                }
+
+                const MOD_KEY4 = 'log-level';
+                const mod4 = await EncryptedStorage.getItem(MOD_KEY4);
+                if (!mod4) {
+                    if (!this.settings?.logLevel) {
+                        this.settings.logLevel = 'info';
+                    }
+                    this.setSettings(JSON.stringify(this.settings));
+                    await EncryptedStorage.setItem(MOD_KEY4, 'true');
                 }
 
                 // migrate old POS squareEnabled setting to posEnabled

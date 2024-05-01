@@ -5,11 +5,12 @@ import { inject, observer } from 'mobx-react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Button from '../../../components/Button';
+import DropdownSetting from '../../../components/DropdownSetting';
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
 import Switch from '../../../components/Switch';
 
-import SettingsStore from '../../../stores/SettingsStore';
+import SettingsStore, { LOG_LEVELS } from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
@@ -28,6 +29,7 @@ interface EmbeddedNodeAdvancedSettingsState {
     embeddedTor: boolean | undefined;
     persistentMode: boolean | undefined;
     compactDb: boolean | undefined;
+    logLevel: string;
 }
 
 const PERSISTENT_KEY = 'persistentServicesEnabled';
@@ -42,7 +44,8 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
         rescan: false,
         persistentMode: false,
         embeddedTor: false,
-        compactDb: false
+        compactDb: false,
+        logLevel: 'info'
     };
 
     async UNSAFE_componentWillMount() {
@@ -55,13 +58,15 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
             rescan: settings.rescan,
             persistentMode: persistentMode === 'true' ? true : false,
             embeddedTor: settings.embeddedTor,
-            compactDb: settings.compactDb
+            compactDb: settings.compactDb,
+            logLevel: settings.logLevel || 'info'
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { rescan, persistentMode, embeddedTor, compactDb } = this.state;
+        const { rescan, persistentMode, embeddedTor, compactDb, logLevel } =
+            this.state;
         const { updateSettings, embeddedLndNetwork, settings }: any =
             SettingsStore;
         const { bimodalPathfinding } = settings;
@@ -354,6 +359,24 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                 </Text>
                             </View>
                         </>
+                        <View style={{ margin: 10 }}>
+                            <DropdownSetting
+                                title={localeString(
+                                    'views.Settings.EmbeddedNode.logLevel'
+                                )}
+                                selectedValue={logLevel}
+                                onValueChange={async (value: string) => {
+                                    this.setState({
+                                        logLevel: value
+                                    });
+                                    await updateSettings({
+                                        logLevel: value
+                                    });
+                                    restartNeeded();
+                                }}
+                                values={LOG_LEVELS}
+                            />
+                        </View>
                         <>
                             <View style={{ marginTop: 20 }}>
                                 <Button
