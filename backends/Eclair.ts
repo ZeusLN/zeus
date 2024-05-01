@@ -244,7 +244,7 @@ export default class Eclair {
         }));
     getNewAddress = () =>
         this.api('getnewaddress').then((address: any) => ({ address }));
-    openChannel = (data: OpenChannelRequest) =>
+    openChannelSync = (data: OpenChannelRequest) =>
         this.api('open', {
             nodeId: data.node_pubkey_string,
             fundingSatoshis: data.satoshis,
