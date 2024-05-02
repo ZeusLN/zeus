@@ -503,6 +503,7 @@ export default class CurrencyConverter extends React.Component<
                                     onReordered={this.onReordered}
                                     data={Object.keys(inputValues)}
                                     keyExtractor={(item: any) => item}
+                                    scrollEnabled={false}
                                     renderItem={({
                                         item,
                                         onDragStart,
