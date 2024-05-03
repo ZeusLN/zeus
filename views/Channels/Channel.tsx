@@ -36,7 +36,6 @@ import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import Edit from '../../assets/images/SVG/Edit.svg';
-import Share from '../../assets/images/SVG/Share.svg';
 
 interface ChannelProps {
     navigation: any;
@@ -218,24 +217,7 @@ export default class ChannelView extends React.Component<
             </TouchableOpacity>
         );
 
-        const KeySend = () => (
-            <TouchableOpacity
-                onPress={() =>
-                    navigation.navigate('Send', {
-                        destination: remotePubkey,
-                        transactionType: 'Keysend',
-                        isValid: true
-                    })
-                }
-            >
-                <Share
-                    fill={themeColor('text')}
-                    style={{ alignSelf: 'center' }}
-                />
-            </TouchableOpacity>
-        );
-
-        const centerComponent = () => {
+        const rightComponent = () => {
             if (
                 editableFees &&
                 this.props.SettingsStore.implementation !== 'embedded-lnd'
@@ -252,8 +234,7 @@ export default class ChannelView extends React.Component<
                     onBack={() => {
                         ChannelsStore.clearCloseChannelErr();
                     }}
-                    centerComponent={centerComponent}
-                    rightComponent={<KeySend />}
+                    rightComponent={rightComponent}
                     placement="right"
                     navigation={navigation}
                 />
