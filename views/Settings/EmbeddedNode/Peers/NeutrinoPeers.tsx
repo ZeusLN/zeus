@@ -483,6 +483,7 @@ export default class NeutrinoPeers extends React.Component<
                                             index: number
                                         ) => `${item.txid}-${index}`}
                                         onEndReachedThreshold={50}
+                                        scrollEnabled={false}
                                     />
                                 ) : (
                                     <Text
