@@ -16,7 +16,7 @@ import UrlUtils from '../utils/UrlUtils';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
-import Error from '../assets/images/SVG/Error.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 interface SendingOnChainProps {
@@ -135,13 +135,13 @@ export default class SendingOnChain extends React.Component<
                             )}
                             {(error || error_msg) && (
                                 <View style={{ alignItems: 'center' }}>
-                                    <Error
+                                    <ErrorIcon
                                         width={windowSize.height * 0.13}
                                         height={windowSize.height * 0.13}
                                     />
                                     <Text
                                         style={{
-                                            color: '#FF9090',
+                                            color: themeColor('warning'),
                                             fontFamily: 'PPNeueMontreal-Book',
                                             fontSize: 32,
                                             margin: 15,
