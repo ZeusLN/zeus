@@ -320,8 +320,8 @@ export default class EditFee extends React.Component<
                                     style={{
                                         top: 20,
                                         fontSize: 20,
-                                        color: '#E14C4C',
-                                        marginBottom: 50
+                                        color: themeColor('warning'),
+                                        marginBottom: 49
                                     }}
                                 >
                                     {localeString('views.EditFee.error')}
