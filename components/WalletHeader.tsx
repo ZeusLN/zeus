@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
@@ -83,7 +84,11 @@ const MailboxAnimated = () => {
     );
 };
 
-const ActivityButton = ({ navigation }: { navigation: any }) => (
+const ActivityButton = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+}) => (
     <View style={{ width: 80 }}>
         <Button
             icon={{
@@ -98,7 +103,11 @@ const ActivityButton = ({ navigation }: { navigation: any }) => (
     </View>
 );
 
-const TempleButton = ({ navigation }: { navigation: any }) => (
+const TempleButton = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+}) => (
     <TouchableOpacity
         onPress={() => protectedNavigation(navigation, 'Wallet', true)}
     >
@@ -111,7 +120,11 @@ const TempleButton = ({ navigation }: { navigation: any }) => (
     </TouchableOpacity>
 );
 
-const ScanBadge = ({ navigation }: { navigation: any }) => (
+const ScanBadge = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+}) => (
     <TouchableOpacity
         onPress={() => navigation.navigate('HandleAnythingQRScanner')}
         accessibilityLabel={localeString('general.scan')}
@@ -124,7 +137,7 @@ const ClipboardBadge = ({
     navigation,
     clipboard
 }: {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     clipboard: string;
 }) => (
     <TouchableOpacity
@@ -162,7 +175,7 @@ interface WalletHeaderProps {
     LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
     SyncStore?: SyncStore;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     loading: boolean;
     title: string;
     channels: boolean;
@@ -383,7 +396,11 @@ export default class WalletHeader extends React.Component<
             </TouchableOpacity>
         );
 
-        const SyncBadge = ({ navigation }: { navigation: any }) => {
+        const SyncBadge = ({
+            navigation
+        }: {
+            navigation: StackNavigationProp<any, any>;
+        }) => {
             const [spinAnim] = useState(new Animated.Value(0));
 
             const interpolateRotation = spinAnim.interpolate({

@@ -12,6 +12,9 @@ import Svg, { Text } from 'react-native-svg';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { isEmpty } from 'lodash';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
@@ -29,12 +32,12 @@ import Add from '../../assets/images/SVG/Add.svg';
 import Edit from '../../assets/images/SVG/Pen.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import BitcoinIcon from '../../assets/images/SVG/bitcoin-icon.svg';
-import { isEmpty } from 'lodash';
 
 interface CurrencyConverterProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     FiatStore?: FiatStore;
     SettingsStore?: SettingsStore;
+    route: Route<'CurrencyConverter', { selectedCurrency: string }>;
 }
 
 interface CurrencyConverterState {
@@ -69,22 +72,17 @@ export default class CurrencyConverter extends React.Component<
     }
 
     componentDidMount() {
-        const { navigation } = this.props;
         this.retrieveInputValues();
         this.addDefaultCurrenciesToStorage();
-        const selectedCurrency = navigation.getParam('selectedCurrency', '');
+        const selectedCurrency = this.props.route.params?.selectedCurrency;
         if (selectedCurrency) {
             this.handleCurrencySelect(selectedCurrency);
         }
     }
 
-    componentDidUpdate(prevProps) {
-        const { navigation } = this.props;
-        const selectedCurrency = navigation.getParam('selectedCurrency', '');
-        const prevSelectedCurrency = prevProps.navigation.getParam(
-            'selectedCurrency',
-            ''
-        );
+    componentDidUpdate(prevProps: CurrencyConverterProps) {
+        const selectedCurrency = this.props.route.params?.selectedCurrency;
+        const prevSelectedCurrency = prevProps.route.params?.selectedCurrency;
 
         // Check if the selected currency prop has changed
         if (selectedCurrency !== prevSelectedCurrency) {

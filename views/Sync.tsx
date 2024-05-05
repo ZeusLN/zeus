@@ -2,6 +2,7 @@ import React from 'react';
 import { Dimensions, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import CircularProgress from 'react-native-circular-progress-indicator';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import KeyValue from '../components/KeyValue';
@@ -14,7 +15,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface SyncProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SyncStore: SyncStore;
 }
 

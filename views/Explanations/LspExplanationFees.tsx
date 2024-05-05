@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import NavigationService from '../../NavigationService';
 
@@ -12,7 +13,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 interface LspExplanationProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
 }
 
 const FONT_SIZE = 18;

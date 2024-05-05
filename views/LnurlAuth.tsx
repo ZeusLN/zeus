@@ -5,6 +5,8 @@ import { inject, observer } from 'mobx-react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import querystring from 'querystring-es3';
 import { HMAC as sha256HMAC } from 'fast-sha256';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -29,8 +31,9 @@ const LNURLAUTH_CANONICAL_PHRASE =
     'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
 
 interface LnurlAuthProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: Route<'LnurlAuth', { lnurlParams: any }>;
 }
 
 interface LnurlAuthState {
@@ -85,8 +88,8 @@ export default class LnurlAuth extends React.Component<
     }
 
     stateFromProps(props: LnurlAuthProps) {
-        const { navigation } = props;
-        const lnurl = navigation.getParam('lnurlParams');
+        const { route } = props;
+        const lnurl = route.params?.lnurlParams;
 
         return {
             domain: lnurl.domain,
@@ -164,9 +167,9 @@ export default class LnurlAuth extends React.Component<
     sendValues() {
         this.setState({ authenticating: true });
 
-        const { navigation } = this.props;
+        const { route } = this.props;
         const { domain } = this.state;
-        const lnurl = navigation.getParam('lnurlParams');
+        const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.key = this.state.linkingKeyPub;

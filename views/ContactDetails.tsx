@@ -8,6 +8,9 @@ import {
     ScrollView
 } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import Screen from '../components/Screen';
 import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -29,7 +32,15 @@ import { localeString } from '../utils/LocaleUtils';
 import Contact from '../models/Contact';
 
 interface ContactDetailsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<
+        'ContactDetails',
+        {
+            isNostrContact: boolean;
+            contactId: string;
+            nostrContact: any;
+        }
+    >;
 }
 
 interface ContactDetailsState {
@@ -68,10 +79,7 @@ export default class ContactDetails extends React.Component<
         try {
             await this.fetchContact();
 
-            const isNostrContact = this.props.navigation.getParam(
-                'isNostrContact',
-                null
-            );
+            const isNostrContact = this.props.route.params?.isNostrContact;
 
             this.setState({ isNostrContact });
         } catch (error) {
@@ -80,16 +88,10 @@ export default class ContactDetails extends React.Component<
     }
 
     fetchContact = async () => {
-        this.props.navigation.addListener('didFocus', async () => {
+        this.props.navigation.addListener('focus', async () => {
             try {
-                const contactId = this.props.navigation.getParam(
-                    'contactId',
-                    null
-                );
-                const nostrContact = this.props.navigation.getParam(
-                    'nostrContact',
-                    null
-                );
+                const { contactId, nostrContact } =
+                    this.props.route.params ?? {};
                 const contactsString = await EncryptedStorage.getItem(
                     'zeus-contacts'
                 );
@@ -203,10 +205,7 @@ export default class ContactDetails extends React.Component<
         const { navigation } = this.props;
 
         const contact = new Contact(this.state.contact);
-        const nostrContact = this.props.navigation.getParam(
-            'nostrContact',
-            null
-        );
+        const nostrContact = this.props.route.params?.nostrContact;
         const StarButton = () => (
             <TouchableOpacity onPress={this.toggleFavorite}>
                 <Star

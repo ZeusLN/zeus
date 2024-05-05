@@ -10,6 +10,8 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
@@ -50,13 +52,14 @@ import Scan from '../assets/images/SVG/Scan.svg';
 
 interface OpenChannelProps {
     exitSetup: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     ModalStore: ModalStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UTXOsStore: UTXOsStore;
+    route: Route<'OpenChannel', { node_pubkey_string: string; host: string }>;
 }
 
 interface OpenChannelState {
@@ -209,14 +212,11 @@ export default class OpenChannel extends React.Component<
         this.initFromProps(nextProps);
     }
 
-    initFromProps(props: any) {
-        const { navigation } = props;
+    initFromProps(props: OpenChannelProps) {
+        const { route } = props;
 
-        const node_pubkey_string = navigation.getParam(
-            'node_pubkey_string',
-            ''
-        );
-        const host = navigation.getParam('host', '');
+        const node_pubkey_string = route.params?.node_pubkey_string ?? '';
+        const host = route.params?.host ?? '';
 
         this.setState({
             node_pubkey_string,
@@ -790,6 +790,7 @@ export default class OpenChannel extends React.Component<
                                                 sat_per_vbyte: text
                                             });
                                         }}
+                                        navigation={navigation}
                                     />
                                 </>
 

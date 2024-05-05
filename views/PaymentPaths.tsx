@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../components/Header';
 import PaymentPath from '../components/PaymentPath';
@@ -11,14 +13,15 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface PaymentPathsViewProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
+    route: Route<'PaymentPaths', { enhancedPath: any[] }>;
 }
 
 export default class PaymentPathsView extends React.Component<PaymentPathsViewProps> {
     render() {
-        const { navigation } = this.props;
-        const enhancedPath = navigation.getParam('enhancedPath', null);
+        const { navigation, route } = this.props;
+        const enhancedPath = route.params?.enhancedPath;
 
         return (
             <Screen>

@@ -2,6 +2,8 @@ import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
@@ -16,8 +18,9 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface SelectCurrencyProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: Route<'SelectCurrency', { currencyConverter: boolean }>;
 }
 
 interface SelectCurrencyState {
@@ -71,7 +74,7 @@ export default class SelectCurrency extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, route } = this.props;
         const { selectedCurrency, search, fiatRatesSource } = this.state;
         const currencies = this.state.currencies
             .sort((a, b) =>
@@ -83,10 +86,7 @@ export default class SelectCurrency extends React.Component<
 
         const { updateSettings, getSettings }: any = SettingsStore;
 
-        const currencyConverter = navigation.getParam(
-            'currencyConverter',
-            null
-        );
+        const currencyConverter = route.params?.currencyConverter;
 
         return (
             <Screen>

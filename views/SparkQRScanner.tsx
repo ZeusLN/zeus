@@ -1,17 +1,22 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import QRCodeScanner from './../components/QRCodeScanner';
+
 import { localeString } from './../utils/LocaleUtils';
 
 interface SparkQRProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<'SparkQRScanner', { index: any }>;
 }
 
 export default class SparkQRScanner extends React.Component<SparkQRProps, {}> {
     handleSparkInvoiceScanned = (data: string) => {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
 
-        const index = navigation.getParam('index', null);
+        const index = route.params?.index;
 
         const [url, accessKey] = data.split('?access-key=');
 
@@ -34,9 +39,9 @@ export default class SparkQRScanner extends React.Component<SparkQRProps, {}> {
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
 
-        const index = navigation.getParam('index', null);
+        const index = route.params?.index;
 
         return (
             <QRCodeScanner

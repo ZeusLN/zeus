@@ -2,6 +2,7 @@ import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
@@ -14,7 +15,7 @@ import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 interface ExpressGraphSyncProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

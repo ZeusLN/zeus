@@ -2,6 +2,7 @@ import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import CopyBox from '../components/CopyBox';
@@ -20,7 +21,7 @@ import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 interface SendingOnChainProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
 }
@@ -36,7 +37,7 @@ export default class SendingOnChain extends React.Component<
     };
     async componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
-        navigation.addListener('didFocus', () => {
+        navigation.addListener('focus', () => {
             EncryptedStorage.getItem('note-' + TransactionsStore.txid)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });

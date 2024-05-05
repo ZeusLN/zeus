@@ -12,6 +12,7 @@ import {
 import { CheckBox, Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { relayInit, nip05, nip19 } from 'nostr-tools';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -32,7 +33,7 @@ import SelectOff from '../assets/images/SVG/Select Off.svg';
 import SelectOn from '../assets/images/SVG/Select On.svg';
 
 interface NostrContactsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
 }
 
 interface NostrContactsState {

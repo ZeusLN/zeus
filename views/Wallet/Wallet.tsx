@@ -70,11 +70,12 @@ import CaretUp from '../../assets/images/SVG/Caret Up.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 interface WalletProps {
     enterSetup: any;
     exitTransaction: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
@@ -120,7 +121,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private handleAppStateChangeSubscription: NativeEventSubscription;
     private backPressSubscription: NativeEventSubscription;
 
-    constructor(props) {
+    constructor(props: WalletProps) {
         super(props);
         this.state = {
             unlocked: false,
@@ -160,13 +161,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             return true;
         }
 
+        const navigation = this.props.navigation;
+
         if (this.props.SettingsStore.loginRequired()) {
-            // pop to close lock screen and return false to close the app
-            this.props.navigation.pop();
+            // popToTop to close all screens and return false to close the app
+            navigation.popToTop();
             return false;
         }
 
-        if (this.props.navigation.pop()) {
+        const navigationState = navigation.getState();
+        if (navigationState.routes.length > 1) {
+            navigation.pop();
             return true;
         }
 
@@ -192,11 +197,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         return false;
     }
 
+    handleFocus = () => this.getSettingsAndNavigate();
+
     async componentDidMount() {
         // triggers when loaded from navigation or back action
-        this.props.navigation.addListener('didFocus', () => {
-            this.getSettingsAndNavigate();
-        });
+        this.props.navigation.addListener('focus', this.handleFocus);
 
         this.handleAppStateChangeSubscription = AppState.addEventListener(
             'change',
@@ -210,7 +215,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     componentWillUnmount() {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
+            this.props.navigation.removeListener('focus', this.handleFocus);
         this.handleAppStateChangeSubscription?.remove();
         this.backPressSubscription?.remove();
     }
@@ -391,7 +396,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                         ChannelBackupStore.initSubscribeChannelEvents();
                 } catch (e) {
-                    console.log('recover error', e);
+                    console.error('recover error', e);
                 }
             } else {
                 if (SettingsStore.settings.automaticDisasterRecoveryBackup)
@@ -645,6 +650,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         <NavigationContainer
                             theme={Theme}
                             ref={this.tabNavigationRef}
+                            independent={true}
                         >
                             <Tab.Navigator
                                 initialRouteName={
@@ -689,17 +695,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 />
                                             );
                                         }
-                                    }
-                                })}
-                                tabBarOptions={{
-                                    activeTintColor: error
+                                    },
+                                    headerShown: false,
+                                    tabBarActiveTintColor: error
                                         ? themeColor('error')
                                         : themeColor('text'),
-                                    inactiveTintColor: error
+                                    tabBarInactiveTintColor: error
                                         ? themeColor('error')
                                         : 'gray',
-                                    showLabel: false
-                                }}
+                                    tabBarShowLabel: false,
+                                    tabBarStyle: { display: 'flex' }
+                                })}
                             >
                                 {posEnabled !== PosEnabled.Disabled &&
                                 posStatus === 'active' ? (

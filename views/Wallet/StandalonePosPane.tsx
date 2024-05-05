@@ -13,6 +13,7 @@ import { ButtonGroup, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import moment from 'moment';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -38,7 +39,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { version } from './../../package.json';
 
 interface StandalonePosPaneProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
     FiatStore: FiatStore;
     NodeInfoStore: NodeInfoStore;

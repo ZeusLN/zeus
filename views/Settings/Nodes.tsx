@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -25,7 +26,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 
 interface NodesProps {
     nodes: any[];
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     edit?: boolean;
     loading?: boolean;
     selectedNode?: number;
@@ -55,12 +56,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     componentDidMount() {
         this.refreshSettings();
 
-        this.props.navigation.addListener('didFocus', this.handleFocus);
+        this.props.navigation.addListener('focus', this.handleFocus);
     }
 
     componentWillUnmount() {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
+            this.props.navigation.removeListener('focus', this.handleFocus);
     }
 
     handleFocus = () => {
