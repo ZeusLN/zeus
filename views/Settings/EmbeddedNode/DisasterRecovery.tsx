@@ -4,6 +4,7 @@ import { ListItem, Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
 import Screen from '../../../components/Screen';
@@ -22,7 +23,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { exportAllChannelBackups } from '../../../lndmobile/channel';
 
 interface DisasterRecoveryProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

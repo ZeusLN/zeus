@@ -12,6 +12,8 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import cloneDeep from 'lodash/cloneDeep';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { hash, STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
@@ -50,8 +52,20 @@ import { getPhoto } from '../../utils/PhotoUtils';
 import { createLndWallet } from '../../utils/LndMobileUtils';
 
 interface NodeConfigurationProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: Route<
+        'NodeConfiguration',
+        {
+            node: any;
+            index: any;
+            active: any;
+            tor: any;
+            saved: any;
+            newEntry: any;
+            newPhoto: any;
+        }
+    >;
 }
 
 interface NodeConfigurationState {
@@ -270,15 +284,10 @@ export default class NodeConfiguration extends React.Component<
     }
 
     async initFromProps(props: any) {
-        const { navigation } = props;
+        const { route } = props;
 
-        const node = navigation.getParam('node', null);
-        const index = navigation.getParam('index', null);
-        const active = navigation.getParam('active', null);
-        const tor = navigation.getParam('enableTor', false);
-        const saved = navigation.getParam('saved', null);
-        const newEntry = navigation.getParam('newEntry', null);
-        const newPhoto = navigation.getParam('photo', null);
+        const { node, index, active, tor, saved, newEntry, newPhoto } =
+            route.params ?? {};
 
         if (node) {
             const {
@@ -584,8 +593,8 @@ export default class NodeConfiguration extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const node = navigation.getParam('node', null);
+        const { route, navigation, SettingsStore } = this.props;
+        const node = route.params?.node;
         const {
             nickname,
             host,

@@ -12,6 +12,8 @@ import InventoryStore from '../../stores/InventoryStore';
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Divider, Icon } from 'react-native-elements';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -26,9 +28,10 @@ import DeleteIcon from '../../assets/images/SVG/Delete.svg';
 import PosStore from '../../stores/PosStore';
 
 interface ProductCategoryProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     InventoryStore: InventoryStore;
     PosStore: PosStore;
+    route: Route<'ProductCategoryDetails', { categoryId: string }>;
 }
 
 interface ProductCategoryState {
@@ -59,12 +62,9 @@ export default class ProductCategoryDetails extends React.Component<
     }
 
     fetchCategory = async () => {
-        this.props.navigation.addListener('didFocus', async () => {
+        this.props.navigation.addListener('focus', async () => {
             try {
-                const categoryId = this.props.navigation.getParam(
-                    'categoryId',
-                    null
-                );
+                const categoryId = this.props.route.params?.categoryId;
 
                 if (!categoryId) {
                     this.setState({
@@ -159,9 +159,7 @@ export default class ProductCategoryDetails extends React.Component<
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => {
-                    navigation.goBack();
-                }}
+                onPress={() => navigation.goBack()}
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={35}

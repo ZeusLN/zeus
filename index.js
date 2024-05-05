@@ -1,3 +1,5 @@
+import 'react-native-gesture-handler';
+
 /**
  * @format
  * @lint-ignore-every XPLATJSCOPYRIGHT1
@@ -9,7 +11,6 @@ import { TextDecoder } from 'text-encoding';
 global.TextDecoder = TextDecoder;
 
 import {AppRegistry} from 'react-native';
-import 'react-native-gesture-handler';
 import './shim.js'
 import App from './App.tsx';
 import {name as appName} from './app.json';

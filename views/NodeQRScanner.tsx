@@ -1,11 +1,14 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import QRCodeScanner from './../components/QRCodeScanner';
+
 import NodeUriUtils from './../utils/NodeUriUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 interface NodeQRProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
 }
 
 function NodeQRScanner(props: NodeQRProps) {

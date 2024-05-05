@@ -10,6 +10,8 @@ import {
 import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from '../components/Amount';
 import Button from '../components/Button';
@@ -30,11 +32,12 @@ import RNPrint from 'react-native-print';
 import PosStore from '../stores/PosStore';
 
 interface OrderProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
     UnitsStore: UnitsStore;
     PosStore: PosStore;
+    route: Route<'Order', { orderId: string; order: any; print: boolean }>;
 }
 
 interface OrderState {
@@ -50,11 +53,10 @@ interface OrderState {
 @inject('FiatStore', 'SettingsStore', 'UnitsStore', 'PosStore')
 @observer
 export default class OrderView extends React.Component<OrderProps, OrderState> {
-    constructor(props: any) {
+    constructor(props: OrderProps) {
         super(props);
-        const { SettingsStore, navigation } = props;
-        const order = navigation.getParam('order', null);
-        const print = navigation.getParam('print', false);
+        const { SettingsStore, route } = props;
+        const { order, print } = route.params ?? {};
 
         const { settings } = SettingsStore;
         const disableTips: boolean =
@@ -75,12 +77,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         // print and order id are passed from the paid screen
         // we update the order so it includes payment details
         // which will enable the receipt printing
-        if (
-            this.props.navigation.getParam('print', false) !==
-            prevProps.navigation.getParam('print', false)
-        ) {
-            const orderId = this.props.navigation.getParam('orderId', null);
-            const print = this.props.navigation.getParam('print', false);
+        if (this.props.route.params?.print !== prevProps.route.params?.print) {
+            const { orderId, print } = this.props.route.params ?? {};
 
             const { PosStore } = this.props;
             if (orderId) {

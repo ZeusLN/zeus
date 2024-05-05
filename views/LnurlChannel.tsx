@@ -4,6 +4,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -23,9 +25,10 @@ import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
 
 interface LnurlChannelProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
+    route: Route<'LnurlChannel', { lnurlParams: any }>;
 }
 
 interface LnurlChannelState {
@@ -74,8 +77,8 @@ export default class LnurlChannel extends React.Component<
     }
 
     stateFromProps(props: LnurlChannelProps) {
-        const { navigation } = props;
-        const lnurl = navigation.getParam('lnurlParams');
+        const { route } = props;
+        const lnurl = route.params?.lnurlParams;
 
         const { pubkey, host } = NodeUriUtils.processNodeUri(lnurl.uri);
         return {
@@ -126,9 +129,9 @@ export default class LnurlChannel extends React.Component<
     }
 
     sendValues() {
-        const { navigation, NodeInfoStore } = this.props;
+        const { route, NodeInfoStore } = this.props;
         const { domain, k1 } = this.state;
-        const lnurl = navigation.getParam('lnurlParams');
+        const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.k1 = k1;
@@ -180,7 +183,7 @@ export default class LnurlChannel extends React.Component<
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
         const {
             domain,
             privateChannel,
@@ -188,7 +191,7 @@ export default class LnurlChannel extends React.Component<
             lnurlChannelSuccess,
             errorMsgPeer
         } = this.state;
-        const lnurl = navigation.getParam('lnurlParams');
+        const lnurl = route.params?.lnurlParams;
 
         return (
             <Screen>

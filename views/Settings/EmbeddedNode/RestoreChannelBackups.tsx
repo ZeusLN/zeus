@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
@@ -16,7 +17,7 @@ import SettingsStore from '../../../stores/SettingsStore';
 import { restoreChannelBackups } from '../../../lndmobile/channel';
 
 interface RestoreChannelBackupsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

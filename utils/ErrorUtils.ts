@@ -21,8 +21,8 @@ const errorToUserFriendly = (error: Error, localize = true) => {
 
     try {
         errorObject = JSON.parse(errorMessage || error.toString());
-    } catch (err) {
-        console.log(err);
+    } catch {
+        // ignore - using original error message
     }
 
     const userFriendlyErrorMessage =

@@ -11,6 +11,8 @@ import {
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -31,11 +33,12 @@ import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
 
 interface ActivityProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
     FiatStore: FiatStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
+    route: Route<'Activity', { order: any }>;
 }
 
 interface ActivityState {
@@ -135,7 +138,8 @@ export default class Activity extends React.PureComponent<
             ActivityStore,
             FiatStore,
             PosStore,
-            SettingsStore
+            SettingsStore,
+            route
         } = this.props;
         const { selectedPaymentForOrder } = this.state;
 
@@ -145,7 +149,7 @@ export default class Activity extends React.PureComponent<
         const { settings } = SettingsStore;
         const { fiat } = settings;
 
-        const order = navigation.getParam('order', null);
+        const order = route.params?.order;
 
         const MarkPaymentButton = () => (
             <Icon

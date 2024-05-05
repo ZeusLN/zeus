@@ -10,6 +10,9 @@ import {
 
 import { Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import Channel from '../../models/Channel';
 
 import Amount from '../../components/Amount';
@@ -39,10 +42,11 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import Edit from '../../assets/images/SVG/Edit.svg';
 
 interface ChannelProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
+    route: Route<'Channel', { channel: Channel }>;
 }
 
 interface ChannelState {
@@ -62,8 +66,8 @@ export default class ChannelView extends React.Component<
     listener: any;
     constructor(props: ChannelProps) {
         super(props);
-        const { navigation, ChannelsStore } = props;
-        const channel: Channel = navigation.getParam('channel', null);
+        const { route, ChannelsStore } = props;
+        const channel = route.params?.channel;
 
         this.state = {
             confirmCloseChannel: false,
@@ -624,6 +628,7 @@ export default class ChannelView extends React.Component<
                                                 satPerByte: text
                                             });
                                         }}
+                                        navigation={navigation}
                                     />
                                     <>
                                         <Text

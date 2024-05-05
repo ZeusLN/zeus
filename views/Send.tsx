@@ -15,15 +15,15 @@ import {
 } from 'react-native';
 import { Chip, Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
-
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-
 import NfcManager, {
     NfcEvents,
     TagEvent,
     Ndef
 } from 'react-native-nfc-manager';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
@@ -66,7 +66,7 @@ import { AdditionalOutput } from '../models/TransactionRequest';
 
 interface SendProps {
     exitSetup: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     ModalStore: ModalStore;
@@ -74,6 +74,17 @@ interface SendProps {
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     UTXOsStore: UTXOsStore;
+    route: Route<
+        'Send',
+        {
+            destination: string;
+            amount: string;
+            transactionType: string | null;
+            isValid: boolean;
+            contactName: string;
+            clearOnBackPress: boolean;
+        }
+    >;
 }
 
 interface SendState {
@@ -118,16 +129,10 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     constructor(props: SendProps) {
         super(props);
-        const { navigation } = props;
-        const destination = navigation.getParam('destination', null);
-        const amount = navigation.getParam('amount', null);
-        const transactionType = navigation.getParam('transactionType', null);
-        const isValid = navigation.getParam('isValid', false);
-        const contactName = navigation.getParam('contactName', null);
-        const clearOnBackPress = navigation.getParam(
-            'clearOnBackPress',
-            !destination
-        );
+        const { route } = props;
+        const { destination, amount, transactionType, isValid, contactName } =
+            route.params ?? {};
+        const clearOnBackPress = route.params?.clearOnBackPress ?? !destination;
 
         if (transactionType === 'Lightning') {
             this.props.InvoicesStore.getPayReq(destination);
@@ -178,11 +183,9 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation } = nextProps;
-        const destination = navigation.getParam('destination', null);
-        const amount = navigation.getParam('amount', null);
-        const transactionType = navigation.getParam('transactionType', null);
-        const contactName = navigation.getParam('contactName', null);
+        const { route } = nextProps;
+        const { destination, amount, transactionType, contactName } =
+            route.params ?? {};
 
         if (transactionType === 'Lightning') {
             this.props.InvoicesStore.getPayReq(destination);
@@ -220,7 +223,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     loadContacts = async () => {
-        this.props.navigation.addListener('didFocus', async () => {
+        this.props.navigation.addListener('focus', async () => {
             try {
                 const contactsString = await EncryptedStorage.getItem(
                     'zeus-contacts'
@@ -1088,6 +1091,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     onChangeFee={(text: string) =>
                                         this.setState({ fee: text })
                                     }
+                                    navigation={navigation}
                                 />
 
                                 <View

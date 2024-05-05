@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, ScrollView } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import NavigationService from '../../NavigationService';
 import Button from '../../components/Button';
@@ -10,7 +11,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface LspExplanationOverviewProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
 }
 
 const FONT_SIZE = 17;

@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TouchableWithoutFeedback, View } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/native';
+
 import TextInput from '../components/TextInput';
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import stores from '../stores/Stores';
-import NavigationService from '../NavigationService';
 import LoadingIndicator from './LoadingIndicator';
 
 interface OnchainFeeInputProps {
+    navigation: StackNavigationProp<any, any>;
     fee?: string;
     onChangeFee: (fee: string) => void;
 }
 
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
-    const { fee, onChangeFee } = props;
+    const { fee, onChangeFee, navigation } = props;
 
     const { settingsStore, feeStore } = stores;
     const { settings } = settingsStore;
@@ -50,7 +52,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
             {enableMempoolRates ? (
                 <TouchableWithoutFeedback
                     onPress={() =>
-                        NavigationService.navigate('EditFee', {
+                        navigation.navigate('EditFee', {
                             onNavigateBack: (fee: string) => {
                                 if (fee) {
                                     setErrorOccurredLoadingFees(false);
