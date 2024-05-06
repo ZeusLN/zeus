@@ -69,6 +69,10 @@ class BackendUtils {
     getLightningBalance = (...args: any[]) =>
         this.call('getLightningBalance', args);
     sendCoins = (...args: any[]) => this.call('sendCoins', args);
+    sendCustomMessage = (...args: any[]) =>
+        this.call('sendCustomMessage', args);
+    subscribeCustomMessages = (...args: any[]) =>
+        this.call('subscribeCustomMessages', args);
     getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
     getNetworkInfo = (...args: any[]) => this.call('getNetworkInfo', args);
     getInvoices = (...args: any[]) => this.call('getInvoices', args);
@@ -114,6 +118,10 @@ class BackendUtils {
     subscribeTransactions = (...args: any[]) =>
         this.call('subscribeTransactions', args);
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
+
+    //cln
+    supportsLSPS1customMessage = () => this.call('supportsLSPS1customMessage');
+    supportsLSPS1rest = () => this.call('supportsLSPS1rest');
 
     // lndhub
     login = (...args: any[]) => this.call('login', args);

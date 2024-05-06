@@ -160,6 +160,52 @@ export const connectPeer = async (
 /**
  * @throws
  */
+export const sendCustomMessage = async (
+    peer: string,
+    type: number,
+    data: string
+): Promise<lnrpc.SendCustomMessageResponse> => {
+    return await sendCommand<
+        lnrpc.ISendCustomMessageRequest,
+        lnrpc.SendCustomMessageRequest,
+        lnrpc.SendCustomMessageResponse
+    >({
+        request: lnrpc.SendCustomMessageRequest,
+        response: lnrpc.SendCustomMessageResponse,
+        method: 'SendCustomMessage',
+        options: {
+            peer: Base64Utils.hexToBase64(peer),
+            type,
+            data: Base64Utils.hexToBase64(data)
+        }
+    });
+};
+
+/**
+ * @throws
+ */
+export const subscribeCustomMessages = async (): Promise<string> => {
+    const response = await sendStreamCommand<
+        lnrpc.ISubscribeCustomMessagesRequest,
+        lnrpc.SubscribeCustomMessagesRequest
+    >({
+        request: lnrpc.SubscribeCustomMessagesRequest,
+        method: 'SubscribeCustomMessages',
+        options: {}
+    });
+    return response;
+};
+
+export const decodeCustomMessage = (data: string): lnrpc.CustomMessage => {
+    return decodeStreamResult<lnrpc.CustomMessage>({
+        response: lnrpc.CustomMessage,
+        base64Result: data
+    });
+};
+
+/**
+ * @throws
+ */
 export const disconnectPeer = async (
     pub_key: string
 ): Promise<lnrpc.DisconnectPeerResponse> => {

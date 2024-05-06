@@ -6,21 +6,31 @@ import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-const { channel } = lndMobile;
+const { index, channel } = lndMobile;
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 export default class LSPStore {
     @observable public info: any = {};
     @observable public zeroConfFee: number | undefined;
     @observable public feeId: string | undefined;
+    @observable public pubkey: string;
+    @observable public getInfoId: string;
+    @observable public createOrderId: string;
+    @observable public getOrderId: string;
+    @observable public loading: boolean = true;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
+    @observable public customMessagesSubscriber: any;
+    @observable public getInfoData: any = {};
+    @observable public createOrderResponse: any = {};
+    @observable public getOrderResponse: any = {};
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
@@ -44,6 +54,7 @@ export default class LSPStore {
         this.error_msg = '';
         this.showLspSettings = false;
         this.channelAcceptor = undefined;
+        this.customMessagesSubscriber = undefined;
     };
 
     @action
@@ -51,10 +62,34 @@ export default class LSPStore {
         this.zeroConfFee = undefined;
     };
 
+    @action
+    public resetLSPS1Data = () => {
+        this.createOrderResponse = {};
+        this.getInfoData = {};
+        this.loading = true;
+        this.error = false;
+        this.error_msg = '';
+    };
+
     getLSPHost = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lspTestnet
             : this.settingsStore.settings.lspMainnet;
+
+    getLSPS1Pubkey = () =>
+        this.nodeInfoStore!.nodeInfo.isTestNet
+            ? this.settingsStore.settings.lsps1PubkeyTestnet
+            : this.settingsStore.settings.lsps1PubkeyMainnet;
+
+    getLSPS1Host = () =>
+        this.nodeInfoStore!.nodeInfo.isTestNet
+            ? this.settingsStore.settings.lsps1HostTestnet
+            : this.settingsStore.settings.lsps1HostMainnet;
+
+    getLSPS1Rest = () =>
+        this.nodeInfoStore!.nodeInfo.isTestNet
+            ? this.settingsStore.settings.lsps1RestTestnet
+            : this.settingsStore.settings.lsps1RestMainnet;
 
     @action
     public getLSPInfo = () => {
@@ -179,7 +214,7 @@ export default class LSPStore {
             await channel.channelAcceptorResponse(
                 channelAcceptRequest.pending_chan_id,
                 !channelAcceptRequest.wants_zero_conf || isZeroConfAllowed,
-                isZeroConfAllowed
+                isZeroConfAllowed && channelAcceptRequest.wants_zero_conf
             );
         } catch (error: any) {
             console.error('handleChannelAcceptorEvent error:', error.message);
@@ -270,4 +305,225 @@ export default class LSPStore {
                 });
         });
     };
+
+    @action
+    public sendCustomMessage = ({
+        peer,
+        type,
+        data
+    }: {
+        peer: string;
+        type: number | null;
+        data: string;
+    }) => {
+        return new Promise((resolve, reject) => {
+            if (!peer || !type || !data) {
+                reject('Invalid parameters for custom message.');
+                return;
+            }
+
+            BackendUtils.sendCustomMessage({ peer, type, data })
+                .then((response: any) => {
+                    resolve(response);
+                })
+                .catch((error: any) => {
+                    this.error = true;
+                    this.error_msg = 'send message error';
+                    reject(error);
+                });
+        });
+    };
+
+    @action
+    public handleCustomMessages = (decoded: any) => {
+        const peer = Base64Utils.base64ToHex(decoded.peer);
+        const data = JSON.parse(Base64Utils.base64ToUtf8(decoded.data));
+
+        console.log('peer', peer);
+        console.log('data', data);
+
+        if (data.id === this.getInfoId) {
+            this.getInfoData = data;
+            this.loading = false;
+        } else if (data.id === this.createOrderId) {
+            if (data.error) {
+                this.error = true;
+                this.loading = false;
+                this.error_msg = data?.error?.data?.message;
+            } else {
+                this.createOrderResponse = data;
+                this.loading = false;
+            }
+        } else if (data.id === this.getOrderId) {
+            if (data.error) {
+                this.error = true;
+                this.error_msg = data?.error?.message;
+            } else {
+                this.getOrderResponse = data;
+            }
+        }
+    };
+
+    @action
+    public subscribeCustomMessages = async () => {
+        if (this.customMessagesSubscriber) return;
+        let timer = 10000;
+        const timeoutId = setTimeout(() => {
+            this.error = true;
+            this.error_msg = 'Did not receive response from server';
+            this.loading = false;
+        }, timer);
+
+        if (this.settingsStore.implementation === 'embedded-lnd') {
+            this.customMessagesSubscriber = LndMobileEventEmitter.addListener(
+                'SubscribeCustomMessages',
+                async (event: any) => {
+                    try {
+                        const decoded = index.decodeCustomMessage(event.data);
+                        this.handleCustomMessages(decoded);
+                        clearTimeout(timeoutId);
+                    } catch (error: any) {
+                        console.error(
+                            'sub custom messages error: ' + error.message
+                        );
+                    }
+                }
+            );
+
+            await index.subscribeCustomMessages();
+        } else {
+            BackendUtils.subscribeCustomMessages(
+                (response: any) => {
+                    const decoded = response.result;
+                    this.handleCustomMessages(decoded);
+                    clearTimeout(timeoutId);
+                },
+                (error: any) => {
+                    console.error(
+                        'sub custom messages error: ' + error.message
+                    );
+                }
+            );
+        }
+    };
+
+    @action
+    public getInfoREST = () => {
+        const endpoint = `${this.getLSPS1Rest()}/api/v1/get_info`;
+
+        console.log('Fetching data from:', endpoint);
+
+        return ReactNativeBlobUtil.fetch('GET', endpoint)
+            .then((response) => {
+                if (response.info().status === 200) {
+                    const responseData = JSON.parse(response.data);
+                    this.getInfoData = responseData;
+                    try {
+                        const uri = responseData.uris[0];
+                        const pubkey = uri.split('@')[0];
+                        this.pubkey = pubkey;
+                    } catch (e) {}
+                    this.loading = false;
+                } else {
+                    this.error = true;
+                    this.error_msg = 'Error fetching get_info data';
+                    this.loading = false;
+                }
+            })
+            .catch(() => {
+                this.error = true;
+                this.error_msg = 'Error fetching get_info data';
+                this.loading = false;
+            });
+    };
+
+    @action
+    public createOrderREST = (state: any) => {
+        const data = JSON.stringify({
+            lsp_balance_sat: state.lspBalanceSat,
+            client_balance_sat: state.clientBalanceSat,
+            required_channel_confirmations: parseInt(
+                state.requiredChannelConfirmations
+            ),
+            funding_confirms_within_blocks: parseInt(
+                state.confirmsWithinBlocks
+            ),
+            channel_expiry_blocks: parseInt(state.channelExpiryBlocks),
+            token: state.token,
+            refund_onchain_address: state.refundOnchainAddress,
+            announce_channel: state.announceChannel,
+            public_key: this.nodeInfoStore.nodeInfo.nodeId
+        });
+        this.loading = true;
+        this.error = false;
+        this.error_msg = '';
+        const endpoint = `${this.getLSPS1Rest()}/api/v1/create_order`;
+        console.log('Sending data to:', endpoint);
+
+        return ReactNativeBlobUtil.fetch(
+            'POST',
+            endpoint,
+            {
+                'Content-Type': 'application/json'
+            },
+            data
+        )
+            .then((response) => {
+                const responseData = JSON.parse(response.data);
+                if (responseData.error) {
+                    this.error = true;
+                    this.error_msg = responseData.message;
+                    this.loading = false;
+                } else {
+                    this.createOrderResponse = responseData;
+                    this.loading = false;
+                    console.log('Response received:', responseData);
+                }
+            })
+            .catch((error) => {
+                console.error(
+                    'Error sending (create_order) custom message:',
+                    error
+                );
+                this.error = true;
+                this.error_msg = errorToUserFriendly(error);
+                this.loading = false;
+            });
+    };
+
+    @action
+    public getOrderREST(id: string) {
+        this.loading = true;
+        const data = JSON.stringify({
+            order_id: id
+        });
+        const endpoint = `${this.getLSPS1Rest()}/api/v1/get_order`;
+
+        console.log('Sending data to:', endpoint);
+
+        return ReactNativeBlobUtil.fetch(
+            'POST',
+            endpoint,
+            {
+                'Content-Type': 'application/json'
+            },
+            data
+        )
+            .then((response) => {
+                const responseData = JSON.parse(response.data);
+                console.log('Response received:', responseData);
+                if (responseData.error) {
+                    this.error = true;
+                    this.error_msg = responseData.message;
+                } else {
+                    this.getOrderResponse = responseData;
+                }
+            })
+            .catch((error) => {
+                console.error('Error sending custom message:', error);
+                this.error = true;
+                this.error_msg = errorToUserFriendly(error);
+                this.loading = false;
+            });
+    }
 }

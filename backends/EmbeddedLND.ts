@@ -23,7 +23,9 @@ const {
     getNetworkInfo,
     queryRoutes,
     lookupInvoice,
-    fundingStateStep
+    fundingStateStep,
+    sendCustomMessage,
+    subscribeCustomMessages
 } = lndMobile.index;
 const {
     channelBalance,
@@ -68,6 +70,9 @@ export default class EmbeddedLND extends LND {
             data.spend_unconfirmed,
             data.send_all
         );
+    sendCustomMessage = async (data: any) =>
+        await sendCustomMessage(data.peer, data.type, data.data);
+    subscribeCustomMessages = async () => await subscribeCustomMessages();
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
     getInvoices = async () => await listInvoices();
@@ -289,4 +294,6 @@ export default class EmbeddedLND extends LND {
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     isLNDBased = () => true;
+    supportsLSPS1customMessage = () => true;
+    supportsLSPS1rest = () => false;
 }

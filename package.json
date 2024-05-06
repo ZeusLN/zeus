@@ -38,6 +38,7 @@
     "@react-native-clipboard/clipboard": "1.13.2",
     "@react-native-community/masked-view": "0.1.11",
     "@react-native-community/netinfo": "11.3.0",
+    "@react-native-community/slider": "4.5.2",
     "@react-native-picker/picker": "2.6.1",
     "@react-navigation/bottom-tabs": "5.11.11",
     "@react-navigation/native": "6.1.10",

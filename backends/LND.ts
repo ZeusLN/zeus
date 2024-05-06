@@ -251,6 +251,57 @@ export default class LND {
             spend_unconfirmed: data.spend_unconfirmed,
             send_all: data.send_all
         });
+    sendCustomMessage = (data: any) =>
+        this.postRequest('/v1/custommessage', {
+            peer: Base64Utils.hexToBase64(data.peer),
+            type: data.type,
+            data: Base64Utils.hexToBase64(data.data)
+        });
+    subscribeCustomMessages = (onResponse: any, onError: any) => {
+        const route = '/v1/custommessage/subscribe';
+        const method = 'GET';
+
+        const { host, lndhubUrl, port, macaroonHex, accessToken } =
+            stores.settingsStore;
+
+        const auth = macaroonHex || accessToken;
+        const headers: any = this.getHeaders(auth, true);
+        const methodRoute = `${route}?method=${method}`;
+        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
+
+        const ws: any = new WebSocket(url, null, {
+            headers
+        });
+
+        ws.addEventListener('open', () => {
+            // connection opened
+            console.log('subscribeCustomMessages ws open');
+            ws.send(JSON.stringify({}));
+        });
+
+        ws.addEventListener('message', (e: any) => {
+            // a message was received
+            const data = JSON.parse(e.data);
+            console.log('subscribeCustomMessagews message', data);
+            if (data.error) {
+                onError(data.error);
+            } else {
+                onResponse(data);
+            }
+        });
+
+        ws.addEventListener('error', (e: any) => {
+            // an error occurred
+            console.log('subscribeCustomMessages ws err', e);
+            const certWarning = localeString('backends.LND.wsReq.warning');
+            onError(e.message ? `${certWarning} (${e.message})` : certWarning);
+        });
+
+        ws.addEventListener('close', () => {
+            // ws closed
+            console.log('subscribeCustomMessages ws close');
+        });
+    };
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = (data: any) =>
         this.getRequest(
@@ -616,4 +667,6 @@ export default class LND {
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     isLNDBased = () => true;
+    supportsLSPS1customMessage = () => true;
+    supportsLSPS1rest = () => false;
 }

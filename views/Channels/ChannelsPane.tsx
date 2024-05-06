@@ -1,5 +1,13 @@
-import * as React from 'react';
-import { FlatList, View, TouchableHighlight } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Animated,
+    FlatList,
+    View,
+    StyleSheet,
+    Text,
+    TouchableHighlight,
+    TouchableOpacity
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
 
@@ -19,6 +27,8 @@ import { localeString } from '../../utils/LocaleUtils';
 
 import Channel from '../../models/Channel';
 
+import NavigationService from '../../NavigationService';
+
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
     Good = 'Good',
@@ -34,6 +44,45 @@ interface ChannelsProps {
     ChannelsStore?: ChannelsStore;
     SettingsStore?: SettingsStore;
 }
+
+const ColorChangingButton = () => {
+    const [forward, setForward] = useState(true);
+    const animation = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // Toggle animation direction
+            setForward((prev) => !prev);
+        }, 5000); // Change color gradient every 6 seconds
+
+        return () => clearInterval(interval); // Cleanup interval on component unmount
+    }, []);
+
+    useEffect(() => {
+        // Animate from 0 to 1 or from 1 to 0 based on 'forward' value
+        Animated.timing(animation, {
+            toValue: forward ? 1 : 0,
+            duration: 4500,
+            useNativeDriver: true
+        }).start();
+    }, [forward]);
+
+    const backgroundColor: any = animation.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['rgb(180, 26, 20)', 'rgb(255, 169, 0)'] // Red to Gold gradient
+    });
+
+    return (
+        <TouchableOpacity
+            onPress={() => NavigationService.navigate('LSPS1')}
+            style={[styles.button, { backgroundColor }]}
+        >
+            <Text style={styles.buttonText}>
+                {localeString('views.Wallet.Channels.purchaseInbound')}
+            </Text>
+        </TouchableOpacity>
+    );
+};
 
 @inject('ChannelsStore', 'SettingsStore')
 @observer
@@ -139,8 +188,9 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             channelsType
         } = ChannelsStore!;
 
-        const lurkerMode: boolean =
-            SettingsStore!.settings?.privacy?.lurkerMode || false;
+        const { settings } = SettingsStore!;
+
+        const lurkerMode: boolean = settings?.privacy?.lurkerMode || false;
 
         let headerString;
         let channelsData: Channel[];
@@ -183,6 +233,11 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     totalOffline={totalOffline}
                     lurkerMode={lurkerMode}
                 />
+                {settings?.lsps1ShowPurchaseButton &&
+                    (BackendUtils.supportsLSPS1customMessage() ||
+                        BackendUtils.supportsLSPS1rest()) && (
+                        <ColorChangingButton />
+                    )}
                 {showSearch && <ChannelsFilter />}
                 {loading ? (
                     <View style={{ marginTop: 40 }}>
@@ -204,3 +259,17 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
         );
     }
 }
+
+const styles = StyleSheet.create({
+    button: {
+        padding: 10,
+        borderRadius: 5,
+        margin: 10
+    },
+    buttonText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        color: 'white',
+        fontWeight: 'bold',
+        textAlign: 'center'
+    }
+});
