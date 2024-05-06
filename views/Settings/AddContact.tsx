@@ -1252,13 +1252,7 @@ export default class AddContact extends React.Component<
                                         this.deleteContact();
                                     }
                                 }}
-                                containerStyle={{
-                                    borderColor: themeColor('delete')
-                                }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}
