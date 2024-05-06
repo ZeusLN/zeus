@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { ListItem } from 'react-native-elements';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
@@ -78,18 +78,20 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
 
         return (
             <Screen>
+                <Header
+                    leftComponent="Back"
+                    centerComponent={{
+                        text: localeString(
+                            'view.Settings.LSPServicesList.flow2'
+                        ),
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }
+                    }}
+                    navigation={navigation}
+                />
                 <View style={{ flex: 1 }}>
-                    <Header
-                        leftComponent="Back"
-                        centerComponent={{
-                            text: localeString('general.lsp'),
-                            style: {
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }
-                        }}
-                        navigation={navigation}
-                    />
                     {lspNotConfigured ? (
                         <>
                             <ListItem containerStyle={styles.listItem}>
@@ -344,6 +346,75 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                         </>
                     )}
                 </View>
+                {!lspNotConfigured && (
+                    <View style={{ marginBottom: 15 }}>
+                        <FlatList
+                            data={[
+                                {
+                                    label: localeString(
+                                        'views.Settings.LSP.createWrappedInvoice'
+                                    ),
+                                    nav: 'Receive'
+                                },
+                                {
+                                    label: localeString(
+                                        'views.LspExplanationOverview.title'
+                                    ),
+                                    nav: 'LspExplanationOverview'
+                                },
+                                {
+                                    label: localeString(
+                                        'views.Settings.LSP.flow2'
+                                    ),
+                                    url: 'https://docs.zeusln.app/lsp/api'
+                                }
+                            ]}
+                            renderItem={({ item }) => (
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                    onPress={() => {
+                                        if (item.nav)
+                                            navigation.navigate(item.nav);
+                                        if (item.url)
+                                            UrlUtils.goToUrl(item.url);
+                                    }}
+                                >
+                                    <ListItem.Content>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
+                                            }}
+                                        >
+                                            {item.label}
+                                        </ListItem.Title>
+                                    </ListItem.Content>
+                                    <Icon
+                                        name="keyboard-arrow-right"
+                                        color={themeColor('secondaryText')}
+                                    />
+                                </ListItem>
+                            )}
+                            keyExtractor={(item, index) =>
+                                `${item.label}-${index}`
+                            }
+                            ItemSeparatorComponent={
+                                <View
+                                    style={{
+                                        height: 1,
+                                        backgroundColor: themeColor('separator')
+                                    }}
+                                />
+                            }
+                        />
+                    </View>
+                )}
             </Screen>
         );
     }

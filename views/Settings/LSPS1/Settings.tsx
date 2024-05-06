@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { inject, observer } from 'mobx-react';
-import { View, Text } from 'react-native';
+import { FlatList, View, Text } from 'react-native';
+import { Icon, ListItem } from 'react-native-elements';
 
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
@@ -11,6 +12,7 @@ import TextInput from '../../../components/TextInput';
 import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+import UrlUtils from '../../../utils/UrlUtils';
 
 import LSPStore from '../../../stores/LSPStore';
 import NodeInfoStore from '../../../stores/NodeInfoStore';
@@ -128,7 +130,9 @@ export default class LSPS1Settings extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: `${localeString('views.LSPS1.settings')}`,
+                        text: `${localeString(
+                            'view.Settings.LSPServicesList.lsps1'
+                        )}`,
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -262,16 +266,68 @@ export default class LSPS1Settings extends React.Component<
                         />
                     </View>
                 </View>
-                <View style={{ bottom: 20 }}>
-                    {isOlympus && (
-                        <View style={{ alignSelf: 'center' }}>
-                            <OlympusAnimated
-                                width="70"
-                                height="70"
-                                fill={themeColor('text')}
+                <View style={{ marginBottom: 15 }}>
+                    <View style={{ marginBottom: 10 }}>
+                        {isOlympus && (
+                            <View style={{ alignSelf: 'center' }}>
+                                <OlympusAnimated
+                                    width="70"
+                                    height="70"
+                                    fill={themeColor('text')}
+                                />
+                            </View>
+                        )}
+                    </View>
+                    <FlatList
+                        data={[
+                            {
+                                label: localeString(
+                                    'views.LSPS1.purchaseInbound'
+                                ),
+                                nav: 'LSPS1'
+                            },
+                            {
+                                label: localeString('views.LSPS1.lsps1Spec'),
+                                url: 'https://github.com/BitcoinAndLightningLayerSpecs/lsp/blob/main/LSPS1/README.md'
+                            }
+                        ]}
+                        renderItem={({ item }) => (
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() => {
+                                    if (item.nav) navigation.navigate(item.nav);
+                                    if (item.url) UrlUtils.goToUrl(item.url);
+                                }}
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {item.label}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+                        keyExtractor={(item, index) => `${item.label}-${index}`}
+                        ItemSeparatorComponent={
+                            <View
+                                style={{
+                                    height: 1,
+                                    backgroundColor: themeColor('separator')
+                                }}
                             />
-                        </View>
-                    )}
+                        }
+                    />
                 </View>
             </Screen>
         );
