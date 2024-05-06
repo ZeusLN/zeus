@@ -143,8 +143,31 @@ import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
 
 import PSBT from './views/PSBT';
 import TxHex from './views/TxHex';
+import { BackHandler, NativeEventSubscription } from 'react-native';
 
 export default class App extends React.PureComponent {
+    private backPressListenerSubscription: NativeEventSubscription;
+
+    private handleBackPress = (navigation: any) => {
+        const dialogHasBeenClosed = Stores.modalStore.closeVisibleModalDialog();
+        if (dialogHasBeenClosed) {
+            return true;
+        }
+
+        if (Stores.settingsStore.loginRequired()) {
+            BackHandler.exitApp();
+            return true;
+        }
+
+        const navigationState = navigation.getState();
+        if (navigationState.routes.length > 1) {
+            navigation.pop();
+            return true;
+        }
+
+        return false;
+    };
+
     render() {
         const Stack = createStackNavigator();
         return (
@@ -190,6 +213,21 @@ export default class App extends React.PureComponent {
                                             headerShown: false,
                                             animationEnabled: false
                                         }}
+                                        screenListeners={({ navigation }) => ({
+                                            focus: () => {
+                                                this.backPressListenerSubscription?.remove();
+                                                this.backPressListenerSubscription =
+                                                    BackHandler.addEventListener(
+                                                        'hardwareBackPress',
+                                                        () =>
+                                                            this.handleBackPress(
+                                                                navigation
+                                                            )
+                                                    );
+                                            },
+                                            blur: () =>
+                                                this.backPressListenerSubscription?.remove()
+                                        })}
                                     >
                                         <Stack.Screen
                                             name="Wallet"

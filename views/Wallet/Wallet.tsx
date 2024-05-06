@@ -155,26 +155,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     private handleBackButton() {
-        const dialogHasBeenClosed =
-            this.props.ModalStore.closeVisibleModalDialog();
-        if (dialogHasBeenClosed) {
-            return true;
-        }
-
-        const navigation = this.props.navigation;
-
-        if (this.props.SettingsStore.loginRequired()) {
-            // popToTop to close all screens and return false to close the app
-            navigation.popToTop();
-            return false;
-        }
-
-        const navigationState = navigation.getState();
-        if (navigationState.routes.length > 1) {
-            navigation.pop();
-            return true;
-        }
-
         const tabNavigator = this.tabNavigationRef.current;
         if (!tabNavigator) {
             return false;
@@ -197,19 +177,25 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         return false;
     }
 
-    handleFocus = () => this.getSettingsAndNavigate();
+    private handleFocus = () => {
+        this.backPressSubscription?.remove();
+        this.backPressSubscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.handleBackButton.bind(this)
+        );
+        this.getSettingsAndNavigate();
+    };
+
+    private handleBlur = () => this.backPressSubscription?.remove();
 
     async componentDidMount() {
         // triggers when loaded from navigation or back action
         this.props.navigation.addListener('focus', this.handleFocus);
+        this.props.navigation.addListener('blur', this.handleBlur);
 
         this.handleAppStateChangeSubscription = AppState.addEventListener(
             'change',
             this.handleAppStateChange
-        );
-        this.backPressSubscription = BackHandler.addEventListener(
-            'hardwareBackPress',
-            this.handleBackButton.bind(this)
         );
     }
 
