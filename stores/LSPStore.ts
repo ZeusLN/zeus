@@ -494,21 +494,13 @@ export default class LSPStore {
     @action
     public getOrderREST(id: string) {
         this.loading = true;
-        const data = JSON.stringify({
-            order_id: id
-        });
-        const endpoint = `${this.getLSPS1Rest()}/api/v1/get_order`;
+        const endpoint = `${this.getLSPS1Rest()}/api/v1/get_order?order_id=${id}`;
 
         console.log('Sending data to:', endpoint);
 
-        return ReactNativeBlobUtil.fetch(
-            'POST',
-            endpoint,
-            {
-                'Content-Type': 'application/json'
-            },
-            data
-        )
+        return ReactNativeBlobUtil.fetch('GET', endpoint, {
+            'Content-Type': 'application/json'
+        })
             .then((response) => {
                 const responseData = JSON.parse(response.data);
                 console.log('Response received:', responseData);
