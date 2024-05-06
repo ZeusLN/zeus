@@ -60,7 +60,8 @@ import Products from './views/POS/Products';
 import ProductDetails from './views/POS/ProductDetails';
 import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
-import LSP from './views/Settings/LSP';
+import LSPServicesList from './views/Settings/LSPServicesList';
+import LSP from './views/Settings/LSP'; // Flow 2.0
 import ChannelsSettings from './views/Settings/ChannelsSettings';
 import SetNodePicture from './views/Settings/SetNodePicture';
 
@@ -128,6 +129,10 @@ import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelB
 import RawTxHex from './views/RawTxHex';
 
 import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
+import LSPS1 from './views/Settings/LSPS1/index';
+import OrdersPane from './views/Settings/LSPS1/OrdersPane';
+import LSPS1Order from './views/Settings/LSPS1/Order';
+import LSPS1Settings from './views/Settings/LSPS1/Settings';
 
 import PSBT from './views/PSBT';
 import TxHex from './views/TxHex';
@@ -391,6 +396,9 @@ const AppScenes = {
     EmbeddedNodeSettingsAdvanced: {
         screen: Advanced
     },
+    LSPServicesList: {
+        screen: LSPServicesList
+    },
     LSPSettings: {
         screen: LSP
     },
@@ -459,6 +467,18 @@ const AppScenes = {
     },
     TxHex: {
         screen: TxHex
+    },
+    LSPS1: {
+        screen: LSPS1
+    },
+    OrdersPane: {
+        screen: OrdersPane
+    },
+    LSPS1Order: {
+        screen: LSPS1Order
+    },
+    LSPS1Settings: {
+        screen: LSPS1Settings
     }
 };
 
