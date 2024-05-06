@@ -110,8 +110,9 @@ export default class Payment extends BaseModel {
 
     @computed public get isIncomplete(): boolean {
         return (
+            !this.getPreimage ||
             this.getPreimage ===
-            '0000000000000000000000000000000000000000000000000000000000000000'
+                '0000000000000000000000000000000000000000000000000000000000000000'
         );
     }
 
