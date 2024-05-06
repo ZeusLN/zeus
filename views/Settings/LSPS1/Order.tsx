@@ -477,7 +477,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                                             />
                                         </>
                                     )}
-                                    {result?.order_state !== 'COMPLETED' && (
+                                    {result?.order_state === 'CREATED' && (
                                         <Button
                                             title={localeString(
                                                 'views.LSPS1.makePayment'
