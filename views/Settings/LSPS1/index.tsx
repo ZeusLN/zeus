@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Slider from '@react-native-community/slider';
-import moment from 'moment';
 import { v4 as uuidv4 } from 'uuid';
 
 import CaretDown from '../../../assets/images/SVG/Caret Down.svg';
@@ -26,7 +25,6 @@ import KeyValue from '../../../components/KeyValue';
 import Switch from '../../../components/Switch';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import { Row } from '../../../components/layout/Row';
-import Amount from '../../../components/Amount';
 
 import BackendUtils from '../../../utils/BackendUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -39,6 +37,7 @@ import SettingsStore from '../../../stores/SettingsStore';
 import FiatStore from '../../../stores/FiatStore';
 import { Icon } from 'react-native-elements';
 import LoadingIndicator from '../../../components/LoadingIndicator';
+import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
 
 interface LSPS1Props {
     LSPStore: LSPStore;
@@ -344,230 +343,10 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                 Object.keys(createOrderResponse).length > 0 &&
                                 result &&
                                 payment && (
-                                    <View style={{ paddingHorizontal: 20 }}>
-                                        {result.announce_channel && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.OpenChannel.announceChannel'
-                                                )}
-                                                value={
-                                                    result.announce_channel
-                                                        ? 'True'
-                                                        : 'False'
-                                                }
-                                                color={
-                                                    result.announce_channel
-                                                        ? 'green'
-                                                        : '#808000'
-                                                }
-                                            />
-                                        )}
-
-                                        {result.lsp_balance_sat && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.lspBalance'
-                                                )}
-                                                value={
-                                                    <Amount
-                                                        sats={
-                                                            result.lsp_balance_sat
-                                                        }
-                                                        toggleable
-                                                        sensitive
-                                                    />
-                                                }
-                                            />
-                                        )}
-                                        {result.client_balance_sat && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.clientBalance'
-                                                )}
-                                                value={
-                                                    <Amount
-                                                        sats={
-                                                            result.client_balance_sat
-                                                        }
-                                                        toggleable
-                                                        sensitive
-                                                    />
-                                                }
-                                            />
-                                        )}
-                                        {result.lsp_balance_sat &&
-                                            result.client_balance_sat && (
-                                                <KeyValue
-                                                    keyValue={localeString(
-                                                        'views.LSPS1.totalChannelSize'
-                                                    )}
-                                                    value={
-                                                        <Amount
-                                                            sats={
-                                                                result.client_balance_sat +
-                                                                result.lsp_balance_sat
-                                                            }
-                                                            toggleable
-                                                            sensitive
-                                                        />
-                                                    }
-                                                />
-                                            )}
-                                        {result.channel_expiry_blocks && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.channelExpiryBlocks'
-                                                )}
-                                                value={
-                                                    result.channel_expiry_blocks
-                                                }
-                                            />
-                                        )}
-                                        {result.funding_confirms_within_blocks && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.confirmWithinBlocks'
-                                                )}
-                                                value={
-                                                    result.funding_confirms_within_blocks
-                                                }
-                                            />
-                                        )}
-                                        {result.created_at && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'general.createdAt'
-                                                )}
-                                                value={moment(
-                                                    result.createdAt
-                                                ).format(
-                                                    'MMM Do YYYY, h:mm:ss a'
-                                                )}
-                                            />
-                                        )}
-                                        {result.expires_at && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'general.expiresAt'
-                                                )}
-                                                value={moment(
-                                                    result.expires_at
-                                                ).format(
-                                                    'MMM Do YYYY, h:mm:ss a'
-                                                )}
-                                            />
-                                        )}
-                                        {result.order_id && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.orderId'
-                                                )}
-                                                value={result.order_id}
-                                            />
-                                        )}
-                                        {result.order_state && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.orderState'
-                                                )}
-                                                color="orange"
-                                                value={result.order_state}
-                                            />
-                                        )}
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'views.Payment.title'
-                                            )}
-                                        />
-                                        {payment.fee_total_sat && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.Transaction.totalFees'
-                                                )}
-                                                value={
-                                                    <Amount
-                                                        sats={
-                                                            payment.fee_total_sat
-                                                        }
-                                                        toggleable
-                                                        sensitive
-                                                    />
-                                                }
-                                            />
-                                        )}
-                                        {(payment.lightning_invoice ||
-                                            payment.bolt11_invoice) && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'general.lightningInvoice'
-                                                )}
-                                                value={
-                                                    payment.lightning_invoice ||
-                                                    payment.bolt11_invoice
-                                                }
-                                            />
-                                        )}
-                                        {payment.state && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'general.state'
-                                                )}
-                                                value={payment.state}
-                                            />
-                                        )}
-                                        {payment.min_fee_for_0conf && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.miniFeeFor0Conf'
-                                                )}
-                                                value={
-                                                    payment.min_fee_for_0conf
-                                                }
-                                            />
-                                        )}
-                                        {payment.min_onchain_payment_confirmations && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.minOnchainPaymentConfirmations'
-                                                )}
-                                                value={
-                                                    payment.min_onchain_payment_confirmations
-                                                }
-                                            />
-                                        )}
-                                        {payment.onchain_address && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.Settings.AddContact.onchainAddress'
-                                                )}
-                                                value={payment.onchain_address}
-                                            />
-                                        )}
-                                        {payment.onchain_payment && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.onchainPayment'
-                                                )}
-                                                value={payment.onchain_payment}
-                                            />
-                                        )}
-                                        {payment.order_total_sat && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.LSPS1.totalOrderValue'
-                                                )}
-                                                value={
-                                                    <Amount
-                                                        sats={
-                                                            payment.order_total_sat
-                                                        }
-                                                        toggleable
-                                                        sensitive
-                                                    />
-                                                }
-                                            />
-                                        )}
-                                    </View>
+                                    <LSPS1OrderResponse
+                                        orderResponse={result}
+                                        orderView={false}
+                                    />
                                 )}
 
                             {Object.keys(createOrderResponse).length == 0 && (
