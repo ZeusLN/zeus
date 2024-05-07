@@ -210,7 +210,9 @@ export default class OrdersPane extends React.Component<
                         <Header
                             leftComponent="Back"
                             centerComponent={{
-                                text: `LSPS1 Orders (${orders.length})`,
+                                text: `${localeString(
+                                    'views.LSPS1.lsps1Orders'
+                                )} (${orders.length})`,
                                 style: {
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Book'

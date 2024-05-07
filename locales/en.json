@@ -963,6 +963,7 @@
     "views.LSPS1.fundingOutpoint": "Funding outpoint",
     "views.LSPS1.purchaseInbound": "Purchase inbound channel",
     "views.LSPS1.lsps1Spec": "LSPS1 API and spec",
+    "views.LSPS1.lsps1Orders": "LSPS1 Orders",
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
     "components.UTXOPicker.modal.set": "Set UTXOs",

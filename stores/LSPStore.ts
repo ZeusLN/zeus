@@ -370,7 +370,7 @@ export default class LSPStore {
         let timer = 10000;
         const timeoutId = setTimeout(() => {
             this.error = true;
-            this.error_msg = 'Did not receive response from server';
+            this.error_msg = localeString('views.LSPS1.timeoutError');
             this.loading = false;
         }, timer);
 

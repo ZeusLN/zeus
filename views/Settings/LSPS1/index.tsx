@@ -142,6 +142,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     sendCustomMessage_lsps1() {
         const { LSPStore } = this.props;
         LSPStore.loading = true;
+        LSPStore.error = false;
+        LSPStore.error_msg = '';
         const node_pubkey_string: string = LSPStore.getLSPS1Pubkey();
         const type = 37913;
         const id = uuidv4();
