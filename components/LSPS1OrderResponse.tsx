@@ -46,6 +46,52 @@ export default class LSPS1OrderResponse extends React.Component<
             <Screen>
                 <ScrollView>
                     <View style={{ paddingHorizontal: 20 }}>
+                        {orderResponse?.lsp_balance_sat && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.LSPS1.lspBalance'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={orderResponse?.lsp_balance_sat}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                            />
+                        )}
+                        {orderResponse?.client_balance_sat && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.LSPS1.clientBalance'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={orderResponse?.client_balance_sat}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                            />
+                        )}
+                        {orderResponse?.lsp_balance_sat &&
+                            orderResponse?.client_balance_sat && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.LSPS1.totalBalance'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={
+                                                orderResponse?.client_balance_sat +
+                                                orderResponse?.lsp_balance_sat
+                                            }
+                                            sensitive
+                                            toggleable
+                                        />
+                                    }
+                                />
+                            )}
                         {orderResponse?.announce_channel && (
                             <KeyValue
                                 keyValue={localeString(
@@ -73,20 +119,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                 )}
                             />
                         )}
-                        {orderResponse?.client_balance_sat && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.clientBalance'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={orderResponse?.client_balance_sat}
-                                        sensitive
-                                        toggleable
-                                    />
-                                }
-                            />
-                        )}
+
                         {orderResponse?.funding_confirms_within_blocks && (
                             <KeyValue
                                 keyValue={localeString(
@@ -113,20 +146,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                 )}
                             />
                         )}
-                        {orderResponse?.lsp_balance_sat && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.lspBalance'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={orderResponse?.lsp_balance_sat}
-                                        sensitive
-                                        toggleable
-                                    />
-                                }
-                            />
-                        )}
+
                         {orderResponse?.order_id && (
                             <KeyValue
                                 keyValue={localeString('views.LSPS1.orderId')}
