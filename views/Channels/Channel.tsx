@@ -592,12 +592,6 @@ export default class ChannelView extends React.Component<
                                         })
                                     }
                                     warning={!confirmCloseChannel}
-                                    titleStyle={{
-                                        color: 'white'
-                                    }}
-                                    buttonStyle={{
-                                        backgroundColor: themeColor('delete')
-                                    }}
                                 />
                             </View>
                         )}
@@ -694,7 +688,6 @@ export default class ChannelView extends React.Component<
                                             deliveryAddress
                                         )
                                     }
-                                    quaternary
                                     warning
                                 />
                             </View>

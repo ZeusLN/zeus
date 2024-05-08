@@ -1737,13 +1737,7 @@ export default class NodeConfiguration extends React.Component<
                                         this.deleteNodeConfig();
                                     }
                                 }}
-                                containerStyle={{
-                                    borderColor: themeColor('delete')
-                                }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}
