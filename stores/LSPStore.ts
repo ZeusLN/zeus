@@ -328,7 +328,7 @@ export default class LSPStore {
                 })
                 .catch((error: any) => {
                     this.error = true;
-                    this.error_msg = 'send message error';
+                    this.error_msg = errorToUserFriendly(error);
                     reject(error);
                 });
         });
