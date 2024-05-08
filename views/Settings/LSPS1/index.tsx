@@ -89,14 +89,16 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
     encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
 
-    componentDidMount() {
+    async componentDidMount() {
         const { LSPStore } = this.props;
         LSPStore.resetLSPS1Data();
         if (BackendUtils.supportsLSPS1rest()) {
             LSPStore.getInfoREST();
         } else {
-            this.connectPeer();
-            this.subscribeToCustomMessages();
+            console.log('connecting');
+            await this.connectPeer();
+            console.log('connected');
+            await this.subscribeToCustomMessages();
             this.sendCustomMessage_lsps1();
         }
     }
@@ -121,6 +123,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     }
                 }
             );
+            return;
         } else {
             return new Promise((resolve, reject) => {
                 this.props.LSPStore.subscribeCustomMessages()
@@ -214,12 +217,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             });
     };
 
-    connectPeer() {
+    connectPeer = async () => {
         const { ChannelsStore, LSPStore } = this.props;
         const node_pubkey_string: string = LSPStore.getLSPS1Pubkey();
         const host: string = LSPStore.getLSPS1Host();
         try {
-            ChannelsStore.connectPeer(
+            return await ChannelsStore.connectPeer(
                 {
                     node_pubkey_string,
                     host,
@@ -231,7 +234,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         } catch (err) {
             console.log(err);
         }
-    }
+    };
 
     render() {
         const { navigation, LSPStore, InvoicesStore, FiatStore } = this.props;
@@ -1084,12 +1087,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                         >
                             <Button
                                 title="Retry"
-                                onPress={() => {
+                                onPress={async () => {
                                     if (BackendUtils.supportsLSPS1rest()) {
                                         LSPStore.getInfoREST();
                                     } else {
-                                        this.connectPeer();
-                                        this.subscribeToCustomMessages();
+                                        await this.connectPeer();
+                                        await this.subscribeToCustomMessages();
                                         this.sendCustomMessage_lsps1();
                                     }
                                 }}
