@@ -450,27 +450,27 @@ export default class AddContact extends React.Component<
                     }}
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
+                    <Header
+                        leftComponent="Back"
+                        rightComponent={
+                            <Row>
+                                <StarButton
+                                    isFavourite={this.state.isFavourite}
+                                    onPress={this.toggleFavorite}
+                                />
+                                <ScanBadge navigation={navigation} />
+                            </Row>
+                        }
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
+                        navigation={navigation}
+                    />
                     <ScrollView
                         contentContainerStyle={{
                             flexGrow: 1
                         }}
                     >
-                        <Header
-                            leftComponent="Back"
-                            rightComponent={
-                                <Row>
-                                    <StarButton
-                                        isFavourite={this.state.isFavourite}
-                                        onPress={this.toggleFavorite}
-                                    />
-                                    <ScanBadge navigation={navigation} />
-                                </Row>
-                            }
-                            containerStyle={{
-                                borderBottomWidth: 0
-                            }}
-                            navigation={navigation}
-                        />
                         <View
                             style={{
                                 justifyContent: 'center',
