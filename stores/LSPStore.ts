@@ -32,6 +32,8 @@ export default class LSPStore {
     @observable public createOrderResponse: any = {};
     @observable public getOrderResponse: any = {};
 
+    @observable public resolvedCustomMessage: boolean;
+
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
     nodeInfoStore: NodeInfoStore;
@@ -367,11 +369,14 @@ export default class LSPStore {
     @action
     public subscribeCustomMessages = async () => {
         if (this.customMessagesSubscriber) return;
-        let timer = 10000;
+        this.resolvedCustomMessage = false;
+        let timer = 7000;
         const timeoutId = setTimeout(() => {
-            this.error = true;
-            this.error_msg = localeString('views.LSPS1.timeoutError');
-            this.loading = false;
+            if (!this.resolvedCustomMessage) {
+                this.error = true;
+                this.error_msg = localeString('views.LSPS1.timeoutError');
+                this.loading = false;
+            }
         }, timer);
 
         if (this.settingsStore.implementation === 'embedded-lnd') {
@@ -381,6 +386,7 @@ export default class LSPStore {
                     try {
                         const decoded = index.decodeCustomMessage(event.data);
                         this.handleCustomMessages(decoded);
+                        this.resolvedCustomMessage = true;
                         clearTimeout(timeoutId);
                     } catch (error: any) {
                         console.error(
@@ -396,6 +402,7 @@ export default class LSPStore {
                 (response: any) => {
                     const decoded = response.result;
                     this.handleCustomMessages(decoded);
+                    this.resolvedCustomMessage = true;
                     clearTimeout(timeoutId);
                 },
                 (error: any) => {
