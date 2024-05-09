@@ -965,6 +965,8 @@
     "views.LSPS1.purchaseInbound": "Purchase inbound channel",
     "views.LSPS1.lsps1Spec": "LSPS1 API and spec",
     "views.LSPS1.lsps1Orders": "LSPS1 Orders",
+    "views.LSPS1.noOrdersError": "No orders are saved yet!",
+    "views.LSPS1.showingPreviousState": "showing previous state!",
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
     "components.UTXOPicker.modal.set": "Set UTXOs",

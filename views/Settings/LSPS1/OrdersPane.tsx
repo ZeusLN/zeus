@@ -1,25 +1,32 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import moment from 'moment';
+import { inject, observer } from 'mobx-react';
+import { View, FlatList, TouchableOpacity, Text } from 'react-native';
 
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
 import Amount from '../../../components/Amount';
+import LoadingIndicator from '../../../components/LoadingIndicator';
 
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 
-import { View, FlatList, TouchableOpacity, Text } from 'react-native';
-import LoadingIndicator from '../../../components/LoadingIndicator';
+import LSPStore from '../../../stores/LSPStore';
+import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 interface OrdersPaneProps {
     navigation: any;
+    LSPStore: LSPStore;
 }
 
 interface OrdersPaneState {
     orders: any[];
     isLoading: boolean;
 }
+
+@inject('LSPStore')
+@observer
 export default class OrdersPane extends React.Component<
     OrdersPaneProps,
     OrdersPaneState
@@ -33,7 +40,7 @@ export default class OrdersPane extends React.Component<
     }
 
     componentDidMount() {
-        const { navigation } = this.props;
+        const { navigation, LSPStore } = this.props;
         navigation.addListener('didFocus', async () => {
             // Retrieve saved responses from encrypted storage
             EncryptedStorage.getItem('orderResponses')
@@ -72,6 +79,14 @@ export default class OrdersPane extends React.Component<
                             orders: reversedOrders,
                             isLoading: false
                         });
+                        LSPStore.error = false;
+                        LSPStore.error_msg = '';
+                    } else {
+                        this.setState({ isLoading: false });
+                        LSPStore.error = true;
+                        LSPStore.error_msg = localeString(
+                            'views.LSPS1.noOrdersError'
+                        );
                     }
                 })
                 .catch((error) =>
@@ -196,7 +211,7 @@ export default class OrdersPane extends React.Component<
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, LSPStore } = this.props;
         const { orders, isLoading } = this.state;
 
         return (
@@ -205,6 +220,18 @@ export default class OrdersPane extends React.Component<
                     <View style={{ marginTop: 50 }}>
                         <LoadingIndicator />
                     </View>
+                ) : LSPStore.error && LSPStore.error_msg ? (
+                    <>
+                        <Header
+                            leftComponent="Back"
+                            onBack={() => {
+                                LSPStore.error = false;
+                                LSPStore.error_msg = '';
+                            }}
+                            navigation={navigation}
+                        />
+                        <ErrorMessage message={LSPStore.error_msg} />
+                    </>
                 ) : (
                     <>
                         <Header
@@ -223,7 +250,7 @@ export default class OrdersPane extends React.Component<
                         <FlatList
                             data={orders}
                             renderItem={this.renderItem}
-                            keyExtractor={(item) => item.id}
+                            keyExtractor={(item) => item.orderId.toString()}
                             ItemSeparatorComponent={this.renderSeparator}
                         />
                     </>
