@@ -11,6 +11,7 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 
 import { themeColor } from '../../../utils/ThemeUtils';
 import BackendUtils from '../../../utils/BackendUtils';
+import { localeString } from '../../../utils/LocaleUtils';
 
 import LSPStore from '../../../stores/LSPStore';
 import SettingsStore from '../../../stores/SettingsStore';
@@ -211,7 +212,11 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         {fetchOldOrder && (
                             <View style={{ paddingHorizontal: 20 }}>
                                 <WarningMessage
-                                    message={`${LSPStore.error_msg}: Showing Previous State`}
+                                    message={`${
+                                        LSPStore.error_msg
+                                    }: ${localeString(
+                                        'views.LSPS1.showingPreviousState'
+                                    )}`}
                                 />
                             </View>
                         )}

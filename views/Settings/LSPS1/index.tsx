@@ -811,10 +811,14 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 placeholder={localeString(
                                                     'views.LSPS1.channelExpiryBlocks'
                                                 )}
-                                                value={channelExpiryBlocks.toString()}
+                                                value={FiatStore.numberWithCommas(
+                                                    channelExpiryBlocks
+                                                )}
                                                 onChangeText={(text: any) => {
-                                                    const intValue =
-                                                        parseInt(text);
+                                                    const intValue = parseInt(
+                                                        text.replace(/,/g, ''),
+                                                        10
+                                                    );
                                                     if (isNaN(intValue)) return;
                                                     this.setState({
                                                         channelExpiryBlocks:
