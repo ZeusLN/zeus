@@ -36,21 +36,23 @@ const nostrProfileLookup = async (data: string) => {
     const pubkey = data;
     const profilesEventsPromises = DEFAULT_NOSTR_RELAYS.map(
         async (relayItem) => {
-            const relay = relayInit(relayItem);
-            relay.on('connect', () => {
-                console.log(`connected to ${relay.url}`);
-            });
-            relay.on('error', () => {
-                console.log(`failed to connect to ${relay.url}`);
-            });
+            try {
+                const relay = relayInit(relayItem);
+                relay.on('connect', () => {
+                    console.log(`connected to ${relay.url}`);
+                });
+                relay.on('error', (): any => {
+                    console.log(`failed to connect to ${relay.url}`);
+                });
 
-            await relay.connect();
-            return relay.list([
-                {
-                    authors: [pubkey],
-                    kinds: [0]
-                }
-            ]);
+                await relay.connect();
+                return relay.list([
+                    {
+                        authors: [pubkey],
+                        kinds: [0]
+                    }
+                ]);
+            } catch (e) {}
         }
     );
 
