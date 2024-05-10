@@ -185,9 +185,11 @@ export default class SignVerifyMessage extends React.Component<
                                             messageToSign: text
                                         })
                                     }
-                                    locked={loading}
                                     multiline
-                                    numberOfLines={3}
+                                    style={{
+                                        height: 100
+                                    }}
+                                    locked={loading}
                                 />
                             </View>
 
@@ -258,7 +260,9 @@ export default class SignVerifyMessage extends React.Component<
                                     }
                                     locked={loading}
                                     multiline
-                                    numberOfLines={3}
+                                    style={{
+                                        height: 100
+                                    }}
                                 />
                             </View>
 
@@ -281,8 +285,6 @@ export default class SignVerifyMessage extends React.Component<
                                         })
                                     }
                                     locked={loading}
-                                    multiline
-                                    numberOfLines={3}
                                 />
                             </View>
 
