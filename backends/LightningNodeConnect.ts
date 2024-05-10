@@ -141,7 +141,8 @@ export default class LightningNodeConnect {
                 private: data.private,
                 r_preimage: data.preimage
                     ? Base64Utils.hexToBase64(data.preimage)
-                    : undefined
+                    : undefined,
+                route_hints: data.route_hints
             })
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
     getPayments = async () =>

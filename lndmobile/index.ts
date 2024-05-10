@@ -515,7 +515,8 @@ export const addInvoice = async ({
     expiry = 3600,
     is_amp,
     is_private,
-    preimage
+    preimage,
+    route_hints
 }: {
     amount?: number;
     amount_msat?: number;
@@ -524,6 +525,7 @@ export const addInvoice = async ({
     is_amp?: boolean;
     is_private?: boolean;
     preimage?: string;
+    route_hints?: lnrpc.IRouteHint[] | null;
 }): Promise<lnrpc.AddInvoiceResponse> => {
     const response = await sendCommand<
         lnrpc.IInvoice,
@@ -541,7 +543,8 @@ export const addInvoice = async ({
             private: is_private,
             min_hop_hints: is_private ? 6 : 0,
             is_amp,
-            r_preimage: preimage ? Base64Utils.hexToBytes(preimage) : undefined
+            r_preimage: preimage ? Base64Utils.hexToBytes(preimage) : undefined,
+            route_hints
         }
     });
     return response;
