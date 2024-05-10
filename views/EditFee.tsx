@@ -328,7 +328,7 @@ export default class EditFee extends React.Component<
                                 </Text>
                             </View>
                         )}
-                        {!displayOnly && (
+                        {!displayOnly && !loading && (
                             <View>
                                 <Text
                                     style={{
