@@ -8,7 +8,8 @@ import {
     TextInput,
     View,
     TouchableOpacity,
-    TouchableWithoutFeedback
+    TouchableWithoutFeedback,
+    Keyboard
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
@@ -63,7 +64,7 @@ export default class EditFee extends React.Component<
 
         const preferredMempoolRate =
             settings?.payments?.preferredMempoolRate || 'fastestFee';
-        if (fee && fees[preferredMempoolRate] === fee) {
+        if (fee && fees?.[preferredMempoolRate] === fee) {
             this.setState({
                 selectedFee: preferredMempoolRate,
                 fee
@@ -72,7 +73,7 @@ export default class EditFee extends React.Component<
     }
 
     render() {
-        const { selectedFee } = this.state;
+        const { selectedFee, fee, customFee } = this.state;
         const { navigation, FeeStore } = this.props;
         const displayOnly = navigation.getParam('displayOnly', null);
         const { recommendedFees, loading, error, getOnchainFeesviaMempool } =
@@ -101,7 +102,7 @@ export default class EditFee extends React.Component<
                             : localeString('views.EditFee.title'),
                         style: { color: themeColor('text') }
                     }}
-                    rightComponent={ReloadButton}
+                    rightComponent={ReloadButton()}
                     navigation={navigation}
                 />
                 <View
@@ -124,9 +125,9 @@ export default class EditFee extends React.Component<
                         style={{ paddingTop: 10, alignSelf: 'center' }}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {loading && !error && (
+                        {loading && (
                             <View style={{ flex: 1, justifyContent: 'center' }}>
-                                <LightningIndicator />
+                                <LightningIndicator size={200} />
                             </View>
                         )}
                         {recommendedFees['fastestFee'] && !loading && (
@@ -136,14 +137,15 @@ export default class EditFee extends React.Component<
                                 }}
                             >
                                 <TouchableWithoutFeedback
-                                    onPress={() =>
+                                    onPress={() => {
                                         this.setState({
                                             selectedFee: 'fastestFee',
                                             fee: recommendedFees[
                                                 'fastestFee'
                                             ].toString()
-                                        })
-                                    }
+                                        });
+                                        Keyboard.dismiss();
+                                    }}
                                 >
                                     <View
                                         style={{
@@ -176,14 +178,15 @@ export default class EditFee extends React.Component<
                                     </View>
                                 </TouchableWithoutFeedback>
                                 <TouchableWithoutFeedback
-                                    onPress={() =>
+                                    onPress={() => {
                                         this.setState({
                                             selectedFee: 'halfHourFee',
                                             fee: recommendedFees[
                                                 'halfHourFee'
                                             ].toString()
-                                        })
-                                    }
+                                        });
+                                        Keyboard.dismiss();
+                                    }}
                                 >
                                     <View
                                         style={{
@@ -215,16 +218,16 @@ export default class EditFee extends React.Component<
                                         </Text>
                                     </View>
                                 </TouchableWithoutFeedback>
-
                                 <TouchableWithoutFeedback
-                                    onPress={() =>
+                                    onPress={() => {
                                         this.setState({
                                             selectedFee: 'hourFee',
                                             fee: recommendedFees[
                                                 'hourFee'
                                             ].toString()
-                                        })
-                                    }
+                                        });
+                                        Keyboard.dismiss();
+                                    }}
                                 >
                                     <View
                                         style={{
@@ -257,14 +260,15 @@ export default class EditFee extends React.Component<
                                     </View>
                                 </TouchableWithoutFeedback>
                                 <TouchableWithoutFeedback
-                                    onPress={() =>
+                                    onPress={() => {
                                         this.setState({
                                             selectedFee: 'minimumFee',
                                             fee: recommendedFees[
                                                 'minimumFee'
                                             ].toString()
-                                        })
-                                    }
+                                        });
+                                        Keyboard.dismiss();
+                                    }}
                                 >
                                     <View
                                         style={{
@@ -296,92 +300,96 @@ export default class EditFee extends React.Component<
                                         </Text>
                                     </View>
                                 </TouchableWithoutFeedback>
-
-                                {!displayOnly && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                fontSize: 18,
-                                                top: 48,
-                                                left: 15,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.EditFee.custom'
-                                            )}
-                                        </Text>
-                                        <TouchableWithoutFeedback>
-                                            <TextInput
-                                                style={{
-                                                    ...styles.feeBox,
-                                                    textAlign: 'right',
-                                                    paddingRight: 15,
-                                                    borderColor:
-                                                        selectedFee === 'custom'
-                                                            ? themeColor(
-                                                                  'highlight'
-                                                              )
-                                                            : '#A7A9AC',
-                                                    color: themeColor('text'),
-                                                    fontSize: 18,
-                                                    height: 52
-                                                }}
-                                                keyboardType="numeric"
-                                                defaultValue={
-                                                    this.state.customFee
-                                                }
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        customFee: text,
-                                                        fee: text,
-                                                        selectedFee: 'custom'
-                                                    })
-                                                }
-                                                onFocus={() =>
-                                                    this.setState({
-                                                        selectedFee: 'custom'
-                                                    })
-                                                }
-                                            ></TextInput>
-                                        </TouchableWithoutFeedback>
-
-                                        <View style={styles.confirmButton}>
-                                            <Button
-                                                title={localeString(
-                                                    'views.EditFee.confirmFee'
-                                                )}
-                                                onPress={() => {
-                                                    this.props.navigation.state.params.onNavigateBack(
-                                                        this.state.fee
-                                                    );
-                                                    this.props.navigation.goBack();
-                                                }}
-                                            />
-                                        </View>
-                                    </>
-                                )}
                             </View>
                         )}
                         {error && !loading && (
                             <View
                                 style={{
-                                    flex: 1,
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: 500
+                                    alignItems: 'center'
                                 }}
                             >
-                                <ErrorIcon />
+                                <ErrorIcon
+                                    style={{
+                                        alignItems: 'center',
+                                        width: '20%',
+                                        aspectRatio: 1,
+                                        marginTop: 50
+                                    }}
+                                />
                                 <Text
                                     style={{
                                         top: 20,
-                                        fontSize: 30,
-                                        color: '#E14C4C'
+                                        fontSize: 20,
+                                        color: themeColor('warning'),
+                                        marginBottom: 49
                                     }}
                                 >
                                     {localeString('views.EditFee.error')}
                                 </Text>
+                            </View>
+                        )}
+                        {!displayOnly && !loading && (
+                            <View>
+                                <Text
+                                    style={{
+                                        fontSize: 18,
+                                        top: 48,
+                                        left: 15,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.EditFee.custom')}
+                                </Text>
+                                <TouchableWithoutFeedback>
+                                    <TextInput
+                                        style={{
+                                            ...styles.feeBox,
+                                            textAlign: 'right',
+                                            paddingRight: 15,
+                                            borderColor:
+                                                selectedFee === 'custom'
+                                                    ? themeColor('highlight')
+                                                    : '#A7A9AC',
+                                            color: themeColor('text'),
+                                            fontSize: 18,
+                                            height: 52
+                                        }}
+                                        keyboardType="numeric"
+                                        value={this.state.customFee}
+                                        onChangeText={(text: string) => {
+                                            text = text.replace(/[^0-9]*/g, '');
+                                            this.setState({
+                                                customFee: text,
+                                                fee: text,
+                                                selectedFee: 'custom'
+                                            });
+                                        }}
+                                        onFocus={() =>
+                                            this.setState({
+                                                selectedFee: 'custom'
+                                            })
+                                        }
+                                    />
+                                </TouchableWithoutFeedback>
+
+                                <View style={styles.confirmButton}>
+                                    <Button
+                                        title={localeString(
+                                            'views.EditFee.confirmFee'
+                                        )}
+                                        onPress={() => {
+                                            this.props.navigation.state.params.onNavigateBack(
+                                                fee
+                                            );
+                                            this.props.navigation.goBack();
+                                        }}
+                                        disabled={
+                                            !fee ||
+                                            (selectedFee === 'custom' &&
+                                                !customFee)
+                                        }
+                                    />
+                                </View>
                             </View>
                         )}
                     </ScrollView>

@@ -69,9 +69,11 @@ export default class FeeStore {
                     this.error = true;
                 }
             })
-            .catch(() => {
+            .catch((error: any) => {
+                console.error('Error fetching fees:', error);
                 this.recommendedFees = {};
                 this.loading = false;
+                this.error = true;
             });
     };
 
