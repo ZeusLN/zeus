@@ -1117,6 +1117,8 @@ PODS:
     - React-Core
   - RNPermissions (3.8.0):
     - React-Core
+  - RNReactNativeHapticFeedback (2.2.0):
+    - React-Core
   - RNReanimated (3.7.0):
     - glog
     - RCT-Folly (= 2022.05.16.00)
@@ -1218,6 +1220,7 @@ DEPENDENCIES:
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNKeychain (from `../node_modules/react-native-keychain`)
   - RNPermissions (from `../node_modules/react-native-permissions`)
+  - RNReactNativeHapticFeedback (from `../node_modules/react-native-haptic-feedback`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSecureRandom (from `../node_modules/react-native-securerandom`)
@@ -1390,6 +1393,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-keychain"
   RNPermissions:
     :path: "../node_modules/react-native-permissions"
+  RNReactNativeHapticFeedback:
+    :path: "../node_modules/react-native-haptic-feedback"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -1486,6 +1491,7 @@ SPEC CHECKSUMS:
   RNGestureHandler: 67fb54b3e6ca338a8044e85cd6f340265aa41091
   RNKeychain: ff836453cba46938e0e9e4c22e43d43fa2c90333
   RNPermissions: 06845210af313594dc3fe5e8ae6afc820d791409
+  RNReactNativeHapticFeedback: ec56a5f81c3941206fd85625fa669ffc7b4545f9
   RNReanimated: 73e9c711a65aa2eec9545a437fd55b69599bbf89
   RNScreens: 17e2f657f1b09a71ec3c821368a04acbb7ebcb46
   RNSecureRandom: 07efbdf2cd99efe13497433668e54acd7df49fef
