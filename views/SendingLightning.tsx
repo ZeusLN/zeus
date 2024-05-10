@@ -25,7 +25,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Clock from '../assets/images/SVG/Clock.svg';
-import Error from '../assets/images/SVG/Error.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import CopyBox from '../components/CopyBox';
 
@@ -263,13 +263,13 @@ export default class SendingLightning extends React.Component<
                             {(!!error || !!payment_error) &&
                                 !LnurlPayStore.isZaplocker && (
                                     <View style={{ alignItems: 'center' }}>
-                                        <Error
+                                        <ErrorIcon
                                             width={windowSize.height * 0.13}
                                             height={windowSize.height * 0.13}
                                         />
                                         <Text
                                             style={{
-                                                color: '#FF9090',
+                                                color: themeColor('warning'),
                                                 fontFamily:
                                                     'PPNeueMontreal-Book',
                                                 fontSize: 32,
