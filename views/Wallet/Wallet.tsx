@@ -70,6 +70,8 @@ import CaretUp from '../../assets/images/SVG/Caret Up.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
+import Scan from '../../assets/images/SVG/Scan.svg';
+
 import { StackNavigationProp } from '@react-navigation/stack';
 
 interface WalletProps {
@@ -612,6 +614,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
+        const CameraScreen = () => {};
+
         const ChannelsScreen = () => {
             return (
                 <Screen>
@@ -669,6 +673,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         }
                                         if (route.name === 'POS Keypad') {
                                             return <Bitcoin fill={color} />;
+                                        }
+                                        if (route.name === 'Camera') {
+                                            return (
+                                                <Scan fill={color} width={20} />
+                                            );
                                         }
                                         if (
                                             BackendUtils.supportsChannelManagement()
@@ -733,6 +742,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             )}
                                     </>
                                 )}
+                                <Tab.Screen
+                                    name="Camera"
+                                    component={CameraScreen}
+                                    listeners={{
+                                        tabPress: (e) => {
+                                            // Prevent default action
+                                            e.preventDefault();
+                                            navigation.navigate(
+                                                'HandleAnythingQRScanner',
+                                                {
+                                                    tabNavigationRef:
+                                                        this.tabNavigationRef
+                                                }
+                                            );
+                                        }
+                                    }}
+                                />
                             </Tab.Navigator>
                         </NavigationContainer>
                     )}
