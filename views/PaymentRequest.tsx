@@ -76,8 +76,8 @@ interface InvoiceState {
     feeOption: string;
     maxFeePercent: string;
     timeoutSeconds: string;
-    outgoingChanId: string | null;
-    lastHopPubkey: string | null;
+    outgoingChanId: string | undefined;
+    lastHopPubkey: string | undefined;
     settingsToggle: boolean;
     zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
@@ -775,13 +775,12 @@ export default class PaymentRequest extends React.Component<
                                                     {
                                                         <HopPicker
                                                             onValueChange={(
-                                                                item: any
+                                                                channels
                                                             ) =>
                                                                 this.setState({
                                                                     outgoingChanId:
-                                                                        item
-                                                                            ? item.channelId
-                                                                            : null
+                                                                        channels[0]
+                                                                            ?.channelId
                                                                 })
                                                             }
                                                             title={localeString(
@@ -798,13 +797,12 @@ export default class PaymentRequest extends React.Component<
                                                     {
                                                         <HopPicker
                                                             onValueChange={(
-                                                                item: any
+                                                                channels
                                                             ) =>
                                                                 this.setState({
                                                                     lastHopPubkey:
-                                                                        item
-                                                                            ? item.remote_pubkey
-                                                                            : null
+                                                                        channels[0]
+                                                                            ?.channelId
                                                                 })
                                                             }
                                                             title={localeString(

@@ -267,7 +267,8 @@ export default class LND {
             private: data.private,
             r_preimage: data.preimage
                 ? Base64Utils.hexToBase64(data.preimage)
-                : undefined
+                : undefined,
+            route_hints: data.route_hints
         });
     getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
