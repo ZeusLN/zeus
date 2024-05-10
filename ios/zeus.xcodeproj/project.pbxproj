@@ -144,7 +144,6 @@
 		E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */ = {isa = PBXBuildFile; fileRef = AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */; };
 		E691022067D14B198BFF83DB /* Dice.svg in Resources */ = {isa = PBXBuildFile; fileRef = CE4931FF962B4189AC3F3EEB /* Dice.svg */; };
 		ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED297162215061F000B7C4FE /* JavaScriptCore.framework */; };
-		EE7264005C294AE58E30C834 /* Error.svg in Resources */ = {isa = PBXBuildFile; fileRef = DD470243A7FC45D882EF1B0D /* Error.svg */; };
 		F15BCD255F194C84973AB51D /* Skull.svg in Resources */ = {isa = PBXBuildFile; fileRef = B813A99762CC4756A18E0C20 /* Skull.svg */; };
 		F6BA97FE98FB4D8890855BEC /* Wallet.svg in Resources */ = {isa = PBXBuildFile; fileRef = CCFEAC399BB842A091ADB042 /* Wallet.svg */; };
 		F9767258AD2F4256A0668218 /* Save.svg in Resources */ = {isa = PBXBuildFile; fileRef = 6934A0BCDAD94002BA8F840A /* Save.svg */; };
@@ -502,7 +501,6 @@
 		D7E370054BBF42359E7A5112 /* Wallet2.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Wallet2.svg; path = ../assets/images/SVG/Wallet2.svg; sourceTree = "<group>"; };
 		DAB0850D6CA542288A565578 /* Success.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Success.svg; path = ../assets/images/SVG/Success.svg; sourceTree = "<group>"; };
 		DD1A9F0B9EF0475C81C53C8D /* Flash On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Flash On.svg"; path = "../assets/images/SVG/Flash On.svg"; sourceTree = "<group>"; };
-		DD470243A7FC45D882EF1B0D /* Error.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Error.svg; path = ../assets/images/SVG/Error.svg; sourceTree = "<group>"; };
 		DEE698AC647848D9B6DB13F6 /* 3.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 3.png; path = ../assets/images/intro/3.png; sourceTree = "<group>"; };
 		DFA342136699448EA20DE82D /* Sync.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Sync.svg; path = ../assets/images/SVG/Sync.svg; sourceTree = "<group>"; };
 		E21D3D5587114764BC296D83 /* Key Security.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Key Security.svg"; path = "../assets/images/SVG/Key Security.svg"; sourceTree = "<group>"; };
@@ -927,7 +925,6 @@
 				AC3DB90B22364D909A09B3E0 /* ScanFrameSvg.tsx */,
 				C7FBAA85E56C4D5D92F74F11 /* UnifiedSvg.tsx */,
 				3C817E9DD0504569B85A84F1 /* Edit.svg */,
-				DD470243A7FC45D882EF1B0D /* Error.svg */,
 				B4C39762C9B748E39BFDA90F /* ExchangeBitcoin.svg */,
 				6C81853A9EA0452B9999E58D /* ExchangeFiat.svg */,
 				4A6B733324794E60B618DACE /* Export.svg */,
@@ -1387,7 +1384,6 @@
 				4132F00F76CB488AAA77C848 /* ScanFrameSvg.tsx in Resources */,
 				7598B75F1F64426CAF420155 /* UnifiedSvg.tsx in Resources */,
 				5851F5898AED446FA5EF41FB /* Edit.svg in Resources */,
-				EE7264005C294AE58E30C834 /* Error.svg in Resources */,
 				6027AA29AEA34E7290034736 /* ExchangeBitcoin.svg in Resources */,
 				93C795DB3CDC46D8862C3393 /* ExchangeFiat.svg in Resources */,
 				1E2D6C276B2449BEB48D0EFA /* Export.svg in Resources */,

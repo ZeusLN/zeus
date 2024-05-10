@@ -171,6 +171,7 @@ export default class ZeroConfPeers extends React.Component<
                                         `${item.txid}-${index}`
                                     }
                                     onEndReachedThreshold={50}
+                                    scrollEnabled={false}
                                 />
                             ) : (
                                 <Text
