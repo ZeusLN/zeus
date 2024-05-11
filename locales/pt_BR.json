@@ -107,6 +107,7 @@
     "general.mode": "Mode",
     "general.automatic": "Automatic",
     "general.custom": "Pesonalizar",
+    "general.skip": "Skip",
     "restart.title": "É necessário reiniciar",
     "restart.msg": "ZEUS deve ser reiniciado antes que a nova configuração seja aplicada.",
     "restart.msg1": "Gostaria de reiniciar agora?",
