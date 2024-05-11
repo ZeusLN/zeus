@@ -120,9 +120,11 @@ const writeLndConfig = async (
             ? 'neutrino.assertfilterheader=660000:08312375fabc082b17fa8ee88443feb350c19a34bb7483f94f7478fa4ad33032'
             : ''
     }
-    neutrino.feeurl=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
     neutrino.broadcasttimeout=11s
     neutrino.persistfilters=true
+
+    [fee]
+    fee.url=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
     
     [autopilot]
     autopilot.active=0
