@@ -107,6 +107,7 @@
     "general.mode": "Mode",
     "general.automatic": "Automatic",
     "general.custom": "Mukautettu",
+    "general.skip": "Skip",
     "restart.title": "Vaatii uudelleenkäynnistyksen",
     "restart.msg": "Uusien määritysten käyttöönotto vaatii sovelluksen uudelleen käynnistyksen.",
     "restart.msg1": "Haluatko tehdä uudelleenkäynnistyksen nyt?",
