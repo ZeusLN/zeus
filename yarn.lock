@@ -8523,6 +8523,11 @@ react-native-svg@14.1.0:
     css-select "^5.1.0"
     css-tree "^1.1.3"
 
+react-native-system-navigation-bar@2.6.4:
+  version "2.6.4"
+  resolved "https://registry.yarnpkg.com/react-native-system-navigation-bar/-/react-native-system-navigation-bar-2.6.4.tgz#34edee7051dea01531ff2be95dc14f9fa8a540b7"
+  integrity sha512-4pysgADW53PiuHv+2glzNLJnHSxqDszZvLoitLFI5os4D+gCDfxmR36VSET4EnXkzSf8X9mbeFkHYDypDHJyZA==
+
 react-native-tcp@aprock/react-native-tcp#be5f656:
   version "4.0.0"
   resolved "https://codeload.github.com/aprock/react-native-tcp/tar.gz/be5f656ffd3aa4559270e8472ee24a1c36029cf1"
