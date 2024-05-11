@@ -107,6 +107,7 @@
     "general.mode": "Mode",
     "general.automatic": "Automatic",
     "general.custom": "사용자 정의",
+    "general.skip": "Skip",
     "restart.title": "재시작 필요",
     "restart.msg": "새로운 설정을 적용하려면, ZEUS를 재시작해야 합니다.",
     "restart.msg1": "지금 재시작하시겠습니까?",
