@@ -107,6 +107,7 @@
     "general.mode": "Mode",
     "general.automatic": "Automatic",
     "general.custom": "Anpassad",
+    "general.skip": "Skip",
     "restart.title": "Omstart krävs",
     "restart.msg": "ZEUS måste startas om innan den nya konfigurationen börjar gälla",
     "restart.msg1": "Vill du starta om nu?",
