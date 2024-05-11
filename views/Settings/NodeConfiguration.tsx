@@ -12,6 +12,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import cloneDeep from 'lodash/cloneDeep';
+import differenceBy from 'lodash/differenceBy';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -415,8 +416,12 @@ export default class NodeConfiguration extends React.Component<
         };
 
         let nodes: any;
+        let originalNode: any;
         if (settings.nodes) {
             nodes = settings.nodes;
+            if (index != null) {
+                originalNode = nodes[index];
+            }
             nodes[index !== null ? index : settings.nodes.length] = node;
         } else {
             nodes = [node];
@@ -433,14 +438,29 @@ export default class NodeConfiguration extends React.Component<
                 saved: true
             });
 
-            if (nodes.length === 1) {
+            const activeNodeIndex = settings.selectedNode || 0;
+            if (index === activeNodeIndex) {
+                if (originalNode != null) {
+                    const diff = differenceBy(
+                        Object.entries(originalNode),
+                        Object.entries(node),
+                        (entry) => entry[0] + entry[1]
+                    ).filter(
+                        (entry) =>
+                            entry[0] !== 'nickname' && entry[0] !== 'photo'
+                    );
+                    if (diff.length === 0) {
+                        navigation.goBack();
+                        return;
+                    }
+                }
                 if (implementation === 'lightning-node-connect') {
                     BackendUtils.disconnect();
                 }
                 setConnectingStatus(true);
                 navigation.navigate('Wallet', { refresh: true });
             } else {
-                navigation.navigate('Nodes', { refresh: true });
+                navigation.goBack();
             }
         });
     };
