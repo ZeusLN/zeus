@@ -99,7 +99,7 @@ export default function PinPad({
 
     const triggerHapticFeedback = () => {
         if (!amount) {
-            // effectClick is only avaiable on Android
+            // effectClick is only available on Android
             const type = Platform.OS === 'android' ? 'effectClick' : 'soft';
             ReactNativeHapticFeedback.trigger(type);
         }
