@@ -107,6 +107,7 @@
     "general.mode": "Mode",
     "general.automatic": "Automatic",
     "general.custom": "Προσαρμοσμένο",
+    "general.skip": "Skip",
     "restart.title": "Απαιτείται επανεκκίνηση",
     "restart.msg": "Το Zeus πρέπει να κάνει επανεκκίνηση πριν εφαρμοστούν οι καινούριες ρυθμίσεις.",
     "restart.msg1": "Θέλετε να γίνει επανεκκίνηση τώρα;",
