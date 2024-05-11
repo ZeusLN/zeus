@@ -2473,47 +2473,51 @@ export default class Receive extends React.Component<
                                                 </Row>
                                             )}
 
-                                        {BackendUtils.isLNDBased() && (
-                                            <HopPicker
-                                                ref={(ref) =>
-                                                    (this.hopPickerRef = ref)
-                                                }
-                                                onValueChange={(channels) => {
-                                                    this.setState({
-                                                        selectedRouteHintChannels:
-                                                            channels
-                                                    });
-                                                }}
-                                                onCancel={() => {
-                                                    if (
-                                                        !selectedRouteHintChannels?.length
-                                                    ) {
-                                                        setRouteHintMode(
-                                                            RouteHintMode.Automatic
-                                                        );
+                                        {BackendUtils.isLNDBased() &&
+                                            routeHints && (
+                                                <HopPicker
+                                                    ref={(ref) =>
+                                                        (this.hopPickerRef =
+                                                            ref)
                                                     }
-                                                }}
-                                                title={localeString(
-                                                    'views.Receive.customRouteHints'
-                                                )}
-                                                ChannelsStore={
-                                                    this.props.ChannelsStore
-                                                }
-                                                UnitsStore={UnitsStore}
-                                                containerStyle={{
-                                                    display:
-                                                        routeHintMode ===
-                                                        RouteHintMode.Automatic
-                                                            ? 'none'
-                                                            : 'flex'
-                                                }}
-                                                clearOnTap={false}
-                                                selectionMode={'multiple'}
-                                                selectedChannels={
-                                                    selectedRouteHintChannels
-                                                }
-                                            />
-                                        )}
+                                                    onValueChange={(
+                                                        channels
+                                                    ) => {
+                                                        this.setState({
+                                                            selectedRouteHintChannels:
+                                                                channels
+                                                        });
+                                                    }}
+                                                    onCancel={() => {
+                                                        if (
+                                                            !selectedRouteHintChannels?.length
+                                                        ) {
+                                                            setRouteHintMode(
+                                                                RouteHintMode.Automatic
+                                                            );
+                                                        }
+                                                    }}
+                                                    title={localeString(
+                                                        'views.Receive.customRouteHints'
+                                                    )}
+                                                    ChannelsStore={
+                                                        this.props.ChannelsStore
+                                                    }
+                                                    UnitsStore={UnitsStore}
+                                                    containerStyle={{
+                                                        display:
+                                                            routeHintMode ===
+                                                            RouteHintMode.Automatic
+                                                                ? 'none'
+                                                                : 'flex'
+                                                    }}
+                                                    clearOnTap={false}
+                                                    selectionMode={'multiple'}
+                                                    selectedChannels={
+                                                        selectedRouteHintChannels
+                                                    }
+                                                />
+                                            )}
 
                                         {BackendUtils.supportsAMP() &&
                                             !lspIsActive && (
