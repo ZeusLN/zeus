@@ -75,7 +75,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         super(props);
         this.state = {
             lspBalanceSat: 0,
-            clientBalanceSat: 0,
+            clientBalanceSat: '0',
             requiredChannelConfirmations: '8',
             confirmsWithinBlocks: '6',
             channelExpiryBlocks: 0,
@@ -255,6 +255,10 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                 style={{ marginTop: -10 }}
                 onPress={() => {
                     navigation.navigate('OrdersPane');
+                    // EncryptedStorage.setItem(
+                    //     'orderResponses',
+                    //     JSON.stringify([])
+                    // );
                 }}
                 accessibilityLabel={localeString('general.add')}
             >
@@ -995,10 +999,11 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             const currentOrderId =
                                                                 JSON.parse(
                                                                     response
-                                                                ).order_id ||
+                                                                ).order
+                                                                    ?.order_id ||
                                                                 JSON.parse(
                                                                     response
-                                                                ).result
+                                                                ).order?.result
                                                                     ?.order_id;
                                                             return (
                                                                 currentOrderId ===
@@ -1010,10 +1015,30 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 if (
                                                     existingResponseIndex === -1
                                                 ) {
-                                                    // Serialize the createOrderResponse object into a JSON string
+                                                    const orderData = {
+                                                        order: createOrderResponse
+                                                    };
+
+                                                    if (
+                                                        BackendUtils.supportsLSPS1customMessage()
+                                                    ) {
+                                                        orderData.peer =
+                                                            LSPStore.getLSPS1Pubkey();
+                                                        orderData.uri = `${LSPStore.getLSPS1Pubkey()}@${LSPStore.getLSPS1Host()}`;
+                                                    }
+                                                    if (
+                                                        BackendUtils.supportsLSPS1rest()
+                                                    ) {
+                                                        orderData.endpoint =
+                                                            LSPStore.getLSPS1Rest();
+                                                    }
+
+                                                    console.log(orderData);
+
+                                                    // Serialize the orderData object into a JSON string
                                                     const serializedResponse =
                                                         JSON.stringify(
-                                                            createOrderResponse
+                                                            orderData
                                                         );
 
                                                     // Append the serialized response to the array

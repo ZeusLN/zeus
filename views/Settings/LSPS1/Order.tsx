@@ -47,29 +47,74 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
 
     async componentDidMount() {
         const { LSPStore } = this.props;
-        const orderId = this.props.navigation.getParam('orderId', null);
+        let temporaryOrder: any;
+        const id = this.props.navigation.getParam('orderId', null);
 
-        BackendUtils.supportsLSPS1rest()
-            ? LSPStore.getOrderREST(orderId)
-            : this.lsps1_getorder(orderId);
+        console.log('Looking for order in storage...');
+        EncryptedStorage.getItem('orderResponses')
+            .then((responseArrayString) => {
+                if (responseArrayString) {
+                    const responseArray = JSON.parse(responseArrayString);
+                    const order = responseArray.find((response) => {
+                        const decodedResponse = JSON.parse(response);
+                        const result =
+                            decodedResponse?.order?.result ||
+                            decodedResponse?.order;
+                        return result.order_id === id;
+                    });
+                    if (order) {
+                        const parsedOrder = JSON.parse(order);
+                        temporaryOrder = parsedOrder;
+                        console.log('Order found in storage->', temporaryOrder);
 
-        setTimeout(() => {
-            if (LSPStore.error && LSPStore.error_msg !== '') {
-                this.retrieveOrderFromStorage(orderId);
-            } else {
-                const getOrderData = LSPStore.getOrderResponse;
-                this.setState({ order: getOrderData, fetchOldOrder: false });
-                const result = getOrderData?.result || getOrderData;
-                if (
-                    result?.order_state === 'COMPLETED' ||
-                    result?.order_state === 'FAILED'
-                ) {
-                    this.updateOrderInStorage(getOrderData);
+                        const peerOrEndpoint =
+                            temporaryOrder.peer || temporaryOrder.endpoint;
+
+                        BackendUtils.supportsLSPS1rest()
+                            ? LSPStore.getOrderREST(id, peerOrEndpoint)
+                            : this.lsps1_getorder(id, peerOrEndpoint);
+
+                        setTimeout(() => {
+                            if (LSPStore.error && LSPStore.error_msg !== '') {
+                                this.setState({
+                                    order: temporaryOrder?.order,
+                                    fetchOldOrder: true
+                                });
+                                this.props.LSPStore.loading = false;
+                                console.log('Old Order state fetched!');
+                            } else {
+                                const getOrderData = LSPStore.getOrderResponse;
+                                this.setState({
+                                    order: getOrderData,
+                                    fetchOldOrder: false
+                                });
+                                console.log('Latest Order state fetched!');
+                                const result =
+                                    getOrderData?.result || getOrderData;
+                                if (
+                                    result?.order_state === 'COMPLETED' ||
+                                    result?.order_state === 'FAILED'
+                                ) {
+                                    this.updateOrderInStorage(getOrderData);
+                                }
+                                LSPStore.loading = false;
+                            }
+                        }, 3000);
+                    } else {
+                        console.log('Order not found in encrypted storage.');
+                    }
+                } else {
+                    console.log(
+                        'No saved responses found in encrypted storage.'
+                    );
                 }
-                LSPStore.loading = false;
-                console.log('Latest Order state fetched!');
-            }
-        }, 3000);
+            })
+            .catch((error) => {
+                console.error(
+                    'Error retrieving saved responses from encrypted storage:',
+                    error
+                );
+            });
     }
 
     updateOrderInStorage(order) {
@@ -82,8 +127,10 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                     const index = responseArray.findIndex((response) => {
                         const decodedResponse = JSON.parse(response);
                         const result =
-                            decodedResponse?.result || decodedResponse;
-                        const currentOrderResult = order?.result || order;
+                            decodedResponse?.order?.result ||
+                            decodedResponse?.order;
+                        const currentOrderResult =
+                            order?.order?.result || order?.order;
                         return result.order_id === currentOrderResult.order_id;
                     });
                     if (index !== -1) {
@@ -113,49 +160,9 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
             });
     }
 
-    retrieveOrderFromStorage(id: string) {
-        console.log('Latest order state not found, retrieving from storage...');
-        EncryptedStorage.getItem('orderResponses')
-            .then((responseArrayString) => {
-                if (responseArrayString) {
-                    const responseArray = JSON.parse(responseArrayString);
-                    const order = responseArray.find((response) => {
-                        const decodedResponse = JSON.parse(response);
-                        const result =
-                            decodedResponse?.result || decodedResponse;
-                        return result.order_id === id;
-                    });
-                    if (order) {
-                        const parsedOrder = JSON.parse(order);
-                        this.setState({
-                            order: parsedOrder,
-                            fetchOldOrder: true
-                        });
-                        this.props.LSPStore.loading = false;
-                        console.log('Old Order state fetched!');
-                    } else {
-                        console.log('Order not found in encrypted storage.');
-                    }
-                } else {
-                    console.log(
-                        'No saved responses found in encrypted storage.'
-                    );
-                }
-            })
-            .catch((error) => {
-                console.error(
-                    'Error retrieving saved responses from encrypted storage:',
-                    error
-                );
-            });
-    }
-
-    lsps1_getorder(orderId: string) {
+    lsps1_getorder(orderId: string, peerOrEndpoint: any) {
         const { LSPStore } = this.props;
         LSPStore.loading = true;
-        const peer =
-            '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df@139.144.22.237:9735';
-        const [node_pubkey_string] = peer.split('@');
         const type = 37913;
         const id = uuidv4();
         LSPStore.getOrderId = id;
@@ -169,7 +176,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
         });
 
         this.props.LSPStore.sendCustomMessage({
-            peer: node_pubkey_string,
+            peer: peerOrEndpoint,
             type,
             data
         })
