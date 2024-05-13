@@ -255,10 +255,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                 style={{ marginTop: -10 }}
                 onPress={() => {
                     navigation.navigate('OrdersPane');
-                    // EncryptedStorage.setItem(
-                    //     'orderResponses',
-                    //     JSON.stringify([])
-                    // );
                 }}
                 accessibilityLabel={localeString('general.add')}
             >

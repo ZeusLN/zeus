@@ -1,5 +1,6 @@
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { v4 as uuidv4 } from 'uuid';
 
 import SettingsStore from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
@@ -92,6 +93,8 @@ export default class LSPStore {
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lsps1RestTestnet
             : this.settingsStore.settings.lsps1RestMainnet;
+
+    encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
 
     @action
     public getLSPInfo = () => {
@@ -499,9 +502,9 @@ export default class LSPStore {
     };
 
     @action
-    public getOrderREST(id: string, peerOrEndpoint: any) {
+    public getOrderREST(id: string, RESTHost: string) {
         this.loading = true;
-        const endpoint = `${peerOrEndpoint}/api/v1/get_order?order_id=${id}`;
+        const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
 
         console.log('Sending data to:', endpoint);
 
@@ -523,6 +526,34 @@ export default class LSPStore {
                 this.error = true;
                 this.error_msg = errorToUserFriendly(error);
                 this.loading = false;
+            });
+    }
+
+    @action
+    public getOrderCustomMessage(orderId: string, peer: string) {
+        this.loading = true;
+        const type = 37913;
+        const id = uuidv4();
+        this.getOrderId = id;
+        const data = this.encodeMesage({
+            jsonrpc: '2.0',
+            method: 'lsps1.get_order',
+            params: {
+                order_id: orderId
+            },
+            id: this.getOrderId
+        });
+
+        this.sendCustomMessage({
+            peer: peer,
+            type,
+            data
+        })
+            .then((response) => {
+                console.log('Custom message sent:', response);
+            })
+            .catch((error) => {
+                console.error('Error sending custom message:', error);
             });
     }
 }
