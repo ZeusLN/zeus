@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { v4 as uuidv4 } from 'uuid';
 import { inject, observer } from 'mobx-react';
 
 import Screen from '../../../components/Screen';
@@ -43,8 +42,6 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
         };
     }
 
-    encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
-
     async componentDidMount() {
         const { LSPStore } = this.props;
         let temporaryOrder: any;
@@ -67,12 +64,15 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         temporaryOrder = parsedOrder;
                         console.log('Order found in storage->', temporaryOrder);
 
-                        const peerOrEndpoint =
-                            temporaryOrder.peer || temporaryOrder.endpoint;
-
                         BackendUtils.supportsLSPS1rest()
-                            ? LSPStore.getOrderREST(id, peerOrEndpoint)
-                            : this.lsps1_getorder(id, peerOrEndpoint);
+                            ? LSPStore.getOrderREST(
+                                  id,
+                                  temporaryOrder?.RESTHost
+                              )
+                            : LSPStore.getOrderCustomMessage(
+                                  id,
+                                  temporaryOrder?.peer
+                              );
 
                         setTimeout(() => {
                             if (LSPStore.error && LSPStore.error_msg !== '') {
@@ -157,34 +157,6 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                     'Error retrieving saved responses from encrypted storage:',
                     error
                 );
-            });
-    }
-
-    lsps1_getorder(orderId: string, peerOrEndpoint: any) {
-        const { LSPStore } = this.props;
-        LSPStore.loading = true;
-        const type = 37913;
-        const id = uuidv4();
-        LSPStore.getOrderId = id;
-        const data = this.encodeMesage({
-            jsonrpc: '2.0',
-            method: 'lsps1.get_order',
-            params: {
-                order_id: orderId
-            },
-            id: LSPStore.getOrderId
-        });
-
-        this.props.LSPStore.sendCustomMessage({
-            peer: peerOrEndpoint,
-            type,
-            data
-        })
-            .then((response) => {
-                console.log('Custom message sent:', response);
-            })
-            .catch((error) => {
-                console.error('Error sending custom message:', error);
             });
     }
 
