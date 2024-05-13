@@ -175,73 +175,73 @@ export default class LSPS1OrderResponse extends React.Component<
                         <KeyValue
                             keyValue={localeString('views.Payment.title')}
                         />
-                        {payment.fee_total_sat && (
+                        {payment?.fee_total_sat && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Transaction.totalFees'
                                 )}
                                 value={
                                     <Amount
-                                        sats={payment.fee_total_sat}
+                                        sats={payment?.fee_total_sat}
                                         sensitive
                                         toggleable
                                     />
                                 }
                             />
                         )}
-                        {(payment.lightning_invoice ||
-                            payment.bolt11_invoice) && (
+                        {(payment?.lightning_invoice ||
+                            payment?.bolt11_invoice) && (
                             <KeyValue
                                 keyValue={localeString(
                                     'general.lightningInvoice'
                                 )}
                                 value={
-                                    payment.lightning_invoice ||
-                                    payment.bolt11_invoice
+                                    payment?.lightning_invoice ||
+                                    payment?.bolt11_invoice
                                 }
                             />
                         )}
-                        {payment.state && (
+                        {payment?.state && (
                             <KeyValue
                                 keyValue={localeString('general.state')}
-                                value={payment.state}
+                                value={payment?.state}
                             />
                         )}
-                        {payment.min_fee_for_0conf && (
+                        {payment?.min_fee_for_0conf && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.LSPS1.miniFeeFor0Conf'
                                 )}
-                                value={payment.min_fee_for_0conf}
+                                value={payment?.min_fee_for_0conf}
                             />
                         )}
-                        {payment.min_onchain_payment_confirmations && (
+                        {payment?.min_onchain_payment_confirmations && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.LSPS1.minOnchainPaymentConfirmations'
                                 )}
                                 value={
-                                    payment.min_onchain_payment_confirmations
+                                    payment?.min_onchain_payment_confirmations
                                 }
                             />
                         )}
-                        {payment.onchain_address && (
+                        {payment?.onchain_address && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Settings.AddContact.onchainAddress'
                                 )}
-                                value={payment.onchain_address}
+                                value={payment?.onchain_address}
                             />
                         )}
-                        {payment.onchain_payment && (
+                        {payment?.onchain_payment && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.LSPS1.onchainPayment'
                                 )}
-                                value={payment.onchain_payment}
+                                value={payment?.onchain_payment}
                             />
                         )}
-                        {payment.order_total_sat && (
+                        {payment?.order_total_sat && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.LSPS1.totalOrderValue'

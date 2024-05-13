@@ -57,20 +57,20 @@ export default class OrdersPane extends React.Component<
                         // Extract required information from each order for display
                         const orders = decodedResponses.map((response) => ({
                             orderId:
-                                response?.result?.order_id ||
-                                response?.order_id,
+                                response?.order?.result?.order_id ||
+                                response?.order?.order_id,
                             state:
-                                response?.result?.order_state ||
-                                response?.order_state,
+                                response?.order?.result?.order_state ||
+                                response?.order?.order_state,
                             createdAt:
-                                response?.result?.created_at ||
-                                response?.created_at,
+                                response?.order?.result?.created_at ||
+                                response?.order?.created_at,
                             fundedAt:
-                                response?.result?.channel?.funded_at ||
-                                response?.channel?.funded_at,
+                                response?.order?.result?.channel?.funded_at ||
+                                response?.order?.channel?.funded_at,
                             lspBalanceSat:
-                                response?.result?.lsp_balance_sat ||
-                                response?.lsp_balance_sat
+                                response?.order?.result?.lsp_balance_sat ||
+                                response?.order?.lsp_balance_sat
                         }));
 
                         const reversedOrders = orders.reverse();
