@@ -107,7 +107,7 @@
     "general.mode": "Režim",
     "general.automatic": "Automatický",
     "general.custom": "Vlastní",
-    "general.skip": "Skip",
+    "general.skip": "Přeskočit",
     "restart.title": "Je vyžadován restart",
     "restart.msg": "ZEUS musí být restartován dříve, než bude aplikováno nové nastavení.",
     "restart.msg1": "Přejete si aplikaci restartovat nyní?",
