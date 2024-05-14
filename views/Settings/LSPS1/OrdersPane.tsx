@@ -250,7 +250,7 @@ export default class OrdersPane extends React.Component<
                         <FlatList
                             data={orders}
                             renderItem={this.renderItem}
-                            keyExtractor={(item) => item.orderId.toString()}
+                            keyExtractor={(item) => item?.orderId?.toString()}
                             ItemSeparatorComponent={this.renderSeparator}
                         />
                     </>
