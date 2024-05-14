@@ -209,6 +209,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                             <LSPS1OrderResponse
                                 orderResponse={result}
                                 orderView={true}
+                                navigation={navigation}
                             />
                         )}
                     </ScrollView>

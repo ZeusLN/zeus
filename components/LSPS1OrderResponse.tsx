@@ -37,7 +37,8 @@ export default class LSPS1OrderResponse extends React.Component<
             InvoicesStore,
             NodeInfoStore,
             FiatStore,
-            orderView
+            orderView,
+            navigation
         } = this.props;
         const { testnet } = NodeInfoStore;
         const payment = orderResponse?.payment;
@@ -304,7 +305,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                             payment.bolt11_invoice
                                     )
                                         .then(() => {
-                                            this.props.navigation.navigate(
+                                            navigation.navigate(
                                                 'PaymentRequest',
                                                 {}
                                             );
