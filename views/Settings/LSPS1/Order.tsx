@@ -43,9 +43,9 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
     }
 
     async componentDidMount() {
-        const { LSPStore } = this.props;
+        const { LSPStore, navigation } = this.props;
         let temporaryOrder: any;
-        const id = this.props.navigation.getParam('orderId', null);
+        const id = navigation.getParam('orderId', null);
 
         console.log('Looking for order in storage...');
         EncryptedStorage.getItem('orderResponses')
@@ -57,7 +57,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         const result =
                             decodedResponse?.order?.result ||
                             decodedResponse?.order;
-                        return result.order_id === id;
+                        return result?.order_id === id;
                     });
                     if (order) {
                         const parsedOrder = JSON.parse(order);
@@ -80,7 +80,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                                     order: temporaryOrder?.order,
                                     fetchOldOrder: true
                                 });
-                                this.props.LSPStore.loading = false;
+                                LSPStore.loading = false;
                                 console.log('Old Order state fetched!');
                             } else {
                                 const getOrderData = LSPStore.getOrderResponse;
@@ -129,13 +129,19 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         const result =
                             decodedResponse?.order?.result ||
                             decodedResponse?.order;
-                        const currentOrderResult =
-                            order?.order?.result || order?.order;
+                        const currentOrderResult = order?.result || order;
                         return result.order_id === currentOrderResult.order_id;
                     });
                     if (index !== -1) {
-                        // Update the order
-                        responseArray[index] = JSON.stringify(order);
+                        // Get the old order data
+                        const oldOrder = JSON.parse(responseArray[index]);
+
+                        // Replace the order property with the new order
+                        oldOrder.order = order;
+
+                        // Update the order in the array
+                        responseArray[index] = JSON.stringify(oldOrder);
+
                         // Save the updated order array back to encrypted storage
                         EncryptedStorage.setItem(
                             'orderResponses',
