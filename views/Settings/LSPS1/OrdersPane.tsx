@@ -13,7 +13,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 
 import LSPStore from '../../../stores/LSPStore';
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import { WarningMessage } from '../../../components/SuccessErrorMessage';
 
 interface OrdersPaneProps {
     navigation: any;
@@ -39,62 +39,70 @@ export default class OrdersPane extends React.Component<
         };
     }
 
-    componentDidMount() {
+    async componentDidMount() {
         const { navigation, LSPStore } = this.props;
         navigation.addListener('didFocus', async () => {
-            // Retrieve saved responses from encrypted storage
-            EncryptedStorage.getItem('orderResponses')
+            try {
+                // Retrieve saved responses from encrypted storage
+                const responseArrayString = await EncryptedStorage.getItem(
+                    'orderResponses'
+                );
+                if (responseArrayString) {
+                    const responseArray = JSON.parse(responseArrayString);
 
-                .then((responseArrayString) => {
-                    if (responseArrayString) {
-                        const responseArray = JSON.parse(responseArrayString);
-                        const decodedResponses = responseArray.map(
-                            (response) => {
-                                return JSON.parse(response);
-                            }
-                        );
-
-                        // Extract required information from each order for display
-                        const orders = decodedResponses.map((response) => ({
-                            orderId:
-                                response?.order?.result?.order_id ||
-                                response?.order?.order_id,
-                            state:
-                                response?.order?.result?.order_state ||
-                                response?.order?.order_state,
-                            createdAt:
-                                response?.order?.result?.created_at ||
-                                response?.order?.created_at,
-                            fundedAt:
-                                response?.order?.result?.channel?.funded_at ||
-                                response?.order?.channel?.funded_at,
-                            lspBalanceSat:
-                                response?.order?.result?.lsp_balance_sat ||
-                                response?.order?.lsp_balance_sat
-                        }));
-
-                        const reversedOrders = orders.reverse();
-
-                        this.setState({
-                            orders: reversedOrders,
-                            isLoading: false
-                        });
-                        LSPStore.error = false;
-                        LSPStore.error_msg = '';
-                    } else {
+                    if (responseArray.length === 0) {
+                        console.log('No orders found!');
                         this.setState({ isLoading: false });
                         LSPStore.error = true;
                         LSPStore.error_msg = localeString(
                             'views.LSPS1.noOrdersError'
                         );
+                        return;
                     }
-                })
-                .catch((error) =>
-                    console.error(
-                        'Error retrieving saved responses from encrypted storage:',
-                        error
-                    )
-                );
+
+                    const decodedResponses = responseArray.map((response) =>
+                        JSON.parse(response)
+                    );
+
+                    // Extract required information from each order for display
+                    const orders = decodedResponses.map((response) => ({
+                        orderId:
+                            response?.order?.result?.order_id ||
+                            response?.order?.order_id,
+                        state:
+                            response?.order?.result?.order_state ||
+                            response?.order?.order_state,
+                        createdAt:
+                            response?.order?.result?.created_at ||
+                            response?.order?.created_at,
+                        fundedAt:
+                            response?.order?.result?.channel?.funded_at ||
+                            response?.order?.channel?.funded_at,
+                        lspBalanceSat:
+                            response?.order?.result?.lsp_balance_sat ||
+                            response?.order?.lsp_balance_sat
+                    }));
+
+                    const reversedOrders = orders.reverse();
+
+                    this.setState({
+                        orders: reversedOrders,
+                        isLoading: false
+                    });
+                    LSPStore.error = false;
+                    LSPStore.error_msg = '';
+                } else {
+                    this.setState({ isLoading: false });
+                    LSPStore.error = true;
+                    LSPStore.error_msg = localeString(
+                        'views.LSPS1.noOrdersError'
+                    );
+                }
+            } catch (error) {
+                this.setState({ isLoading: false });
+                LSPStore.error = true;
+                LSPStore.error_msg = `An error occurred while retrieving orders: ${error}`;
+            }
         });
     }
 
@@ -230,7 +238,7 @@ export default class OrdersPane extends React.Component<
                             }}
                             navigation={navigation}
                         />
-                        <ErrorMessage message={LSPStore.error_msg} />
+                        <WarningMessage message={LSPStore.error_msg} />
                     </>
                 ) : (
                     <>
