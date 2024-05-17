@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Animated, View, Text, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
@@ -19,10 +21,9 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
-import BigNumber from 'bignumber.js';
 
 interface KeypadPaneProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     FiatStore: FiatStore;
     NodeInfoStore: NodeInfoStore;
@@ -65,7 +66,7 @@ export default class KeypadPane extends React.PureComponent<
     async UNSAFE_componentWillMount() {
         this.handleLsp();
 
-        this.props.navigation.addListener('didFocus', async () => {
+        this.props.navigation.addListener('focus', async () => {
             this.handleLsp();
         });
     }

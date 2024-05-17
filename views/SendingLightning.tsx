@@ -1,6 +1,5 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-
 import {
     BackHandler,
     Dimensions,
@@ -10,6 +9,8 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import LnurlPaySuccess from './LnurlPay/Success';
 
 import Button from '../components/Button';
@@ -30,7 +31,7 @@ import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import CopyBox from '../components/CopyBox';
 
 interface SendingLightningProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
 }
@@ -49,7 +50,7 @@ export default class SendingLightning extends React.Component<
     componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
-        navigation.addListener('didFocus', () => {
+        navigation.addListener('focus', () => {
             const noteKey =
                 typeof TransactionsStore.payment_hash === 'string'
                     ? TransactionsStore.payment_hash

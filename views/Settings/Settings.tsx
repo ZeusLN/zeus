@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import AccountIcon from '../../assets/images/SVG/Account.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
@@ -54,7 +55,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import { version } from '../../package.json';
 
 interface SettingsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
@@ -83,15 +84,15 @@ export default class Settings extends React.Component<
         SettingsStore.getSettings();
 
         // triggers when loaded from navigation or back action
-        navigation.addListener('didFocus', () => {
-            SettingsStore.getSettings();
-        });
+        navigation.addListener('focus', this.handleFocus);
     }
 
     componentWillUnmount() {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
+            this.props.navigation.removeListener('focus', this.handleFocus);
     }
+
+    handleFocus = () => this.props.SettingsStore.getSettings();
 
     render() {
         const {

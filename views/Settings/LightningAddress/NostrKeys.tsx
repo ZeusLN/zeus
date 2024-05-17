@@ -2,6 +2,8 @@ import * as React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
 import KeyValue from '../../../components/KeyValue';
@@ -28,9 +30,10 @@ import VisibleSVG from '../../../assets/images/SVG/eye_opened.svg';
 import Edit from '../../../assets/images/SVG/Pen.svg';
 
 interface NostrKeyProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
+    route: Route<'NostrKey', { setup: boolean; nostrPrivateKey: string }>;
 }
 
 interface NostrKeyState {
@@ -76,14 +79,13 @@ export default class NostrKey extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, route } = this.props;
         const { settings } = SettingsStore;
 
-        const setup = navigation.getParam('setup', false);
-        const nostrPrivateKey = navigation.getParam(
-            'nostrPrivateKey',
-            settings?.lightningAddress?.nostrPrivateKey || ''
-        );
+        const setup = route.params?.setup;
+        const nostrPrivateKey =
+            route.params?.nostrPrivateKey ??
+            (settings?.lightningAddress?.nostrPrivateKey || '');
 
         let nostrPublicKey, nostrNsec, nostrNpub;
         if (nostrPrivateKey) {

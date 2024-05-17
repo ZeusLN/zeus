@@ -7,6 +7,8 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import DropdownSetting from '../../components/DropdownSetting';
@@ -38,8 +40,17 @@ const AddressTypes = [
 
 interface ImportAccountProps {
     exitSetup: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     UTXOsStore: UTXOsStore;
+    route: Route<
+        'ImportAccount',
+        {
+            name: string;
+            extended_public_key: string;
+            master_key_fingerprint: string;
+            address_type: number;
+        }
+    >;
 }
 
 interface ImportAccountState {
@@ -65,46 +76,36 @@ export default class ImportAccount extends React.Component<
         };
     }
 
-    handleParams = (navigation: any) => {
-        const name = navigation.getParam('name');
+    handleParams = (props: ImportAccountProps) => {
+        const {
+            name,
+            extended_public_key,
+            master_key_fingerprint,
+            address_type
+        } = props.route.params ?? {};
         if (name) {
-            this.setState({
-                name
-            });
+            this.setState({ name });
         }
 
-        const extended_public_key = navigation.getParam('extended_public_key');
         if (extended_public_key) {
-            this.setState({
-                extended_public_key
-            });
+            this.setState({ extended_public_key });
         }
 
-        const master_key_fingerprint = navigation.getParam(
-            'master_key_fingerprint'
-        );
         if (master_key_fingerprint) {
-            this.setState({
-                master_key_fingerprint
-            });
+            this.setState({ master_key_fingerprint });
         }
 
-        const address_type = navigation.getParam('address_type');
         if (address_type) {
-            this.setState({
-                address_type
-            });
+            this.setState({ address_type });
         }
     };
 
     UNSAFE_componentWillMount = () => {
-        const { navigation } = this.props;
-        this.handleParams(navigation);
+        this.handleParams(this.props);
     };
 
-    UNSAFE_componentWillReceiveProps = (newProps: any) => {
-        const { navigation } = newProps;
-        this.handleParams(navigation);
+    UNSAFE_componentWillReceiveProps = (newProps: ImportAccountProps) => {
+        this.handleParams(newProps);
     };
 
     render() {

@@ -7,6 +7,9 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import ForwardEvent from '../../models/ForwardEvent';
 
 import Amount from '../../components/Amount';
@@ -21,8 +24,9 @@ import { themeColor } from '../../utils/ThemeUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
 
 interface RoutingEventProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
+    route: Route<'RoutingEvent', { routingEvent: ForwardEvent }>;
 }
 
 interface RoutingEventState {
@@ -35,14 +39,11 @@ export default class RoutingEvent extends React.Component<
     RoutingEventProps,
     RoutingEventState
 > {
-    constructor(props: any) {
+    constructor(props: RoutingEventProps) {
         super(props);
-        const { navigation } = props;
+        const { route } = props;
 
-        const routingEvent: ForwardEvent = navigation.getParam(
-            'routingEvent',
-            null
-        );
+        const routingEvent = route.params?.routingEvent;
 
         const { chan_id_in, chan_id_out } = routingEvent;
 

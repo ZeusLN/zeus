@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Row } from '../components/layout/Row';
 import Amount from '../components/Amount';
@@ -32,10 +34,11 @@ import LnurlPayHistorical from './LnurlPay/Historical';
 import EditNotes from '../assets/images/SVG/Pen.svg';
 
 interface PaymentProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     LnurlPayStore?: LnurlPayStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
+    route: Route<'Payment', { payment: Payment }>;
 }
 
 @inject('LnurlPayStore', 'NodeInfoStore', 'SettingsStore')
@@ -47,15 +50,15 @@ export default class PaymentView extends React.Component<PaymentProps> {
     };
 
     async componentDidMount() {
-        const { navigation, LnurlPayStore } = this.props;
-        const payment: Payment = navigation.getParam('payment', null);
+        const { navigation, LnurlPayStore, route } = this.props;
+        const payment = route.params?.payment;
         const lnurlpaytx = payment.paymentHash
             ? await LnurlPayStore!.load(payment.paymentHash)
             : undefined;
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
-        navigation.addListener('didFocus', () => {
+        navigation.addListener('focus', () => {
             const noteKey = payment.noteKey;
 
             EncryptedStorage.getItem('note-' + noteKey)
@@ -69,11 +72,11 @@ export default class PaymentView extends React.Component<PaymentProps> {
     }
 
     render() {
-        const { navigation, SettingsStore, NodeInfoStore } = this.props;
+        const { navigation, SettingsStore, NodeInfoStore, route } = this.props;
         const { storedNotes, lnurlpaytx } = this.state;
         const { testnet } = NodeInfoStore;
 
-        const payment: Payment = navigation.getParam('payment', null);
+        const payment = route.params?.payment;
         const formattedOriginalTimeUntilExpiry =
             payment.getFormattedOriginalTimeUntilExpiry(
                 SettingsStore!.settings.locale

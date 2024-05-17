@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { FlatList, Linking, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -10,7 +11,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 interface HelpProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
 }
 
 function Help(props: HelpProps) {

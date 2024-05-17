@@ -1,7 +1,9 @@
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import stores from '../stores/Stores';
 
 const protectedNavigation = async (
-    navigation: any,
+    navigation: StackNavigationProp<any, any>,
     route: string,
     disactivatePOS?: boolean
 ) => {

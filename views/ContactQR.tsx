@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Dimensions, View, SafeAreaView } from 'react-native';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Animated, {
     Extrapolate,
@@ -15,19 +17,24 @@ import { themeColor } from '../utils/ThemeUtils';
 import CollapsedQR from '../components/CollapsedQR';
 
 interface ContactQRProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<
+        'ContactQR',
+        {
+            contactData: string;
+            addressData: string[];
+        }
+    >;
 }
 
 const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
     const [addressData, setAddressData] = useState(['']);
-    const { navigation } = props;
+    const { navigation, route } = props;
 
     useEffect(() => {
-        const contactData = navigation.getParam('contactData', null);
-        const addressData = navigation.getParam('addressData', null);
-
+        const { contactData, addressData } = route.params ?? {};
         setAddressData([contactData, ...addressData]);
-    }, [navigation]);
+    }, [route]);
 
     let screenWidth: number;
     const progressValue = useSharedValue<number>(0);

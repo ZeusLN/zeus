@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Dimensions, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import {
     SuccessMessage,
@@ -21,8 +23,18 @@ import stores from '../stores/Stores';
 import TransactionsStore from '../stores/TransactionsStore';
 
 interface RawTxHexProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     TransactionsStore: TransactionsStore;
+    route: Route<
+        'RawTxHex',
+        {
+            value: string;
+            label: string;
+            hideText: boolean;
+            jumboLabel: boolean;
+            logo: any;
+        }
+    >;
 }
 
 interface RawTxHexState {
@@ -39,21 +51,12 @@ export default class RawTxHex extends React.PureComponent<
     RawTxHexProps,
     RawTxHexState
 > {
-    constructor(props: any) {
+    constructor(props: RawTxHexProps) {
         super(props);
 
-        const value: string = this.props.navigation.getParam('value', '');
-        const label: string = this.props.navigation.getParam('label', '');
-        const hideText: boolean = this.props.navigation.getParam(
-            'hideText',
-            false
-        );
-        const jumboLabel: boolean = this.props.navigation.getParam(
-            'jumboLabel',
-            false
-        );
-
-        const logo: any = this.props.navigation.getParam('logo', null);
+        const value = props.route.params?.value ?? '';
+        const label = props.route.params?.label ?? '';
+        const { hideText, jumboLabel, logo } = props.route.params ?? {};
 
         this.state = {
             value,

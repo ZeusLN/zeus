@@ -2,6 +2,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
@@ -21,7 +22,7 @@ import DropdownSetting from '../../components/DropdownSetting';
 import Switch from '../../components/Switch';
 
 interface CurrencyProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
 }

@@ -3,8 +3,8 @@ import { FlatList, Text, View } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { isEqual } from 'lodash';
-
 import DatePicker from 'react-native-date-picker';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -19,7 +19,7 @@ import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
 interface ActivityFilterProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
     SettingsStore: SettingsStore;
 }

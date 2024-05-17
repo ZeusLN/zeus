@@ -3,6 +3,7 @@ import { Alert, View } from 'react-native';
 import { Header } from 'react-native-elements';
 import { observer } from 'mobx-react';
 import { URDecoder } from '@ngraveio/bc-ur';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
@@ -13,11 +14,11 @@ import { joinQRs } from '../utils/BbqrUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-interface handleAnythingQRProps {
-    navigation: any;
+interface HandleAnythingQRProps {
+    navigation: StackNavigationProp<any, any>;
 }
 
-interface handleAnythingQRState {
+interface HandleAnythingQRState {
     loading: boolean;
     mode: string;
     totalParts: number;
@@ -25,9 +26,9 @@ interface handleAnythingQRState {
 }
 
 @observer
-export default class handleAnythingQRScanner extends React.Component<
-    handleAnythingQRProps,
-    handleAnythingQRState
+export default class HandleAnythingQRScanner extends React.Component<
+    HandleAnythingQRProps,
+    HandleAnythingQRState
 > {
     decoder: any;
     constructor(props: any) {
@@ -187,7 +188,9 @@ export default class handleAnythingQRScanner extends React.Component<
         return (
             <QRCodeScanner
                 handleQRScanned={this.handleAnythingScanned}
-                goBack={() => navigation.goBack()}
+                goBack={() => {
+                    navigation.goBack();
+                }}
                 navigation={navigation}
                 parts={parts.length}
                 totalParts={totalParts}

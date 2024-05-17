@@ -17,7 +17,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
     DefaultTheme,
     NavigationContainer,
-    NavigationContainerRef
+    NavigationContainerRef,
+    NavigationIndependentTree
 } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
@@ -70,11 +71,14 @@ import CaretUp from '../../assets/images/SVG/Caret Up.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
+import Scan from '../../assets/images/SVG/Scan.svg';
+
+import { StackNavigationProp } from '@react-navigation/stack';
 
 interface WalletProps {
     enterSetup: any;
     exitTransaction: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
@@ -120,7 +124,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private handleAppStateChangeSubscription: NativeEventSubscription;
     private backPressSubscription: NativeEventSubscription;
 
-    constructor(props) {
+    constructor(props: WalletProps) {
         super(props);
         this.state = {
             unlocked: false,
@@ -154,22 +158,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     private handleBackButton() {
-        const dialogHasBeenClosed =
-            this.props.ModalStore.closeVisibleModalDialog();
-        if (dialogHasBeenClosed) {
-            return true;
-        }
-
-        if (this.props.SettingsStore.loginRequired()) {
-            // pop to close lock screen and return false to close the app
-            this.props.navigation.pop();
-            return false;
-        }
-
-        if (this.props.navigation.pop()) {
-            return true;
-        }
-
         const tabNavigator = this.tabNavigationRef.current;
         if (!tabNavigator) {
             return false;
@@ -192,25 +180,31 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         return false;
     }
 
+    private handleFocus = () => {
+        this.backPressSubscription?.remove();
+        this.backPressSubscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.handleBackButton.bind(this)
+        );
+        this.getSettingsAndNavigate();
+    };
+
+    private handleBlur = () => this.backPressSubscription?.remove();
+
     async componentDidMount() {
         // triggers when loaded from navigation or back action
-        this.props.navigation.addListener('didFocus', () => {
-            this.getSettingsAndNavigate();
-        });
+        this.props.navigation.addListener('focus', this.handleFocus);
+        this.props.navigation.addListener('blur', this.handleBlur);
 
         this.handleAppStateChangeSubscription = AppState.addEventListener(
             'change',
             this.handleAppStateChange
         );
-        this.backPressSubscription = BackHandler.addEventListener(
-            'hardwareBackPress',
-            this.handleBackButton.bind(this)
-        );
     }
 
     componentWillUnmount() {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
+            this.props.navigation.removeListener('focus', this.handleFocus);
         this.handleAppStateChangeSubscription?.remove();
         this.backPressSubscription?.remove();
     }
@@ -394,7 +388,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                         ChannelBackupStore.initSubscribeChannelEvents();
                 } catch (e) {
-                    console.log('recover error', e);
+                    console.error('recover error', e);
                 }
             } else {
                 if (SettingsStore.settings.automaticDisasterRecoveryBackup)
@@ -627,6 +621,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
+        const CameraScreen = () => {};
+
         const ChannelsScreen = () => {
             return (
                 <Screen>
@@ -648,107 +644,134 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             <View style={{ flex: 1 }}>
                 {!connecting &&
                     (!loginRequired || posEnabled !== PosEnabled.Disabled) && (
-                        <NavigationContainer
-                            theme={Theme}
-                            ref={this.tabNavigationRef}
-                        >
-                            <Tab.Navigator
-                                initialRouteName={
-                                    posEnabled !== PosEnabled.Disabled &&
-                                    posStatus === 'active'
-                                        ? 'POS'
-                                        : isSyncing
-                                        ? 'Balance'
-                                        : (settings.display &&
-                                              settings.display.defaultView) ||
-                                          'Keypad'
-                                }
-                                backBehavior="none"
-                                screenOptions={({ route }) => ({
-                                    tabBarIcon: ({ color }) => {
-                                        if (
-                                            isSyncing &&
-                                            route.name === 'Keypad'
-                                        ) {
-                                            return;
-                                        }
-                                        if (route.name === 'Keypad') {
-                                            return <Bitcoin fill={color} />;
-                                        }
-                                        if (route.name === 'Balance') {
-                                            return <Temple fill={color} />;
-                                        }
-                                        if (route.name === 'POS') {
-                                            return <POS stroke={color} />;
-                                        }
-                                        if (route.name === 'POS Keypad') {
-                                            return <Bitcoin fill={color} />;
-                                        }
-                                        if (
-                                            BackendUtils.supportsChannelManagement()
-                                        ) {
-                                            return (
-                                                <ChannelsIcon
-                                                    height={26}
-                                                    width={26}
-                                                    fill={color}
-                                                />
-                                            );
-                                        }
-                                    }
-                                })}
-                                tabBarOptions={{
-                                    activeTintColor: error
-                                        ? themeColor('error')
-                                        : themeColor('text'),
-                                    inactiveTintColor: error
-                                        ? themeColor('error')
-                                        : 'gray',
-                                    showLabel: false
-                                }}
+                        <NavigationIndependentTree>
+                            <NavigationContainer
+                                theme={Theme}
+                                ref={this.tabNavigationRef}
+                                independent={true}
                             >
-                                {posEnabled !== PosEnabled.Disabled &&
-                                posStatus === 'active' ? (
-                                    <Tab.Screen
-                                        name="POS"
-                                        component={PosScreen}
-                                    />
-                                ) : (
-                                    <Tab.Screen
-                                        name="Balance"
-                                        component={BalanceScreen}
-                                    />
-                                )}
-                                {posEnabled === PosEnabled.Standalone &&
-                                    posStatus === 'active' &&
-                                    showKeypad && (
+                                <Tab.Navigator
+                                    initialRouteName={
+                                        posEnabled !== PosEnabled.Disabled &&
+                                        posStatus === 'active'
+                                            ? 'POS'
+                                            : isSyncing
+                                            ? 'Balance'
+                                            : (settings.display &&
+                                                  settings.display
+                                                      .defaultView) ||
+                                              'Keypad'
+                                    }
+                                    backBehavior="none"
+                                    screenOptions={({ route }) => ({
+                                        tabBarIcon: ({ color }) => {
+                                            if (
+                                                isSyncing &&
+                                                route.name === 'Keypad'
+                                            ) {
+                                                return;
+                                            }
+                                            if (route.name === 'Keypad') {
+                                                return <Bitcoin fill={color} />;
+                                            }
+                                            if (route.name === 'Balance') {
+                                                return <Temple fill={color} />;
+                                            }
+                                            if (route.name === 'POS') {
+                                                return <POS stroke={color} />;
+                                            }
+                                            if (route.name === 'POS Keypad') {
+                                                return <Bitcoin fill={color} />;
+                                            }
+                                            if (route.name === 'Camera') {
+                                                return (
+                                                    <Scan
+                                                        fill={color}
+                                                        width={20}
+                                                    />
+                                                );
+                                            }
+                                            if (
+                                                BackendUtils.supportsChannelManagement()
+                                            ) {
+                                                return (
+                                                    <ChannelsIcon
+                                                        height={26}
+                                                        width={26}
+                                                        fill={color}
+                                                    />
+                                                );
+                                            }
+                                        },
+                                        headerShown: false,
+                                        tabBarActiveTintColor: error
+                                            ? themeColor('error')
+                                            : themeColor('text'),
+                                        tabBarInactiveTintColor: error
+                                            ? themeColor('error')
+                                            : 'gray',
+                                        tabBarShowLabel: false,
+                                        tabBarStyle: { display: 'flex' }
+                                    })}
+                                >
+                                    {posEnabled !== PosEnabled.Disabled &&
+                                    posStatus === 'active' ? (
                                         <Tab.Screen
-                                            name="POS Keypad"
-                                            component={PosKeypadScreen}
+                                            name="POS"
+                                            component={PosScreen}
+                                        />
+                                    ) : (
+                                        <Tab.Screen
+                                            name="Balance"
+                                            component={BalanceScreen}
                                         />
                                     )}
-                                {posStatus !== 'active' && (
-                                    <>
-                                        {!error && !isSyncing && (
+                                    {posEnabled === PosEnabled.Standalone &&
+                                        posStatus === 'active' &&
+                                        showKeypad && (
                                             <Tab.Screen
-                                                name="Keypad"
-                                                component={KeypadScreen}
+                                                name="POS Keypad"
+                                                component={PosKeypadScreen}
                                             />
                                         )}
-                                        {BackendUtils.supportsChannelManagement() &&
-                                            !error &&
-                                            !isSyncing && (
+                                    {posStatus !== 'active' && (
+                                        <>
+                                            {!error && !isSyncing && (
                                                 <Tab.Screen
-                                                    name={localeString(
-                                                        'views.Wallet.Wallet.channels'
-                                                    )}
-                                                    component={ChannelsScreen}
+                                                    name="Keypad"
+                                                    component={KeypadScreen}
                                                 />
                                             )}
-                                    </>
-                                )}
-                            </Tab.Navigator>
-                        </NavigationContainer>
+                                            {BackendUtils.supportsChannelManagement() &&
+                                                !error &&
+                                                !isSyncing && (
+                                                    <Tab.Screen
+                                                        name={localeString(
+                                                            'views.Wallet.Wallet.channels'
+                                                        )}
+                                                        component={
+                                                            ChannelsScreen
+                                                        }
+                                                    />
+                                                )}
+                                        </>
+                                    )}
+                                    <Tab.Screen
+                                        name="Camera"
+                                        component={CameraScreen}
+                                        listeners={{
+                                            tabPress: (e) => {
+                                                // Prevent default action
+                                                e.preventDefault();
+                                                navigation.navigate(
+                                                    'HandleAnythingQRScanner'
+                                                );
+                                            }
+                                        }}
+                                    />
+                                </Tab.Navigator>
+                            </NavigationContainer>
+                        </NavigationIndependentTree>
                     )}
                 {connecting &&
                     (!loginRequired || posEnabled !== PosEnabled.Disabled) && (
