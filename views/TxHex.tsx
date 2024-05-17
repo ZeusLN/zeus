@@ -10,6 +10,8 @@ import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from 'react-native-elements';
 import { UR, UREncoder } from '@ngraveio/bc-ur';
 import clone from 'lodash/clone';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 const bitcoin = require('bitcoinjs-lib');
 
@@ -34,10 +36,11 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
 interface TxHexProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
+    route: Route<'TxHex', { txHex: string }>;
 }
 
 interface TxHexState {
@@ -66,16 +69,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
     };
 
     UNSAFE_componentWillMount(): void {
-        const { navigation } = this.props;
-        const txHex: string = navigation.getParam('txHex');
-        this.setState(
-            {
-                txHex
-            },
-            () => {
-                this.generateInfo();
-            }
-        );
+        const { route } = this.props;
+        const txHex = route.params?.txHex;
+        this.setState({ txHex }, () => this.generateInfo());
     }
 
     generateInfo = () => {

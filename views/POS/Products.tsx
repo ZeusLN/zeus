@@ -3,6 +3,7 @@ import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { ListItem, SearchBar } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -15,7 +16,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import Product from '../../models/Product';
 
 interface ProductsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     InventoryStore: InventoryStore;
 }
 
@@ -38,9 +39,9 @@ export default class Products extends React.Component<
     };
 
     async componentDidMount() {
-        this.props.navigation.addListener('didFocus', async () => {
-            this.loadProducts();
-        });
+        this.props.navigation.addListener('focus', async () =>
+            this.loadProducts()
+        );
     }
 
     async loadProducts() {
@@ -82,7 +83,11 @@ export default class Products extends React.Component<
         const { navigation } = this.props;
         const { products, search, loading } = this.state;
 
-        const Add = ({ navigation }: { navigation: any }) => (
+        const Add = ({
+            navigation
+        }: {
+            navigation: StackNavigationProp<any, any>;
+        }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('ProductDetails')}
             >

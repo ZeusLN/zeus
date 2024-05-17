@@ -1,6 +1,5 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-
 import {
     BackHandler,
     Dimensions,
@@ -10,6 +9,8 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import LnurlPaySuccess from './LnurlPay/Success';
 
 import Button from '../components/Button';
@@ -25,12 +26,12 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Clock from '../assets/images/SVG/Clock.svg';
-import Error from '../assets/images/SVG/Error.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import CopyBox from '../components/CopyBox';
 
 interface SendingLightningProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
 }
@@ -49,7 +50,7 @@ export default class SendingLightning extends React.Component<
     componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
-        navigation.addListener('didFocus', () => {
+        navigation.addListener('focus', () => {
             const noteKey =
                 typeof TransactionsStore.payment_hash === 'string'
                     ? TransactionsStore.payment_hash
@@ -263,13 +264,13 @@ export default class SendingLightning extends React.Component<
                             {(!!error || !!payment_error) &&
                                 !LnurlPayStore.isZaplocker && (
                                     <View style={{ alignItems: 'center' }}>
-                                        <Error
+                                        <ErrorIcon
                                             width={windowSize.height * 0.13}
                                             height={windowSize.height * 0.13}
                                         />
                                         <Text
                                             style={{
-                                                color: '#FF9090',
+                                                color: themeColor('warning'),
                                                 fontFamily:
                                                     'PPNeueMontreal-Book',
                                                 fontSize: 32,

@@ -11,6 +11,7 @@ import {
 import { Camera } from 'react-native-camera-kit';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 const LocalQRCode = require('@remobile/react-native-qrcode-local-image');
 
@@ -29,7 +30,7 @@ interface QRProps {
     text?: string;
     handleQRScanned: any;
     goBack: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     parts?: number;
     totalParts?: number;
     mode?: string;
@@ -101,11 +102,11 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
         }
     };
 
+    handleFocus = () => (this.scannedCache = {});
+
     async componentDidMount() {
         // triggers when loaded from navigation or back action
-        this.props.navigation.addListener('didFocus', () => {
-            this.scannedCache = {};
-        });
+        this.props.navigation.addListener('focus', this.handleFocus);
 
         if (Platform.OS !== 'ios' && Platform.OS !== 'macos') {
             // For android
@@ -176,7 +177,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
 
     componentWillUnmount() {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
+            this.props.navigation.removeListener('focus', this.handleFocus);
     }
 
     render() {

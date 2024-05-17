@@ -915,7 +915,6 @@
     "components.UTXOPicker.modal.set": "Usar UTXOs",
     "components.ChannelPicker.modal.title": "Seleccionar Canal para usar",
     "components.ChannelPicker.modal.description": "Seleccione el canal que se utilizará en esta operación. Es posible que desee utilizar solamente canales específicos para preservar su privacidad.",
-    "components.ChannelPicker.modal.set": "Establecer Canal",
     "backends.LND.wsReq.warning": "Es posible que tenga que activar la verificación de certificados para realizar este tipo de llamadas",
     "backends.LND.restReq.connectionError": "Error de conexión",
     "utils.handleAnything.lightningAddressError": "Error en obtener datos de Dirección de Lightning",

@@ -87,6 +87,8 @@ function Button(props: ButtonProps) {
                     ? themeColor('highlight')
                     : secondary
                     ? themeColor('secondary')
+                    : warning
+                    ? themeColor('delete')
                     : themeColor('text'),
                 ...buttonStyle
             }}
@@ -101,9 +103,9 @@ function Button(props: ButtonProps) {
                           color: iconOnly
                               ? textColor
                               : quaternary
-                              ? warning
-                                  ? themeColor('warning')
-                                  : textColor
+                              ? textColor
+                              : warning
+                              ? themeColor('text')
                               : secondary
                               ? themeColor('highlight')
                               : themeColor('background'),

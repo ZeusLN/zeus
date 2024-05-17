@@ -849,6 +849,11 @@ export const THEME_KEYS = [
         key: 'Watermelon',
         translateKey: 'views.Settings.Theme.watermelon',
         value: 'watermelon'
+    },
+    {
+        key: 'Radioactive',
+        translateKey: 'views.Settings.Theme.radioactive',
+        value: 'radioactive'
     }
 ];
 

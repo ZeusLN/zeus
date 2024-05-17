@@ -3,6 +3,7 @@ import { FlatList, ScrollView, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Ping from 'react-native-ping';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../../components/Button';
 import Header from '../../../../components/Header';
@@ -28,7 +29,7 @@ import { themeColor } from '../../../../utils/ThemeUtils';
 import LoadingIndicator from '../../../../components/LoadingIndicator';
 
 interface NeutrinoPeersProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

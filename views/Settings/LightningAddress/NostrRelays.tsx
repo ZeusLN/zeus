@@ -5,6 +5,8 @@ import { inject, observer } from 'mobx-react';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Row } from '../../../components/layout/Row';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
@@ -23,9 +25,10 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 interface NostrRelaysProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
+    route: Route<'NostrRelays', { setup: boolean; relays: string[] }>;
 }
 
 interface NostrRelaysState {
@@ -53,11 +56,10 @@ export default class NostrRelays extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, route } = this.props;
         const { settings, getSettings } = SettingsStore;
 
-        const setup = navigation.getParam('setup', false);
-        const relays = navigation.getParam('relays', null);
+        const { setup, relays } = route.params ?? {};
 
         await getSettings();
 

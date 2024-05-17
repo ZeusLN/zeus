@@ -7,9 +7,10 @@ import {
     I18nManager,
     TouchableOpacity
 } from 'react-native';
-
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -19,7 +20,7 @@ import Receive from './../../assets/images/SVG/Receive.svg';
 import Send from './../../assets/images/SVG/Send.svg';
 
 interface OnchainSwipeableRowProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     value?: string;
     amount?: string;
     locked?: boolean;

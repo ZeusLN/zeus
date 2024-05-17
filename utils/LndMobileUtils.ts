@@ -15,7 +15,11 @@ import { sleep } from './SleepUtils';
 import Base64Utils from './Base64Utils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-import { ELndMobileStatusCodes, gossipSync } from '../lndmobile/index';
+import {
+    ELndMobileStatusCodes,
+    gossipSync,
+    cancelGossipSync
+} from '../lndmobile/index';
 
 import stores from '../stores/Stores';
 
@@ -120,9 +124,11 @@ const writeLndConfig = async (
             ? 'neutrino.assertfilterheader=660000:08312375fabc082b17fa8ee88443feb350c19a34bb7483f94f7478fa4ad33032'
             : ''
     }
-    neutrino.feeurl=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
     neutrino.broadcasttimeout=11s
     neutrino.persistfilters=true
+
+    [fee]
+    fee.url=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
     
     [autopilot]
     autopilot.active=0
@@ -151,9 +157,25 @@ const writeLndConfig = async (
 };
 
 export async function expressGraphSync() {
-    if (stores.settingsStore.embeddedLndNetwork === 'Mainnet') {
-        const start = new Date();
+    return await new Promise(async (resolve) => {
         stores.syncStore.setExpressGraphSyncStatus(true);
+
+        const start = new Date();
+
+        const timer = setInterval(async () => {
+            console.log('Express graph sync is running...');
+            // Check if the cancellation token is set
+            if (!stores.syncStore.isInExpressGraphSync) {
+                clearInterval(timer);
+                // call cancellation to LND here
+                console.log('Express graph sync cancelling...');
+                cancelGossipSync();
+
+                console.log('Express graph sync cancelled...');
+                resolve(true);
+            }
+        }, 1000);
+
         if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
             log.d('Clearing speedloader files');
             try {
@@ -166,17 +188,24 @@ export async function expressGraphSync() {
 
         try {
             const connectionState = await NetInfo.fetch();
-            const gossipStatus = await gossipSync(connectionState.type);
+            const gossipStatus = await gossipSync(
+                'https://speedloader.lnolymp.us/',
+                connectionState.type
+            );
+
+            clearInterval(timer);
+
             const completionTime =
                 (new Date().getTime() - start.getTime()) / 1000 + 's';
             console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
+            stores.syncStore.setExpressGraphSyncStatus(false);
+            resolve(true);
         } catch (e) {
             log.e('GossipSync exception!', [e]);
+            stores.syncStore.setExpressGraphSyncStatus(false);
+            resolve(true);
         }
-
-        stores.syncStore.setExpressGraphSyncStatus(false);
-    }
-    return;
+    });
 }
 
 export async function initializeLnd(

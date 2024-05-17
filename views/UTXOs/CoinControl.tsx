@@ -2,6 +2,8 @@ import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import AccountFilter from './../../components/AccountFilter';
 import Amount from './../../components/Amount';
@@ -16,8 +18,9 @@ import { themeColor } from './../../utils/ThemeUtils';
 import UTXOsStore from './../../stores/UTXOsStore';
 
 interface CoinControlProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     UTXOsStore: UTXOsStore;
+    route: Route<'CoinControl', { account: string }>;
 }
 
 interface CoinControlState {
@@ -30,10 +33,10 @@ export default class CoinControl extends React.Component<
     CoinControlProps,
     CoinControlState
 > {
-    constructor(props: any) {
+    constructor(props: CoinControlProps) {
         super(props);
 
-        const accountParam = props.navigation.getParam('account');
+        const accountParam = props.route.account;
         const account =
             accountParam && accountParam === 'On-chain'
                 ? 'default'

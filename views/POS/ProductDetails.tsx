@@ -13,6 +13,8 @@ import UnitsStore from '../../stores/UnitsStore';
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Divider, ListItem } from 'react-native-elements';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -30,10 +32,11 @@ import DropdownSetting from '../../components/DropdownSetting';
 import PosStore from '../../stores/PosStore';
 
 interface ProductProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     InventoryStore: InventoryStore;
     PosStore: PosStore;
     UnitsStore: UnitsStore;
+    route: Route<'ProductDetails', { productId: string }>;
 }
 
 interface ProductState {
@@ -67,83 +70,82 @@ export default class ProductDetails extends React.Component<
 
     componentWillUnmount(): void {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
+            this.props.navigation.removeListener('focus', this.handleFocus);
     }
 
     fetchProduct = async () => {
-        this.props.navigation.addListener('didFocus', async () => {
-            try {
-                const { InventoryStore } = this.props;
-                const { getInventory } = InventoryStore;
-                const { products, categories } = await getInventory();
+        this.props.navigation.addListener('focus', this.handleFocus);
+    };
 
-                const mappedCategories = categories
-                    ? categories.map((category: any) => ({
-                          key: category.name,
-                          value: category.name
-                      }))
-                    : [];
-                let categoryOptions: any[] = [
-                    {
-                        key: 'Uncategorized',
-                        value: '',
-                        translateKey: 'pos.views.Wallet.PosPane.uncategorized'
+    handleFocus = async () => {
+        try {
+            const { InventoryStore } = this.props;
+            const { getInventory } = InventoryStore;
+            const { products, categories } = await getInventory();
+
+            const mappedCategories = categories
+                ? categories.map((category: any) => ({
+                      key: category.name,
+                      value: category.name
+                  }))
+                : [];
+            let categoryOptions: any[] = [
+                {
+                    key: 'Uncategorized',
+                    value: '',
+                    translateKey: 'pos.views.Wallet.PosPane.uncategorized'
+                }
+            ];
+            categoryOptions = categoryOptions.concat(...mappedCategories);
+
+            const productId = this.props.route.params?.productId;
+
+            if (!productId) {
+                this.setState({
+                    categories: categoryOptions,
+                    product: new Product({
+                        id: uuidv4(),
+                        name: '',
+                        sku: '',
+                        pricedIn: PricedIn.Fiat,
+                        price: 0,
+                        category: '',
+                        status: ProductStatus.Active
+                    }),
+                    isLoading: false,
+                    isExisting: false
+                });
+                return;
+            }
+
+            if (products) {
+                const product =
+                    products.find(
+                        (product: Product) => product.id === productId
+                    ) || null;
+
+                if (product) {
+                    if (this.props.UnitsStore.units !== product.pricedIn) {
+                        // change unit to match product
+                        while (
+                            this.props.UnitsStore.units !== product.pricedIn
+                        ) {
+                            this.props.UnitsStore.changeUnits();
+                        }
                     }
-                ];
-                categoryOptions = categoryOptions.concat(...mappedCategories);
 
-                const productId = this.props.navigation.getParam(
-                    'productId',
-                    null
-                );
-
-                if (!productId) {
                     this.setState({
                         categories: categoryOptions,
-                        product: new Product({
-                            id: uuidv4(),
-                            name: '',
-                            sku: '',
-                            pricedIn: PricedIn.Fiat,
-                            price: 0,
-                            category: '',
-                            status: ProductStatus.Active
-                        }),
+                        product,
                         isLoading: false,
-                        isExisting: false
+                        isExisting: true
                     });
-                    return;
                 }
-
-                if (products) {
-                    const product =
-                        products.find(
-                            (product: Product) => product.id === productId
-                        ) || null;
-
-                    if (product) {
-                        if (this.props.UnitsStore.units !== product.pricedIn) {
-                            // change unit to match product
-                            while (
-                                this.props.UnitsStore.units !== product.pricedIn
-                            ) {
-                                this.props.UnitsStore.changeUnits();
-                            }
-                        }
-
-                        this.setState({
-                            categories: categoryOptions,
-                            product,
-                            isLoading: false,
-                            isExisting: true
-                        });
-                    }
-                }
-            } catch (error) {
-                console.log('Error fetching product:', error);
-                this.setState({ isLoading: false });
             }
-        });
+        } catch (error) {
+            console.log('Error fetching product:', error);
+            this.setState({ isLoading: false });
+        }
     };
 
     setValue = (field: string, value: any) => {

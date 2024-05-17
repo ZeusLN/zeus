@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TouchableWithoutFeedback, View } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/native';
+
 import TextInput from '../components/TextInput';
 import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
 import stores from '../stores/Stores';
-import NavigationService from '../NavigationService';
 import LoadingIndicator from './LoadingIndicator';
 
 interface OnchainFeeInputProps {
+    navigation: StackNavigationProp<any, any>;
     fee?: string;
     onChangeFee: (fee: string) => void;
 }
 
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
-    const { fee, onChangeFee } = props;
+    const { fee, onChangeFee, navigation } = props;
 
     const { settingsStore, feeStore } = stores;
     const { settings } = settingsStore;
@@ -22,10 +25,10 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
 
     const [newFee, setNewFee] = useState(fee);
     const [loading, setLoading] = useState(false);
+    const [errorOccurredLoadingFees, setErrorOccurredLoadingFees] =
+        useState(false);
 
-    useEffect(() => {
-        setNewFee(fee);
-    }, [fee]);
+    useEffect(() => setNewFee(fee), [fee]);
 
     useEffect(() => {
         if (enableMempoolRates) {
@@ -38,6 +41,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                     setLoading(false);
                 })
                 .catch(() => {
+                    setErrorOccurredLoadingFees(true);
                     setLoading(false);
                 });
         }
@@ -48,8 +52,13 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
             {enableMempoolRates ? (
                 <TouchableWithoutFeedback
                     onPress={() =>
-                        NavigationService.navigate('EditFee', {
-                            onNavigateBack: onChangeFee,
+                        navigation.navigate('EditFee', {
+                            onNavigateBack: (fee: string) => {
+                                if (fee) {
+                                    setErrorOccurredLoadingFees(false);
+                                }
+                                onChangeFee(fee);
+                            },
                             fee: newFee
                         })
                     }
@@ -70,12 +79,16 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                         ) : (
                             <Text
                                 style={{
-                                    color: themeColor('text'),
+                                    color: errorOccurredLoadingFees
+                                        ? themeColor('warning')
+                                        : themeColor('text'),
                                     paddingLeft: 15,
                                     fontSize: 18
                                 }}
                             >
-                                {newFee}
+                                {errorOccurredLoadingFees
+                                    ? localeString('views.EditFee.error')
+                                    : newFee}
                             </Text>
                         )}
                     </View>

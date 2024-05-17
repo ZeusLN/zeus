@@ -2,6 +2,7 @@ import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import CopyBox from '../components/CopyBox';
@@ -16,11 +17,11 @@ import UrlUtils from '../utils/UrlUtils';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
-import Error from '../assets/images/SVG/Error.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 interface SendingOnChainProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
 }
@@ -36,7 +37,7 @@ export default class SendingOnChain extends React.Component<
     };
     async componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
-        navigation.addListener('didFocus', () => {
+        navigation.addListener('focus', () => {
             EncryptedStorage.getItem('note-' + TransactionsStore.txid)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
@@ -135,13 +136,13 @@ export default class SendingOnChain extends React.Component<
                             )}
                             {(error || error_msg) && (
                                 <View style={{ alignItems: 'center' }}>
-                                    <Error
+                                    <ErrorIcon
                                         width={windowSize.height * 0.13}
                                         height={windowSize.height * 0.13}
                                     />
                                     <Text
                                         style={{
-                                            color: '#FF9090',
+                                            color: themeColor('warning'),
                                             fontFamily: 'PPNeueMontreal-Book',
                                             fontSize: 32,
                                             margin: 15,

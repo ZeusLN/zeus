@@ -7,6 +7,8 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from './../../components/Amount';
 import Header from '../../components/Header';
@@ -22,16 +24,17 @@ import UrlUtils from './../../utils/UrlUtils';
 import NodeInfoStore from './../../stores/NodeInfoStore';
 
 interface UTXOProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
+    route: Route<'UTXO', { utxo: Utxo }>;
 }
 
 @inject('NodeInfoStore')
 @observer
 export default class UTXO extends React.Component<UTXOProps> {
     render() {
-        const { NodeInfoStore, navigation } = this.props;
-        const utxo: Utxo = navigation.getParam('utxo', null);
+        const { NodeInfoStore, navigation, route } = this.props;
+        const utxo = route.params?.utxo;
         const { testnet } = NodeInfoStore;
 
         const { getOutpoint, address, getConfs, isUnconfirmed, blockheight } =

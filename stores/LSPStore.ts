@@ -545,7 +545,7 @@ export default class LSPStore {
         });
 
         this.sendCustomMessage({
-            peer: peer,
+            peer,
             type,
             data
         })

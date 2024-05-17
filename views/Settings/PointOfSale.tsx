@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Platform, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -24,7 +25,7 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 
 interface PointOfSaleProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
