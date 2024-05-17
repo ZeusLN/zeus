@@ -4,7 +4,6 @@ import { Header } from 'react-native-elements';
 import { observer } from 'mobx-react';
 import { URDecoder } from '@ngraveio/bc-ur';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Route } from '@react-navigation/native';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
@@ -15,16 +14,8 @@ import { joinQRs } from '../utils/BbqrUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-import stores from '../stores/Stores';
-
 interface HandleAnythingQRProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<
-        'HandleAnythingQRScanner',
-        {
-            tabNavigationRef: any;
-        }
-    >;
 }
 
 interface HandleAnythingQRState {
@@ -163,7 +154,7 @@ export default class HandleAnythingQRScanner extends React.Component<
     };
 
     render() {
-        const { navigation, route } = this.props;
+        const { navigation } = this.props;
         const { loading, totalParts, parts, mode } = this.state;
 
         if (loading) {
@@ -198,14 +189,6 @@ export default class HandleAnythingQRScanner extends React.Component<
             <QRCodeScanner
                 handleQRScanned={this.handleAnythingScanned}
                 goBack={() => {
-                    if (route?.params?.tabNavigationRef) {
-                        route?.params?.tabNavigationRef.current?.navigate(
-                            (stores.settingsStore.settings.display &&
-                                stores.settingsStore.settings.display
-                                    .defaultView) ||
-                                'Keypad'
-                        );
-                    }
                     navigation.goBack();
                 }}
                 navigation={navigation}

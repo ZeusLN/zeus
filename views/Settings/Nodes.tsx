@@ -23,6 +23,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import { cloneDeep } from 'lodash';
 
 interface NodesProps {
     nodes: any[];
@@ -311,7 +312,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                         navigation.navigate(
                                                             'NodeConfiguration',
                                                             {
-                                                                node: item,
+                                                                node: cloneDeep(
+                                                                    item
+                                                                ),
                                                                 index,
                                                                 active:
                                                                     selectedNode ===
