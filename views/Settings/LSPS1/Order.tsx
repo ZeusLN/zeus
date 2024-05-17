@@ -46,6 +46,10 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
         const { LSPStore, navigation } = this.props;
         let temporaryOrder: any;
         const id = navigation.getParam('orderId', null);
+        const orderShouldUpdate = navigation.getParam(
+            'orderShouldUpdate',
+            null
+        );
 
         console.log('Looking for order in storage...');
         EncryptedStorage.getItem('orderResponses')
@@ -92,8 +96,9 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                                 const result =
                                     getOrderData?.result || getOrderData;
                                 if (
-                                    result?.order_state === 'COMPLETED' ||
-                                    result?.order_state === 'FAILED'
+                                    (result?.order_state === 'COMPLETED' ||
+                                        result?.order_state === 'FAILED') &&
+                                    !orderShouldUpdate
                                 ) {
                                     this.updateOrderInStorage(getOrderData);
                                 }
