@@ -94,7 +94,7 @@ export default class SetPassphrase extends React.Component<
         }
 
         await updateSettings({ passphrase }).then(() => {
-            setLoginStatus(false);
+            setLoginStatus(true);
             getSettings();
             navigation.navigate('Settings', {
                 refresh: true
@@ -255,10 +255,7 @@ export default class SetPassphrase extends React.Component<
                                         this.deletePassword();
                                     }
                                 }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}

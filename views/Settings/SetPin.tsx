@@ -93,7 +93,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         }
 
         await updateSettings({ pin }).then(() => {
-            setLoginStatus(false);
+            setLoginStatus(true);
             getSettings();
             navigation.navigate('Settings', {
                 refresh: true
