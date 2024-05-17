@@ -50,7 +50,7 @@ export default class Channel extends BaseModel {
     channel_id?: string;
     alias?: string;
     // pending
-    remote_node_pub: string;
+    remote_node_pub?: string;
 
     // enrichments
     displayName?: string;

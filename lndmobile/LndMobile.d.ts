@@ -39,11 +39,17 @@ export interface ILndMobile {
     ): Promise<'done'>;
     writeToStream(method: string, payload: string): Promise<boolean>;
 
+    // Express Graph Sync / Speedloader
+    gossipSync(
+        serviceUrl: string,
+        networkType: string
+    ): Promise<{ data: string }>;
+    cancelGossipSync(): void;
+
     // Android-specific
     unbindLndMobileService(): Promise<void>; // TODO(hsjoberg): function looks broken
     sendPongToLndMobileservice(): Promise<{ data: string }>;
     checkLndMobileServiceConnected(): Promise<boolean>;
-    gossipSync(networkType: string): Promise<{ data: string }>;
 }
 
 export interface ILndMobileTools {

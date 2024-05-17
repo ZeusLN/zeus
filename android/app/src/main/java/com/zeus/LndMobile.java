@@ -386,13 +386,17 @@ class LndMobile extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void gossipSync(String networkType, Promise promise) {
+  public void gossipSync(String serviceUrl, String networkType, Promise promise) {
     int req = new Random().nextInt();
     requests.put(req, promise);
 
     Message message = Message.obtain(null, LndMobileService.MSG_GOSSIP_SYNC, req, 0);
     message.replyTo = messenger;
     Bundle bundle = new Bundle();
+    bundle.putString(
+      "serviceUrl",
+      serviceUrl
+    );
     bundle.putString(
       "networkType",
       networkType
@@ -403,6 +407,21 @@ class LndMobile extends ReactContextBaseJavaModule {
       lndMobileServiceMessenger.send(message);
     } catch (RemoteException e) {
       promise.reject(TAG, "Could not Send MSG_GOSSIP_SYNC to LndMobileService", e);
+    }
+  }
+
+  @ReactMethod
+  public void cancelGossipSync(Promise promise) {
+    int req = new Random().nextInt();
+    requests.put(req, promise);
+
+    Message message = Message.obtain(null, LndMobileService.MSG_CANCEL_GOSSIP_SYNC, req, 0);
+    message.replyTo = messenger;
+
+    try {
+      lndMobileServiceMessenger.send(message);
+    } catch (RemoteException e) {
+      promise.reject(TAG, "Could not Send MSG_CANCEL_GOSSIP_SYNC to LndMobileService", e);
     }
   }
 

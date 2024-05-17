@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -22,10 +23,11 @@ import BackendUtils from '../../utils/BackendUtils';
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import { cloneDeep } from 'lodash';
 
 interface NodesProps {
     nodes: any[];
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     edit?: boolean;
     loading?: boolean;
     selectedNode?: number;
@@ -55,12 +57,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     componentDidMount() {
         this.refreshSettings();
 
-        this.props.navigation.addListener('didFocus', this.handleFocus);
+        this.props.navigation.addListener('focus', this.handleFocus);
     }
 
     componentWillUnmount() {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
+            this.props.navigation.removeListener('focus', this.handleFocus);
     }
 
     handleFocus = () => {
@@ -310,7 +312,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                         navigation.navigate(
                                                             'NodeConfiguration',
                                                             {
-                                                                node: item,
+                                                                node: cloneDeep(
+                                                                    item
+                                                                ),
                                                                 index,
                                                                 active:
                                                                     selectedNode ===

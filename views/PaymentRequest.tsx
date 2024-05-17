@@ -9,6 +9,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
@@ -54,7 +55,7 @@ const zaplockerDestinations = [
 
 interface InvoiceProps {
     exitSetup: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     TransactionsStore: TransactionsStore;
@@ -76,8 +77,8 @@ interface InvoiceState {
     feeOption: string;
     maxFeePercent: string;
     timeoutSeconds: string;
-    outgoingChanId: string | null;
-    lastHopPubkey: string | null;
+    outgoingChanId: string | undefined;
+    lastHopPubkey: string | undefined;
     settingsToggle: boolean;
     zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
@@ -775,13 +776,12 @@ export default class PaymentRequest extends React.Component<
                                                     {
                                                         <HopPicker
                                                             onValueChange={(
-                                                                item: any
+                                                                channels
                                                             ) =>
                                                                 this.setState({
                                                                     outgoingChanId:
-                                                                        item
-                                                                            ? item.channelId
-                                                                            : null
+                                                                        channels[0]
+                                                                            ?.channelId
                                                                 })
                                                             }
                                                             title={localeString(
@@ -798,13 +798,12 @@ export default class PaymentRequest extends React.Component<
                                                     {
                                                         <HopPicker
                                                             onValueChange={(
-                                                                item: any
+                                                                channels
                                                             ) =>
                                                                 this.setState({
                                                                     lastHopPubkey:
-                                                                        item
-                                                                            ? item.remote_pubkey
-                                                                            : null
+                                                                        channels[0]
+                                                                            ?.channelId
                                                                 })
                                                             }
                                                             title={localeString(

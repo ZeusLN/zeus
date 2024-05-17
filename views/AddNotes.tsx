@@ -2,6 +2,8 @@ import * as React from 'react';
 import { Keyboard, TouchableOpacity, View } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../components/Header';
 import Screen from '../components/Screen';
@@ -16,8 +18,12 @@ import TextInput from '../components/TextInput';
 import SaveIcon from '../assets/images/SVG/Save.svg';
 
 interface AddNotesProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NotesStore: NotesStore;
+    route: Route<
+        'AddNotes',
+        { payment_hash: string; txid: string; getRPreimage: string }
+    >;
 }
 interface AddNotesState {
     notes?: string;
@@ -35,15 +41,8 @@ export default class AddNotes extends React.Component<
 > {
     constructor(props: any) {
         super(props);
-        const payment_hash: string = this.props.navigation.getParam(
-            'payment_hash',
-            null
-        );
-        const txid: string = this.props.navigation.getParam('txid', null);
-        const getRPreimage: string = this.props.navigation.getParam(
-            'getRPreimage',
-            null
-        );
+        const { payment_hash, txid, getRPreimage } =
+            this.props.route.params ?? {};
 
         this.state = {
             notes: '',

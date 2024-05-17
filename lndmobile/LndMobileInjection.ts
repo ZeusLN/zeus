@@ -13,6 +13,7 @@ import {
     checkLndFolderExists,
     createIOSApplicationSupportAndLndDirectories,
     gossipSync,
+    cancelGossipSync,
     TEMP_moveLndToApplicationSupport,
     excludeLndICloudBackup,
     queryRoutes,
@@ -114,7 +115,11 @@ export interface ILndMobileInjections {
             isTestnet?: boolean
         ) => Promise<string>;
         stopLnd: () => Promise<string>;
-        gossipSync: (networkType: string) => Promise<{ data: string }>;
+        gossipSync: (
+            serviceUrl: string,
+            networkType: string
+        ) => Promise<{ data: string }>;
+        cancelGossipSync: () => void;
         checkICloudEnabled: () => Promise<boolean>;
         checkApplicationSupportExists: () => Promise<boolean>;
         checkLndFolderExists: () => Promise<boolean>;
@@ -129,7 +134,8 @@ export interface ILndMobileInjections {
             expiry,
             is_amp,
             is_private,
-            preimage
+            preimage,
+            route_hints
         }: {
             amount?: number;
             amount_msat?: number;
@@ -138,6 +144,7 @@ export interface ILndMobileInjections {
             is_amp?: boolean;
             is_private?: boolean;
             preimage?: string;
+            route_hints?: lnrpc.IRouteHint[] | null;
         }) => Promise<lnrpc.AddInvoiceResponse>;
         cancelInvoice: (
             paymentHash: string
@@ -446,6 +453,7 @@ export default {
         startLnd,
         stopLnd,
         gossipSync,
+        cancelGossipSync,
         checkICloudEnabled,
         checkApplicationSupportExists,
         checkLndFolderExists,

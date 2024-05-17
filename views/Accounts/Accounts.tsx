@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -22,11 +24,15 @@ import Add from '../../assets/images/SVG/Add.svg';
 import Filter from '../../assets/images/SVG/Filter On.svg';
 
 interface AccountsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     UTXOsStore: UTXOsStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
+    route: Route<
+        'Accounts',
+        { value: string; amount: string; lightning: string; locked: boolean }
+    >;
 }
 
 interface AccountsState {
@@ -57,34 +63,23 @@ export default class Accounts extends React.Component<
     }
 
     componentDidMount() {
-        const { navigation } = this.props;
-        const value: string = navigation.getParam('value');
-        const amount: string = navigation.getParam('amount');
-        const lightning: string = navigation.getParam('lightning');
-        const locked: boolean = navigation.getParam('locked');
+        const { route } = this.props;
+        const { value, amount, lightning, locked } = route.params ?? {};
 
         if (value) {
-            this.setState({
-                value
-            });
+            this.setState({ value });
         }
 
         if (amount) {
-            this.setState({
-                amount
-            });
+            this.setState({ amount });
         }
 
         if (lightning) {
-            this.setState({
-                lightning
-            });
+            this.setState({ lightning });
         }
 
         if (locked) {
-            this.setState({
-                locked
-            });
+            this.setState({ locked });
         }
     }
 

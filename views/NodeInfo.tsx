@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { RefreshControl, StyleSheet, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
@@ -15,7 +16,7 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 
 interface NodeInfoProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }

@@ -8,8 +8,9 @@ import {
     ScrollView,
     TouchableOpacity
 } from 'react-native';
-
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import BalanceStore from '../stores/BalanceStore';
 import InvoicesStore from '../stores/InvoicesStore';
@@ -36,13 +37,14 @@ import Scan from '../assets/images/SVG/Scan.svg';
 
 interface SweepProps {
     exitSetup: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     ModalStore: ModalStore;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
+    route: Route<'Sweep', { destination: string }>;
 }
 
 interface SweepState {
@@ -65,8 +67,8 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
     listener: any;
     constructor(props: SweepProps) {
         super(props);
-        const { navigation } = props;
-        const destination = navigation.getParam('destination', null);
+        const { route } = props;
+        const destination = route.params?.destination;
 
         this.state = {
             destination: destination || '',
@@ -80,20 +82,8 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         if (this.listener && this.listener.stop) this.listener.stop();
     }
 
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation } = nextProps;
-        const destination = navigation.getParam('destination', null);
-        const amount = navigation.getParam('amount', null);
-
-        this.setState({
-            destination
-        });
-
-        if (amount) {
-            this.setState({
-                amount
-            });
-        }
+    UNSAFE_componentWillReceiveProps(nextProps: SweepProps) {
+        this.setState({ destination: nextProps.route.params?.destination });
     }
 
     subscribePayment = (streamingCall: string) => {
@@ -288,6 +278,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                             onChangeFee={(text: string) =>
                                 this.setState({ fee: text })
                             }
+                            navigation={navigation}
                         />
 
                         <Text

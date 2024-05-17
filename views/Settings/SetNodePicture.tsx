@@ -11,6 +11,8 @@ import {
 import { Avatar } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
@@ -24,7 +26,8 @@ import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
 
 interface SetNodePictureProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<'SetNodePicture', { implementation: string }>;
 }
 
 interface SetNodePictureState {
@@ -38,10 +41,7 @@ export default class SetNodePicture extends React.Component<
 > {
     constructor(props: SetNodePictureProps) {
         super(props);
-        const implementation = this.props.navigation.getParam(
-            'implementation',
-            null
-        );
+        const implementation = this.props.route.params?.implementation;
         let images: string[] = [
             require('../../assets/images/zeus-illustration-1a.jpg'),
             require('../../assets/images/zeus-illustration-1b.jpg'),

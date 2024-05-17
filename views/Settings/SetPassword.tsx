@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -13,7 +14,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
 
 interface SetPassphraseProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -93,7 +94,7 @@ export default class SetPassphrase extends React.Component<
         }
 
         await updateSettings({ passphrase }).then(() => {
-            setLoginStatus(false);
+            setLoginStatus(true);
             getSettings();
             navigation.navigate('Settings', {
                 refresh: true
@@ -254,10 +255,7 @@ export default class SetPassphrase extends React.Component<
                                         this.deletePassword();
                                     }
                                 }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}

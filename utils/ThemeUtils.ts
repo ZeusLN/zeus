@@ -322,6 +322,35 @@ export function themeColor(themeString: string): any {
         secondaryText: 'lightgray'
     };
 
+    const Radioactive: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#000',
+        gradientBackground: ['#191919', '#000000'],
+        secondary: '#31363F',
+        text: 'white',
+        secondaryText: '#A7A9AC',
+        highlight: '#b8ff0f',
+        error: '#992600',
+        separator: '#31363F',
+        outbound: '#b8ff0f',
+        inbound: '#547506',
+        success: '#46BE43',
+        warning: '#E14C4C',
+        bitcoin: '#FFB040',
+        delete: '#992600',
+        qr: '#b8ff0f',
+        qrBackground: '#000',
+        qrLogoBackground: '#b8ff0f',
+        invertQrIcons: false,
+        qrFrame: '#FFD93F',
+        bolt: '#FFF',
+        chain: '#FFF',
+        disabled: '#767577',
+        buttonBackground: '#b8ff0f',
+        buttonText: '#000',
+        action: '#FFF'
+    };
+
     switch (theme) {
         case 'kyriaki':
             return Kyriaki[themeString] || Dark[themeString];
@@ -365,6 +394,8 @@ export function themeColor(themeString: string): any {
             return RedMetallic[themeString] || Dark[themeString];
         case 'watermelon':
             return Watermelon[themeString] || Dark[themeString];
+        case 'radioactive':
+            return Radioactive[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Divider, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
 import { Row } from '../../../components/layout/Row';
@@ -22,7 +23,7 @@ import NostrichNotFound from '../../../assets/images/SVG/Nostrich_not-found.svg'
 import Receive from '../../../assets/images/SVG/Receive.svg';
 
 interface LightningAddressInfoProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     LightningAddressStore: LightningAddressStore;
 }
 

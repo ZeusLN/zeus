@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -8,7 +9,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface CertInstallInstructionsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
 }
 
 export default class CertInstallInstructions extends React.Component<

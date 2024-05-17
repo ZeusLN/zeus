@@ -1,5 +1,7 @@
 import React from 'react';
 import { Text, ScrollView } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 
@@ -7,7 +9,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface LspExplanationWrappedInvoicesProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
 }
 
 const FONT_SIZE = 18;

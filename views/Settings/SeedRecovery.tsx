@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
@@ -27,8 +29,9 @@ import SettingsStore from '../../stores/SettingsStore';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
 interface SeedRecoveryProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: Route<'SeedRecovery', { network: string }>;
 }
 
 interface SeedRecoveryState {
@@ -134,14 +137,9 @@ export default class SeedRecovery extends React.PureComponent<
         this.initFromProps(nextProps);
     }
 
-    async initFromProps(props: any) {
-        const { navigation } = props;
-
-        const network = navigation.getParam('network', 'mainnet');
-
-        this.setState({
-            network
-        });
+    async initFromProps(props: SeedRecoveryProps) {
+        const network = props.route.params?.network ?? 'mainnet';
+        this.setState({ network });
     }
 
     async UNSAFE_componentWillMount() {

@@ -16,6 +16,8 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import { Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
@@ -36,7 +38,11 @@ import Scan from '../../assets/images/SVG/Scan.svg';
 import Star from '../../assets/images/SVG/Star.svg';
 
 interface AddContactProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<
+        'AddContact',
+        { isEdit: boolean; prefillContact: Contact; isNostrContact: boolean }
+    >;
 }
 
 interface Contact {
@@ -112,7 +118,7 @@ export default class AddContact extends React.Component<
     };
 
     saveContact = async () => {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
         const {
             lnAddress,
             onchainAddress,
@@ -125,9 +131,7 @@ export default class AddContact extends React.Component<
             isFavourite
         } = this.state;
 
-        const isEdit = !!navigation.getParam('isEdit', false);
-        const prefillContact = navigation.getParam('prefillContact', null);
-        const isNostrContact = navigation.getParam('isNostrContact', null);
+        const { isEdit, prefillContact, isNostrContact } = route.params ?? {};
 
         try {
             // Retrieve existing contacts from storage
@@ -217,8 +221,8 @@ export default class AddContact extends React.Component<
     };
 
     deleteContact = async () => {
-        const { navigation } = this.props;
-        const prefillContact = navigation.getParam('prefillContact', null);
+        const { navigation, route } = this.props;
+        const prefillContact = route.params?.prefillContact;
 
         if (prefillContact) {
             try {
@@ -335,15 +339,9 @@ export default class AddContact extends React.Component<
         this.handlePrefillContact();
     }
 
-    componentDidUpdate(prevProps) {
-        const prefillContact = this.props.navigation.getParam(
-            'prefillContact',
-            null
-        );
-        const prevPrefillContact = prevProps.navigation.getParam(
-            'prefillContact',
-            null
-        );
+    componentDidUpdate(prevProps: AddContactProps) {
+        const prefillContact = this.props.route.params?.prefillContact;
+        const prevPrefillContact = prevProps.route.params?.prefillContact;
 
         // Check if the prefillContact prop has changed
         if (prefillContact !== prevPrefillContact) {
@@ -352,10 +350,7 @@ export default class AddContact extends React.Component<
     }
 
     handlePrefillContact() {
-        const prefillContact = this.props.navigation.getParam(
-            'prefillContact',
-            null
-        );
+        const prefillContact = this.props.route.params?.prefillContact;
 
         if (prefillContact) {
             this.setState({
@@ -421,13 +416,13 @@ export default class AddContact extends React.Component<
                 />
             </TouchableOpacity>
         );
-        const isEdit = !!this.props.navigation.getParam('isEdit', false);
-        const prefillContact = this.props.navigation.getParam(
-            'prefillContact',
-            null
-        );
+        const { isEdit, prefillContact } = this.props.route.params ?? {};
 
-        const ScanBadge = ({ navigation }: { navigation: any }) => (
+        const ScanBadge = ({
+            navigation
+        }: {
+            navigation: StackNavigationProp<any, any>;
+        }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('HandleAnythingQRScanner')}
                 accessibilityLabel={localeString('general.scan')}
@@ -450,27 +445,27 @@ export default class AddContact extends React.Component<
                     }}
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
+                    <Header
+                        leftComponent="Back"
+                        rightComponent={
+                            <Row>
+                                <StarButton
+                                    isFavourite={this.state.isFavourite}
+                                    onPress={this.toggleFavorite}
+                                />
+                                <ScanBadge navigation={navigation} />
+                            </Row>
+                        }
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
+                        navigation={navigation}
+                    />
                     <ScrollView
                         contentContainerStyle={{
                             flexGrow: 1
                         }}
                     >
-                        <Header
-                            leftComponent="Back"
-                            rightComponent={
-                                <Row>
-                                    <StarButton
-                                        isFavourite={this.state.isFavourite}
-                                        onPress={this.toggleFavorite}
-                                    />
-                                    <ScanBadge navigation={navigation} />
-                                </Row>
-                            }
-                            containerStyle={{
-                                borderBottomWidth: 0
-                            }}
-                            navigation={navigation}
-                        />
                         <View
                             style={{
                                 justifyContent: 'center',
@@ -1252,13 +1247,7 @@ export default class AddContact extends React.Component<
                                         this.deleteContact();
                                     }
                                 }}
-                                containerStyle={{
-                                    borderColor: themeColor('delete')
-                                }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}

@@ -12,6 +12,9 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import cloneDeep from 'lodash/cloneDeep';
+import differenceBy from 'lodash/differenceBy';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { hash, STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
@@ -50,8 +53,20 @@ import { getPhoto } from '../../utils/PhotoUtils';
 import { createLndWallet } from '../../utils/LndMobileUtils';
 
 interface NodeConfigurationProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: Route<
+        'NodeConfiguration',
+        {
+            node: any;
+            index: any;
+            active: any;
+            tor: any;
+            saved: any;
+            newEntry: any;
+            newPhoto: any;
+        }
+    >;
 }
 
 interface NodeConfigurationState {
@@ -270,15 +285,10 @@ export default class NodeConfiguration extends React.Component<
     }
 
     async initFromProps(props: any) {
-        const { navigation } = props;
+        const { route } = props;
 
-        const node = navigation.getParam('node', null);
-        const index = navigation.getParam('index', null);
-        const active = navigation.getParam('active', null);
-        const tor = navigation.getParam('enableTor', false);
-        const saved = navigation.getParam('saved', null);
-        const newEntry = navigation.getParam('newEntry', null);
-        const newPhoto = navigation.getParam('photo', null);
+        const { node, index, active, tor, saved, newEntry, newPhoto } =
+            route.params ?? {};
 
         if (node) {
             const {
@@ -406,8 +416,12 @@ export default class NodeConfiguration extends React.Component<
         };
 
         let nodes: any;
+        let originalNode: any;
         if (settings.nodes) {
             nodes = settings.nodes;
+            if (index != null) {
+                originalNode = nodes[index];
+            }
             nodes[index !== null ? index : settings.nodes.length] = node;
         } else {
             nodes = [node];
@@ -424,14 +438,31 @@ export default class NodeConfiguration extends React.Component<
                 saved: true
             });
 
-            if (nodes.length === 1) {
+            const activeNodeIndex = settings.selectedNode || 0;
+            if (index === activeNodeIndex) {
+                // updating active node
+                if (originalNode != null) {
+                    const diff = differenceBy(
+                        Object.entries(originalNode),
+                        Object.entries(node),
+                        (entry) => entry[0] + entry[1]
+                    ).filter(
+                        (entry) =>
+                            entry[0] !== 'nickname' && entry[0] !== 'photo'
+                    );
+                    if (diff.length === 0) {
+                        // only nickname or photo was edited - no reconnect necessary
+                        navigation.goBack();
+                        return;
+                    }
+                }
                 if (implementation === 'lightning-node-connect') {
                     BackendUtils.disconnect();
                 }
                 setConnectingStatus(true);
                 navigation.navigate('Wallet', { refresh: true });
             } else {
-                navigation.navigate('Nodes', { refresh: true });
+                navigation.goBack();
             }
         });
     };
@@ -584,8 +615,8 @@ export default class NodeConfiguration extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const node = navigation.getParam('node', null);
+        const { route, navigation, SettingsStore } = this.props;
+        const node = route.params?.node;
         const {
             nickname,
             host,
@@ -1737,13 +1768,7 @@ export default class NodeConfiguration extends React.Component<
                                         this.deleteNodeConfig();
                                     }
                                 }}
-                                containerStyle={{
-                                    borderColor: themeColor('delete')
-                                }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}

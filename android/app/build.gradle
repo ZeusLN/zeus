@@ -101,7 +101,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 84
-        versionName "0.9.0-alpha3"
+        versionName "0.9.0-alpha4"
         multiDexEnabled true
         missingDimensionStrategy 'react-native-camera', 'general'
     }
@@ -191,8 +191,8 @@ dependencies {
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-alpha01'
     implementation files("../../node_modules/react-native-tor/android/libs/sifir_android.aar")
     // gif
-    implementation 'com.facebook.fresco:fresco:2.6.0'
-    implementation 'com.facebook.fresco:animated-gif:2.6.0'
+    implementation 'com.facebook.fresco:fresco:3.1.3'
+    implementation 'com.facebook.fresco:animated-gif:3.1.3'
 
     // Pegasus
     // implementation(name:"Lndmobile", ext:"aar")
