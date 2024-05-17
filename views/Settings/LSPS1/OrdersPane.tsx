@@ -136,7 +136,10 @@ export default class OrdersPane extends React.Component<
             <TouchableOpacity
                 onPress={() =>
                     this.props.navigation.navigate('LSPS1Order', {
-                        orderId: item.orderId
+                        orderId: item.orderId,
+                        orderShouldUpdate:
+                            item?.state === 'FAILED' ||
+                            item?.state === 'COMPLETED'
                     })
                 }
                 style={{
