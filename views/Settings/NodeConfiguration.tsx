@@ -440,6 +440,7 @@ export default class NodeConfiguration extends React.Component<
 
             const activeNodeIndex = settings.selectedNode || 0;
             if (index === activeNodeIndex) {
+                // updating active node
                 if (originalNode != null) {
                     const diff = differenceBy(
                         Object.entries(originalNode),
@@ -450,6 +451,7 @@ export default class NodeConfiguration extends React.Component<
                             entry[0] !== 'nickname' && entry[0] !== 'photo'
                     );
                     if (diff.length === 0) {
+                        // only nickname or photo was edited - no reconnect necessary
                         navigation.goBack();
                         return;
                     }
