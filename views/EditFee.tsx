@@ -12,6 +12,8 @@ import {
     Keyboard
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -31,8 +33,16 @@ import SettingsStore from './../stores/SettingsStore';
 interface EditFeeProps {
     FeeStore: FeeStore;
     SettingsStore: SettingsStore;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     displayOnly?: boolean;
+    route: Route<
+        'EditFee',
+        {
+            fee: any;
+            displayOnly: boolean;
+            onNavigateBack: (fee: any) => {};
+        }
+    >;
 }
 
 interface EditFeeState {
@@ -57,8 +67,8 @@ export default class EditFee extends React.Component<
     }
 
     async UNSAFE_componentWillMount() {
-        const { FeeStore, SettingsStore, navigation } = this.props;
-        const fee = navigation.getParam('fee', null);
+        const { FeeStore, SettingsStore, route } = this.props;
+        const fee = route.params?.fee;
         const { settings } = SettingsStore;
         const fees: any = await FeeStore.getOnchainFeesviaMempool();
 
@@ -74,8 +84,8 @@ export default class EditFee extends React.Component<
 
     render() {
         const { selectedFee, fee, customFee } = this.state;
-        const { navigation, FeeStore } = this.props;
-        const displayOnly = navigation.getParam('displayOnly', null);
+        const { navigation, FeeStore, route } = this.props;
+        const displayOnly = route.params?.displayOnly;
         const { recommendedFees, loading, error, getOnchainFeesviaMempool } =
             FeeStore;
 
@@ -378,7 +388,7 @@ export default class EditFee extends React.Component<
                                             'views.EditFee.confirmFee'
                                         )}
                                         onPress={() => {
-                                            this.props.navigation.state.params.onNavigateBack(
+                                            this.props.route.params.onNavigateBack(
                                                 fee
                                             );
                                             this.props.navigation.goBack();

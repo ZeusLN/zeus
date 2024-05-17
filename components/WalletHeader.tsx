@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
@@ -35,7 +36,7 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
-import Scan from '../assets/images/SVG/Scan.svg';
+import Gear from '../assets/images/SVG/Gear.svg';
 import POS from '../assets/images/SVG/POS.svg';
 import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
@@ -83,7 +84,11 @@ const MailboxAnimated = () => {
     );
 };
 
-const ActivityButton = ({ navigation }: { navigation: any }) => (
+const ActivityButton = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+}) => (
     <View style={{ width: 80 }}>
         <Button
             icon={{
@@ -98,7 +103,11 @@ const ActivityButton = ({ navigation }: { navigation: any }) => (
     </View>
 );
 
-const TempleButton = ({ navigation }: { navigation: any }) => (
+const TempleButton = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+}) => (
     <TouchableOpacity
         onPress={() => protectedNavigation(navigation, 'Wallet', true)}
     >
@@ -111,12 +120,16 @@ const TempleButton = ({ navigation }: { navigation: any }) => (
     </TouchableOpacity>
 );
 
-const ScanBadge = ({ navigation }: { navigation: any }) => (
+const SettingsBadge = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+}) => (
     <TouchableOpacity
-        onPress={() => navigation.navigate('HandleAnythingQRScanner')}
-        accessibilityLabel={localeString('general.scan')}
+        onPress={() => navigation.navigate('Settings')}
+        accessibilityLabel={localeString('views.Settings.title')}
     >
-        <Scan fill={themeColor('text')} width={30} height={30} />
+        <Gear fill={themeColor('text')} width={33} height={33} />
     </TouchableOpacity>
 );
 
@@ -124,7 +137,7 @@ const ClipboardBadge = ({
     navigation,
     clipboard
 }: {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     clipboard: string;
 }) => (
     <TouchableOpacity
@@ -162,7 +175,7 @@ interface WalletHeaderProps {
     LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
     SyncStore?: SyncStore;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     loading: boolean;
     title: string;
     channels: boolean;
@@ -237,10 +250,9 @@ export default class WalletHeader extends React.Component<
             (settings && settings.pos && settings.pos.posEnabled) ||
             PosEnabled.Disabled;
 
-        const SettingsButton = () => (
+        const NodeButton = () => (
             <TouchableOpacity
-                onPress={() => protectedNavigation(navigation, 'Settings')}
-                onLongPress={() => protectedNavigation(navigation, 'Nodes')}
+                onPress={() => protectedNavigation(navigation, 'Nodes')}
                 accessibilityLabel={localeString('views.Settings.title')}
             >
                 {selectedNode && selectedNode.photo ? (
@@ -383,7 +395,11 @@ export default class WalletHeader extends React.Component<
             </TouchableOpacity>
         );
 
-        const SyncBadge = ({ navigation }: { navigation: any }) => {
+        const SyncBadge = ({
+            navigation
+        }: {
+            navigation: StackNavigationProp<any, any>;
+        }) => {
             const [spinAnim] = useState(new Animated.Value(0));
 
             const interpolateRotation = spinAnim.interpolate({
@@ -426,7 +442,7 @@ export default class WalletHeader extends React.Component<
                 leftComponent={
                     loading ? undefined : (
                         <Row>
-                            <SettingsButton />
+                            <NodeButton />
                             {paid && paid.length > 0 && (
                                 <TouchableOpacity
                                     onPress={() =>
@@ -548,7 +564,7 @@ export default class WalletHeader extends React.Component<
                                 </View>
                             )}
                             <View>
-                                <ScanBadge navigation={navigation} />
+                                <SettingsBadge navigation={navigation} />
                             </View>
                             {posEnabled !== PosEnabled.Disabled && (
                                 <View

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -9,7 +10,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface SponsorsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
 }
 
 function Sponsors(props: SponsorsProps) {

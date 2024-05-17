@@ -2,6 +2,8 @@ import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import SettingsStore, {
     DEFAULT_VIEW_KEYS,
     THEME_KEYS
@@ -15,7 +17,7 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
 interface DisplayProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { FlatList, View, TouchableHighlight } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
@@ -30,7 +31,7 @@ export enum Status {
 }
 
 interface ChannelsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore?: ChannelsStore;
     SettingsStore?: SettingsStore;
 }

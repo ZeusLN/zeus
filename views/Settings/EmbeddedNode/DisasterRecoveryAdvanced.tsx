@@ -3,6 +3,7 @@ import { FlatList, Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import moment from 'moment';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
 import Screen from '../../../components/Screen';
@@ -15,7 +16,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 
 interface DisasterRecoveryAdvancedProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelBackupStore: ChannelBackupStore;
 }
 

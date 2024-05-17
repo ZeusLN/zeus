@@ -9,6 +9,8 @@ import {
     Text,
     View
 } from 'react-native';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -26,8 +28,17 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface LockscreenProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: Route<
+        'Lockscreen',
+        {
+            modifySecurityScreen: string;
+            deletePin: boolean;
+            deleteDuressPin: boolean;
+            attemptAdminLogin: boolean;
+        }
+    >;
 }
 
 interface LockscreenState {
@@ -89,15 +100,14 @@ export default class Lockscreen extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, navigation, route } = this.props;
         const { settings } = SettingsStore;
-        const modifySecurityScreen: string = navigation.getParam(
-            'modifySecurityScreen'
-        );
-        const deletePin: boolean = navigation.getParam('deletePin');
-        const deleteDuressPin: boolean = navigation.getParam('deleteDuressPin');
-        const attemptAdminLogin: boolean =
-            navigation.getParam('attemptAdminLogin');
+        const {
+            modifySecurityScreen,
+            deletePin,
+            deleteDuressPin,
+            attemptAdminLogin
+        } = route.params ?? {};
 
         const posEnabled: PosEnabled =
             (settings && settings.pos && settings.pos.posEnabled) ||

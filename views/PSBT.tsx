@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from 'react-native-elements';
 import { UR, UREncoder } from '@ngraveio/bc-ur';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 const bitcoin = require('bitcoinjs-lib');
 
@@ -23,9 +25,10 @@ import ChannelsStore from '../stores/ChannelsStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
 interface PSBTProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
+    route: Route<'PSBT', { psbt: string }>;
 }
 
 interface PSBTState {
@@ -54,8 +57,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
     };
 
     UNSAFE_componentWillMount(): void {
-        const { navigation } = this.props;
-        const psbt: string = navigation.getParam('psbt');
+        const { route } = this.props;
+        const psbt = route.params?.psbt;
         this.setState(
             {
                 fundedPsbt: psbt

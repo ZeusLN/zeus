@@ -9,6 +9,7 @@ import {
     Text
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Globe from '../assets/images/SVG/Globe.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
@@ -27,7 +28,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import TresArrows from '../assets/images/SVG/TresArrows.svg';
 
 interface IntroSplashProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -52,7 +53,7 @@ export default class IntroSplash extends React.Component<
 
     componentDidMount() {
         // triggers when loaded from navigation or back action
-        this.props.navigation.addListener('didFocus', () => {
+        this.props.navigation.addListener('focus', () => {
             this.props.SettingsStore.getSettings();
         });
 

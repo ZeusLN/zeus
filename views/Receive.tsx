@@ -14,12 +14,13 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
-
 import NfcManager, {
     NfcEvents,
     TagEvent,
     Ndef
 } from 'react-native-nfc-manager';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import handleAnything from '../utils/handleAnything';
 
@@ -90,7 +91,7 @@ import HopPicker from '../components/HopPicker';
 
 interface ReceiveProps {
     exitSetup: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     InvoicesStore: InvoicesStore;
     PosStore: PosStore;
@@ -100,6 +101,23 @@ interface ReceiveProps {
     UnitsStore: UnitsStore;
     LSPStore: LSPStore;
     LightningAddressStore: LightningAddressStore;
+    route: Route<
+        'Receive',
+        {
+            lnurlParams: LNURLWithdrawParams | undefined;
+            amount: string;
+            autoGenerate: boolean;
+            autoGenerateOnChain: boolean;
+            account: string;
+            selectedIndex: number;
+            memo: string;
+            orderId: string;
+            orderTotal: string;
+            orderTip: string;
+            exchangeRate: string;
+            rate: number;
+        }
+    >;
 }
 
 interface ReceiveState {
@@ -187,11 +205,11 @@ export default class Receive extends React.Component<
 
     async UNSAFE_componentWillMount() {
         const {
-            navigation,
             InvoicesStore,
             SettingsStore,
             LightningAddressStore,
-            NodeInfoStore
+            NodeInfoStore,
+            route
         } = this.props;
         const { reset } = InvoicesStore;
         const { getSettings, posStatus } = SettingsStore;
@@ -246,23 +264,21 @@ export default class Receive extends React.Component<
             settings.pos.confirmationPreference === 'lnOnly';
 
         reset();
-        const lnurl: LNURLWithdrawParams | undefined =
-            navigation.getParam('lnurlParams');
 
-        const amount: string = navigation.getParam('amount');
-        const autoGenerate: boolean = navigation.getParam('autoGenerate');
-        const autoGenerateOnChain: boolean = navigation.getParam(
-            'autoGenerateOnChain'
-        );
-        const account: string = navigation.getParam('account');
+        const {
+            lnurlParams: lnurl,
+            amount,
+            autoGenerate,
+            autoGenerateOnChain,
+            account,
+            selectedIndex
+        } = route.params ?? {};
 
         if (account) {
             this.setState({
                 account
             });
         }
-
-        const selectedIndex: number = navigation.getParam('selectedIndex');
 
         if (selectedIndex) {
             this.setState({
@@ -274,12 +290,9 @@ export default class Receive extends React.Component<
             this.state;
 
         // POS
-        const memo: string = navigation.getParam('memo', this.state.memo);
-        const orderId: string = navigation.getParam('orderId');
-        const orderTotal: string = navigation.getParam('orderTotal');
-        const orderTip: string = navigation.getParam('orderTip');
-        const exchangeRate: string = navigation.getParam('exchangeRate');
-        const rate: number = navigation.getParam('rate');
+        const memo = route.params?.memo ?? this.state.memo;
+        const { orderId, orderTotal, orderTip, exchangeRate, rate } =
+            route.params ?? {};
 
         if (orderId) {
             this.setState({
@@ -351,13 +364,11 @@ export default class Receive extends React.Component<
     }
 
     async UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation, InvoicesStore } = nextProps;
+        const { route, InvoicesStore } = nextProps;
         const { reset } = InvoicesStore;
 
         reset();
-        const amount: string = navigation.getParam('amount');
-        const lnurl: LNURLWithdrawParams | undefined =
-            navigation.getParam('lnurlParams');
+        const { amount, lnurlParams: lnurl } = route.params ?? {};
 
         if (amount) {
             let needInbound = false;
@@ -531,10 +542,10 @@ export default class Receive extends React.Component<
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore } = this.props;
+        const { navigation, InvoicesStore, route } = this.props;
         const { lspIsActive } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
-        const amount = getSatAmount(navigation.getParam('amount'));
+        const amount = getSatAmount(route.params?.amount);
 
         handleAnything(text, amount.toString())
             .then((response) => {
@@ -567,7 +578,6 @@ export default class Receive extends React.Component<
                                     rHash: string;
                                     onChainAddress?: string;
                                 }) => {
-                                    navigation.setParam;
                                     this.subscribeInvoice(
                                         rHash,
                                         onChainAddress
@@ -966,7 +976,8 @@ export default class Receive extends React.Component<
             LightningAddressStore,
             LSPStore,
             NodeInfoStore,
-            navigation
+            navigation,
+            route
         } = this.props;
         const {
             selectedIndex,
@@ -1026,8 +1037,7 @@ export default class Receive extends React.Component<
             settings.pos.confirmationPreference &&
             settings.pos.confirmationPreference === 'lnOnly';
 
-        const lnurl: LNURLWithdrawParams | undefined =
-            navigation.getParam('lnurlParams');
+        const lnurl = route.params?.lnurlParams;
 
         const ClearButton = () => (
             <Icon
