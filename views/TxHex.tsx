@@ -231,9 +231,8 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        navigation.navigate('Wallet');
-                    }}
+                    onBack={() => navigation.popTo('Wallet')}
+                    navigateBackOnBackPress={false}
                     centerComponent={{
                         text: 'Transaction Hex',
                         style: { color: themeColor('text') }
