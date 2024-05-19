@@ -10,7 +10,7 @@ import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 // lndhub
 import LoginRequest from './../models/LoginRequest';
 
-interface Node {
+export interface Node {
     host?: string;
     port?: string;
     url?: string;
@@ -20,11 +20,11 @@ interface Node {
     certVerification?: boolean;
     enableTor?: boolean;
     nickname?: string;
+    photo?: string;
     // LNC
     pairingPhrase?: string;
     mailboxServer?: string;
     customMailboxServer?: string;
-    photo?: string;
 }
 
 interface PrivacySettings {
