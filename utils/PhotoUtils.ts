@@ -21,7 +21,7 @@ const BTCpay = require('..//assets/images/BTCpay.jpg');
 const CLN = require('..//assets/images/CLN.jpg');
 const LND = require('..//assets/images/LND.jpg');
 
-const getPhoto = (photo: string | null): string => {
+const getPhoto = (photo: string | undefined): string => {
     if (typeof photo === 'string' && photo.includes('rnfs://')) {
         const fileName = photo.replace('rnfs://', '');
         return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
