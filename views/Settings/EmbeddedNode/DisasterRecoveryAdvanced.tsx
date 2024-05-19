@@ -113,7 +113,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                                             await triggerRecovery(
                                                 selected.backup
                                             );
-                                            navigation.navigate('Wallet');
+                                            navigation.popTo('Wallet');
                                         }
                                     }}
                                 />

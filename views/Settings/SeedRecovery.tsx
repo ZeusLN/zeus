@@ -243,9 +243,9 @@ export default class SeedRecovery extends React.PureComponent<
 
             if (nodes.length === 1) {
                 setConnectingStatus(true);
-                navigation.navigate('Wallet', { refresh: true });
+                navigation.popTo('Wallet', { refresh: true });
             } else {
-                navigation.navigate('Nodes', { refresh: true });
+                navigation.popTo('Nodes', { refresh: true });
             }
         });
     };

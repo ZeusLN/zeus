@@ -242,7 +242,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 NodeInfoStore.reset();
                                                 ChannelsStore.reset();
                                                 setConnectingStatus(true);
-                                                navigation.navigate('Wallet', {
+                                                navigation.popTo('Wallet', {
                                                     refresh: true
                                                 });
                                             });
