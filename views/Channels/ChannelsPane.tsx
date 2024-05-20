@@ -28,8 +28,6 @@ import { localeString } from '../../utils/LocaleUtils';
 
 import Channel from '../../models/Channel';
 
-import NavigationService from '../../NavigationService';
-
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
     Good = 'Good',
@@ -46,7 +44,7 @@ interface ChannelsProps {
     SettingsStore?: SettingsStore;
 }
 
-const ColorChangingButton = () => {
+const ColorChangingButton = ({ onPress }) => {
     const [forward, setForward] = useState(true);
     const animation = useRef(new Animated.Value(0)).current;
 
@@ -75,7 +73,7 @@ const ColorChangingButton = () => {
 
     return (
         <TouchableOpacity
-            onPress={() => NavigationService.navigate('LSPS1')}
+            onPress={onPress}
             style={[styles.button, { backgroundColor }]}
         >
             <Text style={styles.buttonText}>
@@ -237,7 +235,11 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                 {settings?.lsps1ShowPurchaseButton &&
                     (BackendUtils.supportsLSPS1customMessage() ||
                         BackendUtils.supportsLSPS1rest()) && (
-                        <ColorChangingButton />
+                        <ColorChangingButton
+                            onPress={() => {
+                                navigation.navigate('LSPS1');
+                            }}
+                        />
                     )}
                 {showSearch && <ChannelsFilter />}
                 {loading ? (

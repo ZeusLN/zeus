@@ -2,6 +2,8 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
@@ -19,7 +21,8 @@ import NodeInfoStore from '../../../stores/NodeInfoStore';
 import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
 
 interface OrderProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<'LSPS1Order', { orderId: string; orderShouldUpdate: boolean }>;
     LSPStore: LSPStore;
     SettingsStore: SettingsStore;
     InvoicesStore: InvoicesStore;
@@ -43,13 +46,10 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
     }
 
     async componentDidMount() {
-        const { LSPStore, navigation } = this.props;
+        const { LSPStore, route } = this.props;
         let temporaryOrder: any;
-        const id = navigation.getParam('orderId', null);
-        const orderShouldUpdate = navigation.getParam(
-            'orderShouldUpdate',
-            null
-        );
+        const id = route.params?.orderId;
+        const orderShouldUpdate = route.params?.orderShouldUpdate;
 
         console.log('Looking for order in storage...');
         EncryptedStorage.getItem('orderResponses')
@@ -71,7 +71,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         BackendUtils.supportsLSPS1rest()
                             ? LSPStore.getOrderREST(
                                   id,
-                                  temporaryOrder?.RESTHost
+                                  temporaryOrder?.endpoint
                               )
                             : LSPStore.getOrderCustomMessage(
                                   id,
