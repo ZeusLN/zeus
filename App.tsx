@@ -138,6 +138,12 @@ import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWr
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
 import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelBackups';
 
+// LSPS1
+import LSPS1 from './views/Settings/LSPS1/index';
+import LSPS1Settings from './views/Settings/LSPS1/Settings';
+import OrdersPane from './views/Settings/LSPS1/OrdersPane';
+import Orders from './views/Settings/LSPS1/Order';
+
 import RawTxHex from './views/RawTxHex';
 
 import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
@@ -731,6 +737,22 @@ export default class App extends React.PureComponent {
                                                 <Stack.Screen
                                                     name="TxHex"
                                                     component={TxHex}
+                                                />
+                                                <Stack.Screen
+                                                    name="LSPS1"
+                                                    component={LSPS1}
+                                                />
+                                                <Stack.Screen
+                                                    name="LSPS1Settings"
+                                                    component={LSPS1Settings}
+                                                />
+                                                <Stack.Screen
+                                                    name="OrdersPane"
+                                                    component={OrdersPane}
+                                                />
+                                                <Stack.Screen
+                                                    name="LSPS1Order"
+                                                    component={Orders}
                                                 />
                                             </Stack.Navigator>
                                         </NavigationContainer>

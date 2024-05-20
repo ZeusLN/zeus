@@ -2,6 +2,7 @@ import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import moment from 'moment';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { View, FlatList, TouchableOpacity, Text } from 'react-native';
 
 import Header from '../../../components/Header';
@@ -16,7 +17,7 @@ import LSPStore from '../../../stores/LSPStore';
 import { WarningMessage } from '../../../components/SuccessErrorMessage';
 
 interface OrdersPaneProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     LSPStore: LSPStore;
 }
 
@@ -41,7 +42,7 @@ export default class OrdersPane extends React.Component<
 
     async componentDidMount() {
         const { navigation, LSPStore } = this.props;
-        navigation.addListener('didFocus', async () => {
+        navigation.addListener('focus', async () => {
             try {
                 // Retrieve saved responses from encrypted storage
                 const responseArrayString = await EncryptedStorage.getItem(
