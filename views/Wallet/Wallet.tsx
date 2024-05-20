@@ -452,7 +452,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        if (connecting) {
+        if (connecting && start != null) {
             console.log(
                 'connect time: ' + (new Date().getTime() - start) / 1000 + 's'
             );
@@ -490,7 +490,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const Tab = createBottomTabNavigator();
         const {
             NodeInfoStore,
-            UnitsStore,
             BalanceStore,
             SettingsStore,
             SyncStore,
@@ -551,8 +550,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         <>
                             <LayerBalances
                                 navigation={navigation}
-                                BalanceStore={BalanceStore}
-                                UnitsStore={UnitsStore}
                                 onRefresh={() => this.getSettingsAndNavigate()}
                                 locked={isSyncing}
                                 consolidated
@@ -576,7 +573,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 <TouchableOpacity
                                     onPress={() =>
                                         this.props.navigation.navigate(
-                                            'Activity'
+                                            'Activity',
+                                            { animation: 'slide_from_bottom' }
                                         )
                                     }
                                     accessibilityLabel={localeString(
@@ -635,6 +633,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ...DefaultTheme,
             colors: {
                 ...DefaultTheme.colors,
+                background: themeColor('background'),
                 card: error ? themeColor('error') : themeColor('background'),
                 border: error ? themeColor('error') : themeColor('background')
             }
@@ -648,7 +647,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             <NavigationContainer
                                 theme={Theme}
                                 ref={this.tabNavigationRef}
-                                independent={true}
                             >
                                 <Tab.Navigator
                                     initialRouteName={
@@ -711,7 +709,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             ? themeColor('error')
                                             : 'gray',
                                         tabBarShowLabel: false,
-                                        tabBarStyle: { display: 'flex' }
+                                        tabBarStyle: {
+                                            paddingBottom: 12
+                                        },
+                                        animation: 'shift'
                                     })}
                                 >
                                     {posEnabled !== PosEnabled.Disabled &&
