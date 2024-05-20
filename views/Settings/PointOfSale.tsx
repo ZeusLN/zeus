@@ -145,7 +145,7 @@ export default class PointOfSale extends React.Component<
                         {!fiatEnabled && posEnabled === 'square' && (
                             <ErrorMessage
                                 message={localeString(
-                                    'pos.views.Settings.PointOfSale.currencyError'
+                                    'pos.views.Settings.PointOfSale.currencyMustBeEnabledError'
                                 )}
                             />
                         )}
