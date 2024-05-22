@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Imprimir factura",
     "pos.views.Settings.PointOfSale.authWarning": "ADVERTENCIA: Sin contraseña o PIN configurado",
     "pos.views.Settings.PointOfSale.backendWarning": "ADVERTENCIA: Actualmente, solo los nodos LND pueden marcar pedidos como pagados",
-    "pos.views.Settings.PointOfSale.currencyError": "Error: la moneda debe establecerse primero",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Comprobante",
     "pos.print.invoice": "Invoice",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Crear billetera mainnet",
