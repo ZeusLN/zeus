@@ -142,12 +142,9 @@ export default function QRCodeScanner({
         (async () => {
             // triggers when loaded from navigation or back action
             navigation.addListener('focus', handleFocus);
-            const appBlurSubscription = AppState.addEventListener('blur', () =>
-                setCameraIsActive(false)
-            );
-            const appFocusSubscription = AppState.addEventListener(
-                'focus',
-                () => setCameraIsActive(true)
+            const appStateChangeSubscription = AppState.addEventListener(
+                'change',
+                (state) => setCameraIsActive(state === 'active')
             );
 
             if (Platform.OS !== 'ios' && Platform.OS !== 'macos') {
@@ -206,8 +203,7 @@ export default function QRCodeScanner({
 
             return () => {
                 navigation.removeListener('focus', handleFocus);
-                appBlurSubscription.remove();
-                appFocusSubscription.remove();
+                appStateChangeSubscription.remove();
             };
         })();
     }, []);
