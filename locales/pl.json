@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Print Invoice",
     "pos.views.Settings.PointOfSale.authWarning": "Ostrzeżenie: brak hasła lub PINu",
     "pos.views.Settings.PointOfSale.backendWarning": "Uwaga: w tej chwili tylko węzły LND są w stanie oznaczyć zamówienia jako opłacone",
-    "pos.views.Settings.PointOfSale.currencyError": "Błąd: waluta musi być najpierw ustawiona",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Rachunek",
     "pos.print.invoice": "Faktura",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Create mainnet wallet",
