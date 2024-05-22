@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Vytisknout fakturu",
     "pos.views.Settings.PointOfSale.authWarning": "Varování: není nastaveno heslo ani PIN",
     "pos.views.Settings.PointOfSale.backendWarning": "Upozornění: v současné době mohou označovat objednávky jako zaplacené pouze uzly LND.",
-    "pos.views.Settings.PointOfSale.currencyError": "Chyba: nejdříve je potřeba nastavit měnu",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Účtenka",
     "pos.print.invoice": "Faktura",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Vytvořit mainnet peněženku",
