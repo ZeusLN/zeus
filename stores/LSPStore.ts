@@ -362,6 +362,7 @@ export default class LSPStore {
         } else if (data.id === this.getOrderId) {
             if (data.error) {
                 this.error = true;
+                this.loading = false;
                 this.error_msg = data?.error?.message;
             } else {
                 this.getOrderResponse = data;
@@ -531,6 +532,7 @@ export default class LSPStore {
 
     @action
     public getOrderCustomMessage(orderId: string, peer: string) {
+        console.log('Requesting LSPS1...');
         this.loading = true;
         const type = 37913;
         const id = uuidv4();

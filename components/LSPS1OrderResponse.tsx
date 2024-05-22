@@ -134,7 +134,7 @@ export default class LSPS1OrderResponse extends React.Component<
                         {orderResponse?.created_at && (
                             <KeyValue
                                 keyValue={localeString('general.createdAt')}
-                                value={moment(orderResponse?.createdAt).format(
+                                value={moment(orderResponse?.created_at).format(
                                     'MMM Do YYYY, h:mm:ss a'
                                 )}
                             />
