@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Εκτύπωση τιμολογίου",
     "pos.views.Settings.PointOfSale.authWarning": "Προειδοποίηση: δεν έχει καθοριστεί κωδικός ή PIN",
     "pos.views.Settings.PointOfSale.backendWarning": "Προειδοποίηση: επί του παρόντος μόνο οι κόμβοι LND είναι σε θέση να χαρακτηρίσουν τις παραγγελίες ως πληρωμένες",
-    "pos.views.Settings.PointOfSale.currencyError": "Σφάλμα: πρώτα πρέπει να καθοριστεί νόμισμα",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Απόδειξη",
     "pos.print.invoice": "Τιμολόγιο",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Δημιουργία πορτοφολιού mainnet",
