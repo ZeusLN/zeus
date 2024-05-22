@@ -253,6 +253,7 @@ export default function QRCodeScanner({
                         centerComponent={
                             <Text
                                 style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
                                     color: themeColor('text'),
                                     fontSize: 16
                                 }}
@@ -382,6 +383,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row'
     },
     textOverlay: {
+        fontFamily: 'PPNeueMontreal-Book',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         color: 'white',
         textAlign: 'center',
