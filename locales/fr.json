@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Imprimez la facture",
     "pos.views.Settings.PointOfSale.authWarning": "AVERTISSEMENT: pas de mot de passe ou de punage",
     "pos.views.Settings.PointOfSale.backendWarning": "AVERTISSEMENT: Actuellement, seuls les nœuds LND sont en mesure de marquer les commandes comme payé",
-    "pos.views.Settings.PointOfSale.currencyError": "Erreur: la monnaie doit être définie en premier",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Reçu",
     "pos.print.invoice": "Facture",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Créer un portefeuille MainNet",
