@@ -16,7 +16,6 @@ import {
     useCameraDevice,
     useCodeScanner
 } from 'react-native-vision-camera';
-import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -183,21 +182,16 @@ export default function QRCodeScanner({
             }
             // Camera permission for IOS
             else {
-                const cameraPermission = PERMISSIONS.IOS.CAMERA;
-                const status = await check(cameraPermission);
-
-                if (status === RESULTS.GRANTED) {
+                const hasPermission = Camera.getCameraPermissionStatus();
+                if (hasPermission === 'granted') {
                     setCameraStatus(CameraAuthStatus.AUTHORIZED);
-                } else if (status === RESULTS.DENIED) {
-                    const result = await request(cameraPermission);
-
-                    if (result === RESULTS.GRANTED) {
+                } else {
+                    const result = await Camera.requestCameraPermission();
+                    if (result) {
                         setCameraStatus(CameraAuthStatus.AUTHORIZED);
                     } else {
                         setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
                     }
-                } else {
-                    setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
                 }
             }
 
