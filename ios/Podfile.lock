@@ -1095,8 +1095,6 @@ PODS:
     - React-jsi (= 0.73.7)
     - React-logger (= 0.73.7)
     - React-perflogger (= 0.73.7)
-  - ReactNativeCameraKit (13.0.0):
-    - React-Core
   - RemobileReactNativeQrcodeLocalImage (1.0.4):
     - React
   - RNCAsyncStorage (1.22.0):
@@ -1114,8 +1112,6 @@ PODS:
     - RCT-Folly (= 2022.05.16.00)
     - React-Core
   - RNKeychain (8.1.1):
-    - React-Core
-  - RNPermissions (3.8.0):
     - React-Core
   - RNReactNativeHapticFeedback (2.2.0):
     - React-Core
@@ -1138,6 +1134,12 @@ PODS:
   - SwiftProtobuf (1.25.2)
   - TcpSockets (4.0.0):
     - React
+  - VisionCamera (4.0.4):
+    - VisionCamera/Core (= 4.0.4)
+    - VisionCamera/React (= 4.0.4)
+  - VisionCamera/Core (4.0.4)
+  - VisionCamera/React (4.0.4):
+    - React-Core
   - Yoga (1.14.0)
 
 DEPENDENCIES:
@@ -1218,7 +1220,6 @@ DEPENDENCIES:
   - RNFS (from `../node_modules/react-native-fs`)
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNKeychain (from `../node_modules/react-native-keychain`)
-  - RNPermissions (from `../node_modules/react-native-permissions`)
   - RNReactNativeHapticFeedback (from `../node_modules/react-native-haptic-feedback`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
@@ -1227,6 +1228,7 @@ DEPENDENCIES:
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - SwiftProtobuf (~> 1.0)
   - TcpSockets (from `../node_modules/react-native-tcp`)
+  - VisionCamera (from `../node_modules/react-native-vision-camera`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -1388,8 +1390,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-gesture-handler"
   RNKeychain:
     :path: "../node_modules/react-native-keychain"
-  RNPermissions:
-    :path: "../node_modules/react-native-permissions"
   RNReactNativeHapticFeedback:
     :path: "../node_modules/react-native-haptic-feedback"
   RNReanimated:
@@ -1404,6 +1404,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-vector-icons"
   TcpSockets:
     :path: "../node_modules/react-native-tcp"
+  VisionCamera:
+    :path: "../node_modules/react-native-vision-camera"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -1478,7 +1480,6 @@ SPEC CHECKSUMS:
   React-runtimescheduler: a884a55560e2a90caa1cbe0b9eaa24a5add4fa2c
   React-utils: d07d009101c7dabff68b710da5c4a47b7a850d98
   ReactCommon: 8cae78d3c3eceff20ee4bbca8bb73b675a45fd5d
-  ReactNativeCameraKit: 9d46a5d7dd544ca64aa9c03c150d2348faf437eb
   RemobileReactNativeQrcodeLocalImage: 57aadc12896b148fb5e04bc7c6805f3565f5c3fa
   RNCAsyncStorage: c43e6d71e13bb4748503797784839e0fbbf89d56
   RNCClipboard: 60fed4b71560d7bfe40e9d35dea9762b024da86d
@@ -1487,7 +1488,6 @@ SPEC CHECKSUMS:
   RNFS: 4ac0f0ea233904cb798630b3c077808c06931688
   RNGestureHandler: 67fb54b3e6ca338a8044e85cd6f340265aa41091
   RNKeychain: ff836453cba46938e0e9e4c22e43d43fa2c90333
-  RNPermissions: 06845210af313594dc3fe5e8ae6afc820d791409
   RNReactNativeHapticFeedback: ec56a5f81c3941206fd85625fa669ffc7b4545f9
   RNReanimated: 73e9c711a65aa2eec9545a437fd55b69599bbf89
   RNScreens: 17e2f657f1b09a71ec3c821368a04acbb7ebcb46
@@ -1497,8 +1497,9 @@ SPEC CHECKSUMS:
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
   SwiftProtobuf: 407a385e97fd206c4fbe880cc84123989167e0d1
   TcpSockets: 4ef55305239923b343ed0a378b1fac188b1373b0
+  VisionCamera: b19a077d72d9f9cff2a269e26aad76f71f6029f6
   Yoga: 47d399a73c0c0caa9ff824e5c657eae31215bfee
 
-PODFILE CHECKSUM: fda30e448ef65e8a4744fba469937951d714ccad
+PODFILE CHECKSUM: d507d08b1b80c9101ab17aa86eca80f453619ee1
 
 COCOAPODS: 1.15.2
