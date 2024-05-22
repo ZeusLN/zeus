@@ -77,7 +77,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         this.setState({
             loading: true
         });
-        await this.props.SettingsStore.getSettings().then((settings: any) => {
+        await this.props.SettingsStore.getSettings().then((settings) => {
             this.setState({
                 loading: false,
                 nodes: settings?.nodes || [],
@@ -242,7 +242,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 NodeInfoStore.reset();
                                                 ChannelsStore.reset();
                                                 setConnectingStatus(true);
-                                                navigation.navigate('Wallet', {
+                                                navigation.popTo('Wallet', {
                                                     refresh: true
                                                 });
                                             });

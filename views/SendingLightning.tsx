@@ -79,7 +79,7 @@ export default class SendingLightning extends React.Component<
             (this.successfullySent(TransactionsStore) ||
                 this.inTransit(TransactionsStore))
         ) {
-            navigation.navigate('Wallet');
+            navigation.popTo('Wallet');
             return true;
         }
         return false;
@@ -447,7 +447,7 @@ export default class SendingLightning extends React.Component<
                                         color: themeColor('background')
                                     }}
                                     onPress={() =>
-                                        navigation.navigate('Wallet', {
+                                        navigation.popTo('Wallet', {
                                             refresh: true
                                         })
                                     }

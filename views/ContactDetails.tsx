@@ -176,7 +176,7 @@ export default class ContactDetails extends React.Component<
         );
 
         console.log('Contact imported successfully!');
-        this.props.navigation.navigate('Contacts', { loading: true });
+        this.props.navigation.popTo('Contacts');
     };
 
     toggleFavorite = () => {

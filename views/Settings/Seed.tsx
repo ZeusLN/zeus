@@ -322,7 +322,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                         'backup-complete',
                                         JSON.stringify(true)
                                     );
-                                    navigation.navigate('Wallet');
+                                    navigation.popTo('Wallet');
                                 }}
                                 title={localeString(
                                     'views.Settings.Seed.backupComplete'
