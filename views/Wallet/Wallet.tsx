@@ -142,7 +142,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     toValue: { x: 0, y: 0 },
                     useNativeDriver: false
                 }).start();
-                props.navigation.navigate('Activity');
+                props.navigation.navigate('Activity', {
+                    animation: 'slide_from_bottom'
+                });
             }
         });
     }
