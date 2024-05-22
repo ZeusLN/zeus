@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Imprimați factura",
     "pos.views.Settings.PointOfSale.authWarning": "Atenție: nu a fost setată o parola sau un PIN",
     "pos.views.Settings.PointOfSale.backendWarning": "Atenție: momentan doar nodurile LND pot marca plățile ca efectuate",
-    "pos.views.Settings.PointOfSale.currencyError": "Eroare: trebuie selectată moneda mai întâi",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Chitanță",
     "pos.print.invoice": "Factură",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Creați portofelul Mainnet",
