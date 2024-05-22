@@ -6944,7 +6944,7 @@ lodash.throttle@^4.1.1:
   resolved "https://registry.yarnpkg.com/lodash.throttle/-/lodash.throttle-4.1.1.tgz#c23e91b710242ac70c37f1e1cda9274cc39bf2f4"
   integrity sha512-wIkUCfVKpVsWo3JSZlc+8MB5it+2AN5W8J7YVMST30UrvcQNZ1Okbj+rbVniijTWE6FGYy4XJq/rHkas8qJMLQ==
 
-lodash@4.17.21, lodash@^4.14.2, lodash@^4.17.11, lodash@^4.17.15, lodash@^4.17.21:
+lodash@4.17.21, lodash@^4.17.11, lodash@^4.17.15, lodash@^4.17.21:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
@@ -7943,13 +7943,6 @@ pkg-dir@^4.2.0:
   dependencies:
     find-up "^4.0.0"
 
-pkg-dir@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/pkg-dir/-/pkg-dir-5.0.0.tgz#a02d6aebe6ba133a928f74aec20bafdfe6b8e760"
-  integrity sha512-NPE8TDbzl/3YQYY7CSS228s3g2ollTFnc+Qi3tqmqJp9Vg2ovUpixcJEo2HJScN2Ez+kEaal6y70c0ehqJBJeA==
-  dependencies:
-    find-up "^5.0.0"
-
 plist@^3.0.5:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/plist/-/plist-3.1.0.tgz#797a516a93e62f5bde55e0b9cc9c967f860893c9"
@@ -8256,13 +8249,6 @@ react-native-blob-util@0.19.1:
     base-64 "0.1.0"
     glob "^7.2.3"
 
-react-native-camera-kit@13.0.0:
-  version "13.0.0"
-  resolved "https://registry.yarnpkg.com/react-native-camera-kit/-/react-native-camera-kit-13.0.0.tgz#983d9146cdeb0ec0cb0c0a86b7fa5f7690df08f6"
-  integrity sha512-fnkyivCG2xzS+14/doP8pCAYNafYaTyg5J0t+JJltJdgKSHf328OG44Rd+fnbbEOydZxgy/bcuLB24R0kCbynw==
-  dependencies:
-    lodash "^4.14.2"
-
 react-native-circular-progress-indicator@4.4.2:
   version "4.4.2"
   resolved "https://registry.yarnpkg.com/react-native-circular-progress-indicator/-/react-native-circular-progress-indicator-4.4.2.tgz#5475d045950e6fcc622e54fb63863b274790fb8e"
@@ -8389,14 +8375,6 @@ react-native-notifications@5.1.0:
 react-native-os@aprock/react-native-os#5/head:
   version "1.2.2"
   resolved "https://codeload.github.com/aprock/react-native-os/tar.gz/4490cdae7c5575ab4ecce4b87558637ee52523fc"
-
-react-native-permissions@3.8.0:
-  version "3.8.0"
-  resolved "https://registry.yarnpkg.com/react-native-permissions/-/react-native-permissions-3.8.0.tgz#7c1f75ae126c7d0b863eec9d2f5cd93ff8ad8310"
-  integrity sha512-BfZ7ksgdpGchHZH8M/kxCGZbWeACANbnPmb3hNjVOMDQusc4PWlPpobX3eBqYMSKbpi7bMECeV9BVU4QuwAf9A==
-  dependencies:
-    picocolors "^1.0.0"
-    pkg-dir "^5.0.0"
 
 react-native-ping@1.2.8:
   version "1.2.8"
@@ -8575,6 +8553,11 @@ react-native-vector-icons@7.1.0:
     lodash.template "^4.5.0"
     prop-types "^15.7.2"
     yargs "^15.0.2"
+
+react-native-vision-camera@4.0.4:
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/react-native-vision-camera/-/react-native-vision-camera-4.0.4.tgz#c719b8494028f253527e319d3f928c13fd701d5d"
+  integrity sha512-L2GlOHAjytbG83At3JEmRYteCNBaRtDqQCauCgJKKFm0wPEcKtzJeail3ErZkh/yGqqVKzhoQHJtxzlroM2wFg==
 
 react-native@0.73.7:
   version "0.73.7"
