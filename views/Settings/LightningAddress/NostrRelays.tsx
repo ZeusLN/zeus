@@ -164,7 +164,8 @@ export default class NostrRelays extends React.Component<
                                         icon={{
                                             name: 'plus',
                                             type: 'font-awesome',
-                                            size: 25
+                                            size: 25,
+                                            color: themeColor('text')
                                         }}
                                         iconOnly
                                         onPress={async () => {
@@ -250,7 +251,10 @@ export default class NostrRelays extends React.Component<
                                                     icon={{
                                                         name: 'minus',
                                                         type: 'font-awesome',
-                                                        size: 25
+                                                        size: 25,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
                                                     }}
                                                     iconOnly
                                                     onPress={async () => {
