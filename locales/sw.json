@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Print Invoice",
     "pos.views.Settings.PointOfSale.authWarning": "Onyo: hakuna nenosiri au PIN imewekwa",
     "pos.views.Settings.PointOfSale.backendWarning": "Onyo: kwa sasa nodi za LND tu zinaweza kuweka alama maagizo kama yamelipwa",
-    "pos.views.Settings.PointOfSale.currencyError": "Hitilafu: sarafu lazima iwepo kwanza",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Stakabadhi",
     "pos.print.invoice": "Invoice",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Unda mkoba wa mainnet",
