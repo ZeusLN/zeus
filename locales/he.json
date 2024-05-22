@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Print Invoice",
     "pos.views.Settings.PointOfSale.authWarning": "אזהרה: לא נקבעו סיסמה או קוד",
     "pos.views.Settings.PointOfSale.backendWarning": "אזהרה: כרגע רק צמתי LND מסוגלים לסמן הזמנות כשולמו",
-    "pos.views.Settings.PointOfSale.currencyError": "שגיאה: מטבע צריך להיקבע תחילה",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "קבלה",
     "pos.print.invoice": "חשבונית",
     "views.Settings.NodeConfiguration.createMainnetWallet": "יצירת ארנק ראשי",
