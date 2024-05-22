@@ -125,7 +125,10 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getMemo(): string {
-        return this.memo || this.description;
+        const memo = this.memo || this.description;
+        if (typeof memo === 'string') return memo;
+        if (Array.isArray(memo)) return memo[0];
+        return '';
     }
 
     @computed public get isPaid(): boolean {
