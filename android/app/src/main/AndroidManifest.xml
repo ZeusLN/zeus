@@ -42,10 +42,6 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/orange" />
-        <!-- Necessary for react-native-vision-camera QR code scanning -->
-        <meta-data
-            android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="barcode" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
