@@ -2,6 +2,7 @@ import { action, observable } from 'mobx';
 import { BiometryType } from 'react-native-biometrics';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import isEqual from 'lodash/isEqual';
 
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -1231,33 +1232,33 @@ export default class SettingsStore {
             // Retrieve the settings
             const settings = await EncryptedStorage.getItem(STORAGE_KEY);
             if (settings) {
-                this.settings = JSON.parse(settings);
-                if (!this.settings.fiatRatesSource) {
-                    this.settings.fiatRatesSource = DEFAULT_FIAT_RATES_SOURCE;
+                const newSettings = JSON.parse(settings);
+                if (!newSettings.fiatRatesSource) {
+                    newSettings.fiatRatesSource = DEFAULT_FIAT_RATES_SOURCE;
                 }
 
                 // migrate fiat settings from older versions
-                if (!this.settings.fiat || this.settings.fiat === 'Disabled') {
-                    this.settings.fiat = DEFAULT_FIAT;
-                    this.settings.fiatEnabled = false;
-                } else if (this.settings.fiatEnabled == null) {
-                    this.settings.fiatEnabled = true;
+                if (!newSettings.fiat || newSettings.fiat === 'Disabled') {
+                    newSettings.fiat = DEFAULT_FIAT;
+                    newSettings.fiatEnabled = false;
+                } else if (newSettings.fiatEnabled == null) {
+                    newSettings.fiatEnabled = true;
                 }
 
                 // set default LSPs if not defined
-                if (this.settings.enableLSP === undefined) {
-                    this.settings.enableLSP = true;
+                if (newSettings.enableLSP === undefined) {
+                    newSettings.enableLSP = true;
                 }
-                if (!this.settings.lspMainnet) {
-                    this.settings.lspMainnet = DEFAULT_LSP_MAINNET;
+                if (!newSettings.lspMainnet) {
+                    newSettings.lspMainnet = DEFAULT_LSP_MAINNET;
                 }
-                if (!this.settings.lspTestnet) {
-                    this.settings.lspTestnet = DEFAULT_LSP_TESTNET;
+                if (!newSettings.lspTestnet) {
+                    newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
                 }
 
                 // default Lightning Address settings
-                if (!this.settings.lightningAddress) {
-                    this.settings.lightningAddress = {
+                if (!newSettings.lightningAddress) {
+                    newSettings.lightningAddress = {
                         enabled: false,
                         automaticallyAccept: true,
                         automaticallyAcceptAttestationLevel: 2,
@@ -1272,11 +1273,11 @@ export default class SettingsStore {
 
                 // migrate locale to ISO 639-1
                 if (
-                    this.settings.locale != null &&
-                    localeMigrationMapping[this.settings.locale]
+                    newSettings.locale != null &&
+                    localeMigrationMapping[newSettings.locale]
                 ) {
-                    this.settings.locale =
-                        localeMigrationMapping[this.settings.locale];
+                    newSettings.locale =
+                        localeMigrationMapping[newSettings.locale];
                 }
 
                 // TODO PEGASUS
@@ -1284,12 +1285,12 @@ export default class SettingsStore {
                 const MOD_KEY = 'beta5-mod';
                 const mod = await EncryptedStorage.getItem(MOD_KEY);
                 if (!mod) {
-                    this.settings.expressGraphSync = true;
-                    if (this.settings.payments) {
-                        this.settings.payments.defaultFeePercentage = '5.0';
-                        this.settings.payments.defaultFeeFixed = '1000';
+                    newSettings.expressGraphSync = true;
+                    if (newSettings.payments) {
+                        newSettings.payments.defaultFeePercentage = '5.0';
+                        newSettings.payments.defaultFeeFixed = '1000';
                     } else {
-                        this.settings.payments = {
+                        newSettings.payments = {
                             defaultFeeMethod: 'fixed', // deprecated
                             defaultFeePercentage: '5.0',
                             defaultFeeFixed: '1000',
@@ -1297,8 +1298,8 @@ export default class SettingsStore {
                             preferredMempoolRate: 'fastestFee'
                         };
                     }
-                    this.settings.automaticDisasterRecoveryBackup = true;
-                    this.setSettings(JSON.stringify(this.settings));
+                    newSettings.automaticDisasterRecoveryBackup = true;
+                    this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
 
@@ -1306,18 +1307,18 @@ export default class SettingsStore {
                 const mod2 = await EncryptedStorage.getItem(MOD_KEY2);
                 if (!mod2) {
                     if (
-                        this.settings?.lspMainnet ===
+                        newSettings?.lspMainnet ===
                         'https://lsp-preview.lnolymp.us'
                     ) {
-                        this.settings.lspMainnet = DEFAULT_LSP_MAINNET;
+                        newSettings.lspMainnet = DEFAULT_LSP_MAINNET;
                     }
                     if (
-                        this.settings?.lspTestnet ===
+                        newSettings?.lspTestnet ===
                         'https://testnet-lsp.lnolymp.us'
                     ) {
-                        this.settings.lspTestnet = DEFAULT_LSP_TESTNET;
+                        newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
                     }
-                    this.setSettings(JSON.stringify(this.settings));
+                    this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY2, 'true');
                 }
 
@@ -1332,34 +1333,38 @@ export default class SettingsStore {
                         'noad.sathoarder.com'
                     ];
                     if (
-                        JSON.stringify(this.settings?.neutrinoPeersMainnet) ===
+                        JSON.stringify(newSettings?.neutrinoPeersMainnet) ===
                         JSON.stringify(neutrinoPeersMainnetOld)
                     ) {
-                        this.settings.neutrinoPeersMainnet =
+                        newSettings.neutrinoPeersMainnet =
                             DEFAULT_NEUTRINO_PEERS_MAINNET;
                     }
-                    this.setSettings(JSON.stringify(this.settings));
+                    this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY3, 'true');
                 }
 
                 // migrate old POS squareEnabled setting to posEnabled
-                if (this.settings?.pos?.squareEnabled) {
-                    this.settings.pos.posEnabled = PosEnabled.Square;
-                    this.settings.pos.squareEnabled = false;
+                if (newSettings?.pos?.squareEnabled) {
+                    newSettings.pos.posEnabled = PosEnabled.Square;
+                    newSettings.pos.squareEnabled = false;
                 }
 
-                if (!this.settings.neutrinoPeersMainnet) {
-                    this.settings.neutrinoPeersMainnet =
+                if (!newSettings.neutrinoPeersMainnet) {
+                    newSettings.neutrinoPeersMainnet =
                         DEFAULT_NEUTRINO_PEERS_MAINNET;
                 }
-                if (!this.settings.neutrinoPeersTestnet) {
-                    this.settings.neutrinoPeersTestnet =
+                if (!newSettings.neutrinoPeersTestnet) {
+                    newSettings.neutrinoPeersTestnet =
                         DEFAULT_NEUTRINO_PEERS_TESTNET;
                 }
 
+                if (!isEqual(this.settings, newSettings)) {
+                    this.settings = newSettings;
+                }
+
                 const node: any =
-                    this.settings.nodes?.length &&
-                    this.settings.nodes[this.settings.selectedNode || 0];
+                    newSettings.nodes?.length &&
+                    newSettings.nodes[newSettings.selectedNode || 0];
                 if (node) {
                     this.host = node.host;
                     this.port = node.port;
