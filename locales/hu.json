@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Print Invoice",
     "pos.views.Settings.PointOfSale.authWarning": "Warning: no password or PIN set",
     "pos.views.Settings.PointOfSale.backendWarning": "Warning: currently only LND nodes are able to mark orders as paid",
-    "pos.views.Settings.PointOfSale.currencyError": "Error: currency must be set first",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Nyugta",
     "pos.print.invoice": "Számla",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Create mainnet wallet",
