@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Rechnung drucken",
     "pos.views.Settings.PointOfSale.authWarning": "Warnung: Kein Passwort oder PIN gesetzt",
     "pos.views.Settings.PointOfSale.backendWarning": "Warnung: Momentan sind nur LND-Nodes in der Lage, Bestellungen als bezahlt zu markieren",
-    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Fehler: Währung muss erst aktiviert werden",
     "pos.print.taxReceipt": "Beleg",
     "pos.print.invoice": "Rechnung",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Mainnet-Wallet erstellen",
