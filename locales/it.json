@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Stampa la fattura",
     "pos.views.Settings.PointOfSale.authWarning": "ATTENZIONE: nessuna password o set di PIN",
     "pos.views.Settings.PointOfSale.backendWarning": "ATTENZIONE: Attualmente solo i nodi LND sono in grado di contrassegnare gli ordini come pagati",
-    "pos.views.Settings.PointOfSale.currencyError": "Errore: la valuta deve essere impostata prima",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Ricevuta",
     "pos.print.invoice": "Fattura",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Crea il portafoglio Mainnet",
