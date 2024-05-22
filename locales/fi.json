@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Tulosta lasku",
     "pos.views.Settings.PointOfSale.authWarning": "Varoitus: salasanaa tai PIN-koodia ei ole asetettu",
     "pos.views.Settings.PointOfSale.backendWarning": "Varoitus: tällä hetkellä vain LND-solmut voivat merkitä tilaukset maksetuiksi.",
-    "pos.views.Settings.PointOfSale.currencyError": "Virhe: Valuutta on asetettava ensin",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Kuitti",
     "pos.print.invoice": "Lasku",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Luo pääverkon lompakko",
