@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "송장 인쇄",
     "pos.views.Settings.PointOfSale.authWarning": "경고: 비밀번호 또는 PIN 설정 없음",
     "pos.views.Settings.PointOfSale.backendWarning": "경고: 현재 LND 노드만 주문을 결제 완료로 표시할 수 있습니다.",
-    "pos.views.Settings.PointOfSale.currencyError": "오류: 통화를 먼저 설정해야 합니다.",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "영수증",
     "pos.print.invoice": "인보이스",
     "views.Settings.NodeConfiguration.createMainnetWallet": "메인넷 지갑 생성",
