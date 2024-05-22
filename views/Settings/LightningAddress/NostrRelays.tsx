@@ -94,10 +94,9 @@ export default class NostrRelays extends React.Component<
                                 <Icon
                                     name="arrow-back"
                                     onPress={() => {
-                                        navigation.navigate(
-                                            'LightningAddress',
-                                            { relays }
-                                        );
+                                        navigation.popTo('LightningAddress', {
+                                            relays
+                                        });
                                     }}
                                     color={themeColor('text')}
                                     underlayColor="transparent"

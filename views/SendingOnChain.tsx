@@ -261,9 +261,7 @@ export default class SendingOnChain extends React.Component<
                                         color: themeColor('background')
                                     }}
                                     containerStyle={{ width: '100%' }}
-                                    onPress={() =>
-                                        navigation.navigate('Wallet')
-                                    }
+                                    onPress={() => navigation.popTo('Wallet')}
                                     buttonStyle={{ height: 40 }}
                                 />
                             )}

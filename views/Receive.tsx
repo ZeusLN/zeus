@@ -1468,7 +1468,7 @@ export default class Receive extends React.Component<
                                     name: 'list',
                                     size: 25
                                 }}
-                                onPress={() => navigation.navigate('Wallet')}
+                                onPress={() => navigation.popTo('Wallet')}
                                 containerStyle={{ width: '100%' }}
                             />
                         </View>
