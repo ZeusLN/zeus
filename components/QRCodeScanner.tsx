@@ -3,9 +3,7 @@ import {
     StyleSheet,
     Text,
     View,
-    Platform,
     TouchableOpacity,
-    PermissionsAndroid,
     BackHandler,
     AppState,
     Alert
@@ -146,52 +144,15 @@ export default function QRCodeScanner({
                 (state) => setCameraIsActive(state === 'active')
             );
 
-            if (Platform.OS !== 'ios' && Platform.OS !== 'macos') {
-                // For android
-                // Returns true or false
-                const permissionAndroid = await PermissionsAndroid.check(
-                    'android.permission.CAMERA'
-                );
-                if (permissionAndroid) {
-                    setCameraStatus(CameraAuthStatus.AUTHORIZED);
-                } else
-                    try {
-                        const granted = await PermissionsAndroid.request(
-                            PermissionsAndroid.PERMISSIONS.CAMERA,
-                            {
-                                title: localeString(
-                                    'components.QRCodeScanner.cameraPermissionTitle'
-                                ),
-                                message: localeString(
-                                    'components.QRCodeScanner.cameraPermission'
-                                ),
-                                buttonNegative: localeString('general.cancel'),
-                                buttonPositive: localeString('general.ok')
-                            }
-                        );
-                        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-                            setCameraStatus(CameraAuthStatus.AUTHORIZED);
-                        } else {
-                            setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
-                        }
-                    } catch (err) {
-                        console.error(err);
-                    }
-
-                return;
-            }
-            // Camera permission for IOS
-            else {
-                const hasPermission = Camera.getCameraPermissionStatus();
-                if (hasPermission === 'granted') {
+            const hasPermission = Camera.getCameraPermissionStatus();
+            if (hasPermission === 'granted') {
+                setCameraStatus(CameraAuthStatus.AUTHORIZED);
+            } else {
+                const result = await Camera.requestCameraPermission();
+                if (result === 'granted') {
                     setCameraStatus(CameraAuthStatus.AUTHORIZED);
                 } else {
-                    const result = await Camera.requestCameraPermission();
-                    if (result) {
-                        setCameraStatus(CameraAuthStatus.AUTHORIZED);
-                    } else {
-                        setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
-                    }
+                    setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
                 }
             }
 
