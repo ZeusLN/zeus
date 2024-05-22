@@ -43,7 +43,8 @@ import SettingsStore, {
     INTERFACE_KEYS,
     LNC_MAILBOX_KEYS,
     EMBEDDED_NODE_NETWORK_KEYS,
-    Settings
+    Settings,
+    Node
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
@@ -58,21 +59,22 @@ interface NodeConfigurationProps {
     route: Route<
         'NodeConfiguration',
         {
-            node: any;
+            node: Node;
             index: any;
-            active: any;
-            tor: any;
-            saved: any;
-            newEntry: any;
-            newPhoto: any;
+            active: boolean;
+            tor: boolean;
+            saved: boolean;
+            newEntry: boolean;
+            photo: string;
         }
     >;
 }
 
 interface NodeConfigurationState {
+    node: Node | null;
     nickname: string; //
     host: string; // lnd, c-lightning-REST
-    port: string | number; // lnd, c-lightning-REST
+    port: string; // lnd, c-lightning-REST
     macaroonHex: string; // lnd, c-lightning-REST
     url: string; // spark, eclair
     accessKey: string; // spark
@@ -91,7 +93,7 @@ interface NodeConfigurationState {
     showCertModal: boolean;
     enableTor: boolean;
     interfaceKeys: Array<any>;
-    photo: string | null;
+    photo?: string;
     // lnc
     pairingPhrase: string;
     mailboxServer: string;
@@ -122,7 +124,8 @@ export default class NodeConfiguration extends React.Component<
     NodeConfigurationProps,
     NodeConfigurationState
 > {
-    state = {
+    state: NodeConfigurationState = {
+        node: null,
         nickname: '',
         host: '',
         port: '',
@@ -143,7 +146,7 @@ export default class NodeConfiguration extends React.Component<
         username: '',
         password: '',
         accessKey: '',
-        photo: null,
+        photo: undefined,
         // lnc
         pairingPhrase: '',
         mailboxServer: 'mailbox.terminal.lightning.today:443',
@@ -162,6 +165,8 @@ export default class NodeConfiguration extends React.Component<
         creatingWallet: false,
         errorCreatingWallet: false
     };
+
+    scrollViewRef = React.createRef<ScrollView>();
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
@@ -284,11 +289,16 @@ export default class NodeConfiguration extends React.Component<
         this.initFromProps(nextProps);
     }
 
-    async initFromProps(props: any) {
+    async initFromProps(props: NodeConfigurationProps) {
         const { route } = props;
 
-        const { node, index, active, tor, saved, newEntry, newPhoto } =
-            route.params ?? {};
+        const node = route.params.node ?? this.state.node;
+        const index = route.params.index ?? this.state.index;
+        const active = route.params.active ?? this.state.active;
+        const tor = route.params.tor ?? this.state.enableTor;
+        const saved = route.params.saved ?? this.state.saved;
+        const newEntry = route.params.newEntry ?? this.state.newEntry;
+        const newPhoto = route.params.photo ?? this.state.photo;
 
         if (node) {
             const {
@@ -315,9 +325,10 @@ export default class NodeConfiguration extends React.Component<
                 walletPassword,
                 adminMacaroon,
                 embeddedLndNetwork
-            } = node;
+            } = node as any;
 
             this.setState({
+                node,
                 nickname,
                 host,
                 port,
@@ -335,7 +346,7 @@ export default class NodeConfiguration extends React.Component<
                 saved,
                 newEntry,
                 enableTor: tor || enableTor,
-                photo: newPhoto ? newPhoto : photo || '',
+                photo: newPhoto || photo || '',
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -415,14 +426,14 @@ export default class NodeConfiguration extends React.Component<
             photo
         };
 
-        let nodes: any;
-        let originalNode: any;
+        let nodes: Node[];
+        let originalNode: Node;
         if (settings.nodes) {
             nodes = settings.nodes;
             if (index != null) {
                 originalNode = nodes[index];
             }
-            nodes[index !== null ? index : settings.nodes.length] = node;
+            nodes[index != null ? index : settings.nodes.length] = node;
         } else {
             nodes = [node];
         }
@@ -460,7 +471,7 @@ export default class NodeConfiguration extends React.Component<
                     BackendUtils.disconnect();
                 }
                 setConnectingStatus(true);
-                navigation.navigate('Wallet', { refresh: true });
+                navigation.popTo('Wallet', { refresh: true });
             } else {
                 navigation.goBack();
             }
@@ -515,7 +526,7 @@ export default class NodeConfiguration extends React.Component<
             node,
             newEntry: true,
             saved: false,
-            index: Number(nodes.length)
+            index: nodes!.length
         });
     };
 
@@ -539,7 +550,7 @@ export default class NodeConfiguration extends React.Component<
             if (newNodes.length === 0) {
                 navigation.navigate('IntroSplash');
             } else {
-                navigation.navigate('Nodes', { refresh: true });
+                navigation.popTo('Nodes', { refresh: true });
             }
         });
     };
@@ -576,7 +587,7 @@ export default class NodeConfiguration extends React.Component<
             active: true
         });
 
-        navigation.navigate('Wallet', { refresh: true });
+        navigation.popTo('Wallet', { refresh: true });
     };
 
     createNewWallet = async (network: string = 'Mainnet') => {
@@ -615,9 +626,9 @@ export default class NodeConfiguration extends React.Component<
     };
 
     render() {
-        const { route, navigation, SettingsStore } = this.props;
-        const node = route.params?.node;
+        const { navigation, SettingsStore } = this.props;
         const {
+            node,
             nickname,
             host,
             port,
@@ -741,7 +752,7 @@ export default class NodeConfiguration extends React.Component<
                         style: { ...styles.text, color: themeColor('text') }
                     }}
                     rightComponent={
-                        implementation === 'eclair' ? null : (
+                        implementation === 'eclair' ? undefined : (
                             <ScanBadge
                                 onPress={() =>
                                     implementation === 'spark'
@@ -890,7 +901,6 @@ export default class NodeConfiguration extends React.Component<
                                                     showLndHubModal: false
                                                 })
                                             }
-                                            primary
                                         />
                                     </View>
                                 </>
@@ -952,7 +962,6 @@ export default class NodeConfiguration extends React.Component<
                                                     showCertModal: false
                                                 })
                                             }
-                                            primary
                                         />
                                     </View>
                                 </>
@@ -962,7 +971,7 @@ export default class NodeConfiguration extends React.Component<
                 </Modal>
 
                 <ScrollView
-                    ref="_scrollView"
+                    ref={this.scrollViewRef}
                     style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
                     keyboardShouldPersistTaps="handled"
                 >
@@ -989,14 +998,27 @@ export default class NodeConfiguration extends React.Component<
                                                   'SetNodePicture',
                                                   { implementation }
                                               )
-                                        : () =>
+                                        : () => {
+                                              if (node) {
+                                                  this.setState({
+                                                      node: {
+                                                          ...node,
+                                                          photo: undefined
+                                                      }
+                                                  });
+                                              }
                                               this.setState(
-                                                  { photo: null, saved: false },
-                                                  () =>
+                                                  {
+                                                      photo: undefined,
+                                                      saved: false
+                                                  },
+                                                  () => {
                                                       node
                                                           ? (node.photo = '')
-                                                          : null
-                                              )
+                                                          : null;
+                                                  }
+                                              );
+                                          }
                                 }
                             >
                                 <View
@@ -1735,7 +1757,7 @@ export default class NodeConfiguration extends React.Component<
                                      * page for the copied node. Without this, the user would have to
                                      * manually scroll to the top to edit the copied node properties.
                                      */
-                                    this.refs._scrollView.scrollTo({
+                                    this.scrollViewRef.current?.scrollTo({
                                         x: 0,
                                         y: 0,
                                         animated: true

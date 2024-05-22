@@ -233,9 +233,12 @@ export default class App extends React.PureComponent {
                                             }}
                                         >
                                             <Stack.Navigator
-                                                screenOptions={{
-                                                    headerShown: false
-                                                }}
+                                                screenOptions={({ route }) => ({
+                                                    headerShown: false,
+                                                    animation: (
+                                                        route.params as any
+                                                    )?.animation
+                                                })}
                                                 screenListeners={({
                                                     navigation
                                                 }) => ({
@@ -299,10 +302,6 @@ export default class App extends React.PureComponent {
                                                 <Stack.Screen
                                                     name="Nodes"
                                                     component={Nodes}
-                                                    options={{
-                                                        animation:
-                                                            'slide_from_left'
-                                                    }}
                                                 />
                                                 <Stack.Screen
                                                     name="Privacy"
@@ -457,10 +456,6 @@ export default class App extends React.PureComponent {
                                                 <Stack.Screen
                                                     name="Activity"
                                                     component={Activity}
-                                                    options={{
-                                                        animation:
-                                                            'slide_from_bottom'
-                                                    }}
                                                 />
                                                 <Stack.Screen
                                                     name="ActivityFilter"

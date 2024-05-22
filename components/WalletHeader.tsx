@@ -126,7 +126,9 @@ const SettingsBadge = ({
     navigation: StackNavigationProp<any, any>;
 }) => (
     <TouchableOpacity
-        onPress={() => navigation.navigate('Settings')}
+        onPress={() =>
+            navigation.navigate('Settings', { animation: 'slide_from_left' })
+        }
         accessibilityLabel={localeString('views.Settings.title')}
     >
         <Gear fill={themeColor('text')} width={33} height={33} />
@@ -252,7 +254,11 @@ export default class WalletHeader extends React.Component<
 
         const NodeButton = () => (
             <TouchableOpacity
-                onPress={() => protectedNavigation(navigation, 'Nodes')}
+                onPress={() =>
+                    protectedNavigation(navigation, 'Nodes', undefined, {
+                        animation: 'slide_from_right'
+                    })
+                }
                 accessibilityLabel={localeString('views.Settings.title')}
             >
                 {selectedNode && selectedNode.photo ? (
@@ -442,7 +448,7 @@ export default class WalletHeader extends React.Component<
                 leftComponent={
                     loading ? undefined : (
                         <Row>
-                            <NodeButton />
+                            <SettingsBadge navigation={navigation} />
                             {paid && paid.length > 0 && (
                                 <TouchableOpacity
                                     onPress={() =>
@@ -564,7 +570,7 @@ export default class WalletHeader extends React.Component<
                                 </View>
                             )}
                             <View>
-                                <SettingsBadge navigation={navigation} />
+                                <NodeButton />
                             </View>
                             {posEnabled !== PosEnabled.Disabled && (
                                 <View
