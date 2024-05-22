@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Print Invoice",
     "pos.views.Settings.PointOfSale.authWarning": "Hata: şifre veya PIN belirlenmedi",
     "pos.views.Settings.PointOfSale.backendWarning": "Uyarı: Şu anda yalnızca LND node'ları siparişleri ödendi olarak işaretleyebilir",
-    "pos.views.Settings.PointOfSale.currencyError": "Hata: öncelikle para birimi belirlenmeli",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Fiş",
     "pos.print.invoice": "Fatura",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Mainnet cüzdanı oluştur",
