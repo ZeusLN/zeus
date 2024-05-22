@@ -991,7 +991,7 @@
     "pos.views.Order.printInvoice": "Print Invoice",
     "pos.views.Settings.PointOfSale.authWarning": "Warning: no password or PIN set",
     "pos.views.Settings.PointOfSale.backendWarning": "警告：当前只有 LND 节点能够将订单标记为已付款",
-    "pos.views.Settings.PointOfSale.currencyError": "Error: currency must be set first",
+    "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "收款人",
     "pos.print.invoice": "发票",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Create mainnet wallet",
