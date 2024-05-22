@@ -86,13 +86,20 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                                 });
                                 LSPStore.loading = false;
                                 console.log('Old Order state fetched!');
-                            } else {
+                            } else if (
+                                Object.keys(LSPStore.getOrderResponse)
+                                    .length !== 0
+                            ) {
                                 const getOrderData = LSPStore.getOrderResponse;
                                 this.setState({
                                     order: getOrderData,
                                     fetchOldOrder: false
                                 });
-                                console.log('Latest Order state fetched!');
+                                console.log(
+                                    'Latest Order state fetched!',
+                                    this.state.order
+                                );
+                                LSPStore.loading = false;
                                 const result =
                                     getOrderData?.result || getOrderData;
                                 if (
@@ -102,7 +109,6 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                                 ) {
                                     this.updateOrderInStorage(getOrderData);
                                 }
-                                LSPStore.loading = false;
                             }
                         }, 3000);
                     } else {
