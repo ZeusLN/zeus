@@ -171,7 +171,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact updated successfully!');
-                navigation.navigate('Contacts', { loading: true });
+                navigation.popTo('Contacts');
             } else {
                 // Creating a new contact
                 const contactId = uuidv4();
@@ -200,7 +200,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact saved successfully!');
-                navigation.navigate('Contacts', { loading: true });
+                navigation.popTo('Contacts');
 
                 // Reset the input fields after saving the contact
                 this.setState({
@@ -243,7 +243,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact deleted successfully!');
-                navigation.navigate('Contacts', { loading: true });
+                navigation.popTo('Contacts');
             } catch (error) {
                 console.log('Error deleting contact:', error);
             }

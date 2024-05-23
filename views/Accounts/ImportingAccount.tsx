@@ -161,7 +161,7 @@ export default class ImportingAccount extends React.Component<
                                     master_key_fingerprint,
                                     address_type,
                                     dry_run: false
-                                }).then(() => navigation.navigate('Wallet'))
+                                }).then(() => navigation.popTo('Wallet'))
                             }
                         />
                     </View>

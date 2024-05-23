@@ -137,18 +137,15 @@ export default class SelectCurrency extends React.Component<
                                 }}
                                 onPress={async () => {
                                     if (currencyConverter) {
-                                        navigation.navigate(
-                                            'CurrencyConverter',
-                                            {
-                                                selectedCurrency: item.value
-                                            }
-                                        );
+                                        navigation.popTo('CurrencyConverter', {
+                                            selectedCurrency: item.value
+                                        });
                                     } else {
                                         await updateSettings({
                                             fiat: item.value
                                         }).then(() => {
                                             getSettings();
-                                            navigation.navigate('Currency', {
+                                            navigation.popTo('Currency', {
                                                 refresh: true
                                             });
                                         });

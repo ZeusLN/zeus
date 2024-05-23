@@ -27,7 +27,7 @@ import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 interface ContactsSettingsProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'Contacts', { SendScreen: boolean; loading: boolean }>;
+    route: Route<'Contacts', { SendScreen: boolean }>;
 }
 
 interface ContactsSettingsState {
@@ -58,16 +58,6 @@ export default class Contacts extends React.Component<
         this.props.navigation.addListener('focus', () => this.loadContacts());
     }
 
-    UNSAFE_componentWillReceiveProps(
-        nextProps: Readonly<ContactsSettingsProps>
-    ): void {
-        const loading = nextProps.route.params?.loading;
-
-        if (loading) {
-            this.setState({ loading });
-        }
-    }
-
     loadContacts = async () => {
         try {
             this.setState({ loading: true });
@@ -86,7 +76,7 @@ export default class Contacts extends React.Component<
         }
     };
 
-    displayAddress = (item) => {
+    displayAddress = (item: Contact) => {
         const contact = new Contact(item);
         const {
             hasLnAddress,
@@ -400,7 +390,7 @@ export default class Contacts extends React.Component<
                     <FlatList
                         data={nonFavoriteContacts}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(item, index) => index.toString()}
+                        keyExtractor={(_, index) => index.toString()}
                         scrollEnabled={false}
                     />
                     {!loading && contacts.length > 1 && (

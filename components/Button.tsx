@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { Button as ElementsButton } from 'react-native-elements';
 import { themeColor } from './../utils/ThemeUtils';
-import { StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, TextStyle, ViewStyle } from 'react-native';
 
 interface ButtonProps {
     title?: string;
     icon?: any;
-    titleStyle?: any;
+    titleStyle?: TextStyle;
     onPress?: any;
     secondary?: boolean;
     tertiary?: boolean;

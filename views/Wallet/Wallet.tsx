@@ -12,7 +12,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
     DefaultTheme,
@@ -22,6 +21,8 @@ import {
 } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
+import { StackNavigationProp } from '@react-navigation/stack';
+import SystemNavigationBar from 'react-native-system-navigation-bar';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -46,7 +47,7 @@ import {
 } from '../../utils/LndMobileUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
@@ -72,8 +73,6 @@ import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
 import Scan from '../../assets/images/SVG/Scan.svg';
-
-import { StackNavigationProp } from '@react-navigation/stack';
 
 interface WalletProps {
     enterSetup: any;
@@ -142,7 +141,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     toValue: { x: 0, y: 0 },
                     useNativeDriver: false
                 }).start();
-                props.navigation.navigate('Activity');
+                props.navigation.navigate('Activity', {
+                    animation: 'slide_from_bottom'
+                });
             }
         });
     }
@@ -236,6 +237,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
+            SystemNavigationBar.setNavigationColor(
+                themeColor('background'),
+                isLightTheme() ? 'dark' : 'light'
+            );
+            SystemNavigationBar.setNavigationBarDividerColor(
+                themeColor('secondary')
+            );
             const loginRequired = SettingsStore.loginRequired();
             const posEnabled =
                 settings?.pos?.posEnabled &&
@@ -452,7 +460,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        if (connecting) {
+        if (connecting && start != null) {
             console.log(
                 'connect time: ' + (new Date().getTime() - start) / 1000 + 's'
             );
@@ -490,7 +498,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const Tab = createBottomTabNavigator();
         const {
             NodeInfoStore,
-            UnitsStore,
             BalanceStore,
             SettingsStore,
             SyncStore,
@@ -551,8 +558,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         <>
                             <LayerBalances
                                 navigation={navigation}
-                                BalanceStore={BalanceStore}
-                                UnitsStore={UnitsStore}
                                 onRefresh={() => this.getSettingsAndNavigate()}
                                 locked={isSyncing}
                                 consolidated
@@ -576,7 +581,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 <TouchableOpacity
                                     onPress={() =>
                                         this.props.navigation.navigate(
-                                            'Activity'
+                                            'Activity',
+                                            { animation: 'slide_from_bottom' }
                                         )
                                     }
                                     accessibilityLabel={localeString(
@@ -635,6 +641,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ...DefaultTheme,
             colors: {
                 ...DefaultTheme.colors,
+                background: themeColor('background'),
                 card: error ? themeColor('error') : themeColor('background'),
                 border: error ? themeColor('error') : themeColor('background')
             }
@@ -648,7 +655,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             <NavigationContainer
                                 theme={Theme}
                                 ref={this.tabNavigationRef}
-                                independent={true}
                             >
                                 <Tab.Navigator
                                     initialRouteName={
@@ -711,7 +717,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             ? themeColor('error')
                                             : 'gray',
                                         tabBarShowLabel: false,
-                                        tabBarStyle: { display: 'flex' }
+                                        tabBarStyle: {
+                                            paddingBottom: 12
+                                        },
+                                        animation: 'shift'
                                     })}
                                 >
                                     {posEnabled !== PosEnabled.Disabled &&

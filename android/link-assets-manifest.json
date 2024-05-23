@@ -166,10 +166,6 @@
       "sha1": "e959c75860607b476bca2b0a9078cb3cb46eb23e"
     },
     {
-      "path": "assets/images/SVG/DynamicSVG/ScanFrameSvg.tsx",
-      "sha1": "7485e1c143ccdfadb765d53dc9fc1626b251a637"
-    },
-    {
       "path": "assets/images/SVG/DynamicSVG/UnifiedSvg.tsx",
       "sha1": "e61cf6ad20fb18b3919d84a47bd4db8b0ab7bc4a"
     },
