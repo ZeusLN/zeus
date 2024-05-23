@@ -224,9 +224,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        navigation.navigate('Wallet');
-                    }}
+                    onBack={() => navigation.popTo('Wallet')}
+                    navigateBackOnBackPress={false}
                     centerComponent={{
                         text: 'PSBT',
                         style: { color: themeColor('text') }

@@ -610,9 +610,7 @@ export default class NostrContacts extends React.Component<
                             )}
                             onPress={async () => {
                                 await this.importContacts();
-                                navigation.navigate('Contacts', {
-                                    loading: true
-                                });
+                                navigation.popTo('Contacts');
                             }}
                             containerStyle={{
                                 paddingBottom: 12,
@@ -632,7 +630,7 @@ export default class NostrContacts extends React.Component<
                         }`}
                         onPress={async () => {
                             await this.importContacts();
-                            navigation.navigate('Contacts', { loading: true });
+                            navigation.popTo('Contacts');
                         }}
                         containerStyle={{ paddingBottom: 12, paddingTop: 8 }}
                         secondary

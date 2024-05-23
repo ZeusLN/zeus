@@ -13,6 +13,7 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import ArrowLeft from '../assets/images/SVG/Arrow_left.svg';
 import Close from '../assets/images/SVG/Close.svg';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 interface HeaderIcon extends IconObject {
     icon?: string;
@@ -32,7 +33,7 @@ interface HeaderProps {
     rightComponent?: React.ReactElement<{}> | TextProps | HeaderIcon;
     containerStyle?: ViewStyle;
     placement?: 'left' | 'center' | 'right' | undefined;
-    navigation?: any;
+    navigation?: StackNavigationProp<any, any>;
     onBack?: () => void;
     navigateBackOnBackPress?: boolean;
 }
@@ -46,7 +47,7 @@ function ZeusHeader(props: HeaderProps) {
             onPress={() => {
                 if (onBack) onBack();
                 if (navigateBackOnBackPress) {
-                    props.navigation.goBack();
+                    props.navigation!.goBack();
                 }
             }}
             accessibilityLabel={localeString('general.goBack')}
@@ -64,7 +65,7 @@ function ZeusHeader(props: HeaderProps) {
         <TouchableOpacity
             onPress={() => {
                 if (onBack) onBack();
-                props.navigation.goBack();
+                props.navigation!.goBack();
             }}
             accessibilityLabel={localeString('general.close')}
         >

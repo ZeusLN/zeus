@@ -5,7 +5,8 @@ import stores from '../stores/Stores';
 const protectedNavigation = async (
     navigation: StackNavigationProp<any, any>,
     route: string,
-    disactivatePOS?: boolean
+    disactivatePOS?: boolean,
+    routeParams?: any
 ) => {
     const { posStatus, settings, setPosStatus } = stores.settingsStore;
     const loginRequired = settings && (settings.passphrase || settings.pin);
@@ -17,7 +18,7 @@ const protectedNavigation = async (
         });
     } else {
         if (disactivatePOS) setPosStatus('inactive');
-        navigation.navigate(route);
+        navigation.navigate(route, routeParams);
     }
 };
 

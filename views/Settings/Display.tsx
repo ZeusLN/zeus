@@ -3,13 +3,14 @@ import { ScrollView, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import SystemNavigationBar from 'react-native-system-navigation-bar';
 
 import SettingsStore, {
     DEFAULT_VIEW_KEYS,
     THEME_KEYS
 } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
@@ -120,6 +121,13 @@ export default class Display extends React.Component<
                                     showAllDecimalPlaces
                                 }
                             });
+                            SystemNavigationBar.setNavigationColor(
+                                themeColor('background'),
+                                isLightTheme() ? 'dark' : 'light'
+                            );
+                            SystemNavigationBar.setNavigationBarDividerColor(
+                                themeColor('secondary')
+                            );
                         }}
                         values={THEME_KEYS}
                     />
