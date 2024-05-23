@@ -15,11 +15,14 @@ import { localeString } from '../../../utils/LocaleUtils';
 import BackendUtils from '../../../utils/BackendUtils';
 
 import LSPStore from '../../../stores/LSPStore';
+import NodeInfoStore from '../../../stores/NodeInfoStore';
+
 import { WarningMessage } from '../../../components/SuccessErrorMessage';
 
 interface OrdersPaneProps {
     navigation: StackNavigationProp<any, any>;
     LSPStore: LSPStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface OrdersPaneState {
@@ -27,7 +30,7 @@ interface OrdersPaneState {
     isLoading: boolean;
 }
 
-@inject('LSPStore')
+@inject('LSPStore', 'NodeInfoStore')
 @observer
 export default class OrdersPane extends React.Component<
     OrdersPaneProps,
@@ -69,14 +72,18 @@ export default class OrdersPane extends React.Component<
                     let selectedOrders;
                     if (BackendUtils.supportsLSPS1customMessage()) {
                         selectedOrders = decodedResponses.filter(
-                            (response) => response?.uri
+                            (response) =>
+                                response?.uri &&
+                                response.clientPubkey ===
+                                    this.props.NodeInfoStore.nodeInfo.nodeId
                         );
                     } else if (BackendUtils.supportsLSPS1rest()) {
                         selectedOrders = decodedResponses.filter(
-                            (response) => response?.endpoint
+                            (response) =>
+                                response?.endpoint &&
+                                response.clientPubkey ===
+                                    this.props.NodeInfoStore.nodeInfo.nodeId
                         );
-                    } else {
-                        selectedOrders = decodedResponses;
                     }
 
                     const orders = selectedOrders.map((response) => {

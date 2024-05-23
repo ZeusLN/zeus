@@ -36,6 +36,7 @@ import InvoicesStore from '../../../stores/InvoicesStore';
 import ChannelsStore from '../../../stores/ChannelsStore';
 import SettingsStore from '../../../stores/SettingsStore';
 import FiatStore from '../../../stores/FiatStore';
+import NodeInfoStore from '../../../stores/NodeInfoStore';
 import { Icon } from 'react-native-elements';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
@@ -46,6 +47,7 @@ interface LSPS1Props {
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
+    NodeInfoStore: NodeInfoStore;
     navigation: StackNavigationProp<any, any>;
 }
 
@@ -67,7 +69,8 @@ interface LSPS1State {
     'ChannelsStore',
     'InvoicesStore',
     'SettingsStore',
-    'FiatStore'
+    'FiatStore',
+    'NodeInfoStore'
 )
 @observer
 export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
@@ -1015,6 +1018,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     const orderData = {
                                                         order: createOrderResponse
                                                     };
+
+                                                    orderData.clientPubkey =
+                                                        this.props.NodeInfoStore.nodeInfo.nodeId;
 
                                                     if (
                                                         BackendUtils.supportsLSPS1customMessage()
