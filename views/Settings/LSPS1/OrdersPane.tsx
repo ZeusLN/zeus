@@ -12,6 +12,7 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
+import BackendUtils from '../../../utils/BackendUtils';
 
 import LSPStore from '../../../stores/LSPStore';
 import { WarningMessage } from '../../../components/SuccessErrorMessage';
@@ -65,24 +66,30 @@ export default class OrdersPane extends React.Component<
                         JSON.parse(response)
                     );
 
-                    // Extract required information from each order for display
-                    const orders = decodedResponses.map((response) => ({
-                        orderId:
-                            response?.order?.result?.order_id ||
-                            response?.order?.order_id,
-                        state:
-                            response?.order?.result?.order_state ||
-                            response?.order?.order_state,
-                        createdAt:
-                            response?.order?.result?.created_at ||
-                            response?.order?.created_at,
-                        fundedAt:
-                            response?.order?.result?.channel?.funded_at ||
-                            response?.order?.channel?.funded_at,
-                        lspBalanceSat:
-                            response?.order?.result?.lsp_balance_sat ||
-                            response?.order?.lsp_balance_sat
-                    }));
+                    let selectedOrders;
+                    if (BackendUtils.supportsLSPS1customMessage()) {
+                        selectedOrders = decodedResponses.filter(
+                            (response) => response?.uri
+                        );
+                    } else if (BackendUtils.supportsLSPS1rest()) {
+                        selectedOrders = decodedResponses.filter(
+                            (response) => response?.endpoint
+                        );
+                    } else {
+                        selectedOrders = decodedResponses;
+                    }
+
+                    const orders = selectedOrders.map((response) => {
+                        const order =
+                            response?.order?.result || response?.order;
+                        return {
+                            orderId: order?.order_id,
+                            state: order?.order_state,
+                            createdAt: order?.created_at,
+                            fundedAt: order?.channel?.funded_at,
+                            lspBalanceSat: order?.lsp_balance_sat
+                        };
+                    });
 
                     const reversedOrders = orders.reverse();
 
