@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth wird von deiner Node-Implementierung nicht unterstützt",
     "utils.handleAnything.unsupportedLnurlType": "Nicht unterstützter lnurl Typ",
     "utils.handleAnything.invalidLnurlParams": "Konnte lnurl Parameter nicht parsen",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Fehler beim Erstellen der Rechnung",
     "stores.InvoicesStore.errorGeneratingAddress": "Fehler beim Generieren der neuen Adresse",
     "stores.InvoicesStore.zeroAmountLndhub": "Die LNDHub-Instanz unterstützt möglicherweise keine Nullbetragsrechnungen",
