@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "โหนดของคุณไม่รองรับ LnurlAuth",
     "utils.handleAnything.unsupportedLnurlType": "ไม่รองรับ lnurl นี้",
     "utils.handleAnything.invalidLnurlParams": "ไม่สามารถอ่านข้อมูลของ lnurl ได้",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้",
     "stores.InvoicesStore.errorGeneratingAddress": "เกิดข้อผิดพลาดในการสร้าง Address",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub ไม่รองรับใบแจ้งหนี้ที่มีค่าเป็นศูนย์",
