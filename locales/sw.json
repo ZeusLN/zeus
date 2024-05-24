@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth haiauniwi na utekelezaji wako wa nodi",
     "utils.handleAnything.unsupportedLnurlType": "Aina isiyoauniwa ya lnurl",
     "utils.handleAnything.invalidLnurlParams": "Haiwezi kupambua vigezo vya lnurl",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Kosa la kuunda bili",
     "stores.InvoicesStore.errorGeneratingAddress": "Kosa la kuzalisha anwani mpya",
     "stores.InvoicesStore.zeroAmountLndhub": "Mtumiaji wa LNDHub labda hauungi mkono bili zenye kiasi cha sifuri",
