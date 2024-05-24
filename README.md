@@ -103,9 +103,6 @@ ZEUS is proud to be integrated on the following platforms:
 * [BTCPay Server](https://btcpayserver.org/)
 * [LNBits](https://lnbits.com/)
 
-### Android nodes
-* [Nayuta Core](https://nayuta.co/core/)
-
 ## Starting development
 
 **Don't trust, verify** the code with your own two eyes. Then when ready proceed to the steps below based on your platform.
