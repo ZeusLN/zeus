@@ -246,6 +246,20 @@ export default class CLightningREST extends LND {
         };
     };
 
+    // BOLT 12 / Offers
+    getNewOffer = () =>
+        this.postRequest('/v1/offers/offer', {
+            amount: 'any',
+            description: 'BOLT 12 Payment Address'
+        });
+    fetchInvoiceFromOffer = async (bolt12: string, amountSatoshis: string) => {
+        return await this.postRequest('/v1/offers/fetchInvoice', {
+            offer: bolt12,
+            msatoshi: Number(amountSatoshis) * 1000,
+            timeout: 60
+        });
+    };
+
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
@@ -274,7 +288,12 @@ export default class CLightningREST extends LND {
     supportsSweep = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
-    isLNDBased = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsOffers = async () => {
+        const res = await this.getRequest('/v1/utility/listConfigs');
+        const supportsOffers: boolean = res['experimental-offers'] || false;
+        return supportsOffers;
+    };
+    isLNDBased = () => false;
 }

@@ -667,7 +667,8 @@ export default class LND {
     supportsSweep = () => true;
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
-    isLNDBased = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
+    supportsOffers = (): Promise<boolean> | boolean => false;
+    isLNDBased = () => true;
 }
