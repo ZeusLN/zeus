@@ -35,6 +35,8 @@ export default class Channel extends BaseModel {
     remote_chan_reserve_sat?: string;
     zero_conf?: boolean;
     commitment_type?: string;
+    open_initiator?: string | number;
+    close_initiator?: string | number;
     // c-lightning
     @observable
     state: string;
@@ -58,6 +60,20 @@ export default class Channel extends BaseModel {
     @computed
     public get isActive(): boolean {
         return this.active || this.state === 'CHANNELD_NORMAL';
+    }
+
+    @computed
+    public get getOpenInitiator(): string {
+        return typeof this.open_initiator === 'number'
+            ? lnrpc.Initiator[this.open_initiator]
+            : this.open_initiator || '';
+    }
+
+    @computed
+    public get getCloseInitiator(): string {
+        return typeof this.close_initiator === 'number'
+            ? lnrpc.Initiator[this.close_initiator]
+            : this.close_initiator || '';
     }
 
     @computed
