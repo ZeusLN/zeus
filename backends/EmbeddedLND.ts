@@ -294,7 +294,8 @@ export default class EmbeddedLND extends LND {
     supportsSweep = () => true;
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
-    isLNDBased = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
+    supportsOffers = () => false;
+    isLNDBased = () => true;
 }
