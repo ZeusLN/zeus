@@ -193,8 +193,8 @@ export default class ChannelView extends React.Component<
             // closed
             closeHeight,
             closeType,
-            open_initiator,
-            close_initiator,
+            getOpenInitiator,
+            getCloseInitiator,
             closing_tx_hash,
             chain_hash,
             settled_balance,
@@ -207,6 +207,7 @@ export default class ChannelView extends React.Component<
             zero_conf,
             getCommitmentType
         } = channel;
+
         const privateChannel = channel.private;
 
         const editableFees: boolean = !(
@@ -318,15 +319,17 @@ export default class ChannelView extends React.Component<
                             value={localeString('general.true')}
                         />
                     )}
-                    <KeyValue
-                        keyValue={localeString('views.Channel.unannounced')}
-                        value={
-                            privateChannel
-                                ? localeString('general.true')
-                                : localeString('general.false')
-                        }
-                        color={privateChannel ? 'green' : '#808000'}
-                    />
+                    {!(closeHeight || closeType) && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.unannounced')}
+                            value={
+                                privateChannel
+                                    ? localeString('general.true')
+                                    : localeString('general.false')
+                            }
+                            color={privateChannel ? 'green' : '#808000'}
+                        />
+                    )}
                     {getCommitmentType && (
                         <KeyValue
                             keyValue={localeString(
@@ -363,21 +366,21 @@ export default class ChannelView extends React.Component<
                             sensitive
                         />
                     )}
-                    {open_initiator && (
+                    {getOpenInitiator && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Channel.openInitiator'
                             )}
-                            value={open_initiator}
+                            value={getOpenInitiator}
                             sensitive
                         />
                     )}
-                    {close_initiator && (
+                    {getCloseInitiator && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Channel.closeInitiator'
                             )}
-                            value={close_initiator}
+                            value={getCloseInitiator}
                             sensitive
                         />
                     )}
