@@ -24,6 +24,7 @@ interface ChannelsSettingsState {
     privateChannel: boolean;
     scidAlias: boolean;
     simpleTaprootChannel: boolean;
+    lsps1ShowPurchaseButton: boolean;
 }
 
 @inject('SettingsStore')
@@ -36,7 +37,8 @@ export default class ChannelsSettings extends React.Component<
         min_confs: 1,
         privateChannel: true,
         scidAlias: true,
-        simpleTaprootChannel: false
+        simpleTaprootChannel: false,
+        lsps1ShowPurchaseButton: true
     };
 
     async UNSAFE_componentWillMount() {
@@ -57,7 +59,11 @@ export default class ChannelsSettings extends React.Component<
             simpleTaprootChannel:
                 settings?.channels?.simpleTaprootChannel !== null
                     ? settings.channels.simpleTaprootChannel
-                    : false
+                    : false,
+            lsps1ShowPurchaseButton:
+                settings?.lsps1ShowPurchaseButton !== null
+                    ? settings.lsps1ShowPurchaseButton
+                    : true
         });
     }
 
@@ -72,8 +78,13 @@ export default class ChannelsSettings extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { min_confs, privateChannel, scidAlias, simpleTaprootChannel } =
-            this.state;
+        const {
+            min_confs,
+            privateChannel,
+            scidAlias,
+            simpleTaprootChannel,
+            lsps1ShowPurchaseButton
+        } = this.state;
         const { updateSettings }: any = SettingsStore;
 
         return (
@@ -216,6 +227,36 @@ export default class ChannelsSettings extends React.Component<
                                             simpleTaprootChannel:
                                                 !simpleTaprootChannel
                                         }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
+
+                    {(BackendUtils.supportsLSPS1customMessage() ||
+                        BackendUtils.supportsLSPS1rest()) && (
+                        <>
+                            <Text
+                                style={{
+                                    top: 20,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Channels.lsps1ShowPurchaseButton'
+                                )}
+                            </Text>
+                            <Switch
+                                value={lsps1ShowPurchaseButton}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        lsps1ShowPurchaseButton:
+                                            !lsps1ShowPurchaseButton
+                                    });
+
+                                    await updateSettings({
+                                        lsps1ShowPurchaseButton:
+                                            !lsps1ShowPurchaseButton
                                     });
                                 }}
                             />

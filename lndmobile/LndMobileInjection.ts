@@ -38,7 +38,10 @@ import {
     listInvoices,
     subscribeChannelGraph,
     sendKeysendPaymentV2,
-    fundingStateStep
+    fundingStateStep,
+    sendCustomMessage,
+    subscribeCustomMessages,
+    decodeCustomMessage
 } from './index';
 import {
     channelBalance,
@@ -245,6 +248,13 @@ export interface ILndMobileInjections {
             psbt_verify,
             psbt_finalize
         }: any) => Promise<lnrpc.FundingStateStepResp>;
+        sendCustomMessage: (
+            peer: Uint8Array | null,
+            type: number | null,
+            data: Uint8Array | null
+        ) => Promise<lnrpc.SendCustomMessageResponse>;
+        subscribeCustomMessages: () => Promise<lnrpc.CustomMessage>;
+        decodeCustomMessage: (data: string) => lnrpc.CustomMessage;
     };
     channel: {
         channelBalance: () => Promise<lnrpc.ChannelBalanceResponse>;
@@ -472,7 +482,10 @@ export default {
         listInvoices,
         subscribeChannelGraph,
         sendKeysendPaymentV2,
-        fundingStateStep
+        fundingStateStep,
+        sendCustomMessage,
+        subscribeCustomMessages,
+        decodeCustomMessage
     },
     channel: {
         channelBalance,

@@ -123,6 +123,16 @@ export default class LightningNodeConnect {
                 send_all: data.send_all
             })
             .then((data: lnrpc.SendCoinsResponse) => snakeize(data));
+    sendCustomMessage = async (data: any) =>
+        await this.lnc.lnd.lightning
+            .sendCustomMessage({
+                peer: Base64Utils.hexToBase64(data.peer),
+                type: data.type,
+                data: Base64Utils.hexToBase64(data.data)
+            })
+            .then((data: lnrpc.SendCustomMessageResponse) => snakeize(data));
+    subscribeCustomMessages = () =>
+        this.lnc.lnd.lightning.subscribeCustomMessages({});
     getMyNodeInfo = async () =>
         await this.lnc.lnd.lightning
             .getInfo({})
@@ -477,4 +487,6 @@ export default class LightningNodeConnect {
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     isLNDBased = () => true;
+    supportsLSPS1customMessage = () => true;
+    supportsLSPS1rest = () => false;
 }
