@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth nie jest wspierane przez implementację tego węzła",
     "utils.handleAnything.unsupportedLnurlType": "Typ lnurl nieobsługiwany",
     "utils.handleAnything.invalidLnurlParams": "Nie udało się przetworzyć parametrów lnurl",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Błąd tworzenia faktury",
     "stores.InvoicesStore.errorGeneratingAddress": "Błąd podczas generowanie nowego adresu",
     "stores.InvoicesStore.zeroAmountLndhub": "Instancja LNDHub może nie wspierać faktur z zerową kwotą",
