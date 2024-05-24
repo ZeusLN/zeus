@@ -115,6 +115,9 @@ import IntroSplash from './views/IntroSplash';
 
 import EditFee from './views/EditFee';
 
+// BOLT 12 address
+import Bolt12Address from './views/Settings/Bolt12Address';
+
 // Embedded LND
 import Seed from './views/Settings/Seed';
 import SeedRecovery from './views/Settings/SeedRecovery';
@@ -450,6 +453,9 @@ const AppScenes = {
     },
     CustodialWalletWarning: {
         screen: CustodialWalletWarning
+    },
+    Bolt12Address: {
+        screen: Bolt12Address
     }
 };
 

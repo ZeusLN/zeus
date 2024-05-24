@@ -101,6 +101,10 @@ interface LightningAddressSettings {
     notifications: number;
 }
 
+interface Bolt12AddressSettings {
+    localPart: string;
+}
+
 export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -146,6 +150,7 @@ export interface Settings {
     requestSimpleTaproot: boolean;
     // Lightning Address
     lightningAddress: LightningAddressSettings;
+    bolt12Address: Bolt12AddressSettings;
     selectNodeOnStartup: boolean;
 }
 
@@ -1044,6 +1049,9 @@ export default class SettingsStore {
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
             notifications: 0
+        },
+        bolt12Address: {
+            localPart: ''
         },
         selectNodeOnStartup: false
     };
