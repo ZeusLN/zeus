@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "אימות באמצעות Lnurl אינו נתמך בצומת שלך",
     "utils.handleAnything.unsupportedLnurlType": "סוג lnurl לא נתמך",
     "utils.handleAnything.invalidLnurlParams": "לא ניתן לנתח משתני lnurl",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "שגיאה ביצירת חשבונית",
     "stores.InvoicesStore.errorGeneratingAddress": "שגיאה ביצירת כתובת חדשה",
     "stores.InvoicesStore.zeroAmountLndhub": "יתכן ושרת LNDHub אינו תומך בחשבוניות סכום-אפס",
