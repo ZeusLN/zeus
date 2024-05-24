@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "노드 구현에서 지원되지 않는 LnurlAuth",
     "utils.handleAnything.unsupportedLnurlType": "지원되지 않는 lnurl 유형",
     "utils.handleAnything.invalidLnurlParams": "lnurl 파라미터 값을 제대로 읽어올 수 없음",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "인보이스 생성 오류",
     "stores.InvoicesStore.errorGeneratingAddress": "새 주소 생성 오류",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub 인스턴스가 액수미기입 인보이스를 지원하지 않을 수 있습니다.",
