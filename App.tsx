@@ -87,6 +87,9 @@ import NostrKeys from './views/Settings/LightningAddress/NostrKeys';
 import NostrRelays from './views/Settings/LightningAddress/NostrRelays';
 import ChangeAddress from './views/Settings/LightningAddress/ChangeAddress';
 
+// BOLT 12 address
+import Bolt12Address from './views/Settings/Bolt12Address';
+
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
@@ -733,6 +736,12 @@ export default class App extends React.PureComponent {
                                                         name="ChangeAddress"
                                                         component={
                                                             ChangeAddress
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Bolt12Address"
+                                                        component={
+                                                            Bolt12Address
                                                         }
                                                     />
                                                     <Stack.Screen
