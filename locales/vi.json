@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "Cách triển khai nút của bạn không hỗ trợ LnurlAuth",
     "utils.handleAnything.unsupportedLnurlType": "Loại lnurl không được hỗ trợ",
     "utils.handleAnything.invalidLnurlParams": "Could not parse lnurl params",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Lỗi khi tạo hoá đơn",
     "stores.InvoicesStore.errorGeneratingAddress": "Lỗi khi tạo địa chỉ mới",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
