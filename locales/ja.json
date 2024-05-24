@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "LNURL認証があなたのノードの実装でサポートされていません。",
     "utils.handleAnything.unsupportedLnurlType": "サポートしていないLNURLタイプ",
     "utils.handleAnything.invalidLnurlParams": "LNURLパラメタが解釈できない",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "インボイス作成エラー",
     "stores.InvoicesStore.errorGeneratingAddress": "新しいアドレス生成のエラー",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDhubインスタンスは支払い額が0のインボイスをサポートしていません。",
