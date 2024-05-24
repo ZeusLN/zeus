@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "Solmun toteutus ei tue LnurlAuth-toimintoa",
     "utils.handleAnything.unsupportedLnurlType": "Ei tuettu lnurl-tyyppi",
     "utils.handleAnything.invalidLnurlParams": "Ei voitu jäsentää lnurl-parametreja",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Virhe laskun luomisessa",
     "stores.InvoicesStore.errorGeneratingAddress": "Virhe uuden osoitteen luomisessa",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub-instanssi ei ehkä tue nollasummaisia laskuja.",
