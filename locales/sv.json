@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth stödjs inte av din nodimplementation",
     "utils.handleAnything.unsupportedLnurlType": "Lnurl-typ stöds ej",
     "utils.handleAnything.invalidLnurlParams": "Kunde inte avläsa LNURL-parametrar",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Kunde inte skapa invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Fel vid generering av ny address",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub-intsanser kanske inte stödjer invoices med noll i värde",
