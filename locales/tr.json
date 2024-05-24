@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "Node implementasyonunuz LnurlAuth'a destek vermiyor",
     "utils.handleAnything.unsupportedLnurlType": "Desteklenmeyen lnurl tipi",
     "utils.handleAnything.invalidLnurlParams": "lnurl parametreleri ayrıştırılamadı",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Fatura oluştururken hata",
     "stores.InvoicesStore.errorGeneratingAddress": "Yeni adres oluşturulurken hata",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub örneği, sıfır-tutarlı faturaları desteklemeyebilir",
