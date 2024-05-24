@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "Lnurl Auth non supportata dall'implementazione del tuo nodo",
     "utils.handleAnything.unsupportedLnurlType": "Tipo LNURL non supportato",
     "utils.handleAnything.invalidLnurlParams": "Impossibile analizzare i parametri di lnurl",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Errore nel create la fattura",
     "stores.InvoicesStore.errorGeneratingAddress": "Errore nel generare un nuovo indirizzo",
     "stores.InvoicesStore.zeroAmountLndhub": "L'istanza di Lndhub potrebbe non supportare fatture zero-amunt",
