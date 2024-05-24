@@ -275,4 +275,6 @@ export default class CLightningREST extends LND {
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     isLNDBased = () => false;
+    supportsLSPS1customMessage = () => false;
+    supportsLSPS1rest = () => true;
 }

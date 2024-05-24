@@ -381,4 +381,6 @@ export default class Spark {
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => true;
     isLNDBased = () => false;
+    supportsLSPS1customMessage = () => false;
+    supportsLSPS1rest = () => true;
 }

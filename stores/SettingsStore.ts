@@ -145,6 +145,15 @@ export interface Settings {
     lspTestnet: string;
     lspAccessKey: string;
     requestSimpleTaproot: boolean;
+    //LSPS1
+    lsps1RestMainnet: string;
+    lsps1RestTestnet: string;
+    lsps1PubkeyMainnet: string;
+    lsps1PubkeyTestnet: string;
+    lsps1HostMainnet: string;
+    lsps1HostTestnet: string;
+    lsps1ShowPurchaseButton: boolean;
+
     // Lightning Address
     lightningAddress: LightningAddressSettings;
     selectNodeOnStartup: boolean;
@@ -899,6 +908,17 @@ export const LNDHUB_AUTH_MODES = [
 export const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
 export const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
 
+// LSPS1 REST
+export const DEFAULT_LSPS1_REST_MAINNET = 'https://lsps1.lnolymp.us';
+export const DEFAULT_LSPS1_REST_TESTNET = 'https://testnet-lsps1.lnolymp.us';
+
+export const DEFAULT_LSPS1_PUBKEY_MAINNET =
+    '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581';
+export const DEFAULT_LSPS1_PUBKEY_TESTNET =
+    '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df';
+export const DEFAULT_LSPS1_HOST_MAINNET = '45.79.192.236:9735';
+export const DEFAULT_LSPS1_HOST_TESTNET = '139.144.22.237:9735';
+
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://nostr.mutinywallet.com',
     'wss://relay.damus.io',
@@ -1039,6 +1059,14 @@ export default class SettingsStore {
         lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: '',
         requestSimpleTaproot: false,
+        //lsps1
+        lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
+        lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
+        lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
+        lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
+        lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
+        lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+        lsps1ShowPurchaseButton: true,
         // Lightning Address
         lightningAddress: {
             enabled: false,
@@ -1341,6 +1369,42 @@ export default class SettingsStore {
                     }
                     this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY3, 'true');
+                }
+
+                const MOD_KEY4 = 'lsps1-hosts';
+                const mod4 = await EncryptedStorage.getItem(MOD_KEY4);
+                if (!mod4) {
+                    if (!this.settings?.lsps1HostMainnet) {
+                        this.settings.lsps1HostMainnet =
+                            DEFAULT_LSPS1_HOST_MAINNET;
+                    }
+                    if (!this.settings?.lsps1HostTestnet) {
+                        this.settings.lsps1HostTestnet =
+                            DEFAULT_LSPS1_HOST_TESTNET;
+                    }
+                    if (!this.settings?.lsps1PubkeyMainnet) {
+                        this.settings.lsps1PubkeyMainnet =
+                            DEFAULT_LSPS1_PUBKEY_MAINNET;
+                    }
+                    if (!this.settings?.lsps1PubkeyTestnet) {
+                        this.settings.lsps1PubkeyTestnet =
+                            DEFAULT_LSPS1_PUBKEY_TESTNET;
+                    }
+                    if (!this.settings?.lsps1RestMainnet) {
+                        this.settings.lsps1RestMainnet =
+                            DEFAULT_LSPS1_REST_MAINNET;
+                    }
+                    if (!this.settings?.lsps1RestTestnet) {
+                        this.settings.lsps1RestTestnet =
+                            DEFAULT_LSPS1_REST_TESTNET;
+                    }
+
+                    if (!this.settings?.lsps1ShowPurchaseButton) {
+                        this.settings.lsps1ShowPurchaseButton = true;
+                    }
+
+                    this.setSettings(JSON.stringify(this.settings));
+                    await EncryptedStorage.setItem(MOD_KEY4, 'true');
                 }
 
                 // migrate old POS squareEnabled setting to posEnabled

@@ -507,6 +507,8 @@ export default class Eclair {
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     isLNDBased = () => false;
+    supportsLSPS1customMessage = () => false;
+    supportsLSPS1rest = () => true;
 }
 
 const mapInvoice =

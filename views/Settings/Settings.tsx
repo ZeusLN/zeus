@@ -274,9 +274,19 @@ export default class Settings extends React.Component<
                         >
                             <TouchableOpacity
                                 style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('LSPSettings')
-                                }
+                                onPress={() => {
+                                    const supportsLSPS1 =
+                                        BackendUtils.supportsLSPS1customMessage() ||
+                                        BackendUtils.supportsLSPS1rest();
+                                    if (
+                                        BackendUtils.supportsLSPs() &&
+                                        supportsLSPS1
+                                    ) {
+                                        navigation.navigate('LSPServicesList');
+                                    } else {
+                                        navigation.navigate('LSPSettings');
+                                    }
+                                }}
                             >
                                 <View style={styles.icon}>
                                     <CloudIcon

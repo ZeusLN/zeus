@@ -75,6 +75,7 @@ open class Lnd {
     "AddInvoice": { bytes, cb in LndmobileAddInvoice(bytes, cb) },
     "InvoicesCancelInvoice": { bytes, cb in LndmobileInvoicesCancelInvoice(bytes, cb) },
     "ConnectPeer": { bytes, cb in LndmobileConnectPeer(bytes, cb) },
+    "SendCustomMessage": { bytes, cb in LndmobileSendCustomMessage(bytes, cb) },
     "DecodePayReq": { bytes, cb in LndmobileDecodePayReq(bytes, cb) },
     "DescribeGraph": { bytes, cb in LndmobileDescribeGraph(bytes, cb) },
     "GetInfo": { bytes, cb in LndmobileGetInfo(bytes, cb) },
@@ -144,6 +145,8 @@ open class Lnd {
     "SubscribeState": { req, cb in return LndmobileSubscribeState(req, cb) },
     "RouterTrackPaymentV2": { req, cb in return LndmobileRouterTrackPaymentV2(req, cb) },
     "OpenChannel": { bytes, cb in LndmobileOpenChannel(bytes, cb) },
+    "SubscribeCustomMessages": { bytes, cb in LndmobileSubscribeCustomMessages(bytes, cb) },
+
     // channel
     //
     "CloseChannel": { req, cb in return LndmobileCloseChannel(req, cb)},
