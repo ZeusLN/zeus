@@ -988,6 +988,8 @@
     "utils.handleAnything.lnurlAuthNotSupported": "Implementarea nodului tău nu suportă LnurlAuth",
     "utils.handleAnything.unsupportedLnurlType": "Tip lnurl nesuportat",
     "utils.handleAnything.invalidLnurlParams": "Nu s-au putut interpreta parametrii lnurl",
+    "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
+    "utils.handleAnything.addressError": "Error fetching address",
     "stores.InvoicesStore.errorCreatingInvoice": "Eroare la crearea facturii",
     "stores.InvoicesStore.errorGeneratingAddress": "Eroare la generarea unei adrese noi",
     "stores.InvoicesStore.zeroAmountLndhub": "Este posibil ca LNDHub să nu permită facturi cu valoarea zero",
