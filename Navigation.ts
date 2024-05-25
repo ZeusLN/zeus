@@ -115,7 +115,10 @@ import IntroSplash from './views/IntroSplash';
 
 import EditFee from './views/EditFee';
 
-// BOLT 12 address
+// BOLT 12
+import PayCodes from './views/PayCodes';
+import PayCode from './views/PayCode';
+import CreatePayCode from './views/PayCodeCreate';
 import Bolt12Address from './views/Settings/Bolt12Address';
 
 // Embedded LND
@@ -456,6 +459,15 @@ const AppScenes = {
     },
     Bolt12Address: {
         screen: Bolt12Address
+    },
+    PayCodes: {
+        screen: PayCodes
+    },
+    PayCode: {
+        screen: PayCode
+    },
+    CreatePayCode: {
+        screen: CreatePayCode
     }
 };
 
