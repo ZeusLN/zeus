@@ -247,11 +247,24 @@ export default class CLightningREST extends LND {
     };
 
     // BOLT 12 / Offers
-    getNewOffer = ({ description }: { description: string }) =>
+    listOffers = () => this.getRequest('/v1/offers/listOffers');
+    createOffer = ({
+        description,
+        label,
+        singleUse
+    }: {
+        description?: string;
+        label?: string;
+        singleUse?: boolean;
+    }) =>
         this.postRequest('/v1/offers/offer', {
             amount: 'any',
-            description
+            description,
+            label,
+            single_use: singleUse || false
         });
+    disableOffer = ({ offer_id }: { offer_id: string }) =>
+        this.deleteRequest(`/v1/offers/disableOffer/${offer_id}`);
     fetchInvoiceFromOffer = async (bolt12: string, amountSatoshis: string) => {
         return await this.postRequest('/v1/offers/fetchInvoice', {
             offer: bolt12,

@@ -120,7 +120,9 @@ class BackendUtils {
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
 
     // BOLT 12 / Offers
-    getNewOffer = (...args: any[]) => this.call('getNewOffer', args);
+    listOffers = (...args: any[]) => this.call('listOffers', args);
+    createOffer = (...args: any[]) => this.call('createOffer', args);
+    disableOffer = (...args: any[]) => this.call('disableOffer', args);
     fetchInvoiceFromOffer = (...args: any[]) =>
         this.call('fetchInvoiceFromOffer', args);
 
