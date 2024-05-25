@@ -247,10 +247,10 @@ export default class CLightningREST extends LND {
     };
 
     // BOLT 12 / Offers
-    getNewOffer = () =>
+    getNewOffer = ({ description }: { description: string }) =>
         this.postRequest('/v1/offers/offer', {
             amount: 'any',
-            description: 'BOLT 12 Payment Address'
+            description
         });
     fetchInvoiceFromOffer = async (bolt12: string, amountSatoshis: string) => {
         return await this.postRequest('/v1/offers/fetchInvoice', {

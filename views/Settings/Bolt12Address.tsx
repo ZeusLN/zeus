@@ -32,6 +32,8 @@ type CreateOfferResponse = {
     used: boolean;
 };
 
+const HOST = 'twelve.cash';
+
 @inject('SettingsStore')
 @observer
 export default class Bolt12AddressSettings extends React.Component<
@@ -57,9 +59,13 @@ export default class Bolt12AddressSettings extends React.Component<
     }
 
     async requestPaymentAddress() {
+        const { newLocalPart } = this.state;
+
         let data: CreateOfferResponse;
         try {
-            data = await BackendUtils.getNewOffer();
+            data = await BackendUtils.getNewOffer({
+                description: `${newLocalPart}@${HOST}`
+            });
             if (!data.bolt12) throw 'no bolt12';
         } catch (e) {
             console.error('Failed to get offer', e);
@@ -67,10 +73,10 @@ export default class Bolt12AddressSettings extends React.Component<
         }
 
         try {
-            const res = await fetch('https://twelve.cash/record', {
+            const res = await fetch(`https://${HOST}/record`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    localPart: this.state.newLocalPart,
+                    localPart: newLocalPart,
                     bolt12: data.bolt12
                 })
             });
@@ -130,7 +136,7 @@ export default class Bolt12AddressSettings extends React.Component<
                                 paddingBottom: 10
                             }}
                         >
-                            {existingLocalPart + '@twelve.cash'}
+                            {`${existingLocalPart}@${HOST}`}
                         </Text>
                         <View style={styles.button}>
                             <Button
@@ -167,24 +173,38 @@ export default class Bolt12AddressSettings extends React.Component<
                                 'views.Settings.Bolt12Address.handle'
                             )}
                         </Text>
-                        <TextInput
-                            autoCapitalize="none"
-                            value={newLocalPart}
-                            onChangeText={(text: string) => {
-                                this.setState({
-                                    newLocalPart: text.trim(),
-                                    error: ''
-                                });
-                            }}
-                        />
-                        <Text
+                        <View
                             style={{
-                                ...styles.secondaryText,
-                                color: themeColor('secondaryText')
+                                display: 'flex',
+                                flexDirection: 'row'
                             }}
                         >
-                            {newLocalPart + '@twelve.cash'}
-                        </Text>
+                            <TextInput
+                                value={newLocalPart}
+                                onChangeText={(text: string) => {
+                                    this.setState({
+                                        newLocalPart: text
+                                    });
+                                }}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row'
+                                }}
+                            />
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('text'),
+                                    fontSize: 20,
+                                    marginLeft: 5,
+                                    marginTop: 27
+                                }}
+                            >
+                                @{HOST}
+                            </Text>
+                        </View>
                         <Text
                             style={{
                                 fontFamily: 'PPNeueMontreal-Book',
