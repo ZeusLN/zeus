@@ -71,10 +71,13 @@ export default class Bolt12AddressSettings extends React.Component<
             loading: true
         });
 
+        const address = `${newLocalPart}@${HOST}`;
+
         let data: CreateOfferResponse;
         try {
-            data = await BackendUtils.getNewOffer({
-                description: `${newLocalPart}@${HOST}`
+            data = await BackendUtils.createOffer({
+                description: address,
+                label: address
             });
             if (!data.bolt12)
                 throw localeString(
