@@ -953,7 +953,7 @@
     "views.LSPS1.orderState": "Stav objednávky",
     "views.LSPS1.miniFeeFor0Conf": "Minimální poplatek za 0 conf",
     "views.LSPS1.minOnchainPaymentConfirmations": "Minimální počet on-chain platebních potvrzení",
-    "views.LSPS1.onchainPayment": "Onchain payment",
+    "views.LSPS1.onchainPayment": "On-chain platba",
     "views.LSPS1.totalOrderValue": "Celková hodnota objednávky",
     "views.LSPS1.initialLSPBalance": "Počáteční zůstatek LSP",
     "views.LSPS1.initialClientBalance": "Počáteční zůstatek klienta",
