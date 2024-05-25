@@ -2,10 +2,14 @@ import * as React from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { themeColor } from '../../utils/ThemeUtils';
-import Screen from '../../components/Screen';
+
 import Button from '../../components/Button';
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import TextInput from '../../components/TextInput';
+
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 
@@ -43,7 +47,7 @@ export default class Bolt12AddressSettings extends React.Component<
     state = {
         newLocalPart: '',
         existingLocalPart: '',
-        loading: true,
+        loading: false,
         error: ''
     };
 
@@ -59,16 +63,31 @@ export default class Bolt12AddressSettings extends React.Component<
     }
 
     async requestPaymentAddress() {
+        const { SettingsStore } = this.props;
         const { newLocalPart } = this.state;
+        const { updateSettings } = SettingsStore;
+
+        this.setState({
+            loading: true
+        });
 
         let data: CreateOfferResponse;
         try {
             data = await BackendUtils.getNewOffer({
                 description: `${newLocalPart}@${HOST}`
             });
-            if (!data.bolt12) throw 'no bolt12';
+            if (!data.bolt12)
+                throw localeString(
+                    'views.Settings.Bolt12Address.error.noBolt12'
+                );
         } catch (e) {
-            console.error('Failed to get offer', e);
+            console.error();
+            this.setState({
+                loading: false,
+                error: `${localeString(
+                    'views.Settings.Bolt12Address.error.failedToGetOffer'
+                )}: ${e}`
+            });
             return;
         }
 
@@ -82,36 +101,45 @@ export default class Bolt12AddressSettings extends React.Component<
             });
 
             if (res.status === 409) {
-                this.setState({ error: 'Name is taken' });
+                this.setState({
+                    error: localeString(
+                        'views.Settings.Bolt12Address.error.handleTaken'
+                    )
+                });
                 return;
             } else if (res.status !== 201) {
-                this.setState({ error: 'Failed to create Paycode' });
+                this.setState({
+                    error: localeString(
+                        'views.Settings.Bolt12Address.error.failedToCreate'
+                    )
+                });
                 return;
             }
+
+            await updateSettings({
+                bolt12Address: {
+                    localPart: this.state.newLocalPart
+                }
+            });
+            this.setState({
+                newLocalPart: '',
+                existingLocalPart: this.state.newLocalPart,
+                loading: false
+            });
         } catch (e) {
             console.error(e);
-            this.setState({ error: 'Failed to create Paycode' });
+            this.setState({
+                error: localeString(
+                    'views.Settings.Bolt12Address.error.failedToCreate'
+                )
+            });
             return;
         }
-
-        const { SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
-
-        await updateSettings({
-            bolt12Address: {
-                localPart: this.state.newLocalPart
-            }
-        });
-        this.setState({
-            newLocalPart: '',
-            existingLocalPart: this.state.newLocalPart
-        });
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
-        const { newLocalPart, existingLocalPart, error } = this.state;
+        const { navigation } = this.props;
+        const { newLocalPart, existingLocalPart, loading, error } = this.state;
 
         return (
             <Screen>
@@ -124,9 +152,11 @@ export default class Bolt12AddressSettings extends React.Component<
                             color: themeColor('text')
                         }
                     }}
+                    rightComponent={loading && <LoadingIndicator size={30} />}
                     containerStyle={{ borderBottomWidth: 0 }}
                     navigation={navigation}
                 />
+                {error && <ErrorMessage message={error} />}
                 {existingLocalPart ? (
                     <View style={{ padding: 20 }}>
                         <Text
@@ -143,12 +173,7 @@ export default class Bolt12AddressSettings extends React.Component<
                                 title={localeString(
                                     'views.Settings.Bolt12Address.changeButton'
                                 )}
-                                onPress={async () => {
-                                    await updateSettings({
-                                        bolt12Address: {
-                                            localPart: ''
-                                        }
-                                    });
+                                onPress={() => {
                                     this.setState({
                                         existingLocalPart: '',
                                         newLocalPart: ''
@@ -219,9 +244,7 @@ export default class Bolt12AddressSettings extends React.Component<
                                     'views.Settings.Bolt12Address.requestButton'
                                 )}
                                 disabled={!this.state.newLocalPart}
-                                onPress={async () =>
-                                    this.requestPaymentAddress()
-                                }
+                                onPress={() => this.requestPaymentAddress()}
                             />
                         </View>
                     </View>
