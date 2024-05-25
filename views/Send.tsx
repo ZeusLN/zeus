@@ -52,6 +52,7 @@ import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
 
 import BackendUtils from '../utils/BackendUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 import NFCUtils from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -389,8 +390,15 @@ export default class Send extends React.Component<SendProps, SendState> {
             return;
         }
         try {
+            const split = bolt12.split('=');
+            this.setState({
+                loading: true,
+                error_msg: ''
+            });
             const res = await BackendUtils.fetchInvoiceFromOffer(
-                bolt12,
+                // grok out overstring from Bitcoin URI
+                // eg. bitcoin:?lno=lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq2zapy7nz5yqcnygzsv9uk6etwwssyzerywfjhxuckyypvm779pgy7grg2m0j55f67e2du7359h4nad964309j93kqa0xshcs
+                split[1] || bolt12,
                 amount
             );
             if (!res.invoice) {
@@ -398,8 +406,15 @@ export default class Send extends React.Component<SendProps, SendState> {
             }
             this.props.InvoicesStore.getPayReq(res.invoice);
             this.props.navigation.navigate('PaymentRequest');
-        } catch (e) {
-            console.error(e);
+            this.setState({
+                loading: false,
+                error_msg: ''
+            });
+        } catch (e: any) {
+            this.setState({
+                loading: false,
+                error_msg: errorToUserFriendly(e)
+            });
             return;
         }
     };
@@ -744,6 +759,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                     contentContainerStyle={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
+                    {!!error_msg && !!destination && (
+                        <View style={{ marginVertical: 10 }}>
+                            <ErrorMessage
+                                message={error_msg}
+                                mainStyle={{ marginVertical: 10 }}
+                            />
+                        </View>
+                    )}
+
                     {!!destination &&
                         transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() &&
@@ -891,14 +915,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </>
                     )}
 
-                    {!!error_msg && !!destination && (
-                        <View style={{ marginVertical: 10 }}>
-                            <ErrorMessage
-                                message={error_msg}
-                                mainStyle={{ marginVertical: 10 }}
-                            />
-                        </View>
-                    )}
                     {!isValid && !!destination && error_msg && (
                         <Text
                             style={{
