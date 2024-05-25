@@ -47,6 +47,7 @@ interface AddContactProps {
 
 interface Contact {
     lnAddress: string[];
+    bolt12Address: string[];
     onchainAddress: string[];
     nip05: string[];
     nostrNpub: string[];
@@ -61,6 +62,7 @@ interface Contact {
 interface AddContactState {
     contacts: Contact[];
     lnAddress: string[];
+    bolt12Address: string[];
     onchainAddress: string[];
     nip05: string[];
     nostrNpub: string[];
@@ -73,6 +75,7 @@ interface AddContactState {
     isFavourite: boolean;
     isValidOnchainAddress: boolean;
     isValidLightningAddress: boolean;
+    isValidBolt12Address: boolean;
     isValidNIP05: boolean;
     isValidNpub: boolean;
     isValidPubkey: boolean;
@@ -87,6 +90,7 @@ export default class AddContact extends React.Component<
         this.state = {
             contacts: [],
             lnAddress: [''],
+            bolt12Address: [''],
             onchainAddress: [''],
             nip05: [''],
             nostrNpub: [''],
@@ -99,6 +103,7 @@ export default class AddContact extends React.Component<
             isFavourite: false,
             isValidOnchainAddress: true,
             isValidLightningAddress: true,
+            isValidBolt12Address: true,
             isValidNIP05: true,
             isValidNpub: true,
             isValidPubkey: true
@@ -121,6 +126,7 @@ export default class AddContact extends React.Component<
         const { navigation, route } = this.props;
         const {
             lnAddress,
+            bolt12Address,
             onchainAddress,
             nip05,
             nostrNpub,
@@ -149,6 +155,7 @@ export default class AddContact extends React.Component<
                         ? {
                               ...contact,
                               lnAddress,
+                              bolt12Address,
                               onchainAddress,
                               nip05,
                               nostrNpub,
@@ -179,6 +186,7 @@ export default class AddContact extends React.Component<
                 const newContact: Contact = {
                     contactId,
                     lnAddress,
+                    bolt12Address,
                     onchainAddress,
                     nip05,
                     nostrNpub,
@@ -206,6 +214,7 @@ export default class AddContact extends React.Component<
                 this.setState({
                     contacts: updatedContacts,
                     lnAddress: [],
+                    bolt12Address: [],
                     onchainAddress: [],
                     nip05: [],
                     nostrNpub: [],
@@ -309,12 +318,20 @@ export default class AddContact extends React.Component<
         });
     };
 
+    onChangeBolt12Address = (text: string) => {
+        const isValid = AddressUtils.isValidLightningAddress(text);
+        this.setState({
+            isValidBolt12Address: isValid
+        });
+    };
+
     onChangeNIP05 = (text: string) => {
         const isValid = AddressUtils.isValidLightningAddress(text);
         this.setState({
             isValidNIP05: isValid
         });
     };
+
     onChangeNpub = (text: string) => {
         const isValid = AddressUtils.isValidNpub(text);
         this.setState({
@@ -355,6 +372,7 @@ export default class AddContact extends React.Component<
         if (prefillContact) {
             this.setState({
                 lnAddress: prefillContact.lnAddress,
+                bolt12Address: prefillContact.bolt12Address,
                 onchainAddress: prefillContact.onchainAddress,
                 nip05: prefillContact.nip05,
                 nostrNpub: prefillContact.nostrNpub,
@@ -371,6 +389,7 @@ export default class AddContact extends React.Component<
         const { navigation } = this.props;
         const {
             lnAddress,
+            bolt12Address,
             onchainAddress,
             nip05,
             nostrNpub,
@@ -380,21 +399,43 @@ export default class AddContact extends React.Component<
             photo,
             isValidOnchainAddress,
             isValidLightningAddress,
+            isValidBolt12Address,
             isValidNIP05,
             isValidNpub,
             isValidPubkey
         } = this.state;
 
         const dropdownValues = [
-            { key: 'LN address', translateKey: '', value: 'lnAddress' },
-            { key: 'Pubkey', translateKey: '', value: 'pubkey' },
+            {
+                key: 'LN address',
+                translateKey: 'general.lightningAddressCondensed',
+                value: 'lnAddress'
+            },
+            {
+                key: 'BOLT 12 address',
+                translateKey: 'views.Settings.Bolt12Address',
+                value: 'bolt12Address'
+            },
+            {
+                key: 'Pubkey',
+                translateKey: 'views.NodeInfo.pubkey',
+                value: 'pubkey'
+            },
             {
                 key: 'Onchain address',
-                translateKey: '',
+                translateKey: 'views.Settings.AddContact.onchainAddress',
                 value: 'onchainAddress'
             },
-            { key: 'NIP-05', translateKey: '', value: 'nip05' },
-            { key: 'Nostr npub', translateKey: '', value: 'nostrNpub' }
+            {
+                key: 'NIP-05',
+                translateKey: 'views.Settings.AddContact.nip05',
+                value: 'nip05'
+            },
+            {
+                key: 'Nostr npub',
+                translateKey: 'views.Settings.AddContact.nostrNpub',
+                value: 'nostrNpub'
+            }
         ];
 
         const AddPhotos = () => (
@@ -610,7 +651,7 @@ export default class AddContact extends React.Component<
                             color={
                                 lnAddress?.length == 1 &&
                                 !isValidLightningAddress &&
-                                'red'
+                                themeColor('error')
                             }
                         />
                         <View style={styles.inputContainer}>
@@ -653,7 +694,7 @@ export default class AddContact extends React.Component<
                                     color={
                                         index === lnAddress?.length - 2 &&
                                         !isValidLightningAddress &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -718,9 +759,119 @@ export default class AddContact extends React.Component<
                             color={
                                 pubkey?.length == 1 &&
                                 (!isValidLightningAddress || !isValidPubkey) &&
-                                'red'
+                                themeColor('error')
                             }
                         />
+
+                        <View style={styles.inputContainer}>
+                            <View style={styles.icons}>
+                                <LightningBolt />
+                            </View>
+                            <TextInput
+                                onChangeText={(text) => {
+                                    this.onChangeBolt12Address(text);
+                                    const updatedAddresses = [...bolt12Address];
+                                    updatedAddresses[0] = text;
+                                    this.setState({
+                                        bolt12Address: updatedAddresses
+                                    });
+                                    if (!text) {
+                                        this.setState({
+                                            isValidBolt12Address: true
+                                        });
+                                    }
+                                }}
+                                value={bolt12Address && bolt12Address[0]}
+                                placeholder={localeString(
+                                    'views.Settings.Bolt12Address'
+                                )}
+                                placeholderTextColor={themeColor(
+                                    'secondaryText'
+                                )}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
+                                autoCapitalize="none"
+                            />
+                        </View>
+                        {lnAddress?.slice(1).map((address, index) => (
+                            <>
+                                <Divider
+                                    orientation="horizontal"
+                                    style={{ marginTop: 16 }}
+                                    color={
+                                        index === lnAddress?.length - 2 &&
+                                        !isValidLightningAddress &&
+                                        themeColor('error')
+                                    }
+                                />
+                                <View key={index} style={styles.inputContainer}>
+                                    <View style={styles.icons}>
+                                        <LightningBolt />
+                                    </View>
+                                    <View>
+                                        <TextInput
+                                            onChangeText={(text) => {
+                                                this.onChangeLightningAddress(
+                                                    text
+                                                );
+                                                const updatedAddresses = [
+                                                    ...lnAddress
+                                                ];
+                                                updatedAddresses[index + 1] =
+                                                    text;
+                                                this.setState({
+                                                    lnAddress: updatedAddresses
+                                                });
+                                                if (!text) {
+                                                    this.setState({
+                                                        isValidLightningAddress:
+                                                            true
+                                                    });
+                                                }
+                                            }}
+                                            value={address}
+                                            placeholder={localeString(
+                                                'views.Settings.AddContact.lnAddress'
+                                            )}
+                                            placeholderTextColor={themeColor(
+                                                'secondaryText'
+                                            )}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
+                                            autoCapitalize="none"
+                                        />
+                                    </View>
+                                    <TouchableOpacity style={styles.deleteIcon}>
+                                        <Icon
+                                            name="close"
+                                            onPress={() =>
+                                                this.removeExtraField(
+                                                    'lnAddress',
+                                                    index
+                                                )
+                                            }
+                                            color={themeColor('text')}
+                                            underlayColor="transparent"
+                                            size={16}
+                                        />
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        ))}
+                        <Divider
+                            orientation="horizontal"
+                            style={{ marginTop: 10 }}
+                            color={
+                                pubkey?.length == 1 &&
+                                (!isValidLightningAddress || !isValidPubkey) &&
+                                themeColor('error')
+                            }
+                        />
+
                         <View style={styles.inputContainer}>
                             <View style={styles.icons}>
                                 <LightningBolt />
@@ -764,7 +915,7 @@ export default class AddContact extends React.Component<
                                         index === pubkey?.length - 2 &&
                                         (!isValidPubkey ||
                                             !isValidLightningAddress) &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -828,7 +979,7 @@ export default class AddContact extends React.Component<
                             color={
                                 onchainAddress?.length == 1 &&
                                 (!isValidOnchainAddress || !isValidPubkey) &&
-                                'red'
+                                themeColor('error')
                             }
                         />
                         <View style={styles.inputContainer}>
@@ -875,7 +1026,7 @@ export default class AddContact extends React.Component<
                                         index === onchainAddress?.length - 2 &&
                                         (!isValidOnchainAddress ||
                                             !isValidPubkey) &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -941,7 +1092,7 @@ export default class AddContact extends React.Component<
                             color={
                                 nip05?.length == 1 &&
                                 (!isValidOnchainAddress || !isValidNIP05) &&
-                                'red'
+                                themeColor('error')
                             }
                         />
                         <View style={styles.inputContainer}>
@@ -986,7 +1137,7 @@ export default class AddContact extends React.Component<
                                         index === nip05.length - 2 &&
                                         (!isValidOnchainAddress ||
                                             !isValidNIP05) &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -1048,7 +1199,7 @@ export default class AddContact extends React.Component<
                             color={
                                 nostrNpub?.length == 1 &&
                                 (!isValidNIP05 || !isValidNpub) &&
-                                'red'
+                                themeColor('error')
                             }
                         />
                         <View style={styles.inputContainer}>
@@ -1092,7 +1243,7 @@ export default class AddContact extends React.Component<
                                     color={
                                         index === nostrNpub?.length - 2 &&
                                         (!isValidNIP05 || !isValidNpub) &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -1151,7 +1302,7 @@ export default class AddContact extends React.Component<
                         <Divider
                             orientation="horizontal"
                             style={{ marginTop: 10 }}
-                            color={!isValidNpub && 'red'}
+                            color={!isValidNpub && themeColor('error')}
                         />
                     </ScrollView>
                     {(lnAddress[0] || onchainAddress[0]) &&
@@ -1194,6 +1345,7 @@ export default class AddContact extends React.Component<
                                 opacity:
                                     isValidOnchainAddress &&
                                     isValidLightningAddress &&
+                                    isValidBolt12Address &&
                                     isValidNIP05 &&
                                     isValidNpub &&
                                     isValidPubkey
@@ -1203,11 +1355,15 @@ export default class AddContact extends React.Component<
                             disabled={
                                 !isValidOnchainAddress ||
                                 !isValidLightningAddress ||
+                                !isValidBolt12Address ||
                                 !isValidNIP05 ||
                                 !isValidNpub ||
                                 !isValidPubkey ||
                                 (lnAddress?.length > 1 &&
                                     lnAddress[lnAddress.length - 1] === '') ||
+                                (bolt12Address?.length > 1 &&
+                                    bolt12Address[bolt12Address.length - 1] ===
+                                        '') ||
                                 (pubkey?.length > 1 &&
                                     pubkey[pubkey.length - 1] === '') ||
                                 (onchainAddress?.length > 1 &&
@@ -1220,6 +1376,7 @@ export default class AddContact extends React.Component<
                                     nostrNpub[nostrNpub.length - 1] === '') ||
                                 !(
                                     lnAddress[0] ||
+                                    bolt12Address[0] ||
                                     onchainAddress[0] ||
                                     pubkey[0]
                                 )
@@ -1283,9 +1440,6 @@ const styles = StyleSheet.create({
         marginLeft: 24,
         flexDirection: 'row',
         alignItems: 'center'
-    },
-    invalidInput: {
-        color: 'red'
     },
     icons: {
         paddingRight: 14,
