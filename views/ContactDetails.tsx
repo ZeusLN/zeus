@@ -58,6 +58,7 @@ export default class ContactDetails extends React.Component<
         this.state = {
             contact: {
                 lnAddress: [''],
+                bolt12Address: [''],
                 onchainAddress: [''],
                 pubkey: [''],
                 nip05: [''],
@@ -90,14 +91,10 @@ export default class ContactDetails extends React.Component<
     fetchContact = async () => {
         this.props.navigation.addListener('focus', async () => {
             try {
-                const { contactId, nostrContact } =
+                const { contactId, nostrContact, isNostrContact } =
                     this.props.route.params ?? {};
                 const contactsString = await EncryptedStorage.getItem(
                     'zeus-contacts'
-                );
-                const isNostrContact = this.props.navigation.getParam(
-                    'isNostrContact',
-                    null
                 );
 
                 if (contactsString && contactId) {
@@ -395,6 +392,43 @@ export default class ContactDetails extends React.Component<
                             {contact.hasLnAddress && (
                                 <View>
                                     {contact.lnAddress.map(
+                                        (address: string, index: number) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                onPress={() =>
+                                                    this.sendAddress(address)
+                                                }
+                                            >
+                                                <View style={styles.contactRow}>
+                                                    <LightningBolt />
+                                                    <Text
+                                                        style={{
+                                                            ...styles.contactFields,
+                                                            color: themeColor(
+                                                                'chain'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {address.length > 23
+                                                            ? `${address.substring(
+                                                                  0,
+                                                                  10
+                                                              )}...${address.substring(
+                                                                  address.length -
+                                                                      10
+                                                              )}`
+                                                            : address}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )
+                                    )}
+                                </View>
+                            )}
+
+                            {contact.hasBolt12Address && (
+                                <View>
+                                    {contact.bolt12Address.map(
                                         (address: string, index: number) => (
                                             <TouchableOpacity
                                                 key={index}

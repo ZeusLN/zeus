@@ -80,6 +80,7 @@ interface SendProps {
             destination: string;
             amount: string;
             transactionType: string | null;
+            bolt12: string | null;
             isValid: boolean;
             contactName: string;
             clearOnBackPress: boolean;
@@ -90,6 +91,7 @@ interface SendProps {
 interface SendState {
     isValid: boolean;
     transactionType: string | null;
+    bolt12: string | null;
     destination: string;
     amount: string;
     satAmount: string | number;
@@ -130,8 +132,14 @@ export default class Send extends React.Component<SendProps, SendState> {
     constructor(props: SendProps) {
         super(props);
         const { route } = props;
-        const { destination, amount, transactionType, isValid, contactName } =
-            route.params ?? {};
+        const {
+            destination,
+            amount,
+            transactionType,
+            isValid,
+            contactName,
+            bolt12
+        } = route.params ?? {};
         const clearOnBackPress = route.params?.clearOnBackPress ?? !destination;
 
         if (transactionType === 'Lightning') {
@@ -141,6 +149,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.state = {
             isValid: isValid || false,
             transactionType,
+            bolt12,
             destination: destination || '',
             amount: amount || '',
             satAmount: '',
@@ -374,6 +383,27 @@ export default class Send extends React.Component<SendProps, SendState> {
             });
     };
 
+    payBolt12 = async () => {
+        const { amount, bolt12 } = this.state;
+        if (amount === '0' || !bolt12) {
+            return;
+        }
+        try {
+            const res = await BackendUtils.fetchInvoiceFromOffer(
+                bolt12,
+                amount
+            );
+            if (!res.invoice) {
+                return;
+            }
+            this.props.InvoicesStore.getPayReq(res.invoice);
+            this.props.navigation.navigate('PaymentRequest');
+        } catch (e) {
+            console.error(e);
+            return;
+        }
+    };
+
     sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
         const {
@@ -463,6 +493,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const contact = new Contact(item);
         const {
             hasLnAddress,
+            hasBolt12Address,
             hasOnchainAddress,
             hasPubkey,
             hasMultiplePayableAddresses
@@ -479,6 +510,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                       10
                   )}...${item.lnAddress[0].slice(-10)}`
                 : item.lnAddress[0];
+        }
+
+        if (hasBolt12Address) {
+            return item.bolt12Address[0].length > 23
+                ? `${item.bolt12Address[0].slice(
+                      0,
+                      10
+                  )}...${item.bolt12Address[0].slice(-10)}`
+                : item.bolt12Address[0];
         }
 
         if (hasOnchainAddress) {
@@ -507,6 +547,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 onPress={() => {
                     if (contact.isSingleLnAddress) {
                         this.validateAddress(item.lnAddress[0]);
+                    } else if (contact.isSingleBolt12Address) {
+                        this.validateAddress(item.bolt12Address[0]);
                     } else if (contact.isSingleOnchainAddress) {
                         this.validateAddress(item.onchainAddress[0]);
                     } else if (contact.isSinglePubkey) {
@@ -608,6 +650,9 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
+        if (BackendUtils.supportsOffers()) {
+            paymentOptions.push(localeString('views.Settings.Bolt12Address'));
+        }
         if (BackendUtils.supportsOnchainSends()) {
             paymentOptions.push(localeString('views.Send.btcAddress'));
         }
@@ -713,7 +758,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                         )}
                     {!!destination &&
                         (transactionType === 'Lightning' ||
-                            transactionType === 'Keysend') &&
+                            transactionType === 'Keysend' ||
+                            transactionType === 'BOLT 12') &&
                         lightningBalance === 0 && (
                             <View style={{ marginBottom: 10 }}>
                                 <WarningMessage
@@ -1125,6 +1171,24 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 </View>
                             </React.Fragment>
                         )}
+                    {transactionType === 'BOLT 12' &&
+                        BackendUtils.supportsOffers() && (
+                            <React.Fragment>
+                                <AmountInput
+                                    amount={amount}
+                                    title={localeString('views.Send.amount')}
+                                    onAmountChange={(
+                                        amount: string,
+                                        satAmount: string | number
+                                    ) => {
+                                        this.setState({
+                                            amount,
+                                            satAmount
+                                        });
+                                    }}
+                                />
+                            </React.Fragment>
+                        )}
                     {transactionType === 'Keysend' &&
                         BackendUtils.supportsKeysend() && (
                             <React.Fragment>
@@ -1346,6 +1410,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     navigation.navigate('PaymentRequest')
                                 }
                                 disabled={lightningBalance === 0}
+                            />
+                        </View>
+                    )}
+                    {destination && transactionType === 'BOLT 12' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.proceed')}
+                                onPress={async () => await this.payBolt12()}
                             />
                         </View>
                     )}
