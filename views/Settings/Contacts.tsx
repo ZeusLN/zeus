@@ -94,6 +94,7 @@ export default class Contacts extends React.Component<
         const contact = new Contact(item);
         const {
             hasLnAddress,
+            hasBolt12Address,
             hasOnchainAddress,
             hasPubkey,
             hasMultiplePayableAddresses
@@ -110,6 +111,15 @@ export default class Contacts extends React.Component<
                       10
                   )}...${item.lnAddress[0].slice(-10)}`
                 : item.lnAddress[0];
+        }
+
+        if (hasBolt12Address) {
+            return item.bolt12Address[0].length > 23
+                ? `${item.bolt12Address[0].slice(
+                      0,
+                      10
+                  )}...${item.bolt12Address[0].slice(-10)}`
+                : item.bolt12Address[0];
         }
 
         if (hasOnchainAddress) {
@@ -141,6 +151,12 @@ export default class Contacts extends React.Component<
                             destination: item.lnAddress[0],
                             contactName: item.name
                         })) ||
+                        (contact.isSingleBolt12Address &&
+                            this.state.SendScreen &&
+                            this.props.navigation.navigate('Send', {
+                                destination: item.bolt12Address[0],
+                                contactName: item.name
+                            })) ||
                         (contact.isSingleOnchainAddress &&
                             this.state.SendScreen &&
                             this.props.navigation.navigate('Send', {
@@ -225,6 +241,7 @@ export default class Contacts extends React.Component<
                 hasMatch('name') ||
                 hasMatch('description') ||
                 hasMatch('lnAddress') ||
+                hasMatch('bolt12Address') ||
                 hasMatch('nip05') ||
                 hasMatch('onchainAddress') ||
                 hasMatch('nostrNpub') ||

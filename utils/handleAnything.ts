@@ -219,6 +219,39 @@ const handleAnything = async (
         ];
     } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
         if (isClipboardValue) return true;
+
+        // try BOLT 12 address first, if supported
+        if (BackendUtils.supportsOffers()) {
+            const [localPart, domain] = value.split('@');
+            const dnsUrl = 'https://cloudflare-dns.com/dns-query';
+
+            const name = `${localPart}.user._bitcoin-payment.${domain}`;
+            const url = `${dnsUrl}?name=${name}&type=TXT`;
+            let bolt12: string;
+            try {
+                const res = await fetch(url, {
+                    headers: {
+                        accept: 'application/dns-json'
+                    }
+                });
+                const json = await res.json();
+                if (!json.Answer && !json.Answer[0]) throw 'Bad';
+                bolt12 = json.Answer[0].data;
+                bolt12 = bolt12.replace(/("|\\)/g, '');
+                bolt12 = bolt12.replace(/bitcoin:b12=/, '');
+
+                return [
+                    'Send',
+                    {
+                        destination: value,
+                        bolt12,
+                        transactionType: 'BOLT 12',
+                        isValid: true
+                    }
+                ];
+            } catch (e: any) {}
+        }
+
         const [username, domain] = value.split('@');
         const url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
         const error = localeString(
