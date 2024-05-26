@@ -1,18 +1,17 @@
 import * as React from 'react';
 import { Button as ElementsButton } from 'react-native-elements';
 import { themeColor } from './../utils/ThemeUtils';
-import { StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, TextStyle, ViewStyle } from 'react-native';
 
 interface ButtonProps {
     title?: string;
     icon?: any;
-    titleStyle?: any;
+    titleStyle?: TextStyle;
     onPress?: any;
     secondary?: boolean;
     tertiary?: boolean;
     quaternary?: boolean;
     warning?: boolean;
-    quinary?: boolean;
     iconOnly?: boolean;
     adaptiveWidth?: boolean;
     containerStyle?: any;
@@ -32,7 +31,6 @@ function Button(props: ButtonProps) {
         tertiary,
         quaternary,
         warning,
-        quinary,
         iconOnly,
         adaptiveWidth,
         containerStyle,
@@ -83,14 +81,14 @@ function Button(props: ButtonProps) {
             buttonStyle={{
                 backgroundColor: iconOnly
                     ? 'transparent'
-                    : quinary
-                    ? themeColor('buttonBackground') || themeColor('secondary')
                     : quaternary
-                    ? themeColor('background')
+                    ? themeColor('buttonBackground') || themeColor('secondary')
                     : tertiary
                     ? themeColor('highlight')
                     : secondary
                     ? themeColor('secondary')
+                    : warning
+                    ? themeColor('delete')
                     : themeColor('text'),
                 ...buttonStyle
             }}
@@ -104,14 +102,10 @@ function Button(props: ButtonProps) {
                     : {
                           color: iconOnly
                               ? textColor
-                              : quinary
-                              ? warning
-                                  ? themeColor('warning')
-                                  : textColor
                               : quaternary
-                              ? warning
-                                  ? themeColor('warning')
-                                  : textColor
+                              ? textColor
+                              : warning
+                              ? themeColor('text')
                               : secondary
                               ? themeColor('highlight')
                               : themeColor('background'),

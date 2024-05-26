@@ -13,7 +13,7 @@ import { lnrpc } from '../proto/lightning';
 export default class Payment extends BaseModel {
     private payment_hash: string | { data: number[]; type: string }; // object if lndhub
     creation_date?: string;
-    value: string | number;
+    value?: string | number;
     fee_sat?: string;
     fee_msat?: string;
     payment_preimage: string;
@@ -72,14 +72,16 @@ export default class Payment extends BaseModel {
 
     @computed public get getMemo(): string | undefined {
         if (this.getPaymentRequest) {
-            const decoded: any = bolt11.decode(this.getPaymentRequest);
-            for (let i = 0; i < decoded.tags.length; i++) {
-                const tag = decoded.tags[i];
-                switch (tag.tagName) {
-                    case 'description':
-                        return tag.data;
+            try {
+                const decoded: any = bolt11.decode(this.getPaymentRequest);
+                for (let i = 0; i < decoded.tags.length; i++) {
+                    const tag = decoded.tags[i];
+                    switch (tag.tagName) {
+                        case 'description':
+                            return tag.data;
+                    }
                 }
-            }
+            } catch (e) {}
         }
         return undefined;
     }
@@ -108,8 +110,9 @@ export default class Payment extends BaseModel {
 
     @computed public get isIncomplete(): boolean {
         return (
+            !this.getPreimage ||
             this.getPreimage ===
-            '0000000000000000000000000000000000000000000000000000000000000000'
+                '0000000000000000000000000000000000000000000000000000000000000000'
         );
     }
 
@@ -292,5 +295,9 @@ export default class Payment extends BaseModel {
         })
             .replace(/(\d+) /g, '$1 ')
             .replace(/ (\d+)/g, ' $1');
+    }
+
+    @computed public get noteKey(): string {
+        return this.paymentHash || this.getPreimage;
     }
 }

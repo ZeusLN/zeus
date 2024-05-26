@@ -14,12 +14,13 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
-
 import NfcManager, {
     NfcEvents,
     TagEvent,
     Ndef
 } from 'react-native-nfc-manager';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import handleAnything from '../utils/handleAnything';
 
@@ -28,6 +29,11 @@ import ZIcon from '../assets/images/icon-black.png';
 import LightningIcon from '../assets/images/lightning-black.png';
 import OnChainIcon from '../assets/images/onchain-black.png';
 import ZPayIcon from '../assets/images/pay-z-black.png';
+
+import ZIconWhite from '../assets/images/icon-white.png';
+import LightningIconWhite from '../assets/images/lightning-white.png';
+import OnChainIconWhite from '../assets/images/onchain-white.png';
+import ZPayIconWhite from '../assets/images/pay-z-white.png';
 
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
@@ -50,6 +56,7 @@ import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 
 import Invoice from '../models/Invoice';
+import Channel from '../models/Channel';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import ModalStore from '../stores/ModalStore';
@@ -80,10 +87,11 @@ import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
 import Gear from '../assets/images/SVG/Gear.svg';
 import DropdownSetting from '../components/DropdownSetting';
+import HopPicker from '../components/HopPicker';
 
 interface ReceiveProps {
     exitSetup: any;
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     InvoicesStore: InvoicesStore;
     PosStore: PosStore;
@@ -93,6 +101,23 @@ interface ReceiveProps {
     UnitsStore: UnitsStore;
     LSPStore: LSPStore;
     LightningAddressStore: LightningAddressStore;
+    route: Route<
+        'Receive',
+        {
+            lnurlParams: LNURLWithdrawParams | undefined;
+            amount: string;
+            autoGenerate: boolean;
+            autoGenerateOnChain: boolean;
+            account: string;
+            selectedIndex: number;
+            memo: string;
+            orderId: string;
+            orderTotal: string;
+            orderTip: string;
+            exchangeRate: string;
+            rate: number;
+        }
+    >;
 }
 
 interface ReceiveState {
@@ -108,6 +133,7 @@ interface ReceiveState {
     customPreimage: string;
     ampInvoice: boolean;
     routeHints: boolean;
+    account: string;
     // POS
     orderId: string;
     orderTotal: string;
@@ -118,6 +144,14 @@ interface ReceiveState {
     needInbound: boolean;
     enableLSP: boolean;
     lspIsActive: boolean;
+    lspNotConfigured: boolean;
+    routeHintMode: RouteHintMode;
+    selectedRouteHintChannels?: Channel[];
+}
+
+enum RouteHintMode {
+    Automatic = 0,
+    Custom = 1
 }
 
 @inject(
@@ -139,7 +173,8 @@ export default class Receive extends React.Component<
     listenerSecondary: any;
     lnInterval: any;
     onChainInterval: any;
-    state = {
+    hopPickerRef: HopPicker | null;
+    state: ReceiveState = {
         selectedIndex: 0,
         expirationIndex: 1,
         addressType: '0',
@@ -152,6 +187,7 @@ export default class Receive extends React.Component<
         customPreimage: '',
         ampInvoice: false,
         routeHints: false,
+        account: 'default',
         // POS
         orderId: '',
         orderTip: '',
@@ -161,15 +197,19 @@ export default class Receive extends React.Component<
         // LSP
         needInbound: false,
         enableLSP: true,
-        lspIsActive: false
+        lspIsActive: false,
+        lspNotConfigured: true,
+        routeHintMode: RouteHintMode.Automatic,
+        selectedRouteHintChannels: undefined
     };
 
     async UNSAFE_componentWillMount() {
         const {
-            navigation,
             InvoicesStore,
             SettingsStore,
-            LightningAddressStore
+            LightningAddressStore,
+            NodeInfoStore,
+            route
         } = this.props;
         const { reset } = InvoicesStore;
         const { getSettings, posStatus } = SettingsStore;
@@ -181,7 +221,10 @@ export default class Receive extends React.Component<
             status();
         }
 
+        const { lspNotConfigured } = NodeInfoStore.lspNotConfigured();
+
         const newExpirySeconds = settings?.invoices?.expirySeconds || '3600';
+
         let expirationIndex;
         if (newExpirySeconds === '600') {
             expirationIndex = 0;
@@ -205,7 +248,11 @@ export default class Receive extends React.Component<
             routeHints: settings?.invoices?.routeHints || false,
             ampInvoice: settings?.invoices?.ampInvoice || false,
             enableLSP: settings?.enableLSP,
-            lspIsActive: settings?.enableLSP && BackendUtils.supportsLSPs()
+            lspIsActive:
+                settings?.enableLSP &&
+                BackendUtils.supportsLSPs() &&
+                !lspNotConfigured,
+            lspNotConfigured
         });
 
         const lnOnly =
@@ -217,15 +264,21 @@ export default class Receive extends React.Component<
             settings.pos.confirmationPreference === 'lnOnly';
 
         reset();
-        const lnurl: LNURLWithdrawParams | undefined =
-            navigation.getParam('lnurlParams');
 
-        const amount: string = navigation.getParam('amount');
-        const autoGenerate: boolean = navigation.getParam('autoGenerate');
-        const autoGenerateOnChain: boolean = navigation.getParam(
-            'autoGenerateOnChain'
-        );
-        const selectedIndex: number = navigation.getParam('selectedIndex');
+        const {
+            lnurlParams: lnurl,
+            amount,
+            autoGenerate,
+            autoGenerateOnChain,
+            account,
+            selectedIndex
+        } = route.params ?? {};
+
+        if (account) {
+            this.setState({
+                account
+            });
+        }
 
         if (selectedIndex) {
             this.setState({
@@ -237,12 +290,9 @@ export default class Receive extends React.Component<
             this.state;
 
         // POS
-        const memo: string = navigation.getParam('memo', this.state.memo);
-        const orderId: string = navigation.getParam('orderId');
-        const orderTotal: string = navigation.getParam('orderTotal');
-        const orderTip: string = navigation.getParam('orderTip');
-        const exchangeRate: string = navigation.getParam('exchangeRate');
-        const rate: number = navigation.getParam('rate');
+        const memo = route.params?.memo ?? this.state.memo;
+        const { orderId, orderTotal, orderTip, exchangeRate, rate } =
+            route.params ?? {};
 
         if (orderId) {
             this.setState({
@@ -309,18 +359,16 @@ export default class Receive extends React.Component<
         }
 
         if (autoGenerateOnChain) {
-            this.autoGenerateOnChainAddress();
+            this.autoGenerateOnChainAddress(account);
         }
     }
 
     async UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation, InvoicesStore } = nextProps;
+        const { route, InvoicesStore } = nextProps;
         const { reset } = InvoicesStore;
 
         reset();
-        const amount: string = navigation.getParam('amount');
-        const lnurl: LNURLWithdrawParams | undefined =
-            navigation.getParam('lnurlParams');
+        const { amount, lnurlParams: lnurl } = route.params ?? {};
 
         if (amount) {
             let needInbound = false;
@@ -400,9 +448,12 @@ export default class Receive extends React.Component<
             undefined,
             lspIsActive ? false : ampInvoice || false,
             lspIsActive ? false : routeHints || false,
+            undefined,
             BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
-                : undefined
+                : undefined,
+            undefined,
+            !lspIsActive
         ).then(
             ({
                 rHash,
@@ -416,12 +467,20 @@ export default class Receive extends React.Component<
         );
     };
 
-    autoGenerateOnChainAddress = () => {
+    autoGenerateOnChainAddress = (account?: string) => {
         const { InvoicesStore } = this.props;
         const { addressType } = this.state;
         const { getNewAddress } = InvoicesStore;
 
-        getNewAddress({ type: addressType }).then((onChainAddress: string) => {
+        let request: any = {
+            type: addressType
+        };
+
+        if (account) {
+            request.account = account;
+        }
+
+        getNewAddress(request).then((onChainAddress: string) => {
             this.subscribeInvoice(undefined, onChainAddress);
         });
     };
@@ -483,10 +542,10 @@ export default class Receive extends React.Component<
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore } = this.props;
+        const { navigation, InvoicesStore, route } = this.props;
         const { lspIsActive } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
-        const amount = getSatAmount(navigation.getParam('amount'));
+        const amount = getSatAmount(route.params?.amount);
 
         handleAnything(text, amount.toString())
             .then((response) => {
@@ -503,7 +562,13 @@ export default class Receive extends React.Component<
                             lspIsActive ? '' : memo,
                             amount.toString(),
                             '3600',
-                            lnurlParams
+                            lnurlParams,
+                            undefined,
+                            undefined,
+                            undefined,
+                            undefined,
+                            undefined,
+                            !lspIsActive
                         )
                             .then(
                                 ({
@@ -513,7 +578,6 @@ export default class Receive extends React.Component<
                                     rHash: string;
                                     onChainAddress?: string;
                                 }) => {
-                                    navigation.setParam;
                                     this.subscribeInvoice(
                                         rHash,
                                         onChainAddress
@@ -912,7 +976,8 @@ export default class Receive extends React.Component<
             LightningAddressStore,
             LSPStore,
             NodeInfoStore,
-            navigation
+            navigation,
+            route
         } = this.props;
         const {
             selectedIndex,
@@ -927,9 +992,13 @@ export default class Receive extends React.Component<
             customPreimage,
             ampInvoice,
             routeHints,
+            account,
             needInbound,
             enableLSP,
-            lspIsActive
+            lspIsActive,
+            lspNotConfigured,
+            routeHintMode,
+            selectedRouteHintChannels
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -968,13 +1037,17 @@ export default class Receive extends React.Component<
             settings.pos.confirmationPreference &&
             settings.pos.confirmationPreference === 'lnOnly';
 
-        const lnurl: LNURLWithdrawParams | undefined =
-            navigation.getParam('lnurlParams');
+        const lnurl = route.params?.lnurlParams;
 
         const ClearButton = () => (
             <Icon
                 name="cancel"
-                onPress={() => InvoicesStore.clearUnified()}
+                onPress={() => {
+                    this.setState({
+                        account: 'default'
+                    });
+                    InvoicesStore.clearUnified();
+                }}
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
@@ -1244,6 +1317,55 @@ export default class Receive extends React.Component<
             { element: oneWButton }
         ];
 
+        const routeHintModeButtons = [
+            {
+                element: () => (
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color:
+                                routeHintMode === RouteHintMode.Automatic
+                                    ? themeColor('background')
+                                    : themeColor('text')
+                        }}
+                    >
+                        {localeString('general.automatic')}
+                    </Text>
+                )
+            },
+            {
+                element: () => (
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color:
+                                routeHintMode === RouteHintMode.Custom
+                                    ? themeColor('background')
+                                    : themeColor('text')
+                        }}
+                    >
+                        {localeString('general.custom')}
+                    </Text>
+                )
+            }
+        ];
+
+        const setRouteHintMode = (mode: RouteHintMode) => {
+            if (this.state.routeHintMode === mode) {
+                return;
+            }
+            this.setState({
+                routeHintMode: mode
+            });
+            if (
+                mode === RouteHintMode.Custom &&
+                (!selectedRouteHintChannels ||
+                    selectedRouteHintChannels.length === 0)
+            ) {
+                this.hopPickerRef?.openPicker();
+            }
+        };
+
         const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
 
         return (
@@ -1267,9 +1389,8 @@ export default class Receive extends React.Component<
                         posStatus === 'active' ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
-                            BackendUtils.supportsAddressTypeSelection() && (
-                                <SettingsButton />
-                            )
+                            BackendUtils.supportsAddressTypeSelection() &&
+                            !creatingInvoice && <SettingsButton />
                         )
                     }
                     navigation={navigation}
@@ -1347,7 +1468,7 @@ export default class Receive extends React.Component<
                                     name: 'list',
                                     size: 25
                                 }}
-                                onPress={() => navigation.navigate('Wallet')}
+                                onPress={() => navigation.popTo('Wallet')}
                                 containerStyle={{ width: '100%' }}
                             />
                         </View>
@@ -1355,6 +1476,7 @@ export default class Receive extends React.Component<
                         <ScrollView
                             style={styles.content}
                             keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
                         >
                             {creatingInvoiceError && (
                                 <ErrorMessage
@@ -1409,6 +1531,13 @@ export default class Receive extends React.Component<
                                         <LoadingIndicator />
                                     </View>
                                 )}
+                                {haveInvoice && account !== 'default' && (
+                                    <WarningMessage
+                                        message={`${localeString(
+                                            'general.externalAccount'
+                                        )}: ${account}`}
+                                    />
+                                )}
                                 {haveInvoice &&
                                     lspIsActive &&
                                     satAmount === '0' &&
@@ -1440,7 +1569,7 @@ export default class Receive extends React.Component<
                                         </View>
                                     )}
                                 {haveInvoice &&
-                                    !!zeroConfFee &&
+                                    zeroConfFee > 0 &&
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (
                                         <TouchableOpacity
@@ -1512,6 +1641,61 @@ export default class Receive extends React.Component<
                                             </View>
                                         </TouchableOpacity>
                                     )}
+                                {haveInvoice &&
+                                    zeroConfFee === 0 &&
+                                    (selectedIndex == 0 ||
+                                        selectedIndex == 1) && (
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'LspExplanationWrappedInvoices'
+                                                )
+                                            }
+                                        >
+                                            <View
+                                                style={{
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderRadius: 10,
+                                                    top: 10,
+                                                    margin: 10,
+                                                    padding: 15,
+                                                    borderWidth: 0.5
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        marginBottom: 5
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Receive.lspExplainerZeroFeeWrapper'
+                                                    )}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontSize: 15,
+                                                        top: 5,
+                                                        textAlign: 'right'
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'general.tapToLearnMore'
+                                                    )}
+                                                </Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
                                 {haveInvoice && !creatingInvoiceError && (
                                     <View style={{ marginTop: 10 }}>
                                         {selectedIndex == 0 &&
@@ -1525,7 +1709,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
-                                                    logo={ZIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? ZIconWhite
+                                                            : ZIcon
+                                                    }
                                                 />
                                             )}
                                         {selectedIndex == 1 &&
@@ -1542,7 +1732,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
-                                                    logo={LightningIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? LightningIconWhite
+                                                            : LightningIcon
+                                                    }
                                                 />
                                             )}
                                         {selectedIndex == 2 &&
@@ -1559,7 +1755,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
-                                                    logo={OnChainIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? OnChainIconWhite
+                                                            : OnChainIcon
+                                                    }
                                                 />
                                             )}
 
@@ -1621,7 +1823,13 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     hideText
-                                                    logo={ZPayIcon}
+                                                    logo={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? ZPayIconWhite
+                                                            : ZPayIcon
+                                                    }
                                                 />
                                             )}
 
@@ -1684,47 +1892,54 @@ export default class Receive extends React.Component<
                                 )}
                                 {!loading && !haveInvoice && !creatingInvoice && (
                                     <>
-                                        {BackendUtils.supportsLSPs() && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.secondaryText,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        top: 20
-                                                    }}
-                                                    infoText={[
-                                                        localeString(
-                                                            'views.Receive.lspSwitchExplainer1'
-                                                        ),
-                                                        localeString(
-                                                            'views.Receive.lspSwitchExplainer2'
-                                                        )
-                                                    ]}
-                                                    infoNav="LspExplanationOverview"
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.LSP.enableLSP'
-                                                    )}
-                                                </Text>
-                                                <Switch
-                                                    value={enableLSP}
-                                                    onValueChange={async () => {
-                                                        this.setState({
-                                                            enableLSP:
-                                                                !enableLSP
-                                                        });
-                                                        await updateSettings({
-                                                            enableLSP:
-                                                                !enableLSP
-                                                        });
-                                                    }}
-                                                />
-                                            </>
-                                        )}
+                                        {BackendUtils.supportsLSPs() &&
+                                            !lspNotConfigured && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            top: 20
+                                                        }}
+                                                        infoText={[
+                                                            localeString(
+                                                                'views.Receive.lspSwitchExplainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.Receive.lspSwitchExplainer2'
+                                                            )
+                                                        ]}
+                                                        infoNav="LspExplanationOverview"
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.LSP.enableLSP'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={enableLSP}
+                                                        onValueChange={async () => {
+                                                            this.setState({
+                                                                enableLSP:
+                                                                    !enableLSP,
+                                                                lspIsActive:
+                                                                    !enableLSP &&
+                                                                    BackendUtils.supportsLSPs() &&
+                                                                    !lspNotConfigured
+                                                            });
+                                                            await updateSettings(
+                                                                {
+                                                                    enableLSP:
+                                                                        !enableLSP
+                                                                }
+                                                            );
+                                                        }}
+                                                    />
+                                                </>
+                                            )}
 
-                                        {!enableLSP && (
+                                        {(!enableLSP || lspNotConfigured) && (
                                             <>
                                                 <Text
                                                     style={{
@@ -2217,6 +2432,103 @@ export default class Receive extends React.Component<
                                                 </>
                                             )}
 
+                                        {BackendUtils.isLNDBased() &&
+                                            routeHints && (
+                                                <Row>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'general.mode'
+                                                        )}
+                                                    </Text>
+                                                    <ButtonGroup
+                                                        onPress={
+                                                            setRouteHintMode
+                                                        }
+                                                        selectedIndex={
+                                                            routeHintMode
+                                                        }
+                                                        buttons={
+                                                            routeHintModeButtons
+                                                        }
+                                                        selectedButtonStyle={{
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'highlight'
+                                                                ),
+                                                            borderRadius: 12
+                                                        }}
+                                                        containerStyle={{
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'secondary'
+                                                                ),
+                                                            borderRadius: 12,
+                                                            borderWidth: 0,
+                                                            height: 30,
+                                                            flex: 1
+                                                        }}
+                                                        innerBorderStyle={{
+                                                            color: themeColor(
+                                                                'secondary'
+                                                            )
+                                                        }}
+                                                    />
+                                                </Row>
+                                            )}
+
+                                        {BackendUtils.isLNDBased() &&
+                                            routeHints && (
+                                                <HopPicker
+                                                    ref={(ref) =>
+                                                        (this.hopPickerRef =
+                                                            ref)
+                                                    }
+                                                    onValueChange={(
+                                                        channels
+                                                    ) => {
+                                                        this.setState({
+                                                            selectedRouteHintChannels:
+                                                                channels
+                                                        });
+                                                    }}
+                                                    onCancel={() => {
+                                                        if (
+                                                            !selectedRouteHintChannels?.length
+                                                        ) {
+                                                            setRouteHintMode(
+                                                                RouteHintMode.Automatic
+                                                            );
+                                                        }
+                                                    }}
+                                                    title={localeString(
+                                                        'views.Receive.customRouteHints'
+                                                    )}
+                                                    ChannelsStore={
+                                                        this.props.ChannelsStore
+                                                    }
+                                                    UnitsStore={UnitsStore}
+                                                    containerStyle={{
+                                                        display:
+                                                            routeHintMode ===
+                                                            RouteHintMode.Automatic
+                                                                ? 'none'
+                                                                : 'flex'
+                                                    }}
+                                                    clearOnTap={false}
+                                                    selectionMode={'multiple'}
+                                                    selectedChannels={
+                                                        selectedRouteHintChannels
+                                                    }
+                                                />
+                                            )}
+
                                         {BackendUtils.supportsAMP() &&
                                             !lspIsActive && (
                                                 <>
@@ -2278,13 +2590,18 @@ export default class Receive extends React.Component<
                                                             : ampInvoice ||
                                                                   false,
                                                         routeHints,
+                                                        routeHintMode ===
+                                                            RouteHintMode.Custom
+                                                            ? selectedRouteHintChannels
+                                                            : undefined,
                                                         BackendUtils.supportsAddressTypeSelection()
                                                             ? addressType
                                                             : undefined,
                                                         BackendUtils.supportsCustomPreimages() &&
                                                             showCustomPreimageField
                                                             ? customPreimage
-                                                            : undefined
+                                                            : undefined,
+                                                        !lspIsActive
                                                     ).then(
                                                         ({
                                                             rHash,

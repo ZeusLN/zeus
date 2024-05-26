@@ -87,9 +87,17 @@ export const startLnd = async (
  * @throws
  */
 export const gossipSync = async (
+    serviceUrl: string,
     networkType: string
 ): Promise<{ data: string }> => {
-    return await LndMobile.gossipSync(networkType);
+    return await LndMobile.gossipSync(serviceUrl, networkType);
+};
+
+/**
+ * @throws
+ */
+export const cancelGossipSync = async () => {
+    return LndMobile.cancelGossipSync();
 };
 
 export const checkICloudEnabled = async (): Promise<boolean> => {
@@ -154,6 +162,52 @@ export const connectPeer = async (
             }),
             perm
         }
+    });
+};
+
+/**
+ * @throws
+ */
+export const sendCustomMessage = async (
+    peer: string,
+    type: number,
+    data: string
+): Promise<lnrpc.SendCustomMessageResponse> => {
+    return await sendCommand<
+        lnrpc.ISendCustomMessageRequest,
+        lnrpc.SendCustomMessageRequest,
+        lnrpc.SendCustomMessageResponse
+    >({
+        request: lnrpc.SendCustomMessageRequest,
+        response: lnrpc.SendCustomMessageResponse,
+        method: 'SendCustomMessage',
+        options: {
+            peer: Base64Utils.hexToBase64(peer),
+            type,
+            data: Base64Utils.hexToBase64(data)
+        }
+    });
+};
+
+/**
+ * @throws
+ */
+export const subscribeCustomMessages = async (): Promise<string> => {
+    const response = await sendStreamCommand<
+        lnrpc.ISubscribeCustomMessagesRequest,
+        lnrpc.SubscribeCustomMessagesRequest
+    >({
+        request: lnrpc.SubscribeCustomMessagesRequest,
+        method: 'SubscribeCustomMessages',
+        options: {}
+    });
+    return response;
+};
+
+export const decodeCustomMessage = (data: string): lnrpc.CustomMessage => {
+    return decodeStreamResult<lnrpc.CustomMessage>({
+        response: lnrpc.CustomMessage,
+        base64Result: data
     });
 };
 
@@ -385,7 +439,7 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         no_inflight_updates: true,
         timeout_seconds: 60,
         max_parts: max_parts || 1,
-        fee_limit_sat: fee_limit_sat || 0,
+        fee_limit_sat,
         max_shard_size_msat,
         cltv_limit: cltv_limit || 0,
         amp
@@ -515,7 +569,8 @@ export const addInvoice = async ({
     expiry = 3600,
     is_amp,
     is_private,
-    preimage
+    preimage,
+    route_hints
 }: {
     amount?: number;
     amount_msat?: number;
@@ -524,6 +579,7 @@ export const addInvoice = async ({
     is_amp?: boolean;
     is_private?: boolean;
     preimage?: string;
+    route_hints?: lnrpc.IRouteHint[] | null;
 }): Promise<lnrpc.AddInvoiceResponse> => {
     const response = await sendCommand<
         lnrpc.IInvoice,
@@ -541,7 +597,8 @@ export const addInvoice = async ({
             private: is_private,
             min_hop_hints: is_private ? 6 : 0,
             is_amp,
-            r_preimage: preimage ? Base64Utils.hexToBytes(preimage) : undefined
+            r_preimage: preimage ? Base64Utils.hexToBytes(preimage) : undefined,
+            route_hints
         }
     });
     return response;
@@ -757,7 +814,11 @@ export const getRecoveryInfo =
 /**
  * @throws
  */
-export const listUnspent = async (): Promise<lnrpc.ListUnspentResponse> => {
+export const listUnspent = async ({
+    account = 'default'
+}: {
+    account: string;
+}): Promise<lnrpc.ListUnspentResponse> => {
     const response = await sendCommand<
         lnrpc.IListUnspentRequest,
         lnrpc.ListUnspentRequest,
@@ -766,7 +827,9 @@ export const listUnspent = async (): Promise<lnrpc.ListUnspentResponse> => {
         request: lnrpc.ListUnspentRequest,
         response: lnrpc.ListUnspentResponse,
         method: 'WalletKitListUnspent',
-        options: {}
+        options: {
+            account
+        }
     });
     return response;
 };
@@ -818,7 +881,37 @@ export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
         request: lnrpc.ListInvoiceRequest,
         response: lnrpc.ListInvoiceResponse,
         method: 'ListInvoices',
-        options: {}
+        options: {
+            reversed: true,
+            num_max_invoices: Long.fromValue(1000)
+        }
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
+export const fundingStateStep = async ({
+    shim_register,
+    shim_cancel,
+    psbt_verify,
+    psbt_finalize
+}: any): Promise<lnrpc.FundingStateStepResp> => {
+    const response = await sendCommand<
+        lnrpc.IFundingTransitionMsg,
+        lnrpc.FundingTransitionMsg,
+        lnrpc.FundingStateStepResp
+    >({
+        request: lnrpc.FundingTransitionMsg,
+        response: lnrpc.FundingStateStepResp,
+        method: 'FundingStateStep',
+        options: {
+            shim_register,
+            shim_cancel,
+            psbt_verify,
+            psbt_finalize
+        }
     });
     return response;
 };

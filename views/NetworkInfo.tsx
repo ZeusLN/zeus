@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
@@ -12,7 +13,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import NodeInfoStore from '../stores/NodeInfoStore';
 
 interface NetworkInfoProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
 }
 

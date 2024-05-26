@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -13,7 +14,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
 
 interface SetPassphraseProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -23,6 +24,7 @@ interface SetPassphraseState {
     savedPassphrase: string;
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
+    passphraseEmptyError: boolean;
     confirmDelete: boolean;
 }
 
@@ -38,6 +40,7 @@ export default class SetPassphrase extends React.Component<
         savedPassphrase: '',
         passphraseMismatchError: false,
         passphraseInvalidError: false,
+        passphraseEmptyError: false,
         confirmDelete: false
     };
 
@@ -75,7 +78,7 @@ export default class SetPassphrase extends React.Component<
 
         const settings = await getSettings();
 
-        if (passphrase === settings.duressPassphrase) {
+        if (passphrase !== '' && passphrase === settings.duressPassphrase) {
             this.setState({
                 passphraseInvalidError: true
             });
@@ -83,10 +86,17 @@ export default class SetPassphrase extends React.Component<
             return;
         }
 
+        if (passphrase === '') {
+            this.setState({
+                passphraseEmptyError: true
+            });
+            return;
+        }
+
         await updateSettings({ passphrase }).then(() => {
-            setLoginStatus(false);
+            setLoginStatus(true);
             getSettings();
-            navigation.navigate('Settings', {
+            navigation.popTo('Settings', {
                 refresh: true
             });
         });
@@ -102,7 +112,7 @@ export default class SetPassphrase extends React.Component<
             duressPassphrase: '',
             passphrase: ''
         }).then(() => {
-            navigation.navigate('Settings', {
+            navigation.popTo('Settings', {
                 refresh: true
             });
         });
@@ -115,7 +125,8 @@ export default class SetPassphrase extends React.Component<
             passphraseConfirm,
             savedPassphrase,
             passphraseMismatchError,
-            passphraseInvalidError
+            passphraseInvalidError,
+            passphraseEmptyError
         } = this.state;
 
         return (
@@ -152,6 +163,13 @@ export default class SetPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {passphraseEmptyError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.empty'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newPassword')}
                     </Text>
@@ -163,15 +181,21 @@ export default class SetPassphrase extends React.Component<
                             this.setState({
                                 passphrase: text,
                                 passphraseMismatchError: false,
-                                passphraseInvalidError: false
+                                passphraseInvalidError: false,
+                                passphraseEmptyError: false
                             })
                         }
-                        numberOfLines={1}
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            paddingLeft: 10
+                            paddingLeft: 10,
+                            paddingTop:
+                                this.state.passphrase === ''
+                                    ? Platform.OS === 'android'
+                                        ? 6
+                                        : 8
+                                    : 2
                         }}
                     />
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
@@ -185,15 +209,21 @@ export default class SetPassphrase extends React.Component<
                             this.setState({
                                 passphraseConfirm: text,
                                 passphraseMismatchError: false,
-                                passphraseInvalidError: false
+                                passphraseInvalidError: false,
+                                passphraseEmptyError: false
                             })
                         }
-                        numberOfLines={1}
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            paddingLeft: 10
+                            paddingLeft: 10,
+                            paddingTop:
+                                this.state.passphraseConfirm === ''
+                                    ? Platform.OS === 'android'
+                                        ? 6
+                                        : 8
+                                    : 0
                         }}
                     />
                     <View style={{ paddingTop: 10, margin: 10 }}>
@@ -225,10 +255,7 @@ export default class SetPassphrase extends React.Component<
                                         this.deletePassword();
                                     }
                                 }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}

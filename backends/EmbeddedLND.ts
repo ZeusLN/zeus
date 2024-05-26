@@ -4,6 +4,11 @@ import Base64Utils from './../utils/Base64Utils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 
+import {
+    checkLndStreamErrorResponse,
+    LndMobileEventEmitter
+} from '../utils/LndMobileUtils';
+
 const {
     addInvoice,
     getInfo,
@@ -17,7 +22,10 @@ const {
     listPayments,
     getNetworkInfo,
     queryRoutes,
-    lookupInvoice
+    lookupInvoice,
+    fundingStateStep,
+    sendCustomMessage,
+    subscribeCustomMessages
 } = lndMobile.index;
 const {
     channelBalance,
@@ -26,20 +34,33 @@ const {
     pendingChannels,
     closedChannels,
     closeChannel,
-    openChannel
+    openChannel,
+    openChannelSync,
+    decodeOpenStatusUpdate
 } = lndMobile.channel;
-const { signMessageNodePubkey, verifyMessageNodePubkey, bumpFee } =
-    lndMobile.wallet;
+const {
+    signMessageNodePubkey,
+    verifyMessageNodePubkey,
+    bumpFee,
+    fundPsbt,
+    signPsbt,
+    finalizePsbt,
+    publishTransaction,
+    listAccounts,
+    importAccount
+} = lndMobile.wallet;
 const { walletBalance, newAddress, getTransactions, sendCoins } =
     lndMobile.onchain;
 
 export default class EmbeddedLND extends LND {
+    openChannelListener: any;
+
     getTransactions = async () => await getTransactions();
     getChannels = async () => await listChannels();
     getPendingChannels = async () => await pendingChannels();
     getClosedChannels = async () => await closedChannels();
     getChannelInfo = async (chanId: string) => await getChanInfo(chanId);
-    getBlockchainBalance = async () => await walletBalance();
+    getBlockchainBalance = async (data: any) => await walletBalance(data);
     getLightningBalance = async () => await channelBalance();
     sendCoins = async (data: any) =>
         await sendCoins(
@@ -49,6 +70,9 @@ export default class EmbeddedLND extends LND {
             data.spend_unconfirmed,
             data.send_all
         );
+    sendCustomMessage = async (data: any) =>
+        await sendCustomMessage(data.peer, data.type, data.data);
+    subscribeCustomMessages = async () => await subscribeCustomMessages();
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
     getInvoices = async () => await listInvoices();
@@ -60,12 +84,14 @@ export default class EmbeddedLND extends LND {
             expiry: data.expiry,
             is_amp: data.is_amp,
             is_private: data.private,
-            preimage: data.preimage
+            preimage: data.preimage,
+            route_hints: data.route_hints
         });
     getPayments = async () => await listPayments();
-    getNewAddress = async (data: any) => await newAddress(data.type);
-    openChannel = async (data: OpenChannelRequest) =>
-        await openChannel(
+    getNewAddress = async (data: any) =>
+        await newAddress(data.type, data.account);
+    openChannelSync = async (data: OpenChannelRequest) =>
+        await openChannelSync(
             data.node_pubkey_string,
             Number(data.local_funding_amount),
             data.privateChannel || false,
@@ -77,6 +103,45 @@ export default class EmbeddedLND extends LND {
             data.fundMax,
             data.utxos
         );
+    openChannelStream = async (data: OpenChannelRequest) => {
+        return await new Promise((resolve, reject) => {
+            LndMobileEventEmitter.addListener('OpenChannel', (e: any) => {
+                try {
+                    const error = checkLndStreamErrorResponse('OpenChannel', e);
+                    if (error === 'EOF') {
+                        return;
+                    } else if (error) {
+                        console.error('Got error from OpenChannel', [error]);
+                        reject(error);
+                        return;
+                    }
+
+                    const result = decodeOpenStatusUpdate(e.data);
+                    if (result?.psbt_fund) {
+                        resolve({ result });
+                    }
+                } catch (error) {
+                    console.error(error);
+                }
+            });
+
+            openChannel(
+                data.node_pubkey_string,
+                Number(data.local_funding_amount),
+                data.privateChannel || false,
+                data.sat_per_vbyte && !data.funding_shim
+                    ? Number(data.sat_per_vbyte)
+                    : undefined,
+                data.scidAlias,
+                data.min_confs,
+                data.spend_unconfirmed,
+                data.simpleTaprootChannel,
+                data.fundMax,
+                data.utxos,
+                data.funding_shim
+            );
+        });
+    };
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
     decodePaymentRequest = async (urlParams?: string[]) =>
@@ -90,9 +155,7 @@ export default class EmbeddedLND extends LND {
             max_shard_amt: data?.max_shard_amt,
             fee_limit_sat: data?.fee_limit_sat || 0,
             outgoing_chan_id: data?.outgoing_chan_id,
-            last_hop_pubkey: data?.last_hop_pubkey
-                ? Base64Utils.base64ToHex(data?.last_hop_pubkey)
-                : undefined,
+            last_hop_pubkey: data?.last_hop_pubkey,
             message: data?.message
                 ? Base64Utils.hexToBase64(Base64Utils.utf8ToHex(data?.message))
                 : undefined,
@@ -125,8 +188,16 @@ export default class EmbeddedLND extends LND {
         const force = urlParams && urlParams[2] ? true : false;
         const sat_per_vbyte =
             urlParams && urlParams[3] ? Number(urlParams[3]) : undefined;
+        const delivery_address =
+            urlParams && urlParams[4] ? urlParams[4] : undefined;
 
-        await closeChannel(fundingTxId, outputIndex, force, sat_per_vbyte);
+        return await closeChannel(
+            fundingTxId,
+            outputIndex,
+            force,
+            sat_per_vbyte,
+            delivery_address
+        );
     };
 
     getNodeInfo = async (urlParams?: Array<string>) =>
@@ -148,19 +219,46 @@ export default class EmbeddedLND extends LND {
         urlParams && (await queryRoutes(urlParams[0], urlParams[1]));
     // getForwardingHistory = () => N/A
     // // Coin Control
-    // fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
-    // finalizePsbt = (data: any) =>
-    //     this.postRequest('/v2/wallet/psbt/finalize', data);
-    // publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
-    getUTXOs = async () => await listUnspent();
+    fundPsbt = async (data: any) => await fundPsbt(data);
+    signPsbt = async (data: any) => await signPsbt(data);
+    finalizePsbt = async (data: any) => await finalizePsbt(data);
+    publishTransaction = async (data: any) => {
+        if (data.tx_hex) data.tx_hex = Base64Utils.hexToBase64(data.tx_hex);
+        return await publishTransaction(data);
+    };
+    fundingStateStep = async (data: any) => {
+        // Verify
+        if (
+            data.psbt_finalize?.funded_psbt &&
+            Base64Utils.isHex(data.psbt_finalize?.funded_psbt)
+        )
+            data.psbt_finalize.funded_psbt = Base64Utils.hexToBase64(
+                data.psbt_finalize.funded_psbt
+            );
+        // Finalize
+        if (
+            data.psbt_finalize?.final_raw_tx &&
+            Base64Utils.isHex(data.psbt_finalize?.final_raw_tx)
+        )
+            data.psbt_finalize.final_raw_tx = Base64Utils.hexToBase64(
+                data.psbt_finalize.final_raw_tx
+            );
+        if (
+            data.psbt_finalize?.signed_psbt &&
+            Base64Utils.isHex(data.psbt_finalize?.signed_psbt)
+        )
+            data.psbt_finalize.signed_psbt = Base64Utils.hexToBase64(
+                data.psbt_finalize.signed_psbt
+            );
+        return await fundingStateStep(data);
+    };
+
+    getUTXOs = async (data: any) => await listUnspent(data);
     bumpFee = async (data: any) => await bumpFee(data);
     lookupInvoice = async (data: any) => await lookupInvoice(data.r_hash);
 
-    // TODO inject
-    // listAccounts = () => this.getRequest('/v2/wallet/accounts');
-    // TODO inject
-    // importAccount = (data: any) =>
-    //     this.postRequest('/v2/wallet/accounts/import', data);
+    listAccounts = async () => await listAccounts();
+    importAccount = async (data: any) => await importAccount(data);
 
     // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>
@@ -182,9 +280,7 @@ export default class EmbeddedLND extends LND {
     supportsCoinControl = () => this.supports('v0.12.0');
     supportsChannelCoinControl = () => this.supports('v0.17.0');
     supportsHopPicking = () => this.supports('v0.11.0');
-    // TODO wire up accounts
-    // supportsAccounts = () => this.supports('v0.13.0');
-    supportsAccounts = () => false;
+    supportsAccounts = () => true;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
@@ -196,5 +292,9 @@ export default class EmbeddedLND extends LND {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
+    supportsOnchainBatching = () => true;
+    supportsChannelBatching = () => true;
     isLNDBased = () => true;
+    supportsLSPS1customMessage = () => true;
+    supportsLSPS1rest = () => false;
 }

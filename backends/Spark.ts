@@ -216,7 +216,7 @@ export default class Spark {
             })
         );
     getNewAddress = () => this.rpc('newaddr');
-    openChannel = (data: OpenChannelRequest) =>
+    openChannelSync = (data: OpenChannelRequest) =>
         this.rpc('fundchannel', {
             id: data.node_pubkey_string,
             amount: data.satoshis,
@@ -378,5 +378,9 @@ export default class Spark {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
+    supportsOnchainBatching = () => false;
+    supportsChannelBatching = () => true;
     isLNDBased = () => false;
+    supportsLSPS1customMessage = () => false;
+    supportsLSPS1rest = () => true;
 }

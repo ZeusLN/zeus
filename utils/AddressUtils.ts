@@ -1,11 +1,25 @@
 import BigNumber from 'bignumber.js';
+const bitcoin = require('bitcoinjs-lib');
+
+import Base64Utils from '../utils/Base64Utils';
+
 import { SATS_PER_BTC } from '../stores/UnitsStore';
+
+import { walletrpc } from '../proto/lightning';
 
 const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBech = /^(bc1|BC1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
 
+/*
+ BOLT 11
+ https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#human-readable-part
+ lnbc - mainnet
+ lntb - testnet
+ lntbs - signet
+ lnbcrt - regtest
+*/
 const lnInvoice =
-    /^(lnbcrt|lntb|lnbc|LNBCRT|LNTB|LNBC)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+    /^(lnbc|lntb|lntbs|lnbcrt|LNBC|LNTB|LNTBS|LNBCRT)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* testnet */
@@ -26,6 +40,23 @@ const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 
 /* npub */
 const npubFormat = /^npub1[0-9a-z]{58}$/;
+
+/* xpub,ypub,zpub,vpub */
+const xpubFormat = /^(xpub|ypub|zpub|vpub|tpub)(.*)/;
+
+/* psbt */
+const psbt = /^((cHN)|(psbt))[,:]?.*$/;
+
+/* string wallet export */
+const stringWalletExport =
+    /^\[[0-9a-fA-F]+\/\d+[',h]\/\d+[',h]\/\d+[',h]\](xpub|ypub|zpub|vpub|tpub)[a-zA-Z0-9]+/;
+
+/* descriptors */
+const wpkhDescriptor =
+    /^wpkh\(\[[a-zA-Z0-9]+\/[0-9]+h\/[0-9]+h\/[0-9]+h\](xpub|ypub|zpub|vpub|tpub)[a-zA-Z0-9]+\/<([0-9]+);([0-9]+)>\/[*]\)#([a-zA-Z0-9]+)$/;
+
+const nestedWpkhDescriptor =
+    /^sh\(wpkh\(\[[a-zA-Z0-9]+\/[0-9]+h\/[0-9]+h\/[0-9]+h\](xpub|ypub|zpub|vpub|tpub)[a-zA-Z0-9]+\/<([0-9]+);([0-9]+)>\/[*]\)\)#([a-zA-Z0-9]+)$/;
 
 export const CUSTODIAL_LNDHUBS = [
     'https://lndhub.io',
@@ -148,6 +179,123 @@ class AddressUtils {
     isValidLightningAddress = (input: string) => lightningAddress.test(input);
 
     isValidNpub = (input: string) => npubFormat.test(input);
+
+    isValidXpub = (input: string) => xpubFormat.test(input);
+
+    isPsbt = (input: string) => psbt.test(input);
+
+    isValidTxHex = (txHex: string) => {
+        try {
+            bitcoin.Transaction.fromHex(txHex);
+            return true; // Parsing succeeded, so it's a valid transaction hex
+        } catch (error) {
+            return false; // Parsing failed, so it's not a valid transaction hex
+        }
+    };
+
+    isKeystoreWalletExport = (walletExport: string) => {
+        try {
+            const parsed = JSON.parse(walletExport);
+            if (parsed.keystore?.xpub && parsed.keystore?.ckcc_xfp) return true;
+            return false;
+        } catch (error) {
+            return false;
+        }
+    };
+
+    processKeystoreWalletExport = (input: string) => {
+        try {
+            const parsed = JSON.parse(input);
+            const { keystore } = parsed;
+            const { xpub, label, ckcc_xfp } = keystore;
+
+            return {
+                MasterFingerprint: Base64Utils.mfpIntToBytes(ckcc_xfp),
+                ExtPubKey: xpub,
+                Label: label
+            };
+        } catch (e: any) {
+            // console.error('Error processing wallet export');
+            return {
+                MasterFingerprint: '',
+                ExtPubKey: '',
+                Label: ''
+            };
+        }
+    };
+
+    isJsonWalletExport = (walletExport: string) => {
+        try {
+            const parsed = JSON.parse(walletExport);
+            if (parsed.MasterFingerprint && parsed.ExtPubKey) return true;
+            return false;
+        } catch (error) {
+            return false;
+        }
+    };
+
+    isStringWalletExport = (input: string) => stringWalletExport.test(input);
+
+    processStringWalletExport = (input: string) => {
+        try {
+            const MasterFingerprint = input.split('[')[1].split('/')[0];
+            const ExtPubKey = input.split(']')[1];
+
+            return {
+                MasterFingerprint,
+                ExtPubKey
+            };
+        } catch (e: any) {
+            // console.error('Error processing wallet export');
+            return {
+                MasterFingerprint: '',
+                ExtPubKey: ''
+            };
+        }
+    };
+
+    isWpkhDescriptor = (input: string) => wpkhDescriptor.test(input);
+    isNestedWpkhDescriptor = (input: string) =>
+        nestedWpkhDescriptor.test(input);
+
+    processWpkhDescriptor = (input: string) => {
+        try {
+            const MasterFingerprint = input.split('wpkh([')[1].split('/')[0];
+            const ExtPubKey = input.split(']')[1].split('/')[0];
+            const AddressType = walletrpc.AddressType.WITNESS_PUBKEY_HASH;
+
+            return {
+                MasterFingerprint,
+                ExtPubKey,
+                AddressType
+            };
+        } catch (e: any) {
+            return {
+                MasterFingerprint: '',
+                ExtPubKey: ''
+            };
+        }
+    };
+
+    processNestedWpkhDescriptor = (input: string) => {
+        try {
+            const MasterFingerprint = input.split('sh(wpkh([')[1].split('/')[0];
+            const ExtPubKey = input.split(']')[1].split('/')[0];
+            const AddressType =
+                walletrpc.AddressType.NESTED_WITNESS_PUBKEY_HASH;
+
+            return {
+                MasterFingerprint,
+                ExtPubKey,
+                AddressType
+            };
+        } catch (e: any) {
+            return {
+                MasterFingerprint: '',
+                ExtPubKey: ''
+            };
+        }
+    };
 }
 
 const addressUtils = new AddressUtils();

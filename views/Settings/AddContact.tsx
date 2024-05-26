@@ -16,15 +16,8 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import { Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
-
-import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
-import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
-import KeySecurity from '../../assets/images/SVG/Key Security.svg';
-import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
-import AddIcon from '../../assets/images/SVG/Add.svg';
-import Scan from '../../assets/images/SVG/Scan.svg';
-import { themeColor } from '../../utils/ThemeUtils';
-import AddressUtils from '../../utils/AddressUtils';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
@@ -32,10 +25,24 @@ import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import { Row } from '../../components/layout/Row';
 
+import AddressUtils from '../../utils/AddressUtils';
+import { getPhoto } from '../../utils/PhotoUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+
+import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
+import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
+import KeySecurity from '../../assets/images/SVG/Key Security.svg';
+import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
+import AddIcon from '../../assets/images/SVG/Add.svg';
+import Scan from '../../assets/images/SVG/Scan.svg';
 import Star from '../../assets/images/SVG/Star.svg';
 
 interface AddContactProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<
+        'AddContact',
+        { isEdit: boolean; prefillContact: Contact; isNostrContact: boolean }
+    >;
 }
 
 interface Contact {
@@ -111,7 +118,7 @@ export default class AddContact extends React.Component<
     };
 
     saveContact = async () => {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
         const {
             lnAddress,
             onchainAddress,
@@ -124,9 +131,7 @@ export default class AddContact extends React.Component<
             isFavourite
         } = this.state;
 
-        const isEdit = !!navigation.getParam('isEdit', false);
-        const prefillContact = navigation.getParam('prefillContact', null);
-        const isNostrContact = navigation.getParam('isNostrContact', null);
+        const { isEdit, prefillContact, isNostrContact } = route.params ?? {};
 
         try {
             // Retrieve existing contacts from storage
@@ -166,7 +171,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact updated successfully!');
-                navigation.navigate('Contacts', { loading: true });
+                navigation.popTo('Contacts');
             } else {
                 // Creating a new contact
                 const contactId = uuidv4();
@@ -195,7 +200,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact saved successfully!');
-                navigation.navigate('Contacts', { loading: true });
+                navigation.popTo('Contacts');
 
                 // Reset the input fields after saving the contact
                 this.setState({
@@ -216,8 +221,8 @@ export default class AddContact extends React.Component<
     };
 
     deleteContact = async () => {
-        const { navigation } = this.props;
-        const prefillContact = navigation.getParam('prefillContact', null);
+        const { navigation, route } = this.props;
+        const prefillContact = route.params?.prefillContact;
 
         if (prefillContact) {
             try {
@@ -238,7 +243,7 @@ export default class AddContact extends React.Component<
                 );
 
                 console.log('Contact deleted successfully!');
-                navigation.navigate('Contacts', { loading: true });
+                navigation.popTo('Contacts');
             } catch (error) {
                 console.log('Error deleting contact:', error);
             }
@@ -334,15 +339,9 @@ export default class AddContact extends React.Component<
         this.handlePrefillContact();
     }
 
-    componentDidUpdate(prevProps) {
-        const prefillContact = this.props.navigation.getParam(
-            'prefillContact',
-            null
-        );
-        const prevPrefillContact = prevProps.navigation.getParam(
-            'prefillContact',
-            null
-        );
+    componentDidUpdate(prevProps: AddContactProps) {
+        const prefillContact = this.props.route.params?.prefillContact;
+        const prevPrefillContact = prevProps.route.params?.prefillContact;
 
         // Check if the prefillContact prop has changed
         if (prefillContact !== prevPrefillContact) {
@@ -351,10 +350,7 @@ export default class AddContact extends React.Component<
     }
 
     handlePrefillContact() {
-        const prefillContact = this.props.navigation.getParam(
-            'prefillContact',
-            null
-        );
+        const prefillContact = this.props.route.params?.prefillContact;
 
         if (prefillContact) {
             this.setState({
@@ -369,14 +365,6 @@ export default class AddContact extends React.Component<
                 isFavourite: prefillContact.isFavourite
             });
         }
-    }
-
-    getPhoto(photo): string {
-        if (photo?.includes('rnfs://')) {
-            const fileName = photo.replace('rnfs://', '');
-            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
-        }
-        return photo || '';
     }
 
     render() {
@@ -428,13 +416,13 @@ export default class AddContact extends React.Component<
                 />
             </TouchableOpacity>
         );
-        const isEdit = !!this.props.navigation.getParam('isEdit', false);
-        const prefillContact = this.props.navigation.getParam(
-            'prefillContact',
-            null
-        );
+        const { isEdit, prefillContact } = this.props.route.params ?? {};
 
-        const ScanBadge = ({ navigation }: { navigation: any }) => (
+        const ScanBadge = ({
+            navigation
+        }: {
+            navigation: StackNavigationProp<any, any>;
+        }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('HandleAnythingQRScanner')}
                 accessibilityLabel={localeString('general.scan')}
@@ -457,34 +445,40 @@ export default class AddContact extends React.Component<
                     }}
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
+                    <Header
+                        leftComponent="Back"
+                        rightComponent={
+                            <Row>
+                                <StarButton
+                                    isFavourite={this.state.isFavourite}
+                                    onPress={this.toggleFavorite}
+                                />
+                                <ScanBadge navigation={navigation} />
+                            </Row>
+                        }
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
+                        navigation={navigation}
+                    />
                     <ScrollView
                         contentContainerStyle={{
                             flexGrow: 1
                         }}
                     >
-                        <Header
-                            leftComponent="Back"
-                            rightComponent={
-                                <Row>
-                                    <StarButton
-                                        isFavourite={this.state.isFavourite}
-                                        onPress={this.toggleFavorite}
-                                    />
-                                    <ScanBadge navigation={navigation} />
-                                </Row>
-                            }
-                            containerStyle={{
-                                borderBottomWidth: 0
-                            }}
-                            navigation={navigation}
-                        />
                         <View
                             style={{
                                 justifyContent: 'center',
                                 alignItems: 'center'
                             }}
                         >
-                            <TouchableOpacity onPress={this.selectPhoto}>
+                            <TouchableOpacity
+                                onPress={
+                                    photo === null
+                                        ? this.selectPhoto
+                                        : () => this.setState({ photo: null })
+                                }
+                            >
                                 <View
                                     style={{
                                         backgroundColor:
@@ -499,7 +493,7 @@ export default class AddContact extends React.Component<
                                     {photo ? (
                                         <Image
                                             source={{
-                                                uri: this.getPhoto(photo)
+                                                uri: getPhoto(photo)
                                             }}
                                             style={styles.photo}
                                         />
@@ -1253,13 +1247,7 @@ export default class AddContact extends React.Component<
                                         this.deleteContact();
                                     }
                                 }}
-                                containerStyle={{
-                                    borderColor: themeColor('delete')
-                                }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}

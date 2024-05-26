@@ -1,5 +1,6 @@
 /* eslint-disable */
 import type {
+    OutPoint,
     KeyDescriptor,
     ScriptKey,
     SendAssetResponse
@@ -59,13 +60,6 @@ export interface PrevId {
     scriptKey: Uint8Array | string;
 }
 
-export interface OutPoint {
-    /** Raw bytes representing the transaction id. */
-    txid: Uint8Array | string;
-    /** The index of the output on the transaction. */
-    outputIndex: number;
-}
-
 export interface SignVirtualPsbtRequest {
     /**
      * The PSBT of the virtual transaction that should be signed. The PSBT must
@@ -109,6 +103,7 @@ export interface NextScriptKeyResponse {
 export interface ProveAssetOwnershipRequest {
     assetId: Uint8Array | string;
     scriptKey: Uint8Array | string;
+    outpoint: OutPoint | undefined;
 }
 
 export interface ProveAssetOwnershipResponse {
@@ -122,6 +117,13 @@ export interface VerifyAssetOwnershipRequest {
 export interface VerifyAssetOwnershipResponse {
     validProof: boolean;
 }
+
+export interface RemoveUTXOLeaseRequest {
+    /** The outpoint of the UTXO to remove the lease for. */
+    outpoint: OutPoint | undefined;
+}
+
+export interface RemoveUTXOLeaseResponse {}
 
 export interface AssetWallet {
     /**
@@ -168,6 +170,7 @@ export interface AssetWallet {
         request?: DeepPartial<NextScriptKeyRequest>
     ): Promise<NextScriptKeyResponse>;
     /**
+     * tapcli: `proofs proveownership`
      * ProveAssetOwnership creates an ownership proof embedded in an asset
      * transition proof. That ownership proof is a signed virtual transaction
      * spending the asset with a valid witness to prove the prover owns the keys
@@ -177,12 +180,20 @@ export interface AssetWallet {
         request?: DeepPartial<ProveAssetOwnershipRequest>
     ): Promise<ProveAssetOwnershipResponse>;
     /**
+     * tapcli: `proofs verifyownership`
      * VerifyAssetOwnership verifies the asset ownership proof embedded in the
      * given transition proof of an asset and returns true if the proof is valid.
      */
     verifyAssetOwnership(
         request?: DeepPartial<VerifyAssetOwnershipRequest>
     ): Promise<VerifyAssetOwnershipResponse>;
+    /**
+     * RemoveUTXOLease removes the lease/lock/reservation of the given managed
+     * UTXO.
+     */
+    removeUTXOLease(
+        request?: DeepPartial<RemoveUTXOLeaseRequest>
+    ): Promise<RemoveUTXOLeaseResponse>;
 }
 
 type Builtin =

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
@@ -17,7 +18,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import TextInput from '../../components/TextInput';
 
 interface PaymentsSettingsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -81,7 +82,7 @@ export default class PaymentsSettings extends React.Component<
             preferredMempoolRate
         } = this.state;
         const { SettingsStore } = this.props;
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettings, settings, implementation } = SettingsStore;
 
         return (
             <Screen>
@@ -214,6 +215,72 @@ export default class PaymentsSettings extends React.Component<
                             </Text>
                         </View>
                     )}
+
+                    {implementation === 'c-lightning-REST' && (
+                        <View>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    paddingTop: 5,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('general.lightning')} -{' '}
+                                {localeString(
+                                    'views.Settings.Payments.defaultFeeLimit'
+                                )}
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexWrap: 'wrap',
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            ></View>
+                            <View
+                                style={{
+                                    flexDirection: 'row'
+                                }}
+                            >
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={feePercentage}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            feePercentage: text
+                                        });
+                                        await updateSettings({
+                                            payments: {
+                                                defaultFeeMethod: 'percent',
+                                                defaultFeePercentage: text,
+                                                defaultFeeFixed: feeLimit,
+                                                timeoutSeconds,
+                                                preferredMempoolRate
+                                            }
+                                        });
+                                    }}
+                                    onPressIn={() =>
+                                        this.setState({
+                                            feeLimitMethod: 'percent'
+                                        })
+                                    }
+                                />
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        paddingTop: 5,
+                                        color: themeColor('text'),
+                                        top: 28,
+                                        right: 28
+                                    }}
+                                >
+                                    {'%'}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+
                     {BackendUtils.isLNDBased() && (
                         <>
                             <Text

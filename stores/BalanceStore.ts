@@ -1,9 +1,13 @@
 import { action, reaction, observable } from 'mobx';
+import BigNumber from 'bignumber.js';
+
 import SettingsStore from './SettingsStore';
 import BackendUtils from './../utils/BackendUtils';
 
 export default class BalanceStore {
     @observable public totalBlockchainBalance: number | string;
+    // total blockchain balance including external accounts
+    @observable public totalBlockchainBalanceAccounts: number | string;
     @observable public confirmedBlockchainBalance: number | string;
     @observable public unconfirmedBlockchainBalance: number | string;
     @observable public loadingBlockchainBalance = false;
@@ -59,24 +63,32 @@ export default class BalanceStore {
     public getBlockchainBalance = (set: boolean, reset: boolean) => {
         this.loadingBlockchainBalance = true;
         if (reset) this.resetBlockchainBalance();
-        return BackendUtils.getBlockchainBalance()
+        return BackendUtils.getBlockchainBalance({})
             .then((data: any) => {
                 // process external accounts
                 const accounts = data.account_balance;
-                if (accounts && accounts.default && data.confirmed_balance)
-                    delete accounts.default;
 
                 const unconfirmedBlockchainBalance = Number(
-                    data.unconfirmed_balance || 0
+                    accounts.default.unconfirmed_balance || 0
                 );
 
                 const confirmedBlockchainBalance = Number(
-                    data.confirmed_balance || 0
+                    accounts.default.confirmed_balance || 0
                 );
 
-                const totalBlockchainBalance = Number(data.total_balance || 0);
+                const totalBlockchainBalance = new BigNumber(
+                    unconfirmedBlockchainBalance
+                )
+                    .plus(confirmedBlockchainBalance)
+                    .toNumber();
+
+                const totalBlockchainBalanceAccounts = Number(
+                    data.total_balance || 0
+                );
 
                 if (set) {
+                    if (accounts && accounts.default && data.confirmed_balance)
+                        delete accounts.default;
                     this.otherAccounts = accounts;
 
                     this.unconfirmedBlockchainBalance =
@@ -84,6 +96,8 @@ export default class BalanceStore {
                     this.confirmedBlockchainBalance =
                         confirmedBlockchainBalance;
                     this.totalBlockchainBalance = totalBlockchainBalance;
+                    this.totalBlockchainBalanceAccounts =
+                        totalBlockchainBalanceAccounts;
                 }
                 this.loadingBlockchainBalance = false;
                 return {

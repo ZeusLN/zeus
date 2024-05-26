@@ -2,6 +2,8 @@ import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
@@ -16,8 +18,9 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface SelectCurrencyProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: Route<'SelectCurrency', { currencyConverter: boolean }>;
 }
 
 interface SelectCurrencyState {
@@ -71,7 +74,7 @@ export default class SelectCurrency extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, route } = this.props;
         const { selectedCurrency, search, fiatRatesSource } = this.state;
         const currencies = this.state.currencies
             .sort((a, b) =>
@@ -82,6 +85,8 @@ export default class SelectCurrency extends React.Component<
             .filter((c) => c.supportedSources?.includes(fiatRatesSource));
 
         const { updateSettings, getSettings }: any = SettingsStore;
+
+        const currencyConverter = route.params?.currencyConverter;
 
         return (
             <Screen>
@@ -131,22 +136,29 @@ export default class SelectCurrency extends React.Component<
                                     backgroundColor: 'transparent'
                                 }}
                                 onPress={async () => {
-                                    await updateSettings({
-                                        fiat: item.value
-                                    }).then(() => {
-                                        getSettings();
-                                        navigation.navigate('Currency', {
-                                            refresh: true
+                                    if (currencyConverter) {
+                                        navigation.popTo('CurrencyConverter', {
+                                            selectedCurrency: item.value
                                         });
-                                    });
+                                    } else {
+                                        await updateSettings({
+                                            fiat: item.value
+                                        }).then(() => {
+                                            getSettings();
+                                            navigation.popTo('Currency', {
+                                                refresh: true
+                                            });
+                                        });
+                                    }
                                 }}
                             >
                                 <ListItem.Content>
                                     <ListItem.Title
                                         style={{
                                             color:
-                                                selectedCurrency ===
-                                                    item.value ||
+                                                (!currencyConverter &&
+                                                    selectedCurrency ===
+                                                        item.value) ||
                                                 (!selectedCurrency &&
                                                     item.value === DEFAULT_FIAT)
                                                     ? themeColor('highlight')
@@ -159,14 +171,15 @@ export default class SelectCurrency extends React.Component<
                                 </ListItem.Content>
                                 {(selectedCurrency === item.value ||
                                     (!selectedCurrency &&
-                                        item.value === DEFAULT_FIAT)) && (
-                                    <View style={{ textAlign: 'right' }}>
-                                        <Icon
-                                            name="check"
-                                            color={themeColor('highlight')}
-                                        />
-                                    </View>
-                                )}
+                                        item.value === DEFAULT_FIAT)) &&
+                                    !currencyConverter && (
+                                        <View style={{ textAlign: 'right' }}>
+                                            <Icon
+                                                name="check"
+                                                color={themeColor('highlight')}
+                                            />
+                                        </View>
+                                    )}
                             </ListItem>
                         )}
                         keyExtractor={(item, index) => `${item.host}-${index}`}

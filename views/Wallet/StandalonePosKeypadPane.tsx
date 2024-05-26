@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Animated, View, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
@@ -21,7 +22,7 @@ import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
 import { PricedIn } from '../../models/Product';
 
 interface PosKeypadPaneProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore?: ChannelsStore;
     FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
@@ -167,7 +168,7 @@ export default class PosKeypadPane extends React.PureComponent<
         ]);
     };
 
-    addItemAndCheckout = () => {
+    addItemAndCheckout = async () => {
         const { PosStore, UnitsStore, SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore!;
         const { units } = UnitsStore!;
@@ -181,21 +182,26 @@ export default class PosKeypadPane extends React.PureComponent<
 
         if (!order) return;
 
+        const amountCalc = amount.replace(/,/g, '.');
+
         order.line_items.push({
             name: localeString('pos.customItem'),
             quantity: 1,
             base_price_money: {
-                amount: units === PricedIn.Fiat ? Number(amount) : 0,
+                amount: units === PricedIn.Fiat ? Number(amountCalc) : 0,
                 sats:
                     units === PricedIn.Sats
-                        ? Number(amount)
+                        ? Number(amountCalc)
                         : units === PricedIn.Bitcoin
-                        ? Number(amount) * SATS_PER_BTC
+                        ? Number(amountCalc) * SATS_PER_BTC
                         : 0
             }
         });
 
         PosStore.recalculateCurrentOrder();
+
+        await PosStore.saveStandaloneOrder(order);
+
         navigation.navigate('Order', { order });
     };
 
@@ -273,12 +279,13 @@ export default class PosKeypadPane extends React.PureComponent<
                                 title={localeString(
                                     'general.request'
                                 ).toUpperCase()}
-                                quinary
+                                quaternary
                                 noUppercase
                                 onPress={() => {
                                     this.addItemAndCheckout();
                                 }}
                                 buttonStyle={{ height: 40 }}
+                                disabled={!amount || amount == '0'}
                             />
                         </View>
                     </View>

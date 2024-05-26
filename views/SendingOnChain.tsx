@@ -2,6 +2,7 @@ import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import CopyBox from '../components/CopyBox';
@@ -16,11 +17,11 @@ import UrlUtils from '../utils/UrlUtils';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
-import Error from '../assets/images/SVG/Error.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 interface SendingOnChainProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
 }
@@ -36,7 +37,7 @@ export default class SendingOnChain extends React.Component<
     };
     async componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
-        navigation.addListener('didFocus', () => {
+        navigation.addListener('focus', () => {
             EncryptedStorage.getItem('note-' + TransactionsStore.txid)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
@@ -48,11 +49,23 @@ export default class SendingOnChain extends React.Component<
     }
     render() {
         const { NodeInfoStore, TransactionsStore, navigation } = this.props;
-        const { loading, publishSuccess, error, error_msg, txid } =
-            TransactionsStore;
+        const {
+            loading,
+            crafting,
+            publishSuccess,
+            error,
+            error_msg,
+            txid,
+            funded_psbt
+        } = TransactionsStore;
         const { testnet } = NodeInfoStore;
         const { storedNotes } = this.state;
         const windowSize = Dimensions.get('window');
+
+        if (funded_psbt)
+            navigation.navigate('PSBT', {
+                psbt: funded_psbt
+            });
 
         return (
             <Screen>
@@ -76,96 +89,105 @@ export default class SendingOnChain extends React.Component<
                                     windowSize.width * windowSize.scale * 0.014
                             }}
                         >
-                            {localeString('views.SendingOnChain.broadcasting')}
+                            {crafting
+                                ? localeString('views.SendingOnChain.crafting')
+                                : localeString(
+                                      'views.SendingOnChain.broadcasting'
+                                  )}
                         </Text>
                     </View>
                 )}
                 {!loading && (
-                    <View
-                        style={{
-                            ...styles.content,
-                            paddingTop: windowSize.height * 0.05
-                        }}
-                    >
-                        {publishSuccess && (
-                            <>
-                                <Wordmark
-                                    height={windowSize.width * 0.25}
-                                    width={windowSize.width}
-                                    fill={themeColor('highlight')}
-                                />
+                    <View style={{ flex: 1 }}>
+                        <View
+                            style={{
+                                ...styles.content,
+                                paddingTop: windowSize.height * 0.05
+                            }}
+                        >
+                            {publishSuccess && (
+                                <>
+                                    <Wordmark
+                                        height={windowSize.width * 0.25}
+                                        width={windowSize.width}
+                                        fill={themeColor('highlight')}
+                                    />
+                                    <View style={{ alignItems: 'center' }}>
+                                        <SuccessAnimation />
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text'),
+                                                paddingTop:
+                                                    windowSize.height * 0.03,
+                                                fontSize:
+                                                    windowSize.width *
+                                                    windowSize.scale *
+                                                    0.017,
+                                                alignSelf: 'center'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.SendingOnChain.success'
+                                            )}
+                                        </Text>
+                                    </View>
+                                </>
+                            )}
+                            {(error || error_msg) && (
                                 <View style={{ alignItems: 'center' }}>
-                                    <SuccessAnimation />
+                                    <ErrorIcon
+                                        width={windowSize.height * 0.13}
+                                        height={windowSize.height * 0.13}
+                                    />
                                     <Text
                                         style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            paddingTop:
-                                                windowSize.height * 0.03,
-                                            fontSize:
-                                                windowSize.width *
-                                                windowSize.scale *
-                                                0.017,
-                                            alignSelf: 'center'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.SendingOnChain.success'
-                                        )}
-                                    </Text>
-                                </View>
-                            </>
-                        )}
-                        {(error || error_msg) && (
-                            <View style={{ alignItems: 'center' }}>
-                                <Error
-                                    width={windowSize.height * 0.13}
-                                    height={windowSize.height * 0.13}
-                                />
-                                <Text
-                                    style={{
-                                        color: '#FF9090',
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 32,
-                                        marginTop: windowSize.height * 0.07
-                                    }}
-                                >
-                                    {localeString('general.error')}
-                                </Text>
-                                {error_msg && (
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
+                                            color: themeColor('warning'),
                                             fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize:
-                                                windowSize.width *
-                                                windowSize.scale *
-                                                0.014,
-                                            textAlign: 'center',
-                                            marginTop: windowSize.height * 0.025
+                                            fontSize: 32,
+                                            margin: 15,
+                                            marginTop: windowSize.height * 0.07
                                         }}
                                     >
-                                        {error_msg}
+                                        {localeString('general.error')}
                                     </Text>
-                                )}
-                            </View>
-                        )}
-                        {txid && (
-                            <View style={{ width: '90%' }}>
-                                <CopyBox
-                                    heading={localeString(
-                                        'views.SendingOnChain.txid'
+                                    {error_msg && (
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize:
+                                                    windowSize.width *
+                                                    windowSize.scale *
+                                                    0.014,
+                                                textAlign: 'center',
+                                                marginTop:
+                                                    windowSize.height * 0.025
+                                            }}
+                                        >
+                                            {error_msg}
+                                        </Text>
                                     )}
-                                    headingCopied={`${localeString(
-                                        'views.SendingOnChain.txid'
-                                    )} ${localeString(
-                                        'components.ExternalLinkModal.copied'
-                                    )}`}
-                                    URL={txid}
-                                    theme="dark"
-                                />
-                            </View>
-                        )}
+                                </View>
+                            )}
+                            {txid && (
+                                <View style={{ width: '90%' }}>
+                                    <CopyBox
+                                        heading={localeString(
+                                            'views.SendingOnChain.txid'
+                                        )}
+                                        headingCopied={`${localeString(
+                                            'views.SendingOnChain.txid'
+                                        )} ${localeString(
+                                            'components.ExternalLinkModal.copied'
+                                        )}`}
+                                        URL={txid}
+                                        theme="dark"
+                                    />
+                                </View>
+                            )}
+                        </View>
 
                         <View style={styles.buttons}>
                             {txid && (
@@ -239,9 +261,7 @@ export default class SendingOnChain extends React.Component<
                                         color: themeColor('background')
                                     }}
                                     containerStyle={{ width: '100%' }}
-                                    onPress={() =>
-                                        navigation.navigate('Wallet')
-                                    }
+                                    onPress={() => navigation.popTo('Wallet')}
                                     buttonStyle={{ height: 40 }}
                                 />
                             )}
@@ -261,6 +281,7 @@ const styles = StyleSheet.create({
         flex: 1
     },
     content: {
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'space-evenly',
         height: '100%'
@@ -268,6 +289,7 @@ const styles = StyleSheet.create({
     buttons: {
         justifyContent: 'flex-end',
         width: '100%',
-        gap: 15
+        gap: 15,
+        bottom: 15
     }
 });

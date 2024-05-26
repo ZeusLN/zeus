@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
 import Pin from '../../components/Pin';
@@ -12,7 +13,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
 
 interface SetDuressPinProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -95,7 +96,7 @@ export default class SetDuressPin extends React.Component<
 
         await updateSettings({ duressPin }).then(() => {
             getSettings();
-            navigation.navigate('Settings', {
+            navigation.popTo('Settings', {
                 refresh: true
             });
         });

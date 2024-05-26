@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { Dimensions, View } from 'react-native';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
@@ -9,7 +11,17 @@ import Text from '../components/Text';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface QRProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<
+        'QR',
+        {
+            value: string;
+            label: string;
+            hideText: boolean;
+            jumboLabel: boolean;
+            logo: any;
+        }
+    >;
 }
 
 interface QRState {
@@ -21,21 +33,12 @@ interface QRState {
 }
 
 export default class QR extends React.PureComponent<QRProps, QRState> {
-    constructor(props: any) {
+    constructor(props: QRProps) {
         super(props);
 
-        const value: string = this.props.navigation.getParam('value', '');
-        const label: string = this.props.navigation.getParam('label', '');
-        const hideText: boolean = this.props.navigation.getParam(
-            'hideText',
-            false
-        );
-        const jumboLabel: boolean = this.props.navigation.getParam(
-            'jumboLabel',
-            false
-        );
-
-        const logo: any = this.props.navigation.getParam('logo', null);
+        const value = props.route.params?.value ?? '';
+        const label = props.route.params?.label ?? '';
+        const { hideText, jumboLabel, logo } = props.route.params ?? {};
 
         this.state = {
             value,

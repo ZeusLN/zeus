@@ -12,7 +12,7 @@ import Base64Utils from '../utils/Base64Utils';
 /**
  * @throws
  */
-export const openChannel = async (
+export const openChannelSync = async (
     pubkey: string,
     amount: number,
     private_channel: boolean,
@@ -119,11 +119,62 @@ export const openChannelAll = async (
 /**
  * @throws
  */
+export const openChannel = async (
+    pubkey: string,
+    amount: number,
+    private_channel: boolean,
+    fee_rate_sat?: number,
+    scidAlias?: boolean,
+    min_confs?: number,
+    spend_unconfirmed?: boolean,
+    simpleTaprootChannel?: boolean,
+    fund_max?: boolean,
+    utxos?: Array<string>,
+    funding_shim?: any
+): Promise<string> => {
+    let options: any = {
+        node_pubkey: Base64Utils.hexToBase64(pubkey),
+        local_funding_amount: amount ? Long.fromValue(amount) : undefined,
+        private: private_channel,
+        sat_per_vbyte: fee_rate_sat ? Long.fromValue(fee_rate_sat) : undefined,
+        scid_alias: scidAlias,
+        min_confs,
+        spend_unconfirmed,
+        fund_max,
+        outpoints: utxos
+            ? utxos.map((utxo: string) => {
+                  const [txid_str, output_index] = utxo.split(':');
+                  return {
+                      txid_str,
+                      output_index: Number(output_index)
+                  };
+              })
+            : undefined,
+        funding_shim
+    };
+
+    if (simpleTaprootChannel)
+        options.commitment_type = lnrpc.CommitmentType.SIMPLE_TAPROOT;
+    const response = await sendStreamCommand<
+        lnrpc.IOpenChannelRequest,
+        lnrpc.OpenChannelRequest
+    >({
+        request: lnrpc.OpenChannelRequest,
+        method: 'OpenChannel',
+        options
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
 export const closeChannel = async (
     funding_txid: string,
     output_index: number,
     force?: boolean,
-    sat_per_vbyte?: number
+    sat_per_vbyte?: number,
+    delivery_address?: string
 ): Promise<string> => {
     const response = await sendStreamCommand<
         lnrpc.ICloseChannelRequest,
@@ -140,6 +191,7 @@ export const closeChannel = async (
                 sat_per_vbyte: sat_per_vbyte
                     ? Long.fromValue(sat_per_vbyte)
                     : undefined,
+                delivery_address,
                 force
             }
         },
@@ -396,10 +448,18 @@ export const decodeChannelAcceptRequest = (
     });
 };
 
-// TODO error handling
 export const decodeChannelEvent = (data: string): lnrpc.ChannelEventUpdate => {
     return decodeStreamResult<lnrpc.ChannelEventUpdate>({
         response: lnrpc.ChannelEventUpdate,
+        base64Result: data
+    });
+};
+
+export const decodeOpenStatusUpdate = (
+    data: string
+): lnrpc.OpenStatusUpdate => {
+    return decodeStreamResult<lnrpc.OpenStatusUpdate>({
+        response: lnrpc.OpenStatusUpdate,
         base64Result: data
     });
 };

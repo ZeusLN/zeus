@@ -1,6 +1,5 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-
 import {
     BackHandler,
     Dimensions,
@@ -10,6 +9,8 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import LnurlPaySuccess from './LnurlPay/Success';
 
 import Button from '../components/Button';
@@ -25,12 +26,12 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Clock from '../assets/images/SVG/Clock.svg';
-import Error from '../assets/images/SVG/Error.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import CopyBox from '../components/CopyBox';
 
 interface SendingLightningProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
 }
@@ -49,7 +50,7 @@ export default class SendingLightning extends React.Component<
     componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
-        navigation.addListener('didFocus', () => {
+        navigation.addListener('focus', () => {
             const noteKey =
                 typeof TransactionsStore.payment_hash === 'string'
                     ? TransactionsStore.payment_hash
@@ -78,7 +79,7 @@ export default class SendingLightning extends React.Component<
             (this.successfullySent(TransactionsStore) ||
                 this.inTransit(TransactionsStore))
         ) {
-            navigation.navigate('Wallet');
+            navigation.popTo('Wallet');
             return true;
         }
         return false;
@@ -154,125 +155,92 @@ export default class SendingLightning extends React.Component<
                     </View>
                 )}
                 {!loading && (
-                    <View
-                        style={{
-                            ...styles.content,
-                            paddingTop: windowSize.height * 0.05
-                        }}
-                    >
-                        {(!!success || !!inTransit) && !error && (
-                            <Wordmark
-                                height={windowSize.width * 0.25}
-                                width={windowSize.width}
-                                fill={themeColor('highlight')}
-                            />
-                        )}
-                        {!!success && !error && (
-                            <>
-                                <PaidIndicator />
-                                <View style={{ alignItems: 'center' }}>
-                                    <SuccessAnimation />
+                    <>
+                        <View
+                            style={{
+                                ...styles.content,
+                                paddingTop: windowSize.height * 0.05
+                            }}
+                        >
+                            {(!!success || !!inTransit) && !error && (
+                                <Wordmark
+                                    height={windowSize.width * 0.25}
+                                    width={windowSize.width}
+                                    fill={themeColor('highlight')}
+                                />
+                            )}
+                            {!!success && !error && (
+                                <>
+                                    <PaidIndicator />
+                                    <View style={{ alignItems: 'center' }}>
+                                        <SuccessAnimation />
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                paddingTop:
+                                                    windowSize.height * 0.03,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize:
+                                                    windowSize.width *
+                                                    windowSize.scale *
+                                                    0.017
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.SendingLightning.success'
+                                            )}
+                                        </Text>
+                                    </View>
+                                </>
+                            )}
+                            {!!inTransit && !error && (
+                                <View
+                                    style={{
+                                        padding: 20,
+                                        marginTop: 10,
+                                        marginBottom: 10,
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <Clock
+                                        color={themeColor('bitcoin')}
+                                        width={windowSize.height * 0.2}
+                                        height={windowSize.height * 0.2}
+                                    />
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            paddingTop:
-                                                windowSize.height * 0.03,
                                             fontFamily: 'PPNeueMontreal-Book',
                                             fontSize:
                                                 windowSize.width *
                                                 windowSize.scale *
-                                                0.017
+                                                0.014,
+                                            marginTop: windowSize.height * 0.03,
+                                            textAlign: 'center'
                                         }}
                                     >
                                         {localeString(
-                                            'views.SendingLightning.success'
+                                            'views.SendingLightning.inTransit'
                                         )}
                                     </Text>
                                 </View>
-                            </>
-                        )}
-                        {!!inTransit && !error && (
-                            <View
-                                style={{
-                                    padding: 20,
-                                    marginTop: 10,
-                                    marginBottom: 10,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <Clock
-                                    color={themeColor('bitcoin')}
-                                    width={windowSize.height * 0.2}
-                                    height={windowSize.height * 0.2}
-                                />
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize:
-                                            windowSize.width *
-                                            windowSize.scale *
-                                            0.014,
-                                        marginTop: windowSize.height * 0.03,
-                                        textAlign: 'center'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.SendingLightning.inTransit'
-                                    )}
-                                </Text>
-                            </View>
-                        )}
-                        {LnurlPayStore.isZaplocker && (!success || !!error) && (
-                            <View
-                                style={{
-                                    padding: 20,
-                                    marginTop: 10,
-                                    marginBottom: 10,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <Clock
-                                    color={themeColor('bitcoin')}
-                                    width={windowSize.height * 0.2}
-                                    height={windowSize.height * 0.2}
-                                />
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize:
-                                            windowSize.width *
-                                            windowSize.scale *
-                                            0.014,
-                                        marginTop: windowSize.height * 0.03,
-                                        textAlign: 'center'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.SendingLightning.isZaplocker'
-                                    )}
-                                </Text>
-                            </View>
-                        )}
-                        {(!!error || !!payment_error) &&
-                            !LnurlPayStore.isZaplocker && (
-                                <View style={{ alignItems: 'center' }}>
-                                    <Error
-                                        width={windowSize.height * 0.13}
-                                        height={windowSize.height * 0.13}
-                                    />
-                                    <Text
+                            )}
+                            {LnurlPayStore.isZaplocker &&
+                                (!success || !!error) && (
+                                    <View
                                         style={{
-                                            color: '#FF9090',
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 32,
-                                            marginTop: windowSize.height * 0.07
+                                            padding: 20,
+                                            marginTop: 10,
+                                            marginBottom: 10,
+                                            alignItems: 'center'
                                         }}
                                     >
-                                        {localeString('general.error')}
-                                    </Text>
-                                    {(payment_error || error_msg) && (
+                                        <Clock
+                                            color={themeColor('bitcoin')}
+                                            width={windowSize.height * 0.2}
+                                            height={windowSize.height * 0.2}
+                                        />
                                         <Text
                                             style={{
                                                 color: themeColor('text'),
@@ -282,126 +250,142 @@ export default class SendingLightning extends React.Component<
                                                     windowSize.width *
                                                     windowSize.scale *
                                                     0.014,
-                                                textAlign: 'center',
                                                 marginTop:
-                                                    windowSize.height * 0.025
-                                            }}
-                                        >
-                                            {payment_error || error_msg}
-                                        </Text>
-                                    )}
-                                </View>
-                            )}
-                        {!!success &&
-                            !error &&
-                            !!payment_preimage &&
-                            payment_hash === LnurlPayStore.paymentHash &&
-                            LnurlPayStore.successAction && (
-                                <View style={{ width: '90%' }}>
-                                    <LnurlPaySuccess
-                                        color="white"
-                                        domain={LnurlPayStore.domain}
-                                        successAction={
-                                            LnurlPayStore.successAction
-                                        }
-                                        preimage={payment_preimage}
-                                        scrollable={true}
-                                        maxHeight={windowSize.height * 0.15}
-                                    />
-                                </View>
-                            )}
-                        {!!payment_preimage &&
-                            !isIncomplete &&
-                            !error &&
-                            !payment_error && (
-                                <View style={{ width: '90%' }}>
-                                    <CopyBox
-                                        heading={localeString(
-                                            'views.Payment.paymentPreimage'
-                                        )}
-                                        headingCopied={`${localeString(
-                                            'views.Payment.paymentPreimage'
-                                        )} ${localeString(
-                                            'components.ExternalLinkModal.copied'
-                                        )}`}
-                                        theme="dark"
-                                        URL={payment_preimage}
-                                    />
-                                </View>
-                            )}
-                        {
-                            <View
-                                style={[
-                                    styles.buttons,
-                                    !noteKey && { marginTop: 14 }
-                                ]}
-                            >
-                                {noteKey && !error && !payment_error && (
-                                    <Button
-                                        title={
-                                            storedNotes
-                                                ? localeString(
-                                                      'views.SendingLightning.UpdateNote'
-                                                  )
-                                                : localeString(
-                                                      'views.SendingLightning.AddANote'
-                                                  )
-                                        }
-                                        onPress={() =>
-                                            navigation.navigate('AddNotes', {
-                                                payment_hash: noteKey
-                                            })
-                                        }
-                                        secondary
-                                        buttonStyle={{ height: 40 }}
-                                    />
-                                )}
-                                {(payment_error == 'FAILURE_REASON_NO_ROUTE' ||
-                                    payment_error ==
-                                        localeString(
-                                            'error.failureReasonNoRoute'
-                                        )) && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                textAlign: 'center',
-                                                color: 'white',
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                padding: 20,
-                                                fontSize: 14
+                                                    windowSize.height * 0.03,
+                                                textAlign: 'center'
                                             }}
                                         >
                                             {localeString(
-                                                'views.SendingLightning.lowFeeLimitMessage'
+                                                'views.SendingLightning.isZaplocker'
                                             )}
                                         </Text>
-                                        <Button
-                                            title={localeString(
-                                                'views.SendingLightning.tryAgain'
-                                            )}
-                                            icon={{
-                                                name: 'return-up-back',
-                                                type: 'ionicon',
-                                                size: 25
-                                            }}
-                                            onPress={() => navigation.goBack()}
-                                            buttonStyle={{
-                                                backgroundColor: 'white',
-                                                height: 40
-                                            }}
-                                            containerStyle={{
-                                                width: '100%',
-                                                margin: 10
-                                            }}
-                                        />
-                                    </>
+                                    </View>
                                 )}
-                                {(payment_error == 'FAILURE_REASON_TIMEOUT' ||
-                                    payment_error ==
-                                        localeString(
-                                            'error.failureReasonTimeout'
-                                        )) && (
+                            {(!!error || !!payment_error) &&
+                                !LnurlPayStore.isZaplocker && (
+                                    <View style={{ alignItems: 'center' }}>
+                                        <ErrorIcon
+                                            width={windowSize.height * 0.13}
+                                            height={windowSize.height * 0.13}
+                                        />
+                                        <Text
+                                            style={{
+                                                color: themeColor('warning'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize: 32,
+                                                marginTop:
+                                                    windowSize.height * 0.07
+                                            }}
+                                        >
+                                            {localeString('general.error')}
+                                        </Text>
+                                        {(payment_error || error_msg) && (
+                                            <Text
+                                                style={{
+                                                    color: themeColor('text'),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    fontSize:
+                                                        windowSize.width *
+                                                        windowSize.scale *
+                                                        0.014,
+                                                    textAlign: 'center',
+                                                    marginTop:
+                                                        windowSize.height *
+                                                        0.025,
+                                                    padding: 5
+                                                }}
+                                            >
+                                                {payment_error || error_msg}
+                                            </Text>
+                                        )}
+                                    </View>
+                                )}
+                            {!!success &&
+                                !error &&
+                                !!payment_preimage &&
+                                payment_hash === LnurlPayStore.paymentHash &&
+                                LnurlPayStore.successAction && (
+                                    <View style={{ width: '90%' }}>
+                                        <LnurlPaySuccess
+                                            color="white"
+                                            domain={LnurlPayStore.domain}
+                                            successAction={
+                                                LnurlPayStore.successAction
+                                            }
+                                            preimage={payment_preimage}
+                                            scrollable={true}
+                                            maxHeight={windowSize.height * 0.15}
+                                        />
+                                    </View>
+                                )}
+                            {!!payment_preimage &&
+                                !isIncomplete &&
+                                !error &&
+                                !payment_error && (
+                                    <View style={{ width: '90%' }}>
+                                        <CopyBox
+                                            heading={localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )}
+                                            headingCopied={`${localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )} ${localeString(
+                                                'components.ExternalLinkModal.copied'
+                                            )}`}
+                                            theme="dark"
+                                            URL={payment_preimage}
+                                        />
+                                    </View>
+                                )}
+                        </View>
+
+                        <View
+                            style={[
+                                styles.buttons,
+                                !noteKey && { marginTop: 14 }
+                            ]}
+                        >
+                            {noteKey && !error && !payment_error && (
+                                <Button
+                                    title={
+                                        storedNotes
+                                            ? localeString(
+                                                  'views.SendingLightning.UpdateNote'
+                                              )
+                                            : localeString(
+                                                  'views.SendingLightning.AddANote'
+                                              )
+                                    }
+                                    onPress={() =>
+                                        navigation.navigate('AddNotes', {
+                                            payment_hash: noteKey
+                                        })
+                                    }
+                                    secondary
+                                    buttonStyle={{ height: 40 }}
+                                />
+                            )}
+                            {(payment_error == 'FAILURE_REASON_NO_ROUTE' ||
+                                payment_error ==
+                                    localeString(
+                                        'error.failureReasonNoRoute'
+                                    )) && (
+                                <>
+                                    <Text
+                                        style={{
+                                            textAlign: 'center',
+                                            color: 'white',
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            padding: 20,
+                                            fontSize: 14
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.SendingLightning.lowFeeLimitMessage'
+                                        )}
+                                    </Text>
                                     <Button
                                         title={localeString(
                                             'views.SendingLightning.tryAgain'
@@ -421,36 +405,61 @@ export default class SendingLightning extends React.Component<
                                             margin: 10
                                         }}
                                     />
-                                )}
+                                </>
+                            )}
+                            {(payment_error == 'FAILURE_REASON_TIMEOUT' ||
+                                payment_error ==
+                                    localeString(
+                                        'error.failureReasonTimeout'
+                                    )) && (
+                                <Button
+                                    title={localeString(
+                                        'views.SendingLightning.tryAgain'
+                                    )}
+                                    icon={{
+                                        name: 'return-up-back',
+                                        type: 'ionicon',
+                                        size: 25
+                                    }}
+                                    onPress={() => navigation.goBack()}
+                                    buttonStyle={{
+                                        backgroundColor: 'white',
+                                        height: 40
+                                    }}
+                                    containerStyle={{
+                                        width: '100%',
+                                        margin: 10
+                                    }}
+                                />
+                            )}
 
-                                {(!!error ||
-                                    !!payment_error ||
-                                    !!success ||
-                                    !!inTransit) && (
-                                    <Button
-                                        title={localeString(
-                                            'views.SendingLightning.goToWallet'
-                                        )}
-                                        icon={{
-                                            name: 'list',
-                                            size: 25,
-                                            color: themeColor('background')
-                                        }}
-                                        onPress={() =>
-                                            navigation.navigate('Wallet', {
-                                                refresh: true
-                                            })
-                                        }
-                                        buttonStyle={{ height: 40 }}
-                                        titleStyle={{
-                                            color: themeColor('background')
-                                        }}
-                                        containerStyle={{ width: '100%' }}
-                                    />
-                                )}
-                            </View>
-                        }
-                    </View>
+                            {(!!error ||
+                                !!payment_error ||
+                                !!success ||
+                                !!inTransit) && (
+                                <Button
+                                    title={localeString(
+                                        'views.SendingLightning.goToWallet'
+                                    )}
+                                    icon={{
+                                        name: 'list',
+                                        size: 25,
+                                        color: themeColor('background')
+                                    }}
+                                    onPress={() =>
+                                        navigation.popTo('Wallet', {
+                                            refresh: true
+                                        })
+                                    }
+                                    buttonStyle={{ height: 40 }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
+                                    containerStyle={{ width: '100%' }}
+                                />
+                            )}
+                        </View>
+                    </>
                 )}
             </Screen>
         );
@@ -462,6 +471,7 @@ const styles = StyleSheet.create({
         flex: 1
     },
     content: {
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'space-evenly',
         height: '100%'
@@ -469,6 +479,7 @@ const styles = StyleSheet.create({
     buttons: {
         width: '100%',
         justifyContent: 'space-between',
-        gap: 15
+        gap: 15,
+        bottom: 15
     }
 });

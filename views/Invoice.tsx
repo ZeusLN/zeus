@@ -1,8 +1,9 @@
 import * as React from 'react';
 import EncryptedStorage from 'react-native-encrypted-storage';
-
 import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { inject } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import SettingsStore from '../stores/SettingsStore';
 
@@ -23,8 +24,9 @@ import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
 
 interface InvoiceProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
+    route: Route<'InvoiceView', { invoice: Invoice }>;
 }
 
 @inject('SettingsStore')
@@ -33,9 +35,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         storedNotes: ''
     };
     async componentDidMount() {
-        const { navigation } = this.props;
-        const invoice: Invoice = navigation.getParam('invoice', null);
-        navigation.addListener('didFocus', () => {
+        const { navigation, route } = this.props;
+        const invoice = route.params?.invoice;
+        navigation.addListener('focus', () => {
             const noteKey = invoice.getRPreimage || invoice.payment_hash;
             EncryptedStorage.getItem('note-' + noteKey)
                 .then((storedNotes) => {
@@ -48,9 +50,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, route } = this.props;
         const { storedNotes } = this.state;
-        const invoice: Invoice = navigation.getParam('invoice', null);
+        const invoice = route.params?.invoice;
         const locale = SettingsStore?.settings.locale;
         invoice.determineFormattedOriginalTimeUntilExpiry(locale);
         invoice.determineFormattedRemainingTimeUntilExpiry(locale);
@@ -68,7 +70,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             formattedOriginalTimeUntilExpiry,
             formattedTimeUntilExpiry,
             getPaymentRequest,
-            getKeysendMessage
+            getKeysendMessage,
+            is_amp,
+            value
         } = invoice;
         const privateInvoice = invoice.private;
         const noteKey = getRPreimage || payment_hash;
@@ -103,7 +107,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Invoice.title'),
+                        text: is_amp
+                            ? localeString('views.Receive.ampInvoice')
+                            : localeString('views.Invoice.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -150,6 +156,18 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
+                        {is_amp && isPaid && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.invoiceAmount'
+                                )}
+                                value={
+                                    <Amount sats={value} sensitive toggleable />
+                                }
+                                sensitive
+                            />
+                        )}
+
                         <KeyValue
                             keyValue={localeString('views.Invoice.memo')}
                             value={
@@ -166,7 +184,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
-                        {isPaid && (
+                        {isPaid && !is_amp && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.settleDate'
@@ -272,7 +290,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                         {storedNotes && (
                             <KeyValue
-                                keyValue={localeString('views.Payment.notes')}
+                                keyValue={localeString('general.note')}
                                 value={storedNotes}
                                 sensitive
                                 mempoolLink={() =>
@@ -282,30 +300,30 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 }
                             />
                         )}
-
-                        {noteKey && (
-                            <Button
-                                title={
-                                    storedNotes
-                                        ? localeString(
-                                              'views.SendingLightning.UpdateNote'
-                                          )
-                                        : localeString(
-                                              'views.SendingLightning.AddANote'
-                                          )
-                                }
-                                onPress={() =>
-                                    navigation.navigate('AddNotes', {
-                                        getRPreimage: noteKey
-                                    })
-                                }
-                                containerStyle={{ marginTop: 15 }}
-                                secondary
-                                noUppercase
-                            />
-                        )}
                     </View>
                 </ScrollView>
+                <View style={{ bottom: 15 }}>
+                    {noteKey && (
+                        <Button
+                            title={
+                                storedNotes
+                                    ? localeString(
+                                          'views.SendingLightning.UpdateNote'
+                                      )
+                                    : localeString(
+                                          'views.SendingLightning.AddANote'
+                                      )
+                            }
+                            onPress={() =>
+                                navigation.navigate('AddNotes', {
+                                    getRPreimage: noteKey
+                                })
+                            }
+                            containerStyle={{ marginTop: 15 }}
+                            noUppercase
+                        />
+                    )}
+                </View>
             </Screen>
         );
     }

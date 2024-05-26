@@ -1,14 +1,18 @@
 import * as React from 'react';
 import {
+    NativeModules,
+    NativeEventEmitter,
     ScrollView,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View
 } from 'react-native';
 
 import { Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import Channel from '../../models/Channel';
 
 import Amount from '../../components/Amount';
@@ -17,9 +21,13 @@ import Button from '../../components/Button';
 import FeeBreakdown from '../../components/FeeBreakdown';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
 import Screen from '../../components/Screen';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -32,19 +40,20 @@ import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import Edit from '../../assets/images/SVG/Edit.svg';
-import Share from '../../assets/images/SVG/Share.svg';
 
 interface ChannelProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
+    route: Route<'Channel', { channel: Channel }>;
 }
 
 interface ChannelState {
     confirmCloseChannel: boolean;
     satPerByte: string;
     forceCloseChannel: boolean;
+    deliveryAddress: string;
     channel: Channel;
 }
 
@@ -54,15 +63,17 @@ export default class ChannelView extends React.Component<
     ChannelProps,
     ChannelState
 > {
+    listener: any;
     constructor(props: ChannelProps) {
         super(props);
-        const { navigation, ChannelsStore } = props;
-        const channel: Channel = navigation.getParam('channel', null);
+        const { route, ChannelsStore } = props;
+        const channel = route.params?.channel;
 
         this.state = {
             confirmCloseChannel: false,
             satPerByte: '',
             forceCloseChannel: false,
+            deliveryAddress: '',
             channel
         };
 
@@ -71,39 +82,36 @@ export default class ChannelView extends React.Component<
         }
     }
 
-    closeChannel = (
-        channelPoint: string,
-        channelId: string,
-        satPerByte?: string | null,
-        forceClose?: boolean | null
+    closeChannel = async (
+        channelPoint?: string,
+        channelId?: string,
+        satPerVbyte?: string | null,
+        forceClose?: boolean | null,
+        deliveryAddress?: string | null
     ) => {
-        const { ChannelsStore, navigation } = this.props;
+        const { ChannelsStore, SettingsStore, navigation } = this.props;
+        const { implementation } = SettingsStore;
 
-        // lnd
+        let funding_txid_str, output_index;
         if (channelPoint) {
-            const [funding_txid_str, output_index] = channelPoint.split(':');
-
-            if (satPerByte) {
-                ChannelsStore.closeChannel(
-                    { funding_txid_str, output_index },
-                    null,
-                    satPerByte,
-                    forceClose
-                );
-            } else {
-                ChannelsStore.closeChannel(
-                    { funding_txid_str, output_index },
-                    null,
-                    null,
-                    forceClose
-                );
-            }
-        } else if (channelId) {
-            // c-lightning, eclair
-            ChannelsStore.closeChannel(null, channelId, satPerByte, forceClose);
+            const [fundingTxidStr, outputIndex] = channelPoint.split(':');
+            funding_txid_str = fundingTxidStr;
+            output_index = outputIndex;
         }
 
-        navigation.navigate('Wallet');
+        const streamingCall = await ChannelsStore.closeChannel(
+            channelPoint ? { funding_txid_str, output_index } : null,
+            channelId ? channelId : null,
+            satPerVbyte ? satPerVbyte : null,
+            forceClose,
+            deliveryAddress ? deliveryAddress : null
+        );
+
+        if (implementation === 'lightning-node-connect') {
+            this.subscribeChannelClose(streamingCall);
+        } else {
+            if (!ChannelsStore.closeChannelErr) navigation.popTo('Wallet');
+        }
     };
 
     handleOnNavigateBack = (satPerByte: string) => {
@@ -112,14 +120,56 @@ export default class ChannelView extends React.Component<
         });
     };
 
+    subscribeChannelClose = (streamingCall: string) => {
+        const { handleChannelClose, handleChannelCloseError } =
+            this.props.ChannelsStore;
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        this.listener = eventEmitter.addListener(
+            streamingCall,
+            (event: any) => {
+                if (event.result && event.result !== 'EOF') {
+                    let result;
+                    try {
+                        result = JSON.parse(event.result);
+                    } catch (e) {
+                        try {
+                            result = JSON.parse(event);
+                        } catch (e2) {
+                            result = event.result || event;
+                        }
+                    }
+                    if (
+                        result &&
+                        (result?.chan_close?.success || result?.close_pending)
+                    ) {
+                        handleChannelClose();
+                        this.listener = null;
+                        this.props.navigation.popTo('Wallet');
+                    } else {
+                        handleChannelCloseError(new Error(result));
+                        this.listener = null;
+                    }
+                }
+            }
+        );
+    };
+
     render() {
-        const { navigation, SettingsStore, NodeInfoStore } = this.props;
-        const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
-            this.state;
+        const { navigation, SettingsStore, NodeInfoStore, ChannelsStore } =
+            this.props;
+        const {
+            channel,
+            confirmCloseChannel,
+            satPerByte,
+            forceCloseChannel,
+            deliveryAddress
+        } = this.state;
         const { settings } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
         const { testnet } = NodeInfoStore;
+        const { closeChannelErr, closingChannel } = ChannelsStore;
 
         const {
             channel_point,
@@ -143,8 +193,8 @@ export default class ChannelView extends React.Component<
             // closed
             closeHeight,
             closeType,
-            open_initiator,
-            close_initiator,
+            getOpenInitiator,
+            getCloseInitiator,
             closing_tx_hash,
             chain_hash,
             settled_balance,
@@ -157,6 +207,7 @@ export default class ChannelView extends React.Component<
             zero_conf,
             getCommitmentType
         } = channel;
+
         const privateChannel = channel.private;
 
         const editableFees: boolean = !(
@@ -181,24 +232,7 @@ export default class ChannelView extends React.Component<
             </TouchableOpacity>
         );
 
-        const KeySend = () => (
-            <TouchableOpacity
-                onPress={() =>
-                    navigation.navigate('Send', {
-                        destination: remotePubkey,
-                        transactionType: 'Keysend',
-                        isValid: true
-                    })
-                }
-            >
-                <Share
-                    fill={themeColor('text')}
-                    style={{ alignSelf: 'center' }}
-                />
-            </TouchableOpacity>
-        );
-
-        const centerComponent = () => {
+        const rightComponent = () => {
             if (
                 editableFees &&
                 this.props.SettingsStore.implementation !== 'embedded-lnd'
@@ -212,8 +246,10 @@ export default class ChannelView extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    centerComponent={centerComponent}
-                    rightComponent={<KeySend />}
+                    onBack={() => {
+                        ChannelsStore.clearCloseChannelErr();
+                    }}
+                    rightComponent={rightComponent}
                     placement="right"
                     navigation={navigation}
                 />
@@ -283,15 +319,17 @@ export default class ChannelView extends React.Component<
                             value={localeString('general.true')}
                         />
                     )}
-                    <KeyValue
-                        keyValue={localeString('views.Channel.unannounced')}
-                        value={
-                            privateChannel
-                                ? localeString('general.true')
-                                : localeString('general.false')
-                        }
-                        color={privateChannel ? 'green' : '#808000'}
-                    />
+                    {!(closeHeight || closeType) && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.unannounced')}
+                            value={
+                                privateChannel
+                                    ? localeString('general.true')
+                                    : localeString('general.false')
+                            }
+                            color={privateChannel ? 'green' : '#808000'}
+                        />
+                    )}
                     {getCommitmentType && (
                         <KeyValue
                             keyValue={localeString(
@@ -328,21 +366,21 @@ export default class ChannelView extends React.Component<
                             sensitive
                         />
                     )}
-                    {open_initiator && (
+                    {getOpenInitiator && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Channel.openInitiator'
                             )}
-                            value={open_initiator}
+                            value={getOpenInitiator}
                             sensitive
                         />
                     )}
-                    {close_initiator && (
+                    {getCloseInitiator && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Channel.closeInitiator'
                             )}
-                            value={close_initiator}
+                            value={getCloseInitiator}
                             sensitive
                         />
                     )}
@@ -376,7 +414,10 @@ export default class ChannelView extends React.Component<
                             }
                         />
                     )}
-                    {(pendingOpen || pendingClose || closing) &&
+                    {(pendingOpen ||
+                        pendingClose ||
+                        closing ||
+                        !BackendUtils.isLNDBased()) &&
                         channel_point && (
                             <KeyValue
                                 keyValue={localeString(
@@ -558,17 +599,19 @@ export default class ChannelView extends React.Component<
                                         })
                                     }
                                     warning={!confirmCloseChannel}
-                                    titleStyle={{
-                                        color: 'white'
-                                    }}
-                                    buttonStyle={{
-                                        backgroundColor: themeColor('delete')
-                                    }}
                                 />
                             </View>
                         )}
                     {confirmCloseChannel && (
                         <View>
+                            {closingChannel && (
+                                <View style={{ margin: 20, marginBottom: 40 }}>
+                                    <LoadingIndicator />
+                                </View>
+                            )}
+                            {!closingChannel && closeChannelErr && (
+                                <ErrorMessage message={closeChannelErr} />
+                            )}
                             {BackendUtils.isLNDBased() && (
                                 <>
                                     <Text
@@ -588,7 +631,33 @@ export default class ChannelView extends React.Component<
                                                 satPerByte: text
                                             });
                                         }}
+                                        navigation={navigation}
                                     />
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                            infoText={localeString(
+                                                'views.Channel.externalAddress.info'
+                                            )}
+                                        >
+                                            {localeString(
+                                                'views.Channel.externalAddress'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'bc1...'}
+                                            value={deliveryAddress}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    deliveryAddress: text
+                                                })
+                                            }
+                                            locked={closingChannel}
+                                        />
+                                    </>
                                     <View style={{ marginBottom: 10 }}>
                                         <Text
                                             style={{
@@ -623,10 +692,10 @@ export default class ChannelView extends React.Component<
                                             channel_point,
                                             channelId,
                                             satPerByte,
-                                            forceCloseChannel
+                                            forceCloseChannel,
+                                            deliveryAddress
                                         )
                                     }
-                                    quinary
                                     warning
                                 />
                             </View>

@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { FlatList, ScrollView, View } from 'react-native';
-import { Icon } from 'react-native-elements';
+import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Row } from '../../../components/layout/Row';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
@@ -22,10 +23,13 @@ import LightningAddressStore from '../../../stores/LightningAddressStore';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
+import ArrowLeft from '../../../assets/images/SVG/Arrow_left.svg';
+
 interface NostrRelaysProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
+    route: Route<'NostrRelays', { setup: boolean; relays: string[] }>;
 }
 
 interface NostrRelaysState {
@@ -53,11 +57,10 @@ export default class NostrRelays extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, route } = this.props;
         const { settings, getSettings } = SettingsStore;
 
-        const setup = navigation.getParam('setup', false);
-        const relays = navigation.getParam('relays', null);
+        const { setup, relays } = route.params ?? {};
 
         await getSettings();
 
@@ -89,18 +92,23 @@ export default class NostrRelays extends React.Component<
                     <Header
                         leftComponent={
                             setup ? (
-                                <Icon
-                                    name="arrow-back"
-                                    onPress={() => {
-                                        navigation.navigate(
-                                            'LightningAddress',
-                                            { relays }
-                                        );
-                                    }}
-                                    color={themeColor('text')}
-                                    underlayColor="transparent"
-                                    size={35}
-                                />
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.popTo('LightningAddress', {
+                                            relays
+                                        })
+                                    }
+                                    accessibilityLabel={localeString(
+                                        'general.goBack'
+                                    )}
+                                >
+                                    <ArrowLeft
+                                        fill={themeColor('text')}
+                                        width="30"
+                                        height="30"
+                                        style={{ alignSelf: 'center' }}
+                                    />
+                                </TouchableOpacity>
                             ) : (
                                 'Back'
                             )
@@ -156,7 +164,8 @@ export default class NostrRelays extends React.Component<
                                         icon={{
                                             name: 'plus',
                                             type: 'font-awesome',
-                                            size: 25
+                                            size: 25,
+                                            color: themeColor('text')
                                         }}
                                         iconOnly
                                         onPress={async () => {
@@ -242,7 +251,10 @@ export default class NostrRelays extends React.Component<
                                                     icon={{
                                                         name: 'minus',
                                                         type: 'font-awesome',
-                                                        size: 25
+                                                        size: 25,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
                                                     }}
                                                     iconOnly
                                                     onPress={async () => {
@@ -313,6 +325,7 @@ export default class NostrRelays extends React.Component<
                                         `${item.txid}-${index}`
                                     }
                                     onEndReachedThreshold={50}
+                                    scrollEnabled={false}
                                 />
                             ) : (
                                 <Text

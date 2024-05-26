@@ -15,7 +15,11 @@ import { sleep } from './SleepUtils';
 import Base64Utils from './Base64Utils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-import { ELndMobileStatusCodes, gossipSync } from '../lndmobile/index';
+import {
+    ELndMobileStatusCodes,
+    gossipSync,
+    cancelGossipSync
+} from '../lndmobile/index';
 
 import stores from '../stores/Stores';
 
@@ -71,18 +75,6 @@ const writeLndConfig = async (
         ? 'connect'
         : 'addpeer';
 
-    const peerDefaults = `neutrino.${peerMode}=${
-        isTestnet
-            ? 'btcd-testnet.lightning.computer'
-            : 'btcd-mainnet.lightning.computer'
-    }
-    ${!isTestnet ? `neutrino.${peerMode}=btcd1.lnolymp.us` : ''}
-    ${!isTestnet ? `neutrino.${peerMode}=btcd2.lnolymp.us` : ''}
-    ${!isTestnet ? `neutrino.${peerMode}=node.eldamar.icu` : ''}
-    ${!isTestnet ? `neutrino.${peerMode}=noad.sathoarder.com` : ''}
-    ${isTestnet ? `neutrino.${peerMode}=testnet.lnolymp.us` : ''}
-    ${isTestnet ? `neutrino.${peerMode}=testnet.blixtwallet.com` : ''}`;
-
     const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
@@ -90,7 +82,7 @@ const writeLndConfig = async (
     accept-keysend=1
     tlsdisableautofill=1
     maxpendingchannels=1000
-    max-commit-fee-rate-anchors=50
+    max-commit-fee-rate-anchors=21
     payments-expiration-grace-period=168h
     ${rescan ? 'reset-wallet-transactions=true' : ''}
     
@@ -114,12 +106,13 @@ const writeLndConfig = async (
     
     [Neutrino]
     ${
-        stores.settingsStore?.settings?.neutrinoPeers &&
-        stores.settingsStore?.settings?.neutrinoPeers.length > 0
-            ? stores.settingsStore?.settings?.neutrinoPeers.map(
-                  (peer) => `neutrino.${peerMode}=${peer}`
-              )
-            : peerDefaults
+        !isTestnet
+            ? stores.settingsStore?.settings?.neutrinoPeersMainnet
+                  .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
+                  .join('')
+            : stores.settingsStore?.settings?.neutrinoPeersTestnet
+                  .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
+                  .join('')
     }
     ${
         !isTestnet
@@ -131,9 +124,11 @@ const writeLndConfig = async (
             ? 'neutrino.assertfilterheader=660000:08312375fabc082b17fa8ee88443feb350c19a34bb7483f94f7478fa4ad33032'
             : ''
     }
-    neutrino.feeurl=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
     neutrino.broadcasttimeout=11s
     neutrino.persistfilters=true
+
+    [fee]
+    fee.url=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
     
     [autopilot]
     autopilot.active=0
@@ -162,9 +157,25 @@ const writeLndConfig = async (
 };
 
 export async function expressGraphSync() {
-    if (stores.settingsStore.embeddedLndNetwork === 'Mainnet') {
-        const start = new Date();
+    return await new Promise(async (resolve) => {
         stores.syncStore.setExpressGraphSyncStatus(true);
+
+        const start = new Date();
+
+        const timer = setInterval(async () => {
+            console.log('Express graph sync is running...');
+            // Check if the cancellation token is set
+            if (!stores.syncStore.isInExpressGraphSync) {
+                clearInterval(timer);
+                // call cancellation to LND here
+                console.log('Express graph sync cancelling...');
+                cancelGossipSync();
+
+                console.log('Express graph sync cancelled...');
+                resolve(true);
+            }
+        }, 1000);
+
         if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
             log.d('Clearing speedloader files');
             try {
@@ -177,17 +188,24 @@ export async function expressGraphSync() {
 
         try {
             const connectionState = await NetInfo.fetch();
-            const gossipStatus = await gossipSync(connectionState.type);
+            const gossipStatus = await gossipSync(
+                'https://speedloader.lnolymp.us/',
+                connectionState.type
+            );
+
+            clearInterval(timer);
+
             const completionTime =
                 (new Date().getTime() - start.getTime()) / 1000 + 's';
             console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
+            stores.syncStore.setExpressGraphSyncStatus(false);
+            resolve(true);
         } catch (e) {
             log.e('GossipSync exception!', [e]);
+            stores.syncStore.setExpressGraphSyncStatus(false);
+            resolve(true);
         }
-
-        stores.syncStore.setExpressGraphSyncStatus(false);
-    }
-    return;
+    });
 }
 
 export async function initializeLnd(

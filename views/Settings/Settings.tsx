@@ -4,12 +4,15 @@ import {
     StyleSheet,
     Text,
     View,
+    Image,
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
 import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
+import AccountIcon from '../../assets/images/SVG/Account.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
@@ -39,6 +42,7 @@ import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { getPhoto } from '../../utils/PhotoUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -51,7 +55,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import { version } from '../../package.json';
 
 interface SettingsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
@@ -80,15 +84,15 @@ export default class Settings extends React.Component<
         SettingsStore.getSettings();
 
         // triggers when loaded from navigation or back action
-        navigation.addListener('didFocus', () => {
-            SettingsStore.getSettings();
-        });
+        navigation.addListener('focus', this.handleFocus);
     }
 
     componentWillUnmount() {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
+            this.props.navigation.removeListener('focus', this.handleFocus);
     }
+
+    handleFocus = () => this.props.SettingsStore.getSettings();
 
     render() {
         const {
@@ -127,7 +131,10 @@ export default class Settings extends React.Component<
             nodeSubtitle +=
                 implementationDisplayValue[selectedNode.implementation];
 
-            if (selectedNode.embeddedLndNetwork) {
+            if (
+                selectedNode.embeddedLndNetwork &&
+                selectedNode.implementation === 'embedded-lnd'
+            ) {
                 nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
             }
         }
@@ -151,7 +158,8 @@ export default class Settings extends React.Component<
                 />
                 <ScrollView
                     style={{
-                        flex: 1
+                        flex: 1,
+                        marginTop: 10
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
@@ -173,11 +181,20 @@ export default class Settings extends React.Component<
                                     alignItems: 'center'
                                 }}
                             >
-                                <NodeIdenticon
-                                    selectedNode={selectedNode}
-                                    width={50}
-                                    rounded
-                                />
+                                {selectedNode.photo ? (
+                                    <Image
+                                        source={{
+                                            uri: getPhoto(selectedNode.photo)
+                                        }}
+                                        style={styles.photo}
+                                    />
+                                ) : (
+                                    <NodeIdenticon
+                                        selectedNode={selectedNode}
+                                        width={50}
+                                        rounded
+                                    />
+                                )}
                                 <View style={{ flex: 1 }}>
                                     <Text
                                         style={{
@@ -245,7 +262,7 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {BackendUtils.supportsLSPs() && (
+                    {BackendUtils.supportsLSPs() && selectedNode && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -257,9 +274,19 @@ export default class Settings extends React.Component<
                         >
                             <TouchableOpacity
                                 style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('LSPSettings')
-                                }
+                                onPress={() => {
+                                    const supportsLSPS1 =
+                                        BackendUtils.supportsLSPS1customMessage() ||
+                                        BackendUtils.supportsLSPS1rest();
+                                    if (
+                                        BackendUtils.supportsLSPs() &&
+                                        supportsLSPS1
+                                    ) {
+                                        navigation.navigate('LSPServicesList');
+                                    } else {
+                                        navigation.navigate('LSPSettings');
+                                    }
+                                }}
                             >
                                 <View style={styles.icon}>
                                     <CloudIcon
@@ -543,34 +570,43 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
-                    {/* Coming Soon */}
-                    {false && (
+                    {BackendUtils.supportsAccounts() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                // borderRadius: 10,
-                                alignSelf: 'center'
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
                             }}
                         >
-                            {/* <View style={styles.columnField}>
-                                <View style={styles.icon}>
-                                    <AccountIcon stroke={themeColor('text')} />
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Accounts')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <AccountIcon
+                                            fill={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Accounts.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
                                 </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    Accounts
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardIconColor} />
-                                </View>
-                            </View> */}
+                            </TouchableOpacity>
                         </View>
                     )}
+
                     {selectedNode && (
                         <View
                             style={{
@@ -1175,6 +1211,12 @@ const styles = StyleSheet.create({
     icon: {
         width: 50,
         alignItems: 'center'
+    },
+    photo: {
+        alignSelf: 'center',
+        width: 60,
+        height: 60,
+        borderRadius: 68
     },
     columnText: {
         fontSize: 16,

@@ -1,29 +1,33 @@
 import * as React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 
-import BackendUtils from '../../utils/BackendUtils';
 import BalanceStore from '../../stores/BalanceStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import ChannelsStore from '../../stores/ChannelsStore';
+
+import { getPhoto } from '../../utils/PhotoUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import ChannelsStore from '../../stores/ChannelsStore';
+import BackendUtils from '../../utils/BackendUtils';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import { cloneDeep } from 'lodash';
 
 interface NodesProps {
     nodes: any[];
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     edit?: boolean;
     loading?: boolean;
     selectedNode?: number;
@@ -53,12 +57,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     componentDidMount() {
         this.refreshSettings();
 
-        this.props.navigation.addListener('didFocus', this.handleFocus);
+        this.props.navigation.addListener('focus', this.handleFocus);
     }
 
     componentWillUnmount() {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('didFocus');
+            this.props.navigation.removeListener('focus', this.handleFocus);
     }
 
     handleFocus = () => {
@@ -73,7 +77,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         this.setState({
             loading: true
         });
-        await this.props.SettingsStore.getSettings().then((settings: any) => {
+        await this.props.SettingsStore.getSettings().then((settings) => {
             this.setState({
                 loading: false,
                 nodes: settings?.nodes || [],
@@ -177,7 +181,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 />
                 {loading && <LoadingIndicator />}
                 {!loading && !!nodes && nodes.length > 0 && (
-                    <View>
+                    <View style={{ marginBottom: 50 }}>
                         <DragList
                             onReordered={onReordered}
                             data={nodes}
@@ -205,7 +209,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         item.implementation
                                     ];
 
-                                if (item.embeddedLndNetwork) {
+                                if (
+                                    item.implementation === 'embedded-lnd' &&
+                                    item.embeddedLndNetwork
+                                ) {
                                     nodeSubtitle += ` (${item.embeddedLndNetwork})`;
                                 }
 
@@ -235,7 +242,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 NodeInfoStore.reset();
                                                 ChannelsStore.reset();
                                                 setConnectingStatus(true);
-                                                navigation.navigate('Wallet', {
+                                                navigation.popTo('Wallet', {
                                                     refresh: true
                                                 });
                                             });
@@ -247,11 +254,23 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 backgroundColor: 'transparent'
                                             }}
                                         >
-                                            <NodeIdenticon
-                                                selectedNode={item}
-                                                width={35}
-                                                rounded
-                                            />
+                                            {item.photo ? (
+                                                <Image
+                                                    source={{
+                                                        uri: getPhoto(
+                                                            item.photo
+                                                        )
+                                                    }}
+                                                    style={styles.photo}
+                                                />
+                                            ) : (
+                                                <NodeIdenticon
+                                                    selectedNode={item}
+                                                    width={42}
+                                                    rounded
+                                                />
+                                            )}
+
                                             <ListItem.Content>
                                                 <ListItem.Title
                                                     style={{
@@ -293,7 +312,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                         navigation.navigate(
                                                             'NodeConfiguration',
                                                             {
-                                                                node: item,
+                                                                node: cloneDeep(
+                                                                    item
+                                                                ),
                                                                 index,
                                                                 active:
                                                                     selectedNode ===
@@ -361,3 +382,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         );
     }
 }
+
+const styles = StyleSheet.create({
+    photo: {
+        alignSelf: 'center',
+        width: 42,
+        height: 42,
+        borderRadius: 68
+    }
+});

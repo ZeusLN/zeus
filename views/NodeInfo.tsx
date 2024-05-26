@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { RefreshControl, StyleSheet, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
@@ -15,7 +16,7 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 
 interface NodeInfoProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }
@@ -54,11 +55,13 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
 
         const NodeInfoView = () => (
             <React.Fragment>
-                <KeyValue
-                    keyValue={localeString('views.NodeInfo.alias')}
-                    value={nodeInfo.alias}
-                    sensitive
-                />
+                {nodeInfo.alias && (
+                    <KeyValue
+                        keyValue={localeString('views.NodeInfo.alias')}
+                        value={nodeInfo.alias}
+                        sensitive
+                    />
+                )}
 
                 {nodeInfo.nodeId && (
                     <KeyValue
@@ -119,10 +122,12 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     />
                 )}
 
-                <KeyValue
-                    keyValue={localeString('views.NodeInfo.blockHeight')}
-                    value={nodeInfo.currentBlockHeight}
-                />
+                {nodeInfo.currentBlockHeight && (
+                    <KeyValue
+                        keyValue={localeString('views.NodeInfo.blockHeight')}
+                        value={nodeInfo.currentBlockHeight}
+                    />
+                )}
 
                 {nodeInfo.block_hash && (
                     <KeyValue

@@ -11,19 +11,40 @@ const userFriendlyErrors: any = {
     FAILURE_REASON_INCORRECT_PAYMENT_DETAILS:
         'error.failureReasonIncorrectPaymentDetails',
     FAILURE_REASON_INSUFFICIENT_BALANCE:
-        'error.failureReasonInsufficientBalance'
+        'error.failureReasonInsufficientBalance',
+    Error: 'general.error'
 };
 
-const errorToUserFriendly = (error: string, localize = true) => {
+const errorToUserFriendly = (error: Error, localize = true) => {
+    let errorMessage: string = error?.message;
+    let errorObject: any;
+
+    try {
+        errorObject = JSON.parse(errorMessage || error.toString());
+    } catch {
+        // ignore - using original error message
+    }
+
+    const userFriendlyErrorMessage =
+        errorObject?.error?.message ||
+        errorObject?.message ||
+        errorMessage ||
+        error;
+
     if (localize) {
         const localeString = require('./LocaleUtils').localeString;
         return (
-            localeString(userFriendlyErrors[error])?.replace('Zeus', 'ZEUS') ||
-            error
+            localeString(userFriendlyErrors[userFriendlyErrorMessage])?.replace(
+                'Zeus',
+                'ZEUS'
+            ) || userFriendlyErrorMessage
         );
     } else {
         const EN = require('../locales/en.json');
-        return EN[userFriendlyErrors[error]] || error;
+        return (
+            EN[userFriendlyErrors[userFriendlyErrorMessage]] ||
+            userFriendlyErrorMessage
+        );
     }
 };
 

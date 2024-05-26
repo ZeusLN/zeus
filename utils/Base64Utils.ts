@@ -54,6 +54,52 @@ class Base64Utils {
 
         return input;
     };
+
+    hexStringToBin = (data: string) =>
+        data
+            .split('')
+            .map((i) => parseInt(i, 16).toString(2).padStart(4, '0'))
+            .join('');
+
+    hexToAscii = (str1: string) => {
+        const hex = str1.toString();
+        let str = '';
+        for (var n = 0; n < hex.length; n += 2) {
+            str += String.fromCharCode(parseInt(hex.substr(n, 2), 16));
+        }
+        return str;
+    };
+
+    stringToHex = (str: string) => {
+        const arr = [];
+        for (let i = 0; i < str.length; i++) {
+            arr[i] = ('0' + str.charCodeAt(i).toString(16)).slice(-2);
+        }
+        return arr.join('');
+    };
+
+    mfpIntToBytes = (mfpInt: number) => {
+        // Convert the integer to hexadecimal string
+        let hexString = mfpInt.toString(16);
+
+        // Pad the string if necessary to ensure it has 8 characters
+        while (hexString.length < 8) {
+            hexString = '0' + hexString;
+        }
+
+        return this.reverseMfpBytes(hexString).toUpperCase();
+    };
+
+    reverseMfpBytes = (mfp: string) => {
+        // must be 8 characters
+        const byteArray = mfp.match(/.{2}/g) || [];
+        return byteArray.reverse().join('');
+    };
+
+    isHex = (str: string) => {
+        const hexRegex = /^[0-9A-Fa-f]+$/g;
+        return hexRegex.test(str);
+    };
 }
 
 const base64Utils = new Base64Utils();

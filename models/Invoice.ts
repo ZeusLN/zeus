@@ -51,6 +51,7 @@ export default class Invoice extends BaseModel {
     public r_preimage: any;
     public cltv_expiry: string;
     public htlcs: Array<HTLC>;
+    public is_amp?: boolean;
     // c-lightning, eclair
     public bolt11: string;
     public label: string;
@@ -124,7 +125,10 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getMemo(): string {
-        return this.memo || this.description;
+        const memo = this.memo || this.description;
+        if (typeof memo === 'string') return memo;
+        if (Array.isArray(memo)) return memo[0];
+        return '';
     }
 
     @computed public get isPaid(): boolean {
@@ -194,7 +198,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getDisplayTimeShort(): string {
-        return this.isPaid
+        return this.isPaid && !this.is_amp
             ? DateTimeUtils.listFormattedDateShort(
                   this.settle_date || this.paid_at || this.timestamp || 0
               )
@@ -267,7 +271,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get isZeusPay(): boolean {
-        if (this.getMemo?.startsWith('ZEUS PAY')) return true;
+        if (this.getMemo?.toLowerCase().startsWith('zeus pay')) return true;
         return false;
     }
 

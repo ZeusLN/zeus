@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import CopyButton from '../../components/CopyButton';
@@ -20,7 +21,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import MessageSignStore from '../../stores/MessageSignStore';
 
 interface SignVerifyMessageProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     MessageSignStore: MessageSignStore;
 }
 
@@ -185,9 +186,11 @@ export default class SignVerifyMessage extends React.Component<
                                             messageToSign: text
                                         })
                                     }
-                                    locked={loading}
                                     multiline
-                                    numberOfLines={3}
+                                    style={{
+                                        height: 100
+                                    }}
+                                    locked={loading}
                                 />
                             </View>
 
@@ -258,7 +261,9 @@ export default class SignVerifyMessage extends React.Component<
                                     }
                                     locked={loading}
                                     multiline
-                                    numberOfLines={3}
+                                    style={{
+                                        height: 100
+                                    }}
                                 />
                             </View>
 
@@ -281,8 +286,6 @@ export default class SignVerifyMessage extends React.Component<
                                         })
                                     }
                                     locked={loading}
-                                    multiline
-                                    numberOfLines={3}
                                 />
                             </View>
 

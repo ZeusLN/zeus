@@ -10,10 +10,84 @@ import NodeUriUtils from './NodeUriUtils';
 import { localeString } from './LocaleUtils';
 import BackendUtils from './BackendUtils';
 
+// Nostr
+import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
+import { relayInit, nip05, nip19 } from 'nostr-tools';
+import ContactUtils from './ContactUtils';
+
 const { nodeInfoStore, invoicesStore, unitsStore, settingsStore } = stores;
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
+
+const attemptNip05Lookup = async (data: string) => {
+    try {
+        const lookup: any = await nip05.queryProfile(data);
+        const pubkey = lookup.pubkey;
+        return await nostrProfileLookup(pubkey);
+    } catch (e) {
+        throw new Error(localeString('utils.handleAnything.addressError'));
+    }
+};
+
+const nostrProfileLookup = async (data: string) => {
+    let profile: any;
+
+    const pubkey = data;
+    const profilesEventsPromises = DEFAULT_NOSTR_RELAYS.map(
+        async (relayItem) => {
+            try {
+                const relay = relayInit(relayItem);
+                relay.on('connect', () => {
+                    console.log(`connected to ${relay.url}`);
+                });
+                relay.on('error', (): any => {
+                    console.log(`failed to connect to ${relay.url}`);
+                });
+
+                await relay.connect();
+                return relay.list([
+                    {
+                        authors: [pubkey],
+                        kinds: [0]
+                    }
+                ]);
+            } catch (e) {}
+        }
+    );
+
+    await Promise.all(profilesEventsPromises).then((profilesEventsArrays) => {
+        const profileEvents = profilesEventsArrays
+            .flat()
+            .filter((event) => event !== undefined);
+
+        profileEvents.forEach((item: any) => {
+            try {
+                const content = JSON.parse(item.content);
+                if (!profile || item.created_at > profile.timestamp) {
+                    profile = {
+                        content,
+                        timestamp: item.created_at
+                    };
+                }
+            } catch (error: any) {
+                throw new Error(
+                    `Error parsing JSON for item with ID ${item.id}: ${error.message}`
+                );
+            }
+        });
+    });
+
+    return [
+        'ContactDetails',
+        {
+            nostrContact: await ContactUtils.transformContactData(
+                profile.content
+            ),
+            isNostrContact: true
+        }
+    ];
+};
 
 const handleAnything = async (
     data: string,
@@ -21,7 +95,7 @@ const handleAnything = async (
     isClipboardValue?: boolean
 ): Promise<any> => {
     const { nodeInfo } = nodeInfoStore;
-    const { isTestNet, isRegTest } = nodeInfo;
+    const { isTestNet, isRegTest, isSigNet } = nodeInfo;
     const { value, amount, lightning }: any =
         AddressUtils.processSendAddress(data);
     const hasAt: boolean = value.includes('@');
@@ -63,7 +137,7 @@ const handleAnything = async (
                     );
                 }
             } else {
-                invoicesStore.getPayReq(lightning);
+                await invoicesStore.getPayReq(lightning);
                 return ['PaymentRequest', {}];
             }
         }
@@ -72,12 +146,16 @@ const handleAnything = async (
             {
                 value,
                 amount,
-                lightning
+                lightning,
+                locked: true
             }
         ];
     } else if (
         !hasAt &&
-        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
+        AddressUtils.isValidBitcoinAddress(
+            value,
+            isTestNet || isRegTest || isSigNet
+        )
     ) {
         if (isClipboardValue) return true;
         if (amount) unitsStore?.resetUnits();
@@ -102,7 +180,7 @@ const handleAnything = async (
         ];
     } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
         if (isClipboardValue) return true;
-        invoicesStore.getPayReq(value);
+        await invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
     } else if (value.includes('c-lightning-rest://')) {
         if (isClipboardValue) return true;
@@ -259,8 +337,8 @@ const handleAnything = async (
                         throw new Error(error);
                     }
                 })
-                .catch(() => {
-                    throw new Error(error);
+                .catch(async () => {
+                    return await attemptNip05Lookup(data);
                 });
         }
     } else if (value.includes('config=') && value.includes('lnd.config')) {
@@ -394,6 +472,16 @@ const handleAnything = async (
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
             });
+    } else if (AddressUtils.isValidNpub(data)) {
+        try {
+            const decoded = nip19.decode(data);
+            const pubkey = decoded.data.toString();
+            return await nostrProfileLookup(pubkey);
+        } catch (e) {
+            throw new Error(
+                localeString('utils.handleAnything.nostrProfileError')
+            );
+        }
     } else if (data.startsWith('zeuscontact:')) {
         const zeusContactData = data.replace('zeuscontact:', '');
         const contact = JSON.parse(zeusContactData);
@@ -407,6 +495,69 @@ const handleAnything = async (
                 }
             ];
         }
+    } else if (AddressUtils.isPsbt(value)) {
+        return ['PSBT', { psbt: value }];
+    } else if (AddressUtils.isValidTxHex(value)) {
+        return ['TxHex', { txHex: value }];
+    } else if (AddressUtils.isKeystoreWalletExport(value)) {
+        const { MasterFingerprint, ExtPubKey, Label } =
+            AddressUtils.processKeystoreWalletExport(value);
+        return [
+            'ImportAccount',
+            {
+                name: Label,
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint
+            }
+        ];
+    } else if (AddressUtils.isJsonWalletExport(value)) {
+        const { MasterFingerprint, ExtPubKey } = JSON.parse(value);
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint
+            }
+        ];
+    } else if (AddressUtils.isStringWalletExport(value)) {
+        const { MasterFingerprint, ExtPubKey } =
+            AddressUtils.processStringWalletExport(value);
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint
+            }
+        ];
+    } else if (AddressUtils.isWpkhDescriptor(value)) {
+        const { MasterFingerprint, ExtPubKey, AddressType } =
+            AddressUtils.processWpkhDescriptor(value);
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint,
+                address_type: AddressType
+            }
+        ];
+    } else if (AddressUtils.isNestedWpkhDescriptor(value)) {
+        const { MasterFingerprint, ExtPubKey, AddressType } =
+            AddressUtils.processNestedWpkhDescriptor(value);
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: ExtPubKey,
+                master_key_fingerprint: MasterFingerprint,
+                address_type: AddressType
+            }
+        ];
+    } else if (AddressUtils.isValidXpub(value)) {
+        return [
+            'ImportAccount',
+            {
+                extended_public_key: value
+            }
+        ];
     } else {
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));

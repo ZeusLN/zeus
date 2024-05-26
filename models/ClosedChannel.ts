@@ -1,5 +1,6 @@
 import { computed } from 'mobx';
 import Channel from './Channel';
+import { lnrpc } from '../proto/lightning';
 
 export default class ClosedChannel extends Channel {
     chain_hash: string;
@@ -32,6 +33,8 @@ export default class ClosedChannel extends Channel {
 
     @computed
     public get closeType(): string {
-        return this.close_type;
+        return typeof this.close_type === 'number'
+            ? lnrpc.ChannelCloseSummary.ClosureType[this.close_type]
+            : this.close_type || '';
     }
 }

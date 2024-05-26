@@ -11,7 +11,9 @@ import ProductCategory from '../../models/ProductCategory';
 import InventoryStore from '../../stores/InventoryStore';
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Divider, Icon } from 'react-native-elements';
+import { Divider } from 'react-native-elements';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -22,13 +24,16 @@ import TextInput from '../../components/TextInput';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
-import DeleteIcon from '../../assets/images/SVG/Delete.svg';
 import PosStore from '../../stores/PosStore';
 
+import ArrowLeft from '../../assets/images/SVG/Arrow_left.svg';
+import DeleteIcon from '../../assets/images/SVG/Delete.svg';
+
 interface ProductCategoryProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     InventoryStore: InventoryStore;
     PosStore: PosStore;
+    route: Route<'ProductCategoryDetails', { categoryId: string }>;
 }
 
 interface ProductCategoryState {
@@ -59,12 +64,9 @@ export default class ProductCategoryDetails extends React.Component<
     }
 
     fetchCategory = async () => {
-        this.props.navigation.addListener('didFocus', async () => {
+        this.props.navigation.addListener('focus', async () => {
             try {
-                const categoryId = this.props.navigation.getParam(
-                    'categoryId',
-                    null
-                );
+                const categoryId = this.props.route.params?.categoryId;
 
                 if (!categoryId) {
                     this.setState({
@@ -157,15 +159,17 @@ export default class ProductCategoryDetails extends React.Component<
         const { navigation } = this.props;
 
         const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => {
-                    navigation.goBack();
-                }}
-                color={themeColor('text')}
-                underlayColor="transparent"
-                size={35}
-            />
+            <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                accessibilityLabel={localeString('general.goBack')}
+            >
+                <ArrowLeft
+                    fill={themeColor('text')}
+                    width="30"
+                    height="30"
+                    style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
         );
 
         const Delete = () => (
@@ -261,7 +265,6 @@ export default class ProductCategoryDetails extends React.Component<
                                             'secondaryText'
                                         )}
                                         style={styles.textInput}
-                                        autoCapitalize="none"
                                     />
                                 </View>
                                 <Divider

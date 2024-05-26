@@ -4,6 +4,7 @@ import { ListItem, Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
 import Screen from '../../../components/Screen';
@@ -22,7 +23,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { exportAllChannelBackups } from '../../../lndmobile/channel';
 
 interface DisasterRecoveryProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -529,6 +530,68 @@ export default class DisasterRecovery extends React.Component<
                                 >
                                     {localeString(
                                         'views.Settings.EmbeddedNode.initiateAdvancedDisasterRecoveryOlympus.subtitle'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{
+                                    marginHorizontal: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus.subtitle2'
+                                    )}
+                                </Text>
+                            </View>
+                        </>
+                        <>
+                            <Divider
+                                orientation="horizontal"
+                                style={{ margin: 20 }}
+                            />
+                            <View
+                                style={{
+                                    marginTop: 6,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.EmbeddedNode.initiateDisasterRecoveryClipboard'
+                                    )}
+                                    onPress={() => {
+                                        navigation.navigate(
+                                            'RestoreChannelBackups'
+                                        );
+                                    }}
+                                    containerStyle={{
+                                        borderColor: themeColor('delete')
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('delete')
+                                    }}
+                                    secondary
+                                />
+                            </View>
+                            <View
+                                style={{
+                                    marginHorizontal: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.initiateDisasterRecoveryClipboard.subtitle'
                                     )}
                                 </Text>
                             </View>

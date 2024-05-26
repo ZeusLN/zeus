@@ -2,6 +2,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
@@ -21,7 +22,7 @@ import DropdownSetting from '../../components/DropdownSetting';
 import Switch from '../../components/Switch';
 
 interface CurrencyProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
 }
@@ -133,56 +134,89 @@ export default class Currency extends React.Component<
                             />
                         </View>
                     </ListItem>
-                    <View style={{ marginHorizontal: 16 }}>
-                        <DropdownSetting
-                            title={
-                                localeString('views.Settings.Currency.source') +
-                                ':'
-                            }
-                            selectedValue={fiatRatesSource}
-                            onValueChange={async (value: string) => {
-                                this.setState({ fiatRatesSource: value });
-                                const newSettings: any = {
-                                    fiatRatesSource: value
-                                };
-                                if (
-                                    !CURRENCY_KEYS.find(
-                                        (c) => c.value === selectedCurrency
-                                    )?.supportedSources.includes(value)
-                                ) {
-                                    newSettings.fiat = DEFAULT_FIAT;
-                                    this.setState({
-                                        selectedCurrency: DEFAULT_FIAT
-                                    });
-                                }
-                                await updateSettings(newSettings);
-                            }}
-                            values={FIAT_RATES_SOURCE_KEYS}
-                        />
-                    </View>
-                    <ListItem
-                        containerStyle={{
-                            backgroundColor: 'transparent'
-                        }}
-                        onPress={() => this.navigateToSelectCurrency()}
-                    >
-                        <ListItem.Content>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                    {fiatEnabled && (
+                        <>
+                            <View style={{ marginHorizontal: 16 }}>
+                                <DropdownSetting
+                                    title={
+                                        localeString(
+                                            'views.Settings.Currency.source'
+                                        ) + ':'
+                                    }
+                                    selectedValue={fiatRatesSource}
+                                    onValueChange={async (value: string) => {
+                                        this.setState({
+                                            fiatRatesSource: value
+                                        });
+                                        const newSettings: any = {
+                                            fiatRatesSource: value
+                                        };
+                                        if (
+                                            !CURRENCY_KEYS.find(
+                                                (c) =>
+                                                    c.value === selectedCurrency
+                                            )?.supportedSources.includes(value)
+                                        ) {
+                                            newSettings.fiat = DEFAULT_FIAT;
+                                            this.setState({
+                                                selectedCurrency: DEFAULT_FIAT
+                                            });
+                                        }
+                                        await updateSettings(newSettings);
+                                    }}
+                                    values={FIAT_RATES_SOURCE_KEYS}
+                                />
+                            </View>
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
                                 }}
+                                onPress={() => this.navigateToSelectCurrency()}
                             >
-                                {localeString(
-                                    'views.Settings.Currency.selectCurrency'
-                                ) + ` (${selectedCurrency})`}
-                            </ListItem.Title>
-                        </ListItem.Content>
-                        <Icon
-                            name="keyboard-arrow-right"
-                            color={themeColor('secondaryText')}
-                        />
-                    </ListItem>
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Currency.selectCurrency'
+                                        ) + ` (${selectedCurrency})`}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('CurrencyConverter')
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.CurrencyConverter.title'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        </>
+                    )}
                 </View>
             </Screen>
         );
