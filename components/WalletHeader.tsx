@@ -14,8 +14,10 @@ import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import AlertStore from '../stores/AlertStore';
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
+import ModalStore from '../stores/ModalStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
@@ -35,6 +37,7 @@ import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
+import Alert from '../assets/images/SVG/Alert.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Gear from '../assets/images/SVG/Gear.svg';
 import POS from '../assets/images/SVG/POS.svg';
@@ -171,8 +174,10 @@ const POSBadge = ({
 );
 
 interface WalletHeaderProps {
+    AlertStore?: AlertStore;
     ChannelsStore?: ChannelsStore;
     SettingsStore?: SettingsStore;
+    ModalStore?: ModalStore;
     NodeInfoStore?: NodeInfoStore;
     LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
@@ -189,8 +194,10 @@ interface WalletHeaderState {
 }
 
 @inject(
+    'AlertStore',
     'ChannelsStore',
     'LightningAddressStore',
+    'ModalStore',
     'SettingsStore',
     'NodeInfoStore',
     'PosStore',
@@ -228,10 +235,12 @@ export default class WalletHeader extends React.Component<
             title,
             channels,
             toggle,
+            AlertStore,
             SettingsStore,
             NodeInfoStore,
             ChannelsStore,
             LightningAddressStore,
+            ModalStore,
             PosStore,
             SyncStore
         } = this.props;
@@ -371,6 +380,20 @@ export default class WalletHeader extends React.Component<
                 <ReadOnlyBadge />
                 <TorBadge />
             </>
+        );
+
+        const AlertButton = () => (
+            <TouchableOpacity
+                onPress={() => ModalStore.toggleAlertModal(true)}
+                accessibilityLabel={localeString('general.search')}
+            >
+                <Alert
+                    fill={themeColor('error')}
+                    width="35"
+                    height="35"
+                    style={{ alignSelf: 'center', marginRight: 15 }}
+                />
+            </TouchableOpacity>
         );
 
         const SearchButton = () => (
@@ -569,6 +592,7 @@ export default class WalletHeader extends React.Component<
                                     <SyncBadge navigation={navigation} />
                                 </View>
                             )}
+                            {AlertStore.hasError && <AlertButton />}
                             <View>
                                 <NodeButton />
                             </View>

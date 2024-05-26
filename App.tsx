@@ -10,6 +10,7 @@ import Stores from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
 import { AppContainer } from './components/layout/AppContainer';
+import AlertModal from './components/Modals/AlertModal';
 import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
 import InfoModal from './components/Modals/InfoModal';
@@ -180,6 +181,7 @@ export default class App extends React.PureComponent {
         const Stack = createStackNavigator();
         return (
             <Provider
+                AlertStore={Stores.alertStore}
                 BalanceStore={Stores.balanceStore}
                 TransactionsStore={Stores.transactionsStore}
                 ChannelsStore={Stores.channelsStore}
@@ -815,6 +817,7 @@ export default class App extends React.PureComponent {
                                     )}
                                 </Observer>
                             </SafeAreaView>
+                            <AlertModal />
                             <ExternalLinkModal />
                             <AndroidNfcModal />
                             <InfoModal />
