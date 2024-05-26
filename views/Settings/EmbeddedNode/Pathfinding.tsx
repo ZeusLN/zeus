@@ -2,6 +2,7 @@ import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
@@ -17,7 +18,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { resetMissionControl } from '../../../lndmobile';
 
 interface PathfindingProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

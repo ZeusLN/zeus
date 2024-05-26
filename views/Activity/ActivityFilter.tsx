@@ -3,8 +3,8 @@ import { FlatList, Text, View } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { isEqual } from 'lodash';
-
 import DatePicker from 'react-native-date-picker';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -19,7 +19,7 @@ import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
 interface ActivityFilterProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
     SettingsStore: SettingsStore;
 }
@@ -77,6 +77,8 @@ export default class ActivityFilter extends React.Component<
             inTransit,
             isFailed,
             unconfirmed,
+            standardInvoices,
+            ampInvoices,
             zeusPay,
             minimumAmount,
             startDate,
@@ -210,7 +212,21 @@ export default class ActivityFilter extends React.Component<
                 condition: BackendUtils.isLNDBased()
             },
             {
-                label: 'ZEUS PAY',
+                label: localeString('views.ActivityFilter.standardInvoices'),
+                value: standardInvoices,
+                var: 'standardInvoices',
+                type: 'Toggle',
+                condition: BackendUtils.isLNDBased()
+            },
+            {
+                label: localeString('views.ActivityFilter.ampInvoices'),
+                value: ampInvoices,
+                var: 'ampInvoices',
+                type: 'Toggle',
+                condition: BackendUtils.isLNDBased()
+            },
+            {
+                label: 'ZEUS Pay',
                 value: zeusPay,
                 var: 'zeusPay',
                 type: 'Toggle',

@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -17,17 +19,18 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 interface SetFeesProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     FeeStore: FeeStore;
     NodeInfoStore: NodeInfoStore;
+    route: Route<'SetFees', { channel: Channel }>;
 }
 
 @inject('ChannelsStore', 'FeeStore', 'NodeInfoStore')
 @observer
 export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
     render() {
-        const { ChannelsStore, FeeStore, NodeInfoStore, navigation } =
+        const { ChannelsStore, FeeStore, NodeInfoStore, navigation, route } =
             this.props;
 
         const { chanInfo, nodes } = ChannelsStore;
@@ -35,7 +38,7 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
         const { nodeInfo } = NodeInfoStore;
         const { nodeId } = nodeInfo;
 
-        const channel: Channel = navigation.getParam('channel', null);
+        const channel = route.params?.channel;
 
         let peerName;
         if (channel) {

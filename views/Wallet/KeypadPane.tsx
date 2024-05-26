@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Animated, View, Text, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
@@ -11,21 +13,22 @@ import { getSatAmount } from '../../components/AmountInput';
 
 import ChannelsStore from '../../stores/ChannelsStore';
 import FiatStore from '../../stores/FiatStore';
-import UnitsStore from '../../stores/UnitsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
-import BigNumber from 'bignumber.js';
 
 interface KeypadPaneProps {
-    navigation: any;
-    ChannelsStore?: ChannelsStore;
-    FiatStore?: FiatStore;
-    UnitsStore?: UnitsStore;
-    SettingsStore?: SettingsStore;
+    navigation: StackNavigationProp<any, any>;
+    ChannelsStore: ChannelsStore;
+    FiatStore: FiatStore;
+    NodeInfoStore: NodeInfoStore;
+    SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
 }
 
 interface KeypadPaneState {
@@ -33,11 +36,18 @@ interface KeypadPaneState {
     needInbound: boolean;
     belowMinAmount: boolean;
     overrideBelowMinAmount: boolean;
+    lspNotConfigured: boolean;
 }
 
 const MAX_LENGTH = 10;
 
-@inject('ChannelsStore', 'FiatStore', 'UnitsStore', 'SettingsStore')
+@inject(
+    'ChannelsStore',
+    'FiatStore',
+    'NodeInfoStore',
+    'SettingsStore',
+    'UnitsStore'
+)
 @observer
 export default class KeypadPane extends React.PureComponent<
     KeypadPaneProps,
@@ -49,8 +59,26 @@ export default class KeypadPane extends React.PureComponent<
         amount: '0',
         needInbound: false,
         belowMinAmount: false,
-        overrideBelowMinAmount: false
+        overrideBelowMinAmount: false,
+        lspNotConfigured: true
     };
+
+    async UNSAFE_componentWillMount() {
+        this.handleLsp();
+
+        this.props.navigation.addListener('focus', async () => {
+            this.handleLsp();
+        });
+    }
+
+    async handleLsp() {
+        const { lspNotConfigured } =
+            this.props.NodeInfoStore.lspNotConfigured();
+
+        this.setState({
+            lspNotConfigured
+        });
+    }
 
     appendValue = (value: string) => {
         const { amount } = this.state;
@@ -89,6 +117,7 @@ export default class KeypadPane extends React.PureComponent<
         if (
             BackendUtils.supportsLSPs() &&
             this.props.SettingsStore!.settings?.enableLSP &&
+            !this.state.lspNotConfigured &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
                 this.props.ChannelsStore!.totalInbound
@@ -132,6 +161,7 @@ export default class KeypadPane extends React.PureComponent<
         if (
             BackendUtils.supportsLSPs() &&
             this.props.SettingsStore!.settings?.enableLSP &&
+            !this.state.lspNotConfigured &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
                 this.props.ChannelsStore!.totalInbound
@@ -335,7 +365,7 @@ export default class KeypadPane extends React.PureComponent<
                                 <View style={{ width: '25%' }}>
                                     <Button
                                         title={'50k'}
-                                        quinary
+                                        quaternary
                                         noUppercase
                                         onPress={() => {
                                             UnitsStore.resetUnits();
@@ -350,7 +380,7 @@ export default class KeypadPane extends React.PureComponent<
                                 <View style={{ width: '25%' }}>
                                     <Button
                                         title={'100k'}
-                                        quinary
+                                        quaternary
                                         noUppercase
                                         onPress={() => {
                                             UnitsStore.resetUnits();
@@ -365,7 +395,7 @@ export default class KeypadPane extends React.PureComponent<
                                 <View style={{ width: '25%' }}>
                                     <Button
                                         title={'1m'}
-                                        quinary
+                                        quaternary
                                         noUppercase
                                         onPress={() => {
                                             UnitsStore.resetUnits();
@@ -380,7 +410,7 @@ export default class KeypadPane extends React.PureComponent<
                                 <View style={{ width: '25%' }}>
                                     <Button
                                         title={localeString('general.other')}
-                                        quinary
+                                        quaternary
                                         noUppercase
                                         onPress={() => {
                                             UnitsStore.resetUnits();
@@ -406,7 +436,7 @@ export default class KeypadPane extends React.PureComponent<
                             <View style={{ width: '40%' }}>
                                 <Button
                                     title={localeString('general.request')}
-                                    quinary
+                                    quaternary
                                     noUppercase
                                     onPress={() => {
                                         navigation.navigate('Receive', {
@@ -427,7 +457,7 @@ export default class KeypadPane extends React.PureComponent<
                                             themeColor('buttonText') ||
                                             themeColor('text')
                                     }}
-                                    quinary
+                                    quaternary
                                     noUppercase
                                     onPress={() => {
                                         navigation.navigate('Receive', {
@@ -440,7 +470,7 @@ export default class KeypadPane extends React.PureComponent<
                             <View style={{ width: '40%' }}>
                                 <Button
                                     title={localeString('general.send')}
-                                    quinary
+                                    quaternary
                                     noUppercase
                                     onPress={() => {
                                         navigation.navigate('Send', {

@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { SearchBar, Divider } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
@@ -24,7 +26,8 @@ import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 interface ContactsSettingsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<'Contacts', { SendScreen: boolean }>;
 }
 
 interface ContactsSettingsState {
@@ -41,10 +44,7 @@ export default class Contacts extends React.Component<
 > {
     constructor(props: ContactsSettingsProps) {
         super(props);
-        const SendScreen: boolean = this.props.navigation.getParam(
-            'SendScreen',
-            null
-        );
+        const SendScreen = this.props.route.params?.SendScreen;
         this.state = {
             contacts: [],
             search: '',
@@ -55,21 +55,7 @@ export default class Contacts extends React.Component<
     }
 
     componentDidMount() {
-        this.props.navigation.addListener('didFocus', async () => {
-            this.loadContacts();
-        });
-    }
-
-    UNSAFE_componentWillReceiveProps(
-        nextProps: Readonly<ContactsSettingsProps>
-    ): void {
-        const loading: boolean = nextProps.navigation.getParam('loading', null);
-
-        if (loading) {
-            this.setState({
-                loading
-            });
-        }
+        this.props.navigation.addListener('focus', () => this.loadContacts());
     }
 
     loadContacts = async () => {
@@ -90,7 +76,7 @@ export default class Contacts extends React.Component<
         }
     };
 
-    displayAddress = (item) => {
+    displayAddress = (item: Contact) => {
         const contact = new Contact(item);
         const {
             hasLnAddress,
@@ -404,7 +390,7 @@ export default class Contacts extends React.Component<
                     <FlatList
                         data={nonFavoriteContacts}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(item, index) => index.toString()}
+                        keyExtractor={(_, index) => index.toString()}
                         scrollEnabled={false}
                     />
                     {!loading && contacts.length > 1 && (

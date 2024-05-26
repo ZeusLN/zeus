@@ -2,6 +2,8 @@ import { computed } from 'mobx';
 import BaseModel from './BaseModel';
 import RNFS from 'react-native-fs';
 
+import { getPhoto } from '../utils/PhotoUtils';
+
 export default class Contact extends BaseModel {
     id: string; // deprecated
     public contactId: string;
@@ -86,11 +88,7 @@ export default class Contact extends BaseModel {
     }
 
     @computed public get getPhoto(): string {
-        if (this.photo?.includes('rnfs://')) {
-            const fileName = this.photo.replace('rnfs://', '');
-            return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
-        }
-        return this.photo || '';
+        return getPhoto(this.photo || '');
     }
 
     @computed public get getBanner(): string {

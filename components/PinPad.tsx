@@ -1,11 +1,19 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, Pressable, View } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    Pressable,
+    View,
+    AppState,
+    Platform
+} from 'react-native';
 import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
 import Success from '../assets/images/SVG/Success.svg';
 import Touchable from './Touchable';
 import Stores from '../stores/Stores';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 interface PinPadProps {
     appendValue: (newValue: string) => void;
@@ -19,6 +27,9 @@ interface PinPadProps {
     numberHighlight?: boolean;
     amount?: boolean;
 }
+
+const DEFAULT_SIZE = 24;
+const BIG_SIZE = 50;
 
 export default function PinPad({
     appendValue,
@@ -35,6 +46,20 @@ export default function PinPad({
     // PinPad state only depends on pin value length, not the actual pin/amount value
     // Parent component to PinPad can store pin/amount value
     const [pinValueLength, setPinValueLength] = useState(0);
+
+    React.useEffect(() => {
+        const subscription = AppState.addEventListener(
+            'change',
+            (nextAppState) => {
+                if (nextAppState === 'background') {
+                    clearPinValueLength();
+                    clearValue();
+                }
+            }
+        );
+
+        return () => subscription.remove();
+    }, []);
 
     const bigKeypadButtons =
         Stores.settingsStore.settings &&
@@ -72,6 +97,14 @@ export default function PinPad({
         setPinValueLength(0);
     };
 
+    const triggerHapticFeedback = () => {
+        if (!amount) {
+            // effectClick is only available on Android
+            const type = Platform.OS === 'android' ? 'effectClick' : 'soft';
+            ReactNativeHapticFeedback.trigger(type);
+        }
+    };
+
     return (
         <View style={styles.pad}>
             <Row align="flex-end" style={styles.pinPadRow}>
@@ -79,6 +112,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[1]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -87,7 +121,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[1]}
@@ -97,6 +131,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[2]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -105,7 +140,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[2]}
@@ -115,6 +150,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[3]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -123,7 +159,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[3]}
@@ -135,6 +171,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[4]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -143,7 +180,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[4]}
@@ -153,6 +190,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[5]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -161,7 +199,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[5]}
@@ -171,6 +209,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[6]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -179,7 +218,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[6]}
@@ -191,6 +230,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[7]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -199,7 +239,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[7]}
@@ -209,6 +249,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[8]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -217,7 +258,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[8]}
@@ -227,6 +268,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[9]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -235,7 +277,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[9]}
@@ -255,7 +297,9 @@ export default function PinPad({
                             style={{
                                 ...styles.pinPadNumber,
                                 color: themeColor('text'),
-                                fontSize: bigKeypadButtons ? 50 : 20
+                                fontSize: bigKeypadButtons
+                                    ? BIG_SIZE
+                                    : DEFAULT_SIZE
                             }}
                         >
                             {'.'}
@@ -266,6 +310,7 @@ export default function PinPad({
                         touch={() => {
                             decrementPinValueLength();
                             deleteValue();
+                            triggerHapticFeedback();
                         }}
                         highlight={numberHighlight}
                         style={styles.key}
@@ -274,7 +319,9 @@ export default function PinPad({
                             style={{
                                 ...styles.pinPadNumber,
                                 color: themeColor('text'),
-                                fontSize: bigKeypadButtons ? 50 : 20
+                                fontSize: bigKeypadButtons
+                                    ? BIG_SIZE
+                                    : DEFAULT_SIZE
                             }}
                         >
                             {'<'}
@@ -285,6 +332,7 @@ export default function PinPad({
                     touch={() => {
                         incrementPinValueLength();
                         appendValue(pinNumbers[0]);
+                        triggerHapticFeedback();
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -293,7 +341,7 @@ export default function PinPad({
                         style={{
                             ...styles.pinPadNumber,
                             color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? 50 : 20
+                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
                         }}
                     >
                         {pinNumbers[0]}
@@ -313,7 +361,9 @@ export default function PinPad({
                                 style={{
                                     ...styles.pinPadNumber,
                                     color: themeColor('text'),
-                                    fontSize: bigKeypadButtons ? 50 : 20
+                                    fontSize: bigKeypadButtons
+                                        ? BIG_SIZE
+                                        : DEFAULT_SIZE
                                 }}
                             >
                                 {'<'}
@@ -324,6 +374,7 @@ export default function PinPad({
                             touch={() => {
                                 clearPinValueLength();
                                 clearValue();
+                                triggerHapticFeedback();
                             }}
                             highlight={numberHighlight}
                             style={styles.key}
@@ -332,7 +383,9 @@ export default function PinPad({
                                 style={{
                                     ...styles.pinPadNumber,
                                     color: themeColor('text'),
-                                    fontSize: bigKeypadButtons ? 50 : 20
+                                    fontSize: bigKeypadButtons
+                                        ? BIG_SIZE
+                                        : DEFAULT_SIZE
                                 }}
                             >
                                 C
@@ -344,6 +397,7 @@ export default function PinPad({
                         touch={() => {
                             submitValue();
                             clearPinValueLength();
+                            triggerHapticFeedback();
                         }}
                         highlight={numberHighlight}
                         style={styles.key}

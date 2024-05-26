@@ -54,7 +54,11 @@ class Stores {
             this.channelsStore,
             this.settingsStore
         );
-        this.lspStore = new LSPStore(this.settingsStore, this.channelsStore);
+        this.lspStore = new LSPStore(
+            this.settingsStore,
+            this.channelsStore,
+            this.nodeInfoStore
+        );
         this.lightningAddressStore = new LightningAddressStore(
             this.nodeInfoStore,
             this.settingsStore
@@ -66,11 +70,13 @@ class Stores {
         this.invoicesStore = new InvoicesStore(
             this.settingsStore,
             this.lspStore,
-            this.channelsStore
+            this.channelsStore,
+            this.nodeInfoStore
         );
         this.transactionsStore = new TransactionsStore(
             this.settingsStore,
-            this.nodeInfoStore
+            this.nodeInfoStore,
+            this.channelsStore
         );
         this.balanceStore = new BalanceStore(this.settingsStore);
         this.unitsStore = new UnitsStore(this.settingsStore, this.fiatStore);

@@ -7,9 +7,10 @@ import {
     I18nManager,
     TouchableOpacity
 } from 'react-native';
-
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -19,10 +20,12 @@ import Receive from './../../assets/images/SVG/Receive.svg';
 import Send from './../../assets/images/SVG/Send.svg';
 
 interface OnchainSwipeableRowProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     value?: string;
     amount?: string;
     locked?: boolean;
+    account?: string;
+    hidden?: boolean;
 }
 
 export default class OnchainSwipeableRow extends Component<
@@ -34,6 +37,7 @@ export default class OnchainSwipeableRow extends Component<
         x: number,
         progress: Animated.AnimatedInterpolation
     ) => {
+        const { account, navigation } = this.props;
         const transTranslateX = progress.interpolate({
             inputRange: [0.25, 1],
             outputRange: [x, 0]
@@ -46,14 +50,15 @@ export default class OnchainSwipeableRow extends Component<
             this.close();
 
             if (text === localeString('general.receive')) {
-                this.props.navigation.navigate('Receive', {
+                navigation.navigate('Receive', {
+                    account: account === 'On-chain' ? 'default' : account,
                     selectedIndex: 2,
                     autoGenerateOnChain: true
                 });
             } else if (text === localeString('general.coins')) {
-                this.props.navigation.navigate('CoinControl');
+                navigation.navigate('CoinControl', { account });
             } else if (text === localeString('general.send')) {
-                this.props.navigation.navigate('Send');
+                navigation.navigate('Send');
             }
         };
 
@@ -162,18 +167,24 @@ export default class OnchainSwipeableRow extends Component<
     };
 
     render() {
-        const { children, value, locked } = this.props;
+        const { children, value, locked, hidden } = this.props;
         if (locked && value) {
             return (
                 <TouchableOpacity
                     onPress={() => this.sendToAddress()}
                     activeOpacity={1}
+                    style={{ width: '100%' }}
                 >
                     {children}
                 </TouchableOpacity>
             );
         }
-        if (locked) return children;
+        if (locked)
+            return (
+                <View style={{ width: '100%', opacity: hidden ? 0.1 : 1 }}>
+                    {children}
+                </View>
+            );
         return (
             <Swipeable
                 ref={this.updateRef}
@@ -182,6 +193,7 @@ export default class OnchainSwipeableRow extends Component<
                 leftThreshold={30}
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
+                containerStyle={{ width: '100%' }}
             >
                 <TouchableOpacity
                     onPress={() => (value ? this.sendToAddress() : this.open())}

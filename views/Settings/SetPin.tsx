@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
 import Pin from '../../components/Pin';
@@ -13,7 +14,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface SetPinProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -92,9 +93,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         }
 
         await updateSettings({ pin }).then(() => {
-            setLoginStatus(false);
+            setLoginStatus(true);
             getSettings();
-            navigation.navigate('Settings', {
+            navigation.popTo('Settings', {
                 refresh: true
             });
         });

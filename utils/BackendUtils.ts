@@ -69,13 +69,17 @@ class BackendUtils {
     getLightningBalance = (...args: any[]) =>
         this.call('getLightningBalance', args);
     sendCoins = (...args: any[]) => this.call('sendCoins', args);
+    sendCustomMessage = (...args: any[]) =>
+        this.call('sendCustomMessage', args);
+    subscribeCustomMessages = (...args: any[]) =>
+        this.call('subscribeCustomMessages', args);
     getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
     getNetworkInfo = (...args: any[]) => this.call('getNetworkInfo', args);
     getInvoices = (...args: any[]) => this.call('getInvoices', args);
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
-    openChannel = (...args: any[]) => this.call('openChannel', args);
+    openChannelSync = (...args: any[]) => this.call('openChannelSync', args);
     openChannelStream = (...args: any[]) =>
         this.call('openChannelStream', args);
     connectPeer = (...args: any[]) => this.call('connectPeer', args);
@@ -101,9 +105,11 @@ class BackendUtils {
     lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
+    signPsbt = (...args: any[]) => this.call('signPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
     publishTransaction = (...args: any[]) =>
         this.call('publishTransaction', args);
+    fundingStateStep = (...args: any[]) => this.call('fundingStateStep', args);
     bumpFee = (...args: any[]) => this.call('bumpFee', args);
     lookupInvoice = (...args: any[]) => this.call('lookupInvoice', args);
     subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
@@ -111,6 +117,11 @@ class BackendUtils {
         this.call('subscribeInvoices', args);
     subscribeTransactions = (...args: any[]) =>
         this.call('subscribeTransactions', args);
+    initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
+
+    //cln
+    supportsLSPS1customMessage = () => this.call('supportsLSPS1customMessage');
+    supportsLSPS1rest = () => this.call('supportsLSPS1rest');
 
     // lndhub
     login = (...args: any[]) => this.call('login', args);
@@ -142,6 +153,8 @@ class BackendUtils {
         this.call('supportsSimpleTaprootChannels');
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsSweep = () => this.call('supportsSweep');
+    supportsOnchainBatching = () => this.call('supportsOnchainBatching');
+    supportsChannelBatching = () => this.call('supportsChannelBatching');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC

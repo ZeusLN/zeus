@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -13,7 +14,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
 
 interface SetDuressPassphraseProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -23,6 +24,7 @@ interface SetDuressPassphraseState {
     savedDuressPassphrase: string;
     duressPassphraseMismatchError: boolean;
     duressPassphraseInvalidError: boolean;
+    duressPassphraseEmptyError: boolean;
     confirmDelete: boolean;
 }
 
@@ -38,6 +40,7 @@ export default class SetDuressPassphrase extends React.Component<
         savedDuressPassphrase: '',
         duressPassphraseMismatchError: false,
         duressPassphraseInvalidError: false,
+        duressPassphraseEmptyError: false,
         confirmDelete: false
     };
 
@@ -75,7 +78,10 @@ export default class SetDuressPassphrase extends React.Component<
 
         const settings = await getSettings();
 
-        if (duressPassphrase === settings.passphrase) {
+        if (
+            duressPassphrase !== '' &&
+            duressPassphrase === settings.passphrase
+        ) {
             this.setState({
                 duressPassphraseInvalidError: true
             });
@@ -83,9 +89,16 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
+        if (duressPassphrase === '') {
+            this.setState({
+                duressPassphraseEmptyError: true
+            });
+            return;
+        }
+
         await updateSettings({ duressPassphrase }).then(() => {
             getSettings();
-            navigation.navigate('Settings', {
+            navigation.popTo('Settings', {
                 refresh: true
             });
         });
@@ -96,7 +109,7 @@ export default class SetDuressPassphrase extends React.Component<
         const { updateSettings } = SettingsStore;
 
         await updateSettings({ duressPassphrase: '' }).then(() => {
-            navigation.navigate('Settings', {
+            navigation.popTo('Settings', {
                 refresh: true
             });
         });
@@ -109,7 +122,8 @@ export default class SetDuressPassphrase extends React.Component<
             duressPassphraseConfirm,
             savedDuressPassphrase,
             duressPassphraseMismatchError,
-            duressPassphraseInvalidError
+            duressPassphraseInvalidError,
+            duressPassphraseEmptyError
         } = this.state;
 
         return (
@@ -148,6 +162,13 @@ export default class SetDuressPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {duressPassphraseEmptyError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.empty'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newDuressPassword')}
                     </Text>
@@ -159,15 +180,21 @@ export default class SetDuressPassphrase extends React.Component<
                             this.setState({
                                 duressPassphrase: text,
                                 duressPassphraseMismatchError: false,
-                                duressPassphraseInvalidError: false
+                                duressPassphraseInvalidError: false,
+                                duressPassphraseEmptyError: false
                             })
                         }
-                        numberOfLines={1}
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            paddingLeft: 10
+                            paddingLeft: 10,
+                            paddingTop:
+                                this.state.duressPassphrase === ''
+                                    ? Platform.OS === 'android'
+                                        ? 6
+                                        : 8
+                                    : 2
                         }}
                     />
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
@@ -181,15 +208,21 @@ export default class SetDuressPassphrase extends React.Component<
                             this.setState({
                                 duressPassphraseConfirm: text,
                                 duressPassphraseMismatchError: false,
-                                duressPassphraseInvalidError: false
+                                duressPassphraseInvalidError: false,
+                                duressPassphraseEmptyError: false
                             })
                         }
-                        numberOfLines={1}
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            paddingLeft: 10
+                            paddingLeft: 10,
+                            paddingTop:
+                                this.state.duressPassphraseConfirm === ''
+                                    ? Platform.OS === 'android'
+                                        ? 6
+                                        : 8
+                                    : 0
                         }}
                     />
                     <Text

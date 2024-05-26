@@ -1,10 +1,12 @@
 import * as React from 'react';
-import { FlatList, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { ListItem, SearchBar } from 'react-native-elements';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 
 import InventoryStore from '../../stores/InventoryStore';
@@ -12,16 +14,16 @@ import InventoryStore from '../../stores/InventoryStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Product from '../../models/Product';
-import LoadingIndicator from '../../components/LoadingIndicator';
 
 interface ProductsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     InventoryStore: InventoryStore;
 }
 
 interface ProductsState {
     search: string;
     products: Array<Product>;
+    loading: boolean;
 }
 
 @inject('InventoryStore')
@@ -32,13 +34,14 @@ export default class Products extends React.Component<
 > {
     state = {
         search: '',
-        products: []
+        products: [],
+        loading: true
     };
 
     async componentDidMount() {
-        this.props.navigation.addListener('didFocus', async () => {
-            this.loadProducts();
-        });
+        this.props.navigation.addListener('focus', async () =>
+            this.loadProducts()
+        );
     }
 
     async loadProducts() {
@@ -49,7 +52,8 @@ export default class Products extends React.Component<
         this.setState({
             products: products
                 ? products.sort((a, b) => a.name.localeCompare(b.name))
-                : []
+                : [],
+            loading: false
         });
 
         return products;
@@ -76,11 +80,14 @@ export default class Products extends React.Component<
     };
 
     render() {
-        const { navigation, InventoryStore } = this.props;
-        const { products, search } = this.state;
-        const { loading } = InventoryStore;
+        const { navigation } = this.props;
+        const { products, search, loading } = this.state;
 
-        const Add = ({ navigation }: { navigation: any }) => (
+        const Add = ({
+            navigation
+        }: {
+            navigation: StackNavigationProp<any, any>;
+        }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('ProductDetails')}
             >
@@ -139,7 +146,7 @@ export default class Products extends React.Component<
                             <LoadingIndicator />
                         </View>
                     )}
-                    {!loading && (
+                    {!loading && products?.length > 0 && (
                         <FlatList
                             data={products}
                             renderItem={({ item }: { item: Product }) => (
@@ -170,6 +177,20 @@ export default class Products extends React.Component<
                             }
                             ItemSeparatorComponent={this.renderSeparator}
                         />
+                    )}
+                    {!loading && products.length === 0 && (
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                alignSelf: 'center',
+                                marginTop: 20
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.POS.Product.noProductsDefined'
+                            )}
+                        </Text>
                     )}
                 </View>
             </Screen>

@@ -134,9 +134,9 @@ class LndMobileTools extends ReactContextBaseJavaModule {
     intent.setType("text/plain");
     intent.putExtra(Intent.EXTRA_TITLE, "lnd.log");
     if (network == "testnet") {
-      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.INTENT_COPYLNDLOGTESTNET);
+      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.Companion.getINTENT_COPYLNDLOGTESTNET());
     } else {
-      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.INTENT_COPYLNDLOG);
+      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.Companion.getINTENT_COPYLNDLOG());
     }
     promise.resolve(true);
   }
@@ -268,14 +268,14 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void saveChannelsBackup(String base64Backups, Promise promise) {
-    MainActivity.tmpChanBackup = Base64.decode(base64Backups, Base64.NO_WRAP);
+    MainActivity.Companion.setTmpChanBackup(Base64.decode(base64Backups, Base64.NO_WRAP));
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
 
     Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
     intent.addCategory(Intent.CATEGORY_OPENABLE);
     intent.setType("text/plain");
     intent.putExtra(Intent.EXTRA_TITLE, "zeus-channels-backup-" + dateFormat.format(new Date()) + ".bin");
-    getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.INTENT_EXPORTCHANBACKUP);
+    getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.Companion.getINTENT_EXPORTCHANBACKUP());
     promise.resolve(true);
   }
 
@@ -288,9 +288,9 @@ class LndMobileTools extends ReactContextBaseJavaModule {
     intent.setType("text/plain");
     intent.putExtra(Intent.EXTRA_TITLE, "zeus-channels-backup-" + dateFormat.format(new Date()) + ".bin");
     if (network == "testnet") {
-      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.INTENT_EXPORTCHANBACKUPFILETESTNET);
+      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.Companion.getINTENT_EXPORTCHANBACKUPFILETESTNET());
     } else {
-      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.INTENT_EXPORTCHANBACKUPFILE);
+      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.Companion.getINTENT_EXPORTCHANBACKUPFILE());
     }
     promise.resolve(true);
   }

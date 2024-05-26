@@ -7,11 +7,15 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
 
 import Invoice from '../models/Invoice';
+import Channel from '../models/Channel';
+import ChannelInfo from '../models/ChannelInfo';
 import SettingsStore from './SettingsStore';
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 import ChannelsStore from './ChannelsStore';
+import NodeInfoStore from './NodeInfoStore';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -33,6 +37,7 @@ export default class InvoicesStore {
     settingsStore: SettingsStore;
     lspStore: LSPStore;
     channelsStore: ChannelsStore;
+    nodeInfoStore: NodeInfoStore;
 
     // lnd
     @observable loadingFeeEstimate = false;
@@ -42,11 +47,13 @@ export default class InvoicesStore {
     constructor(
         settingsStore: SettingsStore,
         lspStore: LSPStore,
-        channelsStore: ChannelsStore
+        channelsStore: ChannelsStore,
+        nodeInfoStore: NodeInfoStore
     ) {
         this.settingsStore = settingsStore;
         this.lspStore = lspStore;
         this.channelsStore = channelsStore;
+        this.nodeInfoStore = nodeInfoStore;
 
         reaction(
             () => this.pay_req,
@@ -120,8 +127,10 @@ export default class InvoicesStore {
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
         routeHints?: boolean,
+        routeHintChannels?: Channel[],
         addressType?: string,
-        customPreimage?: string
+        customPreimage?: string,
+        noLsp?: boolean
     ) => {
         this.creatingInvoice = true;
         return this.createInvoice(
@@ -131,8 +140,10 @@ export default class InvoicesStore {
             lnurl,
             ampInvoice,
             routeHints,
+            routeHintChannels,
             true,
-            customPreimage
+            customPreimage,
+            noLsp
         ).then(
             ({
                 rHash,
@@ -175,8 +186,10 @@ export default class InvoicesStore {
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
         routeHints?: boolean,
+        routeHintChannels?: Channel[],
         unified?: boolean,
-        customPreimage?: string
+        customPreimage?: string,
+        noLsp?: boolean
     ) => {
         this.lspStore?.resetFee();
         this.payment_request = null;
@@ -192,7 +205,58 @@ export default class InvoicesStore {
         };
 
         if (ampInvoice) req.is_amp = true;
-        if (routeHints) req.private = true;
+        if (routeHints) {
+            if (routeHintChannels?.length) {
+                const routeHints = [];
+                for (const routeHintChannel of routeHintChannels) {
+                    let channelInfo =
+                        this.channelsStore.chanInfo[
+                            routeHintChannel.channelId!
+                        ];
+                    if (!channelInfo) {
+                        try {
+                            channelInfo = new ChannelInfo(
+                                await BackendUtils.getChannelInfo(
+                                    routeHintChannel.channelId
+                                )
+                            );
+                        } catch (error: any) {
+                            this.creatingInvoiceError = true;
+                            this.creatingInvoice = false;
+                            this.error_msg =
+                                error.toString() ||
+                                localeString(
+                                    'stores.InvoicesStore.errorCreatingInvoice'
+                                );
+                            return;
+                        }
+                    }
+                    const remotePolicy =
+                        channelInfo.node1Pub ===
+                        this.nodeInfoStore.nodeInfo.nodeId
+                            ? channelInfo.node2Policy
+                            : channelInfo.node1Policy;
+                    routeHints.push({
+                        hop_hints: [
+                            {
+                                node_id: routeHintChannel.remotePubkey,
+                                chan_id: routeHintChannel.channelId, // must not be converted to Number as this might lead to a loss of precision
+                                fee_base_msat: Number(
+                                    remotePolicy?.fee_base_msat
+                                ),
+                                fee_proportional_millionths: Number(
+                                    remotePolicy?.fee_rate_milli_msat
+                                ),
+                                cltv_expiry_delta: remotePolicy?.time_lock_delta
+                            }
+                        ]
+                    });
+                }
+                req.route_hints = routeHints;
+            } else {
+                req.private = true;
+            }
+        }
 
         if (customPreimage) req.preimage = customPreimage;
 
@@ -200,7 +264,8 @@ export default class InvoicesStore {
             BackendUtils.supportsLSPs() &&
             this.settingsStore.settings?.enableLSP &&
             value &&
-            value !== '0'
+            value !== '0' &&
+            !noLsp
         ) {
             const info: any = this.lspStore?.info;
             const method =
@@ -263,7 +328,8 @@ export default class InvoicesStore {
                 if (
                     BackendUtils.supportsLSPs() &&
                     this.settingsStore.settings?.enableLSP &&
-                    value !== '0'
+                    value !== '0' &&
+                    !noLsp
                 ) {
                     await this.lspStore
                         .getZeroConfInvoice(invoice.getPaymentRequest)
@@ -392,11 +458,12 @@ export default class InvoicesStore {
                 this.pay_req = new Invoice(data);
                 this.getPayReqError = null;
                 this.loading = false;
+                return;
             })
-            .catch((error: any) => {
+            .catch((error: Error) => {
                 // handle error
                 this.pay_req = null;
-                this.getPayReqError = error.toString();
+                this.getPayReqError = errorToUserFriendly(error);
                 this.loading = false;
             });
     };

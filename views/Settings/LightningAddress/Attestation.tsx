@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { nip19 } from 'nostr-tools';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from '../../../components/Amount';
 import Button from '../../../components/Button';
@@ -14,12 +16,13 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 interface AttestationProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
+    route: Route<'Attestation', { attestation: any }>;
 }
 
 export default function Attestation(props: AttestationProps) {
-    const { navigation } = props;
-    const item = navigation.getParam('attestation', null);
+    const { navigation, route } = props;
+    const item = route.params?.attestation;
 
     const handleNostr = (value: string) => {
         const deepLink = `nostr:${value}`;

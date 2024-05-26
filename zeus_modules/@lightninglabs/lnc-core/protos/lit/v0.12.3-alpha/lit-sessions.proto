@@ -1,0 +1,391 @@
+syntax = "proto3";
+
+package litrpc;
+
+option go_package = "github.com/lightninglabs/lightning-terminal/litrpc";
+
+// Sessions is a service that gives access to the core functionalities of the
+// daemon's session system.
+service Sessions {
+    /* litcli: `sessions add`
+    AddSession adds and starts a new LNC session.
+    */
+    rpc AddSession (AddSessionRequest) returns (AddSessionResponse);
+
+    /* litcli: `sessions list`
+    ListSessions returns all sessions known to the session store.
+    */
+    rpc ListSessions (ListSessionsRequest) returns (ListSessionsResponse);
+
+    /* litcli: `sessions revoke`
+    RevokeSession revokes a single session and also stops it if it is currently
+    active.
+    */
+    rpc RevokeSession (RevokeSessionRequest) returns (RevokeSessionResponse);
+}
+
+enum SessionType {
+    TYPE_MACAROON_READONLY = 0;
+    TYPE_MACAROON_ADMIN = 1;
+    TYPE_MACAROON_CUSTOM = 2;
+    TYPE_UI_PASSWORD = 3;
+    TYPE_AUTOPILOT = 4;
+    TYPE_MACAROON_ACCOUNT = 5;
+}
+
+message AddSessionRequest {
+    /*
+    A user assigned label for the session.
+    */
+    string label = 1;
+
+    /*
+    The session type. This will be used during macaroon construction to
+    determine how restrictive to make the macaroon and thus the session access.
+    */
+    SessionType session_type = 2;
+
+    /*
+    The time at which the session should automatically be revoked.
+    */
+    uint64 expiry_timestamp_seconds = 3 [jstype = JS_STRING];
+
+    /*
+    The address of the mailbox server that the LNC connection should use.
+    */
+    string mailbox_server_addr = 4;
+
+    /*
+    If set to true, tls will be skipped  when connecting to the mailbox.
+    */
+    bool dev_server = 5;
+
+    /*
+    Any custom permissions to add the session's macaroon.
+    */
+    repeated MacaroonPermission macaroon_custom_permissions = 6;
+
+    /*
+    The ID of the account to associate this session with. This should only be
+    set if the session_type is TYPE_MACAROON_ACCOUNT.
+    */
+    string account_id = 7;
+}
+
+message MacaroonPermission {
+    /*
+    The entity a permission grants access to. If a entity is set to the
+    "uri" keyword then the action entry should be one of the special cases
+    described in the comment for action.
+    */
+    string entity = 1;
+
+    /*
+    The action that is granted. If entity is set to "uri", then action must
+    be set to either:
+      - a particular URI to which access should be granted.
+      - a URI regex, in which case access will be granted to each URI that
+        matches the regex.
+      - the "***readonly***" keyword. This will result in the access being
+        granted to all read-only endpoints.
+    */
+    string action = 2;
+}
+
+enum SessionState {
+    STATE_CREATED = 0;
+    STATE_IN_USE = 1;
+    STATE_REVOKED = 2;
+    STATE_EXPIRED = 3;
+}
+
+message AddSessionResponse {
+    /*
+    The session of the newly created session.
+    */
+    Session session = 1;
+}
+
+message Session {
+    /*
+    A unique ID assigned to the session. It is derived from the session
+    macaroon.
+    */
+    bytes id = 14;
+
+    /*
+    A user assigned label for the session.
+    */
+    string label = 1;
+
+    /*
+    The current state that the session is in. This will give an indication of
+    if the session is currently usable or not.
+    */
+    SessionState session_state = 2;
+
+    /*
+    The session type. The will given an indication of the restrictions applied
+    to the macaroon assigned to the session.
+    */
+    SessionType session_type = 3;
+
+    /*
+    The time at which the session will automatically be revoked.
+    */
+    uint64 expiry_timestamp_seconds = 4 [jstype = JS_STRING];
+
+    /*
+    The address of the mailbox server that the LNC connection should use.
+    */
+    string mailbox_server_addr = 5;
+
+    /*
+    If set to true, tls will be skipped  when connecting to the mailbox.
+    */
+    bool dev_server = 6;
+
+    /*
+    The LNC pairing phrase in byte form.
+    */
+    bytes pairing_secret = 7;
+
+    /*
+    The LNC pairing phrase in mnemonic form.
+    */
+    string pairing_secret_mnemonic = 8;
+
+    /*
+    The long term, local static public key used by this node for the LNC
+    connection.
+    */
+    bytes local_public_key = 9;
+
+    /*
+    The long term, remote static public key used by the remote party for the
+    LNC connection.
+    */
+    bytes remote_public_key = 10;
+
+    /*
+    The time at which the session was created.
+    */
+    uint64 created_at = 11 [jstype = JS_STRING];
+
+    /*
+    The recipe used for creating a macaroon to use with this session. This will
+    be closely linked to the session type.
+    */
+    MacaroonRecipe macaroon_recipe = 12;
+
+    /*
+    If the session is for a specific account, then this will be the account ID
+    it is associated with.
+    */
+    string account_id = 13;
+
+    /*
+    If this session is for Autopilot use, then this will be the set of features
+    that the session can be used for along with the rules for each feature.
+    */
+    map<string, RulesMap> autopilot_feature_info = 15;
+
+    /*
+    The unix timestamp indicating the time at which the session was revoked.
+    Note that this field has not been around since the beginning and so it
+    could be the case that a session has been revoked but that this field
+    will not have been set for that session. Therefore, it is suggested that
+    readers should not assume that if this field is zero that the session is
+    not revoked. Readers should instead first check the session_state field.
+    */
+    uint64 revoked_at = 16 [jstype = JS_STRING];
+
+    /*
+    The ID of the group of Session's that this Session is linked to. If this
+    session is not linked to any older Session, then this value will be the
+    same as the ID.
+    */
+    bytes group_id = 17;
+
+    /*
+    Configurations for each individual feature mapping from the feature name to
+    a JSON-serialized configuration.
+    */
+    map<string, string> feature_configs = 18;
+}
+
+message MacaroonRecipe {
+    /*
+    A list of permissions that should be included in the macaroon.
+    */
+    repeated MacaroonPermission permissions = 1;
+
+    /*
+    A list of caveats to add to the macaroon.
+    */
+    repeated string caveats = 2;
+}
+
+message ListSessionsRequest {
+}
+
+message ListSessionsResponse {
+    /*
+    A list of sessions.
+    */
+    repeated Session sessions = 1;
+}
+
+message RevokeSessionRequest {
+    /*
+    The local static key of the session to be revoked.
+    When using REST, this field must be encoded as base64url.
+    */
+    bytes local_public_key = 8;
+}
+
+message RevokeSessionResponse {
+}
+
+message RulesMap {
+    /*
+    A map of rule name to RuleValue. The RuleValue should be parsed based on
+    the name of the rule.
+    */
+    map<string, RuleValue> rules = 1;
+}
+
+message RuleValue {
+    oneof value {
+        RateLimit rate_limit = 1;
+        ChannelPolicyBounds chan_policy_bounds = 2;
+        HistoryLimit history_limit = 3;
+        OffChainBudget off_chain_budget = 4;
+        OnChainBudget on_chain_budget = 5;
+        SendToSelf send_to_self = 6;
+        ChannelRestrict channel_restrict = 7;
+        PeerRestrict peer_restrict = 8;
+    }
+}
+
+message RateLimit {
+    /*
+    The rate limit for read-only calls.
+    */
+    Rate read_limit = 1;
+
+    /*
+    The rate limit for write/execution calls.
+    */
+    Rate write_limit = 2;
+}
+
+message Rate {
+    /*
+    The number of times a call is allowed in num_hours number of hours.
+    */
+    uint32 iterations = 1;
+
+    /*
+    The number of hours in which the iterations count takes place over.
+    */
+    uint32 num_hours = 2;
+}
+
+message HistoryLimit {
+    /*
+    The absolute unix timestamp in seconds before which no information should
+    be shared. This should only be set if duration is not set.
+    */
+    uint64 start_time = 1 [jstype = JS_STRING];
+
+    /*
+    The maximum relative duration in seconds that a request is allowed to query
+    for. This should only be set if start_time is not set.
+    */
+    uint64 duration = 2 [jstype = JS_STRING];
+}
+
+message ChannelPolicyBounds {
+    /*
+    The minimum base fee in msat that the autopilot can set for a channel.
+    */
+    uint64 min_base_msat = 1 [jstype = JS_STRING];
+
+    /*
+    The maximum base fee in msat that the autopilot can set for a channel.
+    */
+    uint64 max_base_msat = 2 [jstype = JS_STRING];
+
+    /*
+    The minimum ppm fee in msat that the autopilot can set for a channel.
+    */
+    uint32 min_rate_ppm = 3;
+
+    /*
+    The maximum ppm fee in msat that the autopilot can set for a channel.
+    */
+    uint32 max_rate_ppm = 4;
+
+    /*
+    The minimum cltv delta that the autopilot may set for a channel.
+    */
+    uint32 min_cltv_delta = 5;
+
+    /*
+    The maximum cltv delta that the autopilot may set for a channel.
+    */
+    uint32 max_cltv_delta = 6;
+
+    /*
+    The minimum htlc msat that the autopilot may set for a channel.
+    */
+    uint64 min_htlc_msat = 7 [jstype = JS_STRING];
+
+    /*
+    The maximum htlc msat that the autopilot may set for a channel.
+    */
+    uint64 max_htlc_msat = 8 [jstype = JS_STRING];
+}
+
+message OffChainBudget {
+    /*
+    The maximum amount that can be spent off-chain excluding fees.
+    */
+    uint64 max_amt_msat = 1 [jstype = JS_STRING];
+
+    /*
+    The maximum amount that can be spent off-chain on fees.
+    */
+    uint64 max_fees_msat = 2 [jstype = JS_STRING];
+}
+
+message OnChainBudget {
+    /*
+    The maximum amount that can be spent on-chain including fees.
+    */
+    uint64 absolute_amt_sats = 1 [jstype = JS_STRING];
+
+    /*
+    The maximum amount that can be spent on-chain in fees.
+    */
+    uint64 max_sat_per_v_byte = 2 [jstype = JS_STRING];
+}
+
+message SendToSelf {
+}
+
+message ChannelRestrict {
+    /*
+    A list of channel IDs that the Autopilot should _not_ perform any actions
+    on.
+    */
+    repeated uint64 channel_ids = 1 [jstype = JS_STRING];
+}
+
+message PeerRestrict {
+    /*
+    A list of peer IDs that the Autopilot should _not_ perform any actions on.
+    */
+    repeated string peer_ids = 1;
+}

@@ -75,6 +75,7 @@ open class Lnd {
     "AddInvoice": { bytes, cb in LndmobileAddInvoice(bytes, cb) },
     "InvoicesCancelInvoice": { bytes, cb in LndmobileInvoicesCancelInvoice(bytes, cb) },
     "ConnectPeer": { bytes, cb in LndmobileConnectPeer(bytes, cb) },
+    "SendCustomMessage": { bytes, cb in LndmobileSendCustomMessage(bytes, cb) },
     "DecodePayReq": { bytes, cb in LndmobileDecodePayReq(bytes, cb) },
     "DescribeGraph": { bytes, cb in LndmobileDescribeGraph(bytes, cb) },
     "GetInfo": { bytes, cb in LndmobileGetInfo(bytes, cb) },
@@ -89,6 +90,7 @@ open class Lnd {
     "QueryRoutes": { bytes, cb in LndmobileQueryRoutes(bytes, cb) },
     "ListPayments": { bytes, cb in LndmobileListPayments(bytes, cb) },
     "ListInvoices": { bytes, cb in LndmobileListInvoices(bytes, cb) },
+    "FundingStateStep": { bytes, cb in LndmobileFundingStateStep(bytes, cb) },
 
     // channel
     //
@@ -116,7 +118,14 @@ open class Lnd {
     "InitWallet": { bytes, cb in LndmobileInitWallet(bytes, cb) },
     "UnlockWallet": { bytes, cb in LndmobileUnlockWallet(bytes, cb) },
     "WalletKitDeriveKey": { bytes, cb in LndmobileWalletKitDeriveKey(bytes, cb) },
-//    derivePrivateKey
+    "FundPsbt": { bytes, cb in LndmobileWalletKitFundPsbt(bytes, cb) },
+    "SignPsbt": { bytes, cb in LndmobileWalletKitSignPsbt(bytes, cb) },
+    "FinalizePsbt": { bytes, cb in LndmobileWalletKitFinalizePsbt(bytes, cb) },
+    "PublishTransaction": { bytes, cb in LndmobileWalletKitPublishTransaction(bytes, cb) },
+    "ListAccounts": { bytes, cb in LndmobileWalletKitListAccounts(bytes, cb) },
+    "ImportAccount": { bytes, cb in LndmobileWalletKitImportAccount(bytes, cb) },
+  
+    //    derivePrivateKey
     "VerifyMessage": { bytes, cb in LndmobileVerifyMessage(bytes, cb) },
     "SignMessage": { bytes, cb in LndmobileSignMessage(bytes, cb) },
     "SignerSignMessage": { bytes, cb in LndmobileSignerSignMessage(bytes, cb) },
@@ -135,6 +144,9 @@ open class Lnd {
     "RouterSendPaymentV2": { req, cb in return LndmobileRouterSendPaymentV2(req, cb) },
     "SubscribeState": { req, cb in return LndmobileSubscribeState(req, cb) },
     "RouterTrackPaymentV2": { req, cb in return LndmobileRouterTrackPaymentV2(req, cb) },
+    "OpenChannel": { bytes, cb in LndmobileOpenChannel(bytes, cb) },
+    "SubscribeCustomMessages": { bytes, cb in LndmobileSubscribeCustomMessages(bytes, cb) },
+
     // channel
     //
     "CloseChannel": { req, cb in return LndmobileCloseChannel(req, cb)},
@@ -299,7 +311,17 @@ open class Lnd {
     }
   }
 
- func gossipSync(_ cacheDir: String, dataDir: String, networkType: String, callback: @escaping Callback) {
-   LndmobileGossipSync(cacheDir, dataDir, networkType, LndmobileCallback(method: "zeus_gossipSync", callback: callback))
- }
+  func gossipSync(_ serviceUrl: String, cacheDir: String, dataDir: String, networkType: String, callback: @escaping Callback) {
+    LndmobileGossipSync(serviceUrl, cacheDir, dataDir, networkType, LndmobileCallback(method: "zeus_gossipSync", callback: callback))
+  }
+  
+  func cancelGossipSync(_ callback: @escaping Callback) {
+    do {
+      let stopRequest = Lnrpc_StopRequest()
+      let payload = try stopRequest.serializedData()
+      LndmobileCancelGossipSync()
+    } catch let error {
+      callback(nil, error)
+    }
+  }
 }

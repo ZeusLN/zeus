@@ -78,8 +78,8 @@ export default class SetFeesForm extends React.Component<
             timeLockDelta,
             channelPoint,
             channelId,
-            minHTLC,
-            maxHTLC,
+            minHtlc,
+            maxHtlc,
             setFeesCompleted
         } = this.props;
         const {
@@ -182,7 +182,7 @@ export default class SetFeesForm extends React.Component<
                         </Text>
                         <TextInput
                             keyboardType="numeric"
-                            placeholder={minHTLC || '1'}
+                            placeholder={minHtlc || '1'}
                             value={newMinHtlc}
                             onChangeText={(text: string) =>
                                 this.setState({
@@ -203,7 +203,7 @@ export default class SetFeesForm extends React.Component<
                         </Text>
                         <TextInput
                             keyboardType="numeric"
-                            placeholder={maxHTLC || '250000'}
+                            placeholder={maxHtlc || '250000'}
                             value={newMaxHtlc}
                             onChangeText={(text: string) =>
                                 this.setState({

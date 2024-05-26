@@ -5,6 +5,7 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import VersionUtils from './../utils/VersionUtils';
 import Base64Utils from './../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
+import BigNumber from 'bignumber.js';
 
 export default class CLightningREST extends LND {
     getHeaders = (macaroonHex: string): any => {
@@ -167,13 +168,16 @@ export default class CLightningREST extends LND {
             payments: data.pays
         }));
     getNewAddress = () => this.getRequest('/v1/newaddr?addrType=bech32');
-    openChannel = (data: OpenChannelRequest) => {
+    openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
+        const feeRate = `${new BigNumber(data.sat_per_vbyte)
+            .times(1000)
+            .toString()}perkb`;
         if (data.utxos && data.utxos.length > 0) {
             request = {
                 id: data.id,
                 satoshis: data.satoshis,
-                feeRate: data.sat_per_vbyte,
+                feeRate,
                 announce: !data.privateChannel ? 'true' : 'false',
                 minfConf: data.min_confs,
                 utxos: data.utxos
@@ -182,7 +186,7 @@ export default class CLightningREST extends LND {
             request = {
                 id: data.id,
                 satoshis: data.satoshis,
-                feeRate: data.sat_per_vbyte,
+                feeRate,
                 announce: !data.privateChannel ? 'true' : 'false',
                 minfConf: data.min_confs
             };
@@ -205,7 +209,8 @@ export default class CLightningREST extends LND {
     sendKeysend = (data: any) =>
         this.postRequest('/v1/pay/keysend', {
             pubkey: data.pubkey,
-            amount: Number(data.amt && data.amt * 1000)
+            amount: Number(data.amt && data.amt * 1000),
+            maxfeepercent: data.max_fee_percent
         });
     closeChannel = (urlParams?: Array<string>) =>
         this.deleteRequest(
@@ -267,5 +272,9 @@ export default class CLightningREST extends LND {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
+    supportsOnchainBatching = () => false;
+    supportsChannelBatching = () => false;
     isLNDBased = () => false;
+    supportsLSPS1customMessage = () => false;
+    supportsLSPS1rest = () => true;
 }

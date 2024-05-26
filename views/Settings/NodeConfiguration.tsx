@@ -4,6 +4,7 @@ import {
     StyleSheet,
     Text,
     View,
+    Image,
     ScrollView,
     TouchableOpacity
 } from 'react-native';
@@ -11,6 +12,9 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import cloneDeep from 'lodash/cloneDeep';
+import differenceBy from 'lodash/differenceBy';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { hash, STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
@@ -38,22 +42,39 @@ import TextInput from '../../components/TextInput';
 import SettingsStore, {
     INTERFACE_KEYS,
     LNC_MAILBOX_KEYS,
-    Settings
+    EMBEDDED_NODE_NETWORK_KEYS,
+    Settings,
+    Node
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
+import AddIcon from '../../assets/images/SVG/Add.svg';
 
+import { getPhoto } from '../../utils/PhotoUtils';
 import { createLndWallet } from '../../utils/LndMobileUtils';
 
 interface NodeConfigurationProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: Route<
+        'NodeConfiguration',
+        {
+            node: Node;
+            index: any;
+            active: boolean;
+            tor: boolean;
+            saved: boolean;
+            newEntry: boolean;
+            photo: string;
+        }
+    >;
 }
 
 interface NodeConfigurationState {
+    node: Node | null;
     nickname: string; //
     host: string; // lnd, c-lightning-REST
-    port: string | number; // lnd, c-lightning-REST
+    port: string; // lnd, c-lightning-REST
     macaroonHex: string; // lnd, c-lightning-REST
     url: string; // spark, eclair
     accessKey: string; // spark
@@ -72,6 +93,7 @@ interface NodeConfigurationState {
     showCertModal: boolean;
     enableTor: boolean;
     interfaceKeys: Array<any>;
+    photo?: string;
     // lnc
     pairingPhrase: string;
     mailboxServer: string;
@@ -102,7 +124,8 @@ export default class NodeConfiguration extends React.Component<
     NodeConfigurationProps,
     NodeConfigurationState
 > {
-    state = {
+    state: NodeConfigurationState = {
+        node: null,
         nickname: '',
         host: '',
         port: '',
@@ -123,6 +146,7 @@ export default class NodeConfiguration extends React.Component<
         username: '',
         password: '',
         accessKey: '',
+        photo: undefined,
         // lnc
         pairingPhrase: '',
         mailboxServer: 'mailbox.terminal.lightning.today:443',
@@ -134,13 +158,15 @@ export default class NodeConfiguration extends React.Component<
         seedPhrase: [],
         walletPassword: '',
         adminMacaroon: '',
-        embeddedLndNetwork: '',
+        embeddedLndNetwork: 'mainnet',
         interfaceKeys: [],
         recoveryCipherSeed: '',
         channelBackupsBase64: '',
         creatingWallet: false,
         errorCreatingWallet: false
     };
+
+    scrollViewRef = React.createRef<ScrollView>();
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
@@ -237,7 +263,7 @@ export default class NodeConfiguration extends React.Component<
         // remove option to add a new embedded node if initialized already
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { embeddedLndNetwork, newEntry } = this.state;
+        const { adminMacaroon, newEntry } = this.state;
         if (settings.nodes && newEntry) {
             const result = settings?.nodes?.filter(
                 (node) => node.implementation === 'embedded-lnd'
@@ -246,7 +272,7 @@ export default class NodeConfiguration extends React.Component<
                 interfaceKeys = interfaceKeys.filter(
                     (item) => item.value !== 'embedded-lnd'
                 );
-                if (!embeddedLndNetwork) {
+                if (!adminMacaroon) {
                     this.setState({
                         implementation: 'lnd'
                     });
@@ -263,15 +289,16 @@ export default class NodeConfiguration extends React.Component<
         this.initFromProps(nextProps);
     }
 
-    async initFromProps(props: any) {
-        const { navigation } = props;
+    async initFromProps(props: NodeConfigurationProps) {
+        const { route } = props;
 
-        const node = navigation.getParam('node', null);
-        const index = navigation.getParam('index', null);
-        const active = navigation.getParam('active', null);
-        const tor = navigation.getParam('enableTor', false);
-        const saved = navigation.getParam('saved', null);
-        const newEntry = navigation.getParam('newEntry', null);
+        const node = route.params.node ?? this.state.node;
+        const index = route.params.index ?? this.state.index;
+        const active = route.params.active ?? this.state.active;
+        const tor = route.params.tor ?? this.state.enableTor;
+        const saved = route.params.saved ?? this.state.saved;
+        const newEntry = route.params.newEntry ?? this.state.newEntry;
+        const newPhoto = route.params.photo ?? this.state.photo;
 
         if (node) {
             const {
@@ -288,6 +315,7 @@ export default class NodeConfiguration extends React.Component<
                 implementation,
                 certVerification,
                 enableTor,
+                photo,
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -297,9 +325,10 @@ export default class NodeConfiguration extends React.Component<
                 walletPassword,
                 adminMacaroon,
                 embeddedLndNetwork
-            } = node;
+            } = node as any;
 
             this.setState({
+                node,
                 nickname,
                 host,
                 port,
@@ -317,6 +346,7 @@ export default class NodeConfiguration extends React.Component<
                 saved,
                 newEntry,
                 enableTor: tor || enableTor,
+                photo: newPhoto || photo || '',
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -331,7 +361,8 @@ export default class NodeConfiguration extends React.Component<
             this.setState({
                 index,
                 active,
-                newEntry
+                newEntry,
+                photo: newPhoto || ''
             });
         }
     }
@@ -359,7 +390,8 @@ export default class NodeConfiguration extends React.Component<
             seedPhrase,
             walletPassword,
             adminMacaroon,
-            embeddedLndNetwork
+            embeddedLndNetwork,
+            photo
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -390,13 +422,18 @@ export default class NodeConfiguration extends React.Component<
             seedPhrase,
             walletPassword,
             adminMacaroon,
-            embeddedLndNetwork
+            embeddedLndNetwork,
+            photo
         };
 
-        let nodes: any;
+        let nodes: Node[];
+        let originalNode: Node;
         if (settings.nodes) {
             nodes = settings.nodes;
-            nodes[index !== null ? index : settings.nodes.length] = node;
+            if (index != null) {
+                originalNode = nodes[index];
+            }
+            nodes[index != null ? index : settings.nodes.length] = node;
         } else {
             nodes = [node];
         }
@@ -412,14 +449,31 @@ export default class NodeConfiguration extends React.Component<
                 saved: true
             });
 
-            if (nodes.length === 1) {
+            const activeNodeIndex = settings.selectedNode || 0;
+            if (index === activeNodeIndex) {
+                // updating active node
+                if (originalNode != null) {
+                    const diff = differenceBy(
+                        Object.entries(originalNode),
+                        Object.entries(node),
+                        (entry) => entry[0] + entry[1]
+                    ).filter(
+                        (entry) =>
+                            entry[0] !== 'nickname' && entry[0] !== 'photo'
+                    );
+                    if (diff.length === 0) {
+                        // only nickname or photo was edited - no reconnect necessary
+                        navigation.goBack();
+                        return;
+                    }
+                }
                 if (implementation === 'lightning-node-connect') {
                     BackendUtils.disconnect();
                 }
                 setConnectingStatus(true);
-                navigation.navigate('Wallet', { refresh: true });
+                navigation.popTo('Wallet', { refresh: true });
             } else {
-                navigation.navigate('Nodes', { refresh: true });
+                navigation.goBack();
             }
         });
     };
@@ -443,7 +497,8 @@ export default class NodeConfiguration extends React.Component<
             certVerification,
             pairingPhrase,
             mailboxServer,
-            customMailboxServer
+            customMailboxServer,
+            photo
         } = this.state;
         const { nodes } = settings;
 
@@ -463,14 +518,15 @@ export default class NodeConfiguration extends React.Component<
             enableTor,
             pairingPhrase,
             mailboxServer,
-            customMailboxServer
+            customMailboxServer,
+            photo
         };
 
         navigation.navigate('NodeConfiguration', {
             node,
             newEntry: true,
             saved: false,
-            index: Number(nodes.length)
+            index: nodes!.length
         });
     };
 
@@ -494,7 +550,7 @@ export default class NodeConfiguration extends React.Component<
             if (newNodes.length === 0) {
                 navigation.navigate('IntroSplash');
             } else {
-                navigation.navigate('Nodes', { refresh: true });
+                navigation.popTo('Nodes', { refresh: true });
             }
         });
     };
@@ -531,7 +587,7 @@ export default class NodeConfiguration extends React.Component<
             active: true
         });
 
-        navigation.navigate('Wallet', { refresh: true });
+        navigation.popTo('Wallet', { refresh: true });
     };
 
     createNewWallet = async (network: string = 'Mainnet') => {
@@ -572,6 +628,7 @@ export default class NodeConfiguration extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const {
+            node,
             nickname,
             host,
             port,
@@ -588,6 +645,7 @@ export default class NodeConfiguration extends React.Component<
             implementation,
             certVerification,
             enableTor,
+            photo,
             interfaceKeys,
             existingAccount,
             suggestImport,
@@ -674,6 +732,15 @@ export default class NodeConfiguration extends React.Component<
             );
         };
 
+        const AddPhotos = () => (
+            <AddIcon
+                fill={themeColor('background')}
+                width="14"
+                height="14"
+                style={{ alignSelf: 'center' }}
+            />
+        );
+
         return (
             <Screen>
                 <Header
@@ -685,7 +752,7 @@ export default class NodeConfiguration extends React.Component<
                         style: { ...styles.text, color: themeColor('text') }
                     }}
                     rightComponent={
-                        implementation === 'eclair' ? null : (
+                        implementation === 'eclair' ? undefined : (
                             <ScanBadge
                                 onPress={() =>
                                     implementation === 'spark'
@@ -705,11 +772,17 @@ export default class NodeConfiguration extends React.Component<
                     navigation={navigation}
                 />
                 {!!suggestImport && (
-                    <View style={styles.clipboardImport}>
+                    <View
+                        style={{
+                            padding: 10,
+                            backgroundColor: themeColor('disabled')
+                        }}
+                    >
                         <Text style={styles.whiteText}>
                             {localeString(
                                 'views.Settings.AddEditNode.connectionStringClipboard'
                             )}
+                            :
                         </Text>
                         <Text
                             style={{
@@ -721,7 +794,7 @@ export default class NodeConfiguration extends React.Component<
                                 ? `${suggestImport.substring(0, 100)}...`
                                 : suggestImport}
                         </Text>
-                        <Text style={styles.whiteText}>
+                        <Text style={{ ...styles.whiteText, marginBottom: 10 }}>
                             {localeString(
                                 'views.Settings.AddEditNode.importPrompt'
                             )}
@@ -732,9 +805,6 @@ export default class NodeConfiguration extends React.Component<
                                     'views.Settings.AddEditNode.import'
                                 )}
                                 onPress={() => this.importClipboard()}
-                                titleStyle={{
-                                    color: 'rgba(92, 99,216, 1)'
-                                }}
                                 tertiary
                             />
                         </View>
@@ -742,9 +812,6 @@ export default class NodeConfiguration extends React.Component<
                             <Button
                                 title={localeString('general.cancel')}
                                 onPress={() => this.clearImportSuggestion()}
-                                titleStyle={{
-                                    color: 'rgba(92, 99,216, 1)'
-                                }}
                                 tertiary
                             />
                         </View>
@@ -834,7 +901,6 @@ export default class NodeConfiguration extends React.Component<
                                                     showLndHubModal: false
                                                 })
                                             }
-                                            primary
                                         />
                                     </View>
                                 </>
@@ -896,7 +962,6 @@ export default class NodeConfiguration extends React.Component<
                                                     showCertModal: false
                                                 })
                                             }
-                                            primary
                                         />
                                     </View>
                                 </>
@@ -906,7 +971,7 @@ export default class NodeConfiguration extends React.Component<
                 </Modal>
 
                 <ScrollView
-                    ref="_scrollView"
+                    ref={this.scrollViewRef}
                     style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
                     keyboardShouldPersistTaps="handled"
                 >
@@ -924,62 +989,137 @@ export default class NodeConfiguration extends React.Component<
                                     message={createAccountSuccess}
                                 />
                             )}
+                        <View style={styles.container}>
+                            <TouchableOpacity
+                                onPress={
+                                    (!node || !node.photo) && !photo
+                                        ? () =>
+                                              navigation.navigate(
+                                                  'SetNodePicture',
+                                                  { implementation }
+                                              )
+                                        : () => {
+                                              if (node) {
+                                                  this.setState({
+                                                      node: {
+                                                          ...node,
+                                                          photo: undefined
+                                                      }
+                                                  });
+                                              }
+                                              this.setState(
+                                                  {
+                                                      photo: undefined,
+                                                      saved: false
+                                                  },
+                                                  () => {
+                                                      node
+                                                          ? (node.photo = '')
+                                                          : null;
+                                                  }
+                                              );
+                                          }
+                                }
+                            >
+                                <View
+                                    style={{
+                                        ...styles.imageBackground,
+                                        backgroundColor:
+                                            themeColor('secondaryText')
+                                    }}
+                                >
+                                    {node?.photo || photo ? (
+                                        <Image
+                                            source={{
+                                                uri: getPhoto(
+                                                    node?.photo || photo
+                                                )
+                                            }}
+                                            style={styles.imageBackground}
+                                        />
+                                    ) : (
+                                        <AddPhotos />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
 
-                        <View>
-                            <Text
+                            <View
                                 style={{
-                                    ...styles.text,
-                                    color: themeColor('text')
+                                    flex: 1,
+                                    marginLeft: 14,
+                                    marginTop: -16
                                 }}
                             >
-                                {localeString(
-                                    'views.Settings.AddEditNode.nickname'
-                                )}
-                            </Text>
-                            <TextInput
-                                placeholder={'My lightning node'}
-                                value={nickname}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        nickname: text,
-                                        saved: false
-                                    })
-                                }
-                                locked={loading}
-                            />
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.nickname'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'My lightning node'}
+                                    value={nickname}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            nickname: text,
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                />
+                            </View>
                         </View>
 
                         {!adminMacaroon && <NodeInterface />}
 
-                        {!embeddedLndNetwork &&
-                            implementation === 'embedded-lnd' && (
-                                <View>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.Settings.AddEditNode.recoveryCipherSeed'
-                                        )} (${localeString(
-                                            'general.optional'
-                                        )})`}
-                                    </Text>
-                                    <TextInput
-                                        placeholder="ship yellow box resource scan pelican..."
-                                        value={recoveryCipherSeed}
-                                        onChangeText={(text: string) =>
+                        {!adminMacaroon && implementation === 'embedded-lnd' && (
+                            <View>
+                                {!adminMacaroon && (
+                                    <DropdownSetting
+                                        title={localeString('general.network')}
+                                        selectedValue={embeddedLndNetwork}
+                                        onValueChange={(value: string) => {
                                             this.setState({
-                                                recoveryCipherSeed: text
-                                            })
-                                        }
-                                        locked={loading}
+                                                embeddedLndNetwork: value
+                                            });
+                                        }}
+                                        values={EMBEDDED_NODE_NETWORK_KEYS}
                                     />
-                                </View>
-                            )}
+                                )}
+                                {false && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {`${localeString(
+                                                'views.Settings.AddEditNode.recoveryCipherSeed'
+                                            )} (${localeString(
+                                                'general.optional'
+                                            )})`}
+                                        </Text>
+                                        <TextInput
+                                            placeholder="ship yellow box resource scan pelican..."
+                                            value={recoveryCipherSeed}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    recoveryCipherSeed: text
+                                                })
+                                            }
+                                            locked={loading}
+                                        />
+                                    </>
+                                )}
+                            </View>
+                        )}
 
-                        {!embeddedLndNetwork &&
+                        {!adminMacaroon &&
                             implementation === 'embedded-lnd' &&
                             recoveryCipherSeed && (
                                 <View>
@@ -1453,13 +1593,12 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {implementation === 'embedded-lnd' &&
-                        embeddedLndNetwork && (
-                            <KeyValue
-                                keyValue={localeString('general.network')}
-                                value={embeddedLndNetwork}
-                            />
-                        )}
+                    {implementation === 'embedded-lnd' && adminMacaroon && (
+                        <KeyValue
+                            keyValue={localeString('general.network')}
+                            value={embeddedLndNetwork}
+                        />
+                    )}
 
                     {implementation === 'embedded-lnd' &&
                         recoveryCipherSeed && (
@@ -1477,26 +1616,9 @@ export default class NodeConfiguration extends React.Component<
                                     <View style={styles.button}>
                                         <Button
                                             title={
-                                                recoveryCipherSeed
+                                                embeddedLndNetwork === 'mainnet'
                                                     ? localeString(
-                                                          'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                                      )
-                                                    : localeString(
                                                           'views.Settings.NodeConfiguration.createMainnetWallet'
-                                                      )
-                                            }
-                                            onPress={async () => {
-                                                await this.createNewWallet();
-                                            }}
-                                            tertiary
-                                        />
-                                    </View>
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={
-                                                recoveryCipherSeed
-                                                    ? localeString(
-                                                          'views.Settings.NodeConfiguration.restoreTestnetWallet'
                                                       )
                                                     : localeString(
                                                           'views.Settings.NodeConfiguration.createTestnetWallet'
@@ -1504,10 +1626,36 @@ export default class NodeConfiguration extends React.Component<
                                             }
                                             onPress={async () => {
                                                 await this.createNewWallet(
-                                                    'Testnet'
+                                                    embeddedLndNetwork ===
+                                                        'mainnet'
+                                                        ? undefined
+                                                        : 'Testnet'
                                                 );
                                             }}
                                             tertiary
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={
+                                                embeddedLndNetwork === 'mainnet'
+                                                    ? localeString(
+                                                          'views.Settings.NodeConfiguration.restoreMainnetWallet'
+                                                      )
+                                                    : localeString(
+                                                          'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                                      )
+                                            }
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'SeedRecovery',
+                                                    {
+                                                        network:
+                                                            embeddedLndNetwork
+                                                    }
+                                                )
+                                            }
+                                            secondary
                                         />
                                     </View>
                                 </>
@@ -1526,10 +1674,9 @@ export default class NodeConfiguration extends React.Component<
 
                     {!creatingWallet &&
                         !(
-                            implementation === 'embedded-lnd' &&
-                            !embeddedLndNetwork
+                            implementation === 'embedded-lnd' && !adminMacaroon
                         ) && (
-                            <View style={{ ...styles.button, marginTop: 20 }}>
+                            <View style={{ ...styles.button }}>
                                 <Button
                                     title={
                                         saved
@@ -1610,7 +1757,7 @@ export default class NodeConfiguration extends React.Component<
                                      * page for the copied node. Without this, the user would have to
                                      * manually scroll to the top to edit the copied node properties.
                                      */
-                                    this.refs._scrollView.scrollTo({
+                                    this.scrollViewRef.current?.scrollTo({
                                         x: 0,
                                         y: 0,
                                         animated: true
@@ -1643,18 +1790,12 @@ export default class NodeConfiguration extends React.Component<
                                         this.deleteNodeConfig();
                                     }
                                 }}
-                                containerStyle={{
-                                    borderColor: themeColor('delete')
-                                }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}
 
-                    {implementation === 'embedded-lnd' && saved && (
+                    {implementation === 'embedded-lnd' && !newEntry && (
                         <>
                             <Text
                                 style={{
@@ -1712,15 +1853,9 @@ const styles = StyleSheet.create({
         height: 50
     },
     button: {
-        paddingTop: 10,
-        paddingBottom: 10,
+        paddingVertical: 10,
         width: 350,
         alignSelf: 'center'
-    },
-    clipboardImport: {
-        padding: 10,
-        backgroundColor: 'rgba(92, 99,216, 1)',
-        color: 'white'
     },
     modal: {
         margin: 20,
@@ -1746,5 +1881,21 @@ const styles = StyleSheet.create({
     nodeInterface: {
         paddingTop: 10,
         paddingBottom: 10
+    },
+    container: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    imageBackground: {
+        width: 50,
+        height: 50,
+        borderRadius: 24,
+        justifyContent: 'center'
+    },
+    photo: {
+        alignSelf: 'center',
+        width: 128,
+        height: 128,
+        borderRadius: 68
     }
 });

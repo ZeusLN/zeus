@@ -2,6 +2,8 @@ import * as React from 'react';
 import { StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -21,9 +23,16 @@ import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 interface BumpFeeProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     FeeStore: FeeStore;
     SettingsStore: SettingsStore;
+    route: Route<
+        'BumpFee',
+        {
+            outpoint: string;
+            channel: boolean;
+        }
+    >;
 }
 
 interface BumpFeeState {
@@ -42,7 +51,7 @@ export default class BumpFee extends React.PureComponent<
 > {
     constructor(props: any) {
         super(props);
-        const outpoint: string = this.props.navigation.getParam('outpoint', '');
+        const outpoint = this.props.route.params?.outpoint ?? '';
         this.state = {
             outpoint,
             target_conf: '1',
@@ -63,7 +72,7 @@ export default class BumpFee extends React.PureComponent<
     };
 
     render() {
-        const { FeeStore, SettingsStore, navigation } = this.props;
+        const { FeeStore, SettingsStore, navigation, route } = this.props;
         const { outpoint, target_conf, sat_per_vbyte, force, target_type } =
             this.state;
 
@@ -78,7 +87,7 @@ export default class BumpFee extends React.PureComponent<
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
-        const isChannel = navigation.getParam('channel', false);
+        const isChannel = route.params?.channel;
 
         const feeRateButton = () => (
             <Text

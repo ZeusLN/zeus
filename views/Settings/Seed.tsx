@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
@@ -25,7 +26,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import Skull from '../../assets/images/SVG/Skull.svg';
 
 interface SeedProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -321,7 +322,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                         'backup-complete',
                                         JSON.stringify(true)
                                     );
-                                    navigation.navigate('Wallet');
+                                    navigation.popTo('Wallet');
                                 }}
                                 title={localeString(
                                     'views.Settings.Seed.backupComplete'

@@ -4,6 +4,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from '../../components/Amount';
 import AmountInput from '../../components/AmountInput';
@@ -24,10 +26,11 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { ScrollView } from 'react-native-gesture-handler';
 
 interface LnurlPayProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
     UnitsStore: UnitsStore;
+    route: Route<'LnurlPay', { lnurlParams: any; amount: any }>;
 }
 
 interface LnurlPayState {
@@ -66,9 +69,8 @@ export default class LnurlPay extends React.Component<
     }
 
     stateFromProps(props: LnurlPayProps) {
-        const { UnitsStore, navigation } = props;
-        const lnurl = navigation.getParam('lnurlParams');
-        const amount = navigation.getParam('amount');
+        const { UnitsStore, route } = props;
+        const { lnurlParams: lnurl, amount } = route.params ?? {};
 
         UnitsStore.resetUnits();
 
@@ -83,9 +85,9 @@ export default class LnurlPay extends React.Component<
     }
 
     sendValues(satAmount: string | number) {
-        const { navigation, InvoicesStore, LnurlPayStore } = this.props;
+        const { navigation, InvoicesStore, LnurlPayStore, route } = this.props;
         const { domain, comment } = this.state;
-        const lnurl = navigation.getParam('lnurlParams');
+        const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.amount = Number((parseFloat(satAmount) * 1000).toString());
@@ -180,10 +182,10 @@ export default class LnurlPay extends React.Component<
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
         const { amount, satAmount, domain, comment } = this.state;
 
-        const lnurl = navigation.getParam('lnurlParams');
+        const lnurl = route.params?.lnurlParams;
 
         return (
             <Screen>
@@ -273,7 +275,7 @@ export default class LnurlPay extends React.Component<
                                                     )
                                                 }}
                                             >
-                                                {'):'}
+                                                {')'}
                                             </Text>
                                         </>
                                     )}
@@ -312,7 +314,6 @@ export default class LnurlPay extends React.Component<
                                     {localeString(
                                         'views.LnurlPay.LnurlPay.comment'
                                     ) + ` (${lnurl.commentAllowed} char)`}
-                                    :
                                 </Text>
                                 <TextInput
                                     value={comment}

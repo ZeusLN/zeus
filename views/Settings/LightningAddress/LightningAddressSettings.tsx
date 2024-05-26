@@ -11,6 +11,7 @@ import Switch from '../../../components/Switch';
 import Header from '../../../components/Header';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import LoadingIndicator from '../../../components/LoadingIndicator';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import SettingsStore, {
     NOTIFICATIONS_PREF_KEYS,
@@ -22,7 +23,7 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 interface LightningAddressSettingsProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
 }

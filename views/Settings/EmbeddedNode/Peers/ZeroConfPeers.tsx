@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { FlatList, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Row } from '../../../../components/layout/Row';
 import Button from '../../../../components/Button';
@@ -15,7 +16,7 @@ import { localeString } from '../../../../utils/LocaleUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
 
 interface ZeroConfPeersProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -171,6 +172,7 @@ export default class ZeroConfPeers extends React.Component<
                                         `${item.txid}-${index}`
                                     }
                                     onEndReachedThreshold={50}
+                                    scrollEnabled={false}
                                 />
                             ) : (
                                 <Text

@@ -3,9 +3,9 @@
 
 <p align="center"><img src="https://github-production-user-asset-6210df.s3.amazonaws.com/1878621/282665050-5d485734-ffd2-4926-be3d-ac15d08babc1.png"></p>
 
-ZEUS is a mobile Bitcoin/Lightning node manager and wallet application for LND, Core Lightning, and Eclair. ⚡️
+ZEUS is a mobile Bitcoin/Lightning wallet and remote node manager for LND and Core Lightning. ⚡️
 
-ZEUS is built on TypeScript and React Native. It runs on both iOS and Android.
+ZEUS is built on TypeScript and React Native. It runs on both Android and iOS.
 
 Read more on our [documentation site](https://docs.zeusln.app/).
 
@@ -29,11 +29,10 @@ and
 ## Features
 
 - [x] Bitcoin only wallet
-- [x] Non-custodial
-- [x] No processing fees
+- [x] Self-custodial
 - [x] No KYC
 - [x] Fully open source (APGLv3)
-- [x] Connect to LND, Core Lightning (REST + Sparko), or Eclair lightning node
+- [x] [Connect to LND, Core Lightning (REST + Sparko), or Eclair lightning node](https://docs.zeusln.app/category/remote-connections)
 - [x] Manage multiple lightning nodes at once
 - [x] Connect via LNDHub instances
 - [x] Lightning accounts
@@ -59,16 +58,17 @@ and
 - [ ] External signer support
 - [ ] Watch-only accounts
 - [x] Contact list for easier payments
-- [ ] Multiple profile types (payments, merchant etc.)
+- [x] Nostr contact import
+- [x] Point of Sale (Standalone and Square integration)
 - [x] Lightning address receive
 - [x] Taproot support 
 - [ ] Connect a watchtower
 - [ ] Advanced security center
-- [ ] Notifications 
 - [ ] Batch on-chain transactions
 - [ ] Batch channel opens
 - [ ] PayJoin
 - [x] [Lightning Node Connect](https://docs.lightning.engineering/lightning-network-tools/lightning-terminal/lightning-node-connect)
+- [x] [Self-custodial lightning address (ZEUS Pay)](https://docs.zeusln.app/lightning-address/intro)
 
 ## Connecting ZEUS to your node
 
@@ -102,9 +102,6 @@ ZEUS is proud to be integrated on the following platforms:
 ### Payment platforms
 * [BTCPay Server](https://btcpayserver.org/)
 * [LNBits](https://lnbits.com/)
-
-### Android nodes
-* [Nayuta Core](https://nayuta.co/core/)
 
 ## Starting development
 
@@ -149,7 +146,7 @@ Reproducible builds are available for Android only right now. You'll need Docker
 2. Change to the zeus directory: `cd zeus`
 3. Execute the build script: `./build.sh`
 4. If everything goes well, the script will print a list of all the generated APK files and SHA256 hashes for each one of them: armv7, armv8, x86, x86_64, universal. The equivalent to the one provided in the web page is the one ending in 'universal'. You can compare SHA256 hashes with the ones provided on the [GitHub releases page](https://github.com/ZeusLN/zeus/releases)
-5. Download the oficial APK from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [ZEUS homepage](https://zeusln.com/): `wget https://zeusln.com/zeus-v0.8.0-universal.apk`
+5. Download the official APK from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [ZEUS homepage](https://zeusln.com/): `wget https://zeusln.com/zeus-v0.8.0-universal.apk`
 6. Compare both APKs with a suitable utility like `diffoscope`, `apksigcopier` or by running `diff --brief --recursive ./unpacked_oficial_apk ./unpacked_built_apk`. You should only get differences for the certificates used to sign the official APK
 
 If you want to install the APK built this way onto your own smartphone, you'll need to sign it yourself (see next section). Note that the first time you install a build made using this procedure, you'll need to uninstall your current version of ZEUS and then install the one built here because certificates will not match. You'll lose your connection details and you'll need to reconfigure ZEUS again to connect to your nodes.

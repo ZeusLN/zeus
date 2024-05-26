@@ -1,0 +1,204 @@
+syntax = "proto3";
+
+import "lit-sessions.proto";
+
+package litrpc;
+
+option go_package = "github.com/lightninglabs/lightning-terminal/litrpc";
+
+service Autopilot {
+    /* litcli: `autopilot features`
+    ListAutopilotFeatures fetches all the features supported by the Autopilot
+    server along with the rules that we need to support in order to subscribe
+    to those features.
+    */
+    rpc ListAutopilotFeatures (ListAutopilotFeaturesRequest)
+        returns (ListAutopilotFeaturesResponse);
+
+    /* litcli: `autopilot add`
+    AddAutopilotSession creates a new LNC session and attempts to register it
+    with the Autopilot server.
+    */
+    rpc AddAutopilotSession (AddAutopilotSessionRequest)
+        returns (AddAutopilotSessionResponse);
+
+    /* litcli: `autopilot list`
+    ListAutopilotSessions lists all the sessions that are of type
+    TypeAutopilot.
+    */
+    rpc ListAutopilotSessions (ListAutopilotSessionsRequest)
+        returns (ListAutopilotSessionsResponse);
+
+    /* litcli: `autopilot revoke`
+    RevokeAutopilotSession revokes an Autopilot session.
+    */
+    rpc RevokeAutopilotSession (RevokeAutopilotSessionRequest)
+        returns (RevokeAutopilotSessionResponse);
+}
+
+message AddAutopilotSessionRequest {
+    /*
+    A human readable label to assign to the session.
+    */
+    string label = 1;
+
+    /*
+    The unix timestamp at which this session should be revoked.
+    */
+    uint64 expiry_timestamp_seconds = 2 [jstype = JS_STRING];
+
+    /*
+    The address of the mailbox server to connect to for this session.
+    */
+    string mailbox_server_addr = 3;
+
+    /*
+    Set to true if tls should be skipped for when connecting to the mailbox.
+    */
+    bool dev_server = 4;
+
+    /*
+    The features that the session should subscribe to. Each feature maps to
+    a FeatureConfig that should be applied to that feature.
+    */
+    map<string, FeatureConfig> features = 5;
+
+    /*
+    Rules that apply to the entire session. By default, no rules will apply
+    to the entire session.
+    */
+    RulesMap session_rules = 6;
+
+    /*
+    Set to true of the session should not make use of the privacy mapper.
+    */
+    bool no_privacy_mapper = 7;
+
+    /*
+    Set to the ID of the group to link this session to, if any.
+    */
+    bytes linked_group_id = 8;
+}
+
+message FeatureConfig {
+    /*
+    The RulesMap acts as an override map. In other words, by default the rules
+    values recommended by the Auto Pilot server will be used but the RulesMap
+    can be used to override the defaults.
+    */
+    RulesMap rules = 1;
+
+    /*
+    Serialised configuration for the feature.
+    */
+    bytes config = 2;
+}
+
+message ListAutopilotSessionsRequest {
+}
+
+message ListAutopilotSessionsResponse {
+    /*
+    A list of the Autopilot sessions.
+    */
+    repeated Session sessions = 1;
+}
+
+message AddAutopilotSessionResponse {
+    /*
+    Details of the session that was just created.
+    */
+    Session session = 1;
+}
+
+message ListAutopilotFeaturesRequest {
+}
+
+message ListAutopilotFeaturesResponse {
+    /*
+    A map of feature names to Feature objects describing the feature.
+    */
+    map<string, Feature> features = 1;
+}
+
+message RevokeAutopilotSessionRequest {
+    /*
+    The local static public key of the Autopilot session to be revoked.
+    When using REST, this field must be encoded as base64url.
+    */
+    bytes local_public_key = 1;
+}
+
+message RevokeAutopilotSessionResponse {
+}
+
+message Feature {
+    /*
+    Name is the name of the Autopilot feature.
+    */
+    string name = 1;
+
+    /*
+    A human readable description of what the feature offers.
+    */
+    string description = 2;
+
+    /*
+    A map of rules that make sense for this feature. Each rule is accompanied
+    with appropriate default values for the feature along with minimum and
+    maximum values for the rules.
+    */
+    map<string, RuleValues> rules = 3;
+
+    /*
+    A list of URI permissions required by the feature.
+    */
+    repeated Permissions permissions_list = 4;
+
+    /*
+    A boolean indicating if the user would need to upgrade their Litd version in
+    order to subscribe to the Autopilot feature. This will be true if the
+    feature rules set contains a rule that Litd is unaware of.
+    */
+    bool requires_upgrade = 5;
+
+    /*
+    The JSON-marshaled representation of a feature's default configuration.
+    */
+    string default_config = 6;
+}
+
+message RuleValues {
+    /*
+    Whether or not the users version of Litd is aware of this rule.
+    */
+    bool known = 1;
+
+    /*
+    The default values for the rule that the Autopilot server recommends for
+    the associated feature.
+    */
+    RuleValue defaults = 2;
+
+    /*
+    The minimum sane value for this rule for the associated feature.
+    */
+    RuleValue min_value = 3;
+
+    /*
+    The maximum sane value for this rule for the associated feature.
+    */
+    RuleValue max_value = 4;
+}
+
+message Permissions {
+    /*
+    The URI in question.
+    */
+    string method = 1;
+
+    /*
+    A list of the permissions required for this method.
+    */
+    repeated MacaroonPermission operations = 2;
+}

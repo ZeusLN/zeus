@@ -13,7 +13,6 @@ import stores from '../../../stores/Stores';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
-import Channel from '../../../assets/images/SVG/Channel.svg';
 import Receive from '../../../assets/images/SVG/Receive.svg';
 
 export default function LightningAddressPayment(props) {
@@ -72,14 +71,6 @@ export default function LightningAddressPayment(props) {
             </ListItem.Content>
             <ListItem.Content right>
                 <Row>
-                    {item.opened_channel && (
-                        <Channel
-                            fill={themeColor('text')}
-                            width={42}
-                            height={42}
-                            style={{ marginRight: 10 }}
-                        />
-                    )}
                     <AttestationButton
                         hash={item.hash}
                         amount_msat={item.amount_msat}

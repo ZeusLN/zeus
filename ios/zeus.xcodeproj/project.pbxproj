@@ -46,7 +46,6 @@
 		3AD7EB797D8E4070B46FB7CE /* MailboxFlagDown.svg in Resources */ = {isa = PBXBuildFile; fileRef = 41B36F82E42440E0AD72FC42 /* MailboxFlagDown.svg */; };
 		40ABC332E9C74327B118D50A /* QR.svg in Resources */ = {isa = PBXBuildFile; fileRef = 80E6686C049240CE9887FA2C /* QR.svg */; };
 		40C4AE0236564EDD8B689992 /* Cloud.svg in Resources */ = {isa = PBXBuildFile; fileRef = C689AF9C5EFD42E891A1FFD3 /* Cloud.svg */; };
-		4132F00F76CB488AAA77C848 /* ScanFrameSvg.tsx in Resources */ = {isa = PBXBuildFile; fileRef = AC3DB90B22364D909A09B3E0 /* ScanFrameSvg.tsx */; };
 		42261FC8680748CB8F34DD98 /* MailboxFlagUp.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8E405B6CB7D64A44907B0DB0 /* MailboxFlagUp.svg */; };
 		43264510AFC64A6E89EC9BDA /* Menu.svg in Resources */ = {isa = PBXBuildFile; fileRef = 226FAAEEA94A478A945F9A57 /* Menu.svg */; };
 		452DE3B3EC174D45A6007ACD /* Brush.svg in Resources */ = {isa = PBXBuildFile; fileRef = 5CC0E65B8E6447A38BD1EE91 /* Brush.svg */; };
@@ -86,11 +85,11 @@
 		74B637832A5A350B00750202 /* StreamingCallback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377A2A5A350A00750202 /* StreamingCallback.mm */; };
 		74B637842A5A350B00750202 /* Callback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377C2A5A350A00750202 /* Callback.mm */; };
 		74B637872A5A35B600750202 /* Lndmobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74B637862A5A35B600750202 /* Lndmobile.xcframework */; };
+		74DE85FF2BB530E5001FEC15 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 74A116702A55DEE600F7078C /* libresolv.tbd */; };
 		74F9D7F22AF33324007D44BF /* ppneuemontreal-medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */; };
 		7598B75F1F64426CAF420155 /* UnifiedSvg.tsx in Resources */ = {isa = PBXBuildFile; fileRef = C7FBAA85E56C4D5D92F74F11 /* UnifiedSvg.tsx */; };
 		7605A9F30F13492692B1AB4E /* Flash On.svg in Resources */ = {isa = PBXBuildFile; fileRef = DD1A9F0B9EF0475C81C53C8D /* Flash On.svg */; };
 		78FB5414F55B4D94804920B7 /* Caret Right-1.svg in Resources */ = {isa = PBXBuildFile; fileRef = 34845404A9F04B35ADA34F80 /* Caret Right-1.svg */; };
-		79831EB47D6D4FFB90985E0F /* Channel.svg in Resources */ = {isa = PBXBuildFile; fileRef = 3AB032A5D2204613B50EB1AA /* Channel.svg */; };
 		7C9A1A0DC41A4B56BC555750 /* Node On.svg in Resources */ = {isa = PBXBuildFile; fileRef = 62458EE70D8546B7AE7F87DF /* Node On.svg */; };
 		7D5F7108F3164222AE36A242 /* Filter Off.svg in Resources */ = {isa = PBXBuildFile; fileRef = 2EC02052907E453CB15DBADA /* Filter Off.svg */; };
 		7DDC8A1B32DC415DA3A3123B /* Nostrich.svg in Resources */ = {isa = PBXBuildFile; fileRef = A7D097DE19314D50ABD77607 /* Nostrich.svg */; };
@@ -144,7 +143,6 @@
 		E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */ = {isa = PBXBuildFile; fileRef = AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */; };
 		E691022067D14B198BFF83DB /* Dice.svg in Resources */ = {isa = PBXBuildFile; fileRef = CE4931FF962B4189AC3F3EEB /* Dice.svg */; };
 		ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED297162215061F000B7C4FE /* JavaScriptCore.framework */; };
-		EE7264005C294AE58E30C834 /* Error.svg in Resources */ = {isa = PBXBuildFile; fileRef = DD470243A7FC45D882EF1B0D /* Error.svg */; };
 		F15BCD255F194C84973AB51D /* Skull.svg in Resources */ = {isa = PBXBuildFile; fileRef = B813A99762CC4756A18E0C20 /* Skull.svg */; };
 		F6BA97FE98FB4D8890855BEC /* Wallet.svg in Resources */ = {isa = PBXBuildFile; fileRef = CCFEAC399BB842A091ADB042 /* Wallet.svg */; };
 		F9767258AD2F4256A0668218 /* Save.svg in Resources */ = {isa = PBXBuildFile; fileRef = 6934A0BCDAD94002BA8F840A /* Save.svg */; };
@@ -372,7 +370,6 @@
 		34845404A9F04B35ADA34F80 /* Caret Right-1.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right-1.svg"; path = "../assets/images/SVG/Caret Right-1.svg"; sourceTree = "<group>"; };
 		34F2E3639E1D4C878EA1CC22 /* Gallery.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Gallery.svg; path = ../assets/images/SVG/Gallery.svg; sourceTree = "<group>"; };
 		3814F0A0F1A84AD1AFD7C587 /* POS.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = POS.svg; path = ../assets/images/SVG/POS.svg; sourceTree = "<group>"; };
-		3AB032A5D2204613B50EB1AA /* Channel.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Channel.svg; path = ../assets/images/SVG/Channel.svg; sourceTree = "<group>"; };
 		3BD89BEBA89A4B678A29E094 /* BitcoinIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = BitcoinIcon.svg; path = ../assets/images/SVG/BitcoinIcon.svg; sourceTree = "<group>"; };
 		3C37D42473A54AD981B549B4 /* NFC.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = NFC.svg; path = ../assets/images/SVG/NFC.svg; sourceTree = "<group>"; };
 		3C817E9DD0504569B85A84F1 /* Edit.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Edit.svg; path = ../assets/images/SVG/Edit.svg; sourceTree = "<group>"; };
@@ -424,6 +421,7 @@
 		74B6377E2A5A350A00750202 /* Callback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Callback.h; sourceTree = "<group>"; };
 		74B6377F2A5A350A00750202 /* LncModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LncModule.h; sourceTree = "<group>"; };
 		74B637862A5A35B600750202 /* Lndmobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Lndmobile.xcframework; path = LncMobile/Lndmobile.xcframework; sourceTree = "<group>"; };
+		74DE86022BB530E5001FEC15 /* libresolv.9.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.9.tbd; path = usr/lib/libresolv.9.tbd; sourceTree = SDKROOT; };
 		74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ppneuemontreal-medium.otf"; path = "../assets/fonts/ppneuemontreal-medium.otf"; sourceTree = "<group>"; };
 		77EC666A91C04742A050DEF4 /* Help Icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Help Icon.svg"; path = "../assets/images/SVG/Help Icon.svg"; sourceTree = "<group>"; };
 		788BB1C90868496CA6F03853 /* Network.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Network.svg; path = ../assets/images/SVG/Network.svg; sourceTree = "<group>"; };
@@ -472,7 +470,6 @@
 		A7D097DE19314D50ABD77607 /* Nostrich.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Nostrich.svg; path = ../assets/images/SVG/Nostrich.svg; sourceTree = "<group>"; };
 		AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = PinHollow.svg; path = ../assets/images/SVG/PinHollow.svg; sourceTree = "<group>"; };
 		AC03A7A4319C4366A52D94FE /* Eye On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Eye On.svg"; path = "../assets/images/SVG/Eye On.svg"; sourceTree = "<group>"; };
-		AC3DB90B22364D909A09B3E0 /* ScanFrameSvg.tsx */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ScanFrameSvg.tsx; path = ../assets/images/SVG/DynamicSVG/ScanFrameSvg.tsx; sourceTree = "<group>"; };
 		ADBDB91F1DFEBF0600ED6528 /* RCTBlob.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTBlob.xcodeproj; path = "../node_modules/react-native/Libraries/Blob/RCTBlob.xcodeproj"; sourceTree = "<group>"; };
 		B10811B91C8044358B7EBE82 /* Block.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Block.svg; path = ../assets/images/SVG/Block.svg; sourceTree = "<group>"; };
 		B23A03CFAFEF40D790A7B4E6 /* ErrorIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ErrorIcon.svg; path = ../assets/images/SVG/ErrorIcon.svg; sourceTree = "<group>"; };
@@ -502,7 +499,6 @@
 		D7E370054BBF42359E7A5112 /* Wallet2.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Wallet2.svg; path = ../assets/images/SVG/Wallet2.svg; sourceTree = "<group>"; };
 		DAB0850D6CA542288A565578 /* Success.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Success.svg; path = ../assets/images/SVG/Success.svg; sourceTree = "<group>"; };
 		DD1A9F0B9EF0475C81C53C8D /* Flash On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Flash On.svg"; path = "../assets/images/SVG/Flash On.svg"; sourceTree = "<group>"; };
-		DD470243A7FC45D882EF1B0D /* Error.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Error.svg; path = ../assets/images/SVG/Error.svg; sourceTree = "<group>"; };
 		DEE698AC647848D9B6DB13F6 /* 3.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 3.png; path = ../assets/images/intro/3.png; sourceTree = "<group>"; };
 		DFA342136699448EA20DE82D /* Sync.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Sync.svg; path = ../assets/images/SVG/Sync.svg; sourceTree = "<group>"; };
 		E21D3D5587114764BC296D83 /* Key Security.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Key Security.svg"; path = "../assets/images/SVG/Key Security.svg"; sourceTree = "<group>"; };
@@ -533,6 +529,7 @@
 				ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */,
 				74B637872A5A35B600750202 /* Lndmobile.xcframework in Frameworks */,
 				120C1A21E0566E9107515C30 /* libPods-zeus.a in Frameworks */,
+				74DE85FF2BB530E5001FEC15 /* libresolv.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -656,6 +653,7 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				74DE86022BB530E5001FEC15 /* libresolv.9.tbd */,
 				74A116702A55DEE600F7078C /* libresolv.tbd */,
 				74B637862A5A35B600750202 /* Lndmobile.xcframework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
@@ -915,7 +913,6 @@
 				956E2E16008F4EA0B54DF09B /* Add.svg */,
 				3BD89BEBA89A4B678A29E094 /* BitcoinIcon.svg */,
 				B10811B91C8044358B7EBE82 /* Block.svg */,
-				3AB032A5D2204613B50EB1AA /* Channel.svg */,
 				E475512AC9944749B58EEAC1 /* Clipboard.svg */,
 				C689AF9C5EFD42E891A1FFD3 /* Cloud.svg */,
 				7ABECF711E9D4F5AB912E1C0 /* Copy.svg */,
@@ -923,10 +920,8 @@
 				7E518DD5239E4B02AD264302 /* AddressSvg.tsx */,
 				84817A27B5CC4C869EA8ABF3 /* LightningSvg.tsx */,
 				A3B07984672041189059C4E0 /* OnChainSvg.tsx */,
-				AC3DB90B22364D909A09B3E0 /* ScanFrameSvg.tsx */,
 				C7FBAA85E56C4D5D92F74F11 /* UnifiedSvg.tsx */,
 				3C817E9DD0504569B85A84F1 /* Edit.svg */,
-				DD470243A7FC45D882EF1B0D /* Error.svg */,
 				B4C39762C9B748E39BFDA90F /* ExchangeBitcoin.svg */,
 				6C81853A9EA0452B9999E58D /* ExchangeFiat.svg */,
 				4A6B733324794E60B618DACE /* Export.svg */,
@@ -1376,7 +1371,6 @@
 				39D956D93D0846AF909F38DA /* Add.svg in Resources */,
 				92542E72F705458EBD582CC8 /* BitcoinIcon.svg in Resources */,
 				B7B3D0A8E3C8499892224242 /* Block.svg in Resources */,
-				79831EB47D6D4FFB90985E0F /* Channel.svg in Resources */,
 				CD17533A6E834DC3982FD216 /* Clipboard.svg in Resources */,
 				40C4AE0236564EDD8B689992 /* Cloud.svg in Resources */,
 				9E2B346F72A34EA3807BC843 /* Copy.svg in Resources */,
@@ -1384,10 +1378,8 @@
 				BECCE8BEED334E9E86730C95 /* AddressSvg.tsx in Resources */,
 				46E5F71A7C0C4114922F6ED0 /* LightningSvg.tsx in Resources */,
 				A52E1E9CF5CE42EA9F808362 /* OnChainSvg.tsx in Resources */,
-				4132F00F76CB488AAA77C848 /* ScanFrameSvg.tsx in Resources */,
 				7598B75F1F64426CAF420155 /* UnifiedSvg.tsx in Resources */,
 				5851F5898AED446FA5EF41FB /* Edit.svg in Resources */,
-				EE7264005C294AE58E30C834 /* Error.svg in Resources */,
 				6027AA29AEA34E7290034736 /* ExchangeBitcoin.svg in Resources */,
 				93C795DB3CDC46D8862C3393 /* ExchangeFiat.svg in Resources */,
 				1E2D6C276B2449BEB48D0EFA /* Export.svg in Resources */,
@@ -1509,7 +1501,7 @@
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Octicons.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Zocial.ttf",
-				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/AccessibilityResources.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/RCTI18nStrings.bundle",
 			);
 			name = "[CP] Copy Pods Resources";
 			outputPaths = (
@@ -1529,7 +1521,7 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Octicons.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SimpleLineIcons.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Zocial.ttf",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AccessibilityResources.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RCTI18nStrings.bundle",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1576,7 +1568,7 @@
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Octicons.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Zocial.ttf",
-				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/AccessibilityResources.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/RCTI18nStrings.bundle",
 			);
 			name = "[CP] Copy Pods Resources";
 			outputPaths = (
@@ -1596,7 +1588,7 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Octicons.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SimpleLineIcons.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Zocial.ttf",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AccessibilityResources.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RCTI18nStrings.bundle",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1752,11 +1744,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../node_modules/react-native-permissions/ios/**",
-					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
-				);
+				HEADER_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = zeusTests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1784,11 +1772,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COPY_PHASE_STRIP = NO;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../node_modules/react-native-permissions/ios/**",
-					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
-				);
+				HEADER_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = zeusTests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1818,30 +1802,27 @@
 				CODE_SIGN_ENTITLEMENTS = zeus/zeus.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 11;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 9TU7M3555F;
 				ENABLE_BITCODE = NO;
 				EXCLUDED_ARCHS = "";
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
 				GCC_NO_COMMON_BLOCKS = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
-				);
+				HEADER_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = zeus/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ZEUS;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.8.2;
+				MARKETING_VERSION = 0.9.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
-					"$(inherited)",
 					"-ObjC",
 					"-lc++",
+					"$(inherited)",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeus;
 				PRODUCT_NAME = zeus;
@@ -1867,30 +1848,31 @@
 				CODE_SIGN_ENTITLEMENTS = zeus/zeusRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 11;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 9TU7M3555F;
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
 				GCC_NO_COMMON_BLOCKS = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../node_modules/react-native-permissions/ios/**",
-					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
-				);
+				HEADER_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = zeus/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ZEUS;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.8.2;
+				MARKETING_VERSION = 0.9.0;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
+				);
+				"OTHER_LDFLAGS[arch=*]" = (
+					"-ObjC",
+					"-lc++",
+					"$(inherited)",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeus;
 				PRODUCT_NAME = zeus;
@@ -1918,11 +1900,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_TESTABILITY = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../node_modules/react-native-permissions/ios/**",
-					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
-				);
+				HEADER_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = "zeus-tvOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1957,11 +1935,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_NO_COMMON_BLOCKS = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../node_modules/react-native-permissions/ios/**",
-					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
-				);
+				HEADER_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = "zeus-tvOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1994,11 +1968,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_TESTABILITY = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../node_modules/react-native-permissions/ios/**",
-					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
-				);
+				HEADER_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = "zeus-tvOSTests/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -2030,11 +2000,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_NO_COMMON_BLOCKS = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../node_modules/react-native-permissions/ios/**",
-					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
-				);
+				HEADER_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = "zeus-tvOSTests/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -2058,7 +2024,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -2111,6 +2077,7 @@
 				OTHER_LDFLAGS = "$(inherited)";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				USE_HERMES = true;
 			};
 			name = Debug;
 		};
@@ -2118,7 +2085,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -2167,6 +2134,7 @@
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

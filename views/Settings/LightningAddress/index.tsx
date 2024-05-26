@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     Dimensions,
     FlatList,
+    ScrollView,
     StyleSheet,
     TouchableOpacity,
     View
@@ -9,6 +10,8 @@ import {
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import LightningAddressPayment from './LightningAddressPayment';
 
@@ -40,11 +43,15 @@ import QR from '../../../assets/images/SVG/QR.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
 
 interface LightningAddressProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
+    route: Route<
+        'LightningAddress',
+        { skipStatus: boolean; relays: string[]; nostrPrivateKey: string }
+    >;
 }
 
 interface LightningAddressState {
@@ -84,10 +91,10 @@ export default class LightningAddress extends React.Component<
     };
 
     async componentDidMount() {
-        const { LightningAddressStore, navigation } = this.props;
+        const { LightningAddressStore, navigation, route } = this.props;
         const { status } = LightningAddressStore;
 
-        const skipStatus: boolean = navigation.getParam('skipStatus', false);
+        const skipStatus = route.params?.skipStatus;
 
         this.generateNostrKeys();
 
@@ -98,7 +105,7 @@ export default class LightningAddress extends React.Component<
         if (!skipStatus) status();
 
         // triggers when loaded from navigation or back action
-        navigation.addListener('didFocus', this.handleFocus);
+        navigation.addListener('focus', this.handleFocus);
     }
 
     handleFocus = () => {
@@ -109,16 +116,14 @@ export default class LightningAddress extends React.Component<
         }
     };
 
-    UNSAFE_componentWillReceiveProps = (newProps: any) => {
-        const { navigation } = newProps;
-        const nostrRelays = navigation.getParam('relays', null);
+    UNSAFE_componentWillReceiveProps = (newProps: LightningAddressProps) => {
+        const { route } = newProps;
+        const nostrRelays = route.params?.relays;
         if (nostrRelays) {
-            this.setState({
-                nostrRelays
-            });
+            this.setState({ nostrRelays });
         }
 
-        const nostrPrivateKey = navigation.getParam('nostrPrivateKey', '');
+        const nostrPrivateKey = route.params?.nostrPrivateKey ?? '';
         if (nostrPrivateKey) {
             const nostrPublicKey = getPublicKey(nostrPrivateKey);
             const nostrNpub = nip19.npubEncode(nostrPublicKey);
@@ -214,7 +219,9 @@ export default class LightningAddress extends React.Component<
                             label: address,
                             hideText: true,
                             jumboLabel: true,
-                            logo: require('../../../assets/images/pay-z-black.png')
+                            logo: themeColor('invertQrIcons')
+                                ? require('../../../assets/images/pay-z-white.png')
+                                : require('../../../assets/images/pay-z-black.png')
                         })
                     }
                     style={{ marginTop: 10 }}
@@ -543,9 +550,8 @@ export default class LightningAddress extends React.Component<
                             !lightningAddressHandle &&
                             !hasChannels && (
                                 <>
-                                    <View
+                                    <ScrollView
                                         style={{
-                                            flex: 1,
                                             marginLeft: 5,
                                             marginRight: 5
                                         }}
@@ -596,10 +602,12 @@ export default class LightningAddress extends React.Component<
                                                 )}
                                             </Text>
                                         )}
-                                    </View>
-                                    <View>
                                         <View
-                                            style={{ bottom: 15, margin: 10 }}
+                                            style={{
+                                                margin: 10,
+                                                marginTop: 25,
+                                                bottom: 15
+                                            }}
                                         >
                                             <Button
                                                 title={localeString(
@@ -676,7 +684,7 @@ export default class LightningAddress extends React.Component<
                                                 secondary
                                             />
                                         </View>
-                                    </View>
+                                    </ScrollView>
                                 </>
                             )}
                         {lightningAddressHandle && (

@@ -933,7 +933,7 @@ export default class LightningAddressStore {
             );
 
             const fireLocalNotification = () => {
-                const title = 'ZEUS PAY payment received!';
+                const title = 'ZEUS Pay payment received!';
                 const body = `Payment of ${value_commas} sats automatically accepted`;
                 if (Platform.OS === 'android') {
                     Notifications.postLocalNotification({
@@ -955,7 +955,7 @@ export default class LightningAddressStore {
                 // 24 hrs
                 expiry: '86400',
                 value_msat: amount_msat,
-                memo: comment ? `ZEUS PAY: ${comment}` : 'ZEUS PAY',
+                memo: comment ? `ZEUS Pay: ${comment}` : 'ZEUS Pay',
                 preimage,
                 private:
                     this.settingsStore?.settings?.lightningAddress

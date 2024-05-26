@@ -39,11 +39,17 @@ export interface ILndMobile {
     ): Promise<'done'>;
     writeToStream(method: string, payload: string): Promise<boolean>;
 
+    // Express Graph Sync / Speedloader
+    gossipSync(
+        serviceUrl: string,
+        networkType: string
+    ): Promise<{ data: string }>;
+    cancelGossipSync(): void;
+
     // Android-specific
     unbindLndMobileService(): Promise<void>; // TODO(hsjoberg): function looks broken
     sendPongToLndMobileservice(): Promise<{ data: string }>;
     checkLndMobileServiceConnected(): Promise<boolean>;
-    gossipSync(networkType: string): Promise<{ data: string }>;
 }
 
 export interface ILndMobileTools {
@@ -55,9 +61,9 @@ export interface ILndMobileTools {
     saveChannelsBackup(base64Backups: string): Promise<string>;
     saveChannelBackupFile(network: string): Promise<boolean>;
     DEBUG_getWalletPasswordFromKeychain(): Promise<string>;
-    DEBUG_deleteSpeedloaderLastrunFile(): boolean;
-    DEBUG_deleteSpeedloaderDgraphDirectory(): null;
-    DEBUG_deleteNeutrinoFiles(network: string): boolean;
+    DEBUG_deleteSpeedloaderLastrunFile(): Promise<boolean>;
+    DEBUG_deleteSpeedloaderDgraphDirectory(): Promise<null>;
+    DEBUG_deleteNeutrinoFiles(network: string): Promise<boolean>;
 
     // Android-specific
     getIntentStringData(): Promise<string | null>;

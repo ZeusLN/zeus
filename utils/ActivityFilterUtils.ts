@@ -75,6 +75,20 @@ class ActivityFilterUtils {
             );
         }
 
+        if (filter.standardInvoices == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(activity instanceof Invoice && !activity.is_amp)
+            );
+        }
+
+        if (filter.ampInvoices == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(activity instanceof Invoice && activity.is_amp)
+            );
+        }
+
         if (filter.zeusPay == false) {
             filteredActivity = filteredActivity.filter(
                 (activity: any) =>

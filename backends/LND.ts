@@ -240,7 +240,8 @@ export default class LND {
     getClosedChannels = () => this.getRequest('/v1/channels/closed');
     getChannelInfo = (chanId: string) =>
         this.getRequest(`/v1/graph/edge/${chanId}`);
-    getBlockchainBalance = () => this.getRequest('/v1/balance/blockchain');
+    getBlockchainBalance = (data: any) =>
+        this.getRequest('/v1/balance/blockchain', data);
     getLightningBalance = () => this.getRequest('/v1/balance/channels');
     sendCoins = (data: any) =>
         this.postRequest('/v1/transactions', {
@@ -250,6 +251,57 @@ export default class LND {
             spend_unconfirmed: data.spend_unconfirmed,
             send_all: data.send_all
         });
+    sendCustomMessage = (data: any) =>
+        this.postRequest('/v1/custommessage', {
+            peer: Base64Utils.hexToBase64(data.peer),
+            type: data.type,
+            data: Base64Utils.hexToBase64(data.data)
+        });
+    subscribeCustomMessages = (onResponse: any, onError: any) => {
+        const route = '/v1/custommessage/subscribe';
+        const method = 'GET';
+
+        const { host, lndhubUrl, port, macaroonHex, accessToken } =
+            stores.settingsStore;
+
+        const auth = macaroonHex || accessToken;
+        const headers: any = this.getHeaders(auth, true);
+        const methodRoute = `${route}?method=${method}`;
+        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
+
+        const ws: any = new WebSocket(url, null, {
+            headers
+        });
+
+        ws.addEventListener('open', () => {
+            // connection opened
+            console.log('subscribeCustomMessages ws open');
+            ws.send(JSON.stringify({}));
+        });
+
+        ws.addEventListener('message', (e: any) => {
+            // a message was received
+            const data = JSON.parse(e.data);
+            console.log('subscribeCustomMessagews message', data);
+            if (data.error) {
+                onError(data.error);
+            } else {
+                onResponse(data);
+            }
+        });
+
+        ws.addEventListener('error', (e: any) => {
+            // an error occurred
+            console.log('subscribeCustomMessages ws err', e);
+            const certWarning = localeString('backends.LND.wsReq.warning');
+            onError(e.message ? `${certWarning} (${e.message})` : certWarning);
+        });
+
+        ws.addEventListener('close', () => {
+            // ws closed
+            console.log('subscribeCustomMessages ws close');
+        });
+    };
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = (data: any) =>
         this.getRequest(
@@ -266,11 +318,12 @@ export default class LND {
             private: data.private,
             r_preimage: data.preimage
                 ? Base64Utils.hexToBase64(data.preimage)
-                : undefined
+                : undefined,
+            route_hints: data.route_hints
         });
     getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
-    openChannel = (data: OpenChannelRequest) => {
+    openChannelSync = (data: OpenChannelRequest) => {
         let request: any = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
@@ -301,9 +354,95 @@ export default class LND {
 
         return this.postRequest('/v1/channels', request);
     };
+    openChannelStream = (data: OpenChannelRequest) => {
+        // prepare request
+        let request: any = {
+            private: data.privateChannel,
+            scid_alias: data.scidAlias,
+            local_funding_amount: data.local_funding_amount,
+            min_confs: data.min_confs,
+            node_pubkey_string: data.node_pubkey_string,
+            sat_per_vbyte: data.sat_per_vbyte,
+            spend_unconfirmed: data.spend_unconfirmed
+        };
 
-    openChannelStream = (data: OpenChannelRequest) =>
-        this.wsReq('/v1/channels/stream', 'POST', data);
+        if (data.fundMax) {
+            request.fund_max = true;
+        }
+
+        if (data.simpleTaprootChannel) {
+            request.commitment_type = 'SIMPLE_TAPROOT';
+        }
+
+        if (data.utxos && data.utxos.length > 0) {
+            request.outpoints = data.utxos.map((utxo: string) => {
+                const [txid_str, output_index] = utxo.split(':');
+                return {
+                    txid_str,
+                    output_index: Number(output_index)
+                };
+            });
+        }
+
+        if (data.node_pubkey_string) {
+            request.node_pubkey = Base64Utils.hexToBase64(
+                data.node_pubkey_string
+            );
+        }
+
+        if (data.funding_shim) {
+            request.funding_shim = data.funding_shim;
+            delete request.sat_per_vbyte;
+        }
+
+        // make call
+        const { host, lndhubUrl, port, macaroonHex, accessToken } =
+            stores.settingsStore;
+
+        const auth = macaroonHex || accessToken;
+        const headers: any = this.getHeaders(auth, true);
+        const methodRoute = '/v1/channels/stream?method=POST';
+        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
+
+        return new Promise(function (resolve, reject) {
+            const ws: any = new WebSocket(url, null, {
+                headers
+            });
+
+            // keep pulling in responses until the socket closes
+            let resp: any;
+
+            ws.addEventListener('open', () => {
+                // connection opened
+                ws.send(JSON.stringify(request)); // send a message
+            });
+
+            ws.addEventListener('message', (e: any) => {
+                // a message was received
+                const data = JSON.parse(e.data);
+                if (data?.result?.psbt_fund) {
+                    resolve(data);
+                } else if (data.error) {
+                    reject(data.error);
+                } else {
+                    resp = e.data;
+                }
+            });
+
+            ws.addEventListener('error', (e: any) => {
+                const certWarning = localeString('backends.LND.wsReq.warning');
+                // an error occurred
+                reject(
+                    e.message ? `${certWarning} (${e.message})` : certWarning
+                );
+            });
+
+            ws.addEventListener('close', () => {
+                // connection closed
+                resolve(JSON.parse(resp));
+            });
+        });
+    };
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
@@ -333,20 +472,19 @@ export default class LND {
         return result;
     };
     closeChannel = (urlParams?: Array<string>) => {
-        if (urlParams && urlParams.length === 4) {
-            return this.deleteRequest(
-                `/v1/channels/${urlParams && urlParams[0]}/${
-                    urlParams && urlParams[1]
-                }?force=${urlParams && urlParams[2]}&sat_per_vbyte=${
-                    urlParams && urlParams[3]
-                }`
-            );
+        let requestString = `/v1/channels/${urlParams && urlParams[0]}/${
+            urlParams && urlParams[1]
+        }?force=${urlParams && urlParams[2]}`;
+
+        if (urlParams && urlParams[3]) {
+            requestString += `&sat_per_vbyte=${urlParams && urlParams[3]}`;
         }
-        return this.deleteRequest(
-            `/v1/channels/${urlParams && urlParams[0]}/${
-                urlParams && urlParams[1]
-            }?force=${urlParams && urlParams[2]}`
-        );
+
+        if (urlParams && urlParams[4]) {
+            requestString += `&delivery_address=${urlParams && urlParams[4]}`;
+        }
+
+        return this.deleteRequest(requestString);
     };
     getNodeInfo = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
@@ -403,10 +541,16 @@ export default class LND {
     };
     // Coin Control
     fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
+    signPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/sign', data);
     finalizePsbt = (data: any) =>
         this.postRequest('/v2/wallet/psbt/finalize', data);
-    publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
-    getUTXOs = () => this.getRequest('/v1/utxos?min_confs=0&max_confs=200000');
+    publishTransaction = (data: any) => {
+        if (data.tx_hex) data.tx_hex = Base64Utils.hexToBase64(data.tx_hex);
+        return this.postRequest('/v2/wallet/tx', data);
+    };
+    fundingStateStep = (data: any) =>
+        this.postRequest('/v1/funding/step', data);
+    getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
     importAccount = (data: any) =>
@@ -433,6 +577,68 @@ export default class LND {
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
     subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
+    initChanAcceptor = (data?: any) => {
+        const { host, lndhubUrl, port, macaroonHex, accessToken } =
+            stores.settingsStore;
+
+        const auth = macaroonHex || accessToken;
+        const headers: any = this.getHeaders(auth, true);
+        const url = this.getURL(
+            host || lndhubUrl,
+            port,
+            '/v1/channels/acceptor?method=POST',
+            true
+        );
+
+        const ws: any = new WebSocket(url, null, {
+            headers
+        });
+
+        // keep pulling in responses until the socket closes
+        let resp: any;
+
+        const { zeroConfPeers, lspPubkey } = data;
+
+        ws.addEventListener('open', (e: any) => {
+            console.log('channel acceptor opened', e);
+            ws.send(JSON.stringify({ accept: true }));
+        });
+
+        ws.addEventListener('message', (e: any) => {
+            // a message was received
+            const res = JSON.parse(e.data);
+            if (res.error) {
+                console.log('chanAcceptor err', res.error);
+            } else {
+                resp = JSON.parse(e.data).result;
+                const requestPubkey = Base64Utils.base64ToHex(resp.node_pubkey);
+                const pending_chan_id = resp.pending_chan_id;
+
+                const isZeroConfAllowed =
+                    lspPubkey === requestPubkey ||
+                    (zeroConfPeers && zeroConfPeers.includes(requestPubkey));
+
+                const acceptData = {
+                    accept: !resp.wants_zero_conf || isZeroConfAllowed,
+                    zero_conf: isZeroConfAllowed,
+                    pending_chan_id
+                };
+                ws.send(JSON.stringify(acceptData)); // send a message
+            }
+        });
+
+        ws.addEventListener('error', (e: any) => {
+            const certWarning = localeString('backends.LND.wsReq.warning');
+            // an error occurred
+            console.log(
+                e.message ? `${certWarning} (${e.message})` : certWarning
+            );
+        });
+
+        ws.addEventListener('close', () => {
+            console.log('channel acceptor close');
+        });
+    };
 
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
@@ -454,10 +660,14 @@ export default class LND {
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
-    supportsLSPs = () => false;
+    supportsLSPs = () => true;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
+    supportsOnchainBatching = () => true;
+    supportsChannelBatching = () => true;
     isLNDBased = () => true;
+    supportsLSPS1customMessage = () => true;
+    supportsLSPS1rest = () => false;
 }

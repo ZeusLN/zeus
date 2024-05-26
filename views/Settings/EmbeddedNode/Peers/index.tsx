@@ -2,6 +2,7 @@ import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Screen from '../../../../components/Screen';
 import Header from '../../../../components/Header';
@@ -11,7 +12,7 @@ import SettingsStore from '../../../../stores/SettingsStore';
 import { localeString } from '../../../../utils/LocaleUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
 interface PeersProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -20,8 +21,18 @@ interface PeersProps {
 export default class Peers extends React.Component<PeersProps, {}> {
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { settings }: any = SettingsStore;
-        const { neutrinoPeers, zeroConfPeers, dontAllowOtherPeers } = settings;
+        const { settings, embeddedLndNetwork }: any = SettingsStore;
+        const {
+            neutrinoPeersMainnet,
+            neutrinoPeersTestnet,
+            zeroConfPeers,
+            dontAllowOtherPeers
+        } = settings;
+
+        const neutrinoPeers =
+            embeddedLndNetwork === 'Mainnet'
+                ? neutrinoPeersMainnet
+                : neutrinoPeersTestnet;
 
         return (
             <Screen>

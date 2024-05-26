@@ -10,6 +10,8 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Row } from '../components/layout/Row';
 import Amount from '../components/Amount';
@@ -33,9 +35,10 @@ import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import EditNotes from '../assets/images/SVG/Pen.svg';
 
 interface TransactionProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
+    route: Route<'Transaction', { transaction: Transaction }>;
 }
 
 interface TransactionState {
@@ -52,12 +55,9 @@ export default class TransactionView extends React.Component<
         storedNotes: ''
     };
     async componentDidMount() {
-        const { navigation } = this.props;
-        const transaction: Transaction = navigation.getParam(
-            'transaction',
-            null
-        );
-        navigation.addListener('didFocus', () => {
+        const { navigation, route } = this.props;
+        const transaction = route.params?.transaction;
+        navigation.addListener('focus', () => {
             this.props.TransactionsStore.resetBroadcast();
             EncryptedStorage.getItem('note-' + transaction.tx)
                 .then((storedNotes) => {
@@ -69,11 +69,8 @@ export default class TransactionView extends React.Component<
         });
     }
     render() {
-        const { NodeInfoStore, navigation } = this.props;
-        const transaction: Transaction = navigation.getParam(
-            'transaction',
-            null
-        );
+        const { NodeInfoStore, navigation, route } = this.props;
+        const transaction = route.params?.transaction;
         const { storedNotes } = this.state;
         const { testnet } = NodeInfoStore;
 
@@ -356,25 +353,25 @@ export default class TransactionView extends React.Component<
                             }
                         >
                             <KeyValue
-                                keyValue={localeString('views.Payment.notes')}
+                                keyValue={localeString('general.note')}
                                 value={storedNotes}
                                 sensitive
                             />
                         </TouchableOpacity>
                     )}
-
+                </ScrollView>
+                <View style={{ bottom: 15 }}>
                     {!isConfirmed && BackendUtils.supportsBumpFee() && (
-                        <View style={{ marginTop: 20 }}>
-                            <Button
-                                title={localeString('views.BumpFee.title')}
-                                onPress={() =>
-                                    navigation.navigate('BumpFee', {
-                                        outpoint: getOutpoint
-                                    })
-                                }
-                                noUppercase
-                            />
-                        </View>
+                        <Button
+                            title={localeString('views.BumpFee.title')}
+                            onPress={() =>
+                                navigation.navigate('BumpFee', {
+                                    outpoint: getOutpoint
+                                })
+                            }
+                            noUppercase
+                            containerStyle={{ marginTop: 20 }}
+                        />
                     )}
 
                     {tx && (
@@ -395,7 +392,7 @@ export default class TransactionView extends React.Component<
                             noUppercase
                         />
                     )}
-                </ScrollView>
+                </View>
             </Screen>
         );
     }

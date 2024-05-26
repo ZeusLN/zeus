@@ -2,12 +2,15 @@ import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
+import SystemNavigationBar from 'react-native-system-navigation-bar';
+
 import SettingsStore, {
     DEFAULT_VIEW_KEYS,
     THEME_KEYS
 } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
@@ -15,7 +18,7 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
 interface DisplayProps {
-    navigation: any;
+    navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
@@ -25,6 +28,7 @@ interface DisplayState {
     displayNickname: boolean;
     bigKeypadButtons: boolean;
     showAllDecimalPlaces: boolean;
+    selectNodeOnStartup: boolean;
 }
 
 @inject('SettingsStore')
@@ -38,7 +42,8 @@ export default class Display extends React.Component<
         defaultView: 'Keypad',
         displayNickname: false,
         bigKeypadButtons: false,
-        showAllDecimalPlaces: false
+        showAllDecimalPlaces: false,
+        selectNodeOnStartup: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -57,7 +62,8 @@ export default class Display extends React.Component<
                 false,
             showAllDecimalPlaces:
                 (settings.display && settings.display.showAllDecimalPlaces) ||
-                false
+                false,
+            selectNodeOnStartup: settings.selectNodeOnStartup || false
         });
     }
 
@@ -77,7 +83,8 @@ export default class Display extends React.Component<
             displayNickname,
             bigKeypadButtons,
             theme,
-            showAllDecimalPlaces
+            showAllDecimalPlaces,
+            selectNodeOnStartup
         } = this.state;
         const { updateSettings }: any = SettingsStore;
 
@@ -114,6 +121,13 @@ export default class Display extends React.Component<
                                     showAllDecimalPlaces
                                 }
                             });
+                            SystemNavigationBar.setNavigationColor(
+                                themeColor('background'),
+                                isLightTheme() ? 'dark' : 'light'
+                            );
+                            SystemNavigationBar.setNavigationBarDividerColor(
+                                themeColor('secondary')
+                            );
                         }}
                         values={THEME_KEYS}
                     />
@@ -268,6 +282,45 @@ export default class Display extends React.Component<
                                             showAllDecimalPlaces:
                                                 !showAllDecimalPlaces
                                         }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                left: -10
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Display.selectNodeOnStartup'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={selectNodeOnStartup}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        selectNodeOnStartup:
+                                            !selectNodeOnStartup
+                                    });
+                                    await updateSettings({
+                                        selectNodeOnStartup:
+                                            !selectNodeOnStartup
                                     });
                                 }}
                             />
