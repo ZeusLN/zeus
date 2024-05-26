@@ -1,3 +1,4 @@
+import AlertStore from './AlertStore';
 import ChannelsStore from './ChannelsStore';
 import InvoicesStore from './InvoicesStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -22,6 +23,7 @@ import ChannelBackupStore from './ChannelBackupStore';
 import InventoryStore from './InventoryStore';
 
 class Stores {
+    public alertStore: AlertStore;
     public channelsStore: ChannelsStore;
     public invoicesStore: InvoicesStore;
     public nodeInfoStore: NodeInfoStore;
@@ -53,6 +55,10 @@ class Stores {
         this.nodeInfoStore = new NodeInfoStore(
             this.channelsStore,
             this.settingsStore
+        );
+        this.alertStore = new AlertStore(
+            this.settingsStore,
+            this.nodeInfoStore
         );
         this.lspStore = new LSPStore(
             this.settingsStore,
