@@ -781,6 +781,7 @@
     "views.Settings.POS.Product.price": "Price",
     "views.Settings.POS.Product.active": "Active",
     "views.Settings.POS.saveProduct": "Save product",
+    "views.Settings.POS.deleteProduct": "Delete product",
     "views.Settings.POS.confirmDelete": "Confirm delete",
     "views.Settings.POS.standalone": "Standalone",
     "views.Settings.POS.0conf": "0 confirmations",

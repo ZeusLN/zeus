@@ -4,8 +4,7 @@ import {
     Platform,
     ScrollView,
     View,
-    StyleSheet,
-    TouchableOpacity
+    StyleSheet
 } from 'react-native';
 import Product, { PricedIn, ProductStatus } from '../../models/Product';
 import InventoryStore from '../../stores/InventoryStore';
@@ -27,7 +26,6 @@ import Switch from '../../components/Switch';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
-import DeleteIcon from '../../assets/images/SVG/Delete.svg';
 import DropdownSetting from '../../components/DropdownSetting';
 import PosStore from '../../stores/PosStore';
 
@@ -207,10 +205,6 @@ export default class ProductDetails extends React.Component<
         }
     };
 
-    confirmDelete = () => {
-        this.setState({ confirmDelete: !this.state.confirmDelete });
-    };
-
     isValid = () => {
         const { product } = this.state;
 
@@ -224,28 +218,7 @@ export default class ProductDetails extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { product, isLoading, isExisting } = this.state;
-
-        const Delete = () => (
-            <TouchableOpacity onPress={() => this.confirmDelete()}>
-                <View
-                    style={{
-                        width: 35,
-                        height: 35,
-                        borderRadius: 25,
-                        backgroundColor: themeColor('delete'),
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}
-                >
-                    <DeleteIcon
-                        width={16}
-                        height={16}
-                        style={{ alignSelf: 'center' }}
-                    />
-                </View>
-            </TouchableOpacity>
-        );
+        const { product, isLoading, isExisting, confirmDelete } = this.state;
 
         return (
             <>
@@ -292,9 +265,6 @@ export default class ProductDetails extends React.Component<
                                         ),
                                         style: { color: themeColor('text') }
                                     }}
-                                    rightComponent={
-                                        isExisting ? <Delete /> : undefined
-                                    }
                                     containerStyle={{
                                         borderBottomWidth: 0
                                     }}
@@ -461,35 +431,40 @@ export default class ProductDetails extends React.Component<
                                         paddingVertical: 20
                                     }}
                                 >
-                                    {this.state.confirmDelete ? (
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.POS.saveProduct'
+                                        )}
+                                        onPress={async () => {
+                                            this.saveProduct();
+                                        }}
+                                        containerStyle={{
+                                            opacity: this.isValid() ? 1 : 0.5
+                                        }}
+                                        disabled={!this.isValid()}
+                                    />
+                                    {isExisting && (
                                         <Button
-                                            title={localeString(
-                                                'views.Settings.POS.confirmDelete'
-                                            )}
-                                            onPress={() => this.deleteItem()}
-                                            containerStyle={{
-                                                borderColor:
-                                                    themeColor('delete')
+                                            title={
+                                                confirmDelete
+                                                    ? localeString(
+                                                          'views.Settings.POS.confirmDelete'
+                                                      )
+                                                    : localeString(
+                                                          'views.Settings.POS.deleteProduct'
+                                                      )
+                                            }
+                                            onPress={() => {
+                                                if (!confirmDelete) {
+                                                    this.setState({
+                                                        confirmDelete: true
+                                                    });
+                                                } else {
+                                                    this.deleteItem();
+                                                }
                                             }}
-                                            titleStyle={{
-                                                color: themeColor('delete')
-                                            }}
-                                            secondary
-                                        />
-                                    ) : (
-                                        <Button
-                                            title={localeString(
-                                                'views.Settings.POS.saveProduct'
-                                            )}
-                                            onPress={async () => {
-                                                this.saveProduct();
-                                            }}
-                                            containerStyle={{
-                                                opacity: this.isValid()
-                                                    ? 1
-                                                    : 0.5
-                                            }}
-                                            disabled={!this.isValid()}
+                                            containerStyle={{ paddingTop: 18 }}
+                                            warning
                                         />
                                     )}
                                 </View>
