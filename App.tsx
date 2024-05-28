@@ -145,6 +145,9 @@ import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWr
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
 import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelBackups';
 
+// LSP
+import LSPServicesList from './views/Settings/LSPServicesList';
+
 // LSPS1
 import LSPS1 from './views/Settings/LSPS1/index';
 import LSPS1Settings from './views/Settings/LSPS1/Settings';
@@ -819,6 +822,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="TxHex"
                                                         component={TxHex}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="LSPServicesList"
+                                                        component={
+                                                            LSPServicesList
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="LSPS1"
