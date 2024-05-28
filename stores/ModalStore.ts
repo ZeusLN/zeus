@@ -4,11 +4,15 @@ export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
     @observable public showAndroidNfcModal: boolean = false;
     @observable public showInfoModal: boolean = false;
+    @observable public showAlertModal: boolean = false;
     @observable public modalUrl: string;
     @observable public clipboardValue: string;
     @observable public infoModalText: string | Array<string> | undefined;
     @observable public infoModalLink: string | undefined;
     @observable public infoModalNav: string | undefined;
+    @observable public alertModalText: string | Array<string> | undefined;
+    @observable public alertModalLink: string | undefined;
+    @observable public alertModalNav: string | undefined;
     @observable public onPress: () => void;
 
     /* External Link Modal */
@@ -27,6 +31,11 @@ export default class ModalStore {
         this.infoModalText = text;
         this.infoModalLink = link;
         this.infoModalNav = nav;
+    };
+
+    @action
+    public toggleAlertModal = (status: boolean) => {
+        this.showAlertModal = status;
     };
 
     @action

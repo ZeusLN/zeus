@@ -49,6 +49,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 
+import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
@@ -78,6 +79,7 @@ interface WalletProps {
     enterSetup: any;
     exitTransaction: any;
     navigation: StackNavigationProp<any, any>;
+    AlertStore: AlertStore;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
@@ -100,6 +102,7 @@ interface WalletState {
 }
 
 @inject(
+    'AlertStore',
     'BalanceStore',
     'ChannelsStore',
     'NodeInfoStore',
@@ -284,6 +287,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async fetchData() {
         const {
+            AlertStore,
             NodeInfoStore,
             BalanceStore,
             ChannelsStore,
@@ -328,6 +332,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         let start;
         if (connecting) {
             start = new Date().getTime();
+            AlertStore.reset();
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
@@ -353,6 +358,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
+                AlertStore.checkNeutrinoPeers();
                 await initializeLnd(
                     embeddedLndNetwork === 'Testnet',
                     rescan,
@@ -365,7 +371,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         initialLoad: false
                     });
                 } else {
-                    if (expressGraphSyncEnabled) await expressGraphSync();
+                    if (expressGraphSyncEnabled) {
+                        await expressGraphSync();
+                        if (settings.resetExpressGraphSyncOnStartup) {
+                            await updateSettings({
+                                resetExpressGraphSyncOnStartup: false
+                            });
+                        }
+                    }
                 }
 
                 await startLnd(
@@ -375,6 +388,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 );
             }
             await NodeInfoStore.getNodeInfo();
+            NodeInfoStore.getNetworkInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
             if (BackendUtils.supportsChannelManagement())
