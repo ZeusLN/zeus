@@ -199,7 +199,7 @@ export default class CLightningREST extends LND {
             id: `${data.addr.pubkey}@${data.addr.host}`
         });
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/pay/decodePay/${urlParams && urlParams[0]}`);
+        this.getRequest(`/v1/utility/decode/${urlParams && urlParams[0]}`);
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/pay', {
             invoice: data.payment_request,
@@ -246,6 +246,33 @@ export default class CLightningREST extends LND {
         };
     };
 
+    // BOLT 12 / Offers
+    listOffers = () => this.getRequest('/v1/offers/listOffers');
+    createOffer = ({
+        description,
+        label,
+        singleUse
+    }: {
+        description?: string;
+        label?: string;
+        singleUse?: boolean;
+    }) =>
+        this.postRequest('/v1/offers/offer', {
+            amount: 'any',
+            description,
+            label,
+            single_use: singleUse || false
+        });
+    disableOffer = ({ offer_id }: { offer_id: string }) =>
+        this.deleteRequest(`/v1/offers/disableOffer/${offer_id}`);
+    fetchInvoiceFromOffer = async (bolt12: string, amountSatoshis: string) => {
+        return await this.postRequest('/v1/offers/fetchInvoice', {
+            offer: bolt12,
+            msatoshi: Number(amountSatoshis) * 1000,
+            timeout: 60
+        });
+    };
+
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
@@ -274,7 +301,12 @@ export default class CLightningREST extends LND {
     supportsSweep = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
-    isLNDBased = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsOffers = async () => {
+        const res = await this.getRequest('/v1/utility/listConfigs');
+        const supportsOffers: boolean = res['experimental-offers'] || false;
+        return supportsOffers;
+    };
+    isLNDBased = () => false;
 }

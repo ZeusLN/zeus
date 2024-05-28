@@ -87,6 +87,12 @@ import NostrKeys from './views/Settings/LightningAddress/NostrKeys';
 import NostrRelays from './views/Settings/LightningAddress/NostrRelays';
 import ChangeAddress from './views/Settings/LightningAddress/ChangeAddress';
 
+// BOLT 12
+import PayCodes from './views/PayCodes';
+import PayCode from './views/PayCode';
+import CreatePayCode from './views/PayCodeCreate';
+import Bolt12Address from './views/Settings/Bolt12Address';
+
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
@@ -202,6 +208,7 @@ export default class App extends React.PureComponent {
                 LSPStore={Stores.lspStore}
                 LightningAddressStore={Stores.lightningAddressStore}
                 ChannelBackupStore={Stores.channelBackupStore}
+                OffersStore={Stores.offersStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -733,6 +740,26 @@ export default class App extends React.PureComponent {
                                                         name="ChangeAddress"
                                                         component={
                                                             ChangeAddress
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="PayCodes"
+                                                        component={PayCodes}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="PayCode"
+                                                        component={PayCode}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CreatePayCode"
+                                                        component={
+                                                            CreatePayCode
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Bolt12Address"
+                                                        component={
+                                                            Bolt12Address
                                                         }
                                                     />
                                                     <Stack.Screen

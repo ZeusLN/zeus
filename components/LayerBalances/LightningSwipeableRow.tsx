@@ -52,6 +52,8 @@ export default class LightningSwipeableRow extends Component<
 
             if (text === localeString('general.receive')) {
                 this.props.navigation.navigate('Receive');
+            } else if (text === localeString('general.paycodes')) {
+                this.props.navigation.navigate('PayCodes');
             } else if (text === localeString('general.routing')) {
                 this.props.navigation.navigate('Routing');
             } else if (text === localeString('general.send')) {
@@ -75,6 +77,16 @@ export default class LightningSwipeableRow extends Component<
                     >
                         {text === localeString('general.routing') && (
                             <Routing
+                                fill={
+                                    themeColor('action') ||
+                                    themeColor('highlight')
+                                }
+                                width={30}
+                                height={30}
+                            />
+                        )}
+                        {text === localeString('general.paycodes') && (
+                            <Receive
                                 fill={
                                     themeColor('action') ||
                                     themeColor('highlight')
@@ -120,7 +132,11 @@ export default class LightningSwipeableRow extends Component<
     private renderActions = (progress: Animated.AnimatedInterpolation) => {
         const width =
             BackendUtils.supportsRouting() &&
-            BackendUtils.supportsLightningSends()
+            BackendUtils.supportsLightningSends() &&
+            BackendUtils.supportsOffers()
+                ? 280
+                : BackendUtils.supportsRouting() &&
+                  BackendUtils.supportsLightningSends()
                 ? 210
                 : BackendUtils.supportsRouting() ||
                   BackendUtils.supportsLightningSends()
@@ -139,6 +155,12 @@ export default class LightningSwipeableRow extends Component<
                     width,
                     progress
                 )}
+                {BackendUtils.supportsOffers() &&
+                    this.renderAction(
+                        localeString('general.paycodes'),
+                        width,
+                        progress
+                    )}
                 {BackendUtils.supportsRouting() &&
                     this.renderAction(
                         localeString('general.routing'),
