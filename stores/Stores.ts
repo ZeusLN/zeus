@@ -20,6 +20,7 @@ import LSPStore from './LSPStore';
 import LightningAddressStore from './LightningAddressStore';
 import ChannelBackupStore from './ChannelBackupStore';
 import InventoryStore from './InventoryStore';
+import OffersStore from './OffersStore';
 
 class Stores {
     public channelsStore: ChannelsStore;
@@ -44,10 +45,12 @@ class Stores {
     public lightningAddressStore: LightningAddressStore;
     public channelBackupStore: ChannelBackupStore;
     public inventoryStore: InventoryStore;
+    public offersStore: OffersStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
         this.modalStore = new ModalStore();
+        this.offersStore = new OffersStore();
         this.fiatStore = new FiatStore(this.settingsStore);
         this.channelsStore = new ChannelsStore(this.settingsStore);
         this.nodeInfoStore = new NodeInfoStore(
