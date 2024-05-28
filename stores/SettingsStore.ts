@@ -1378,39 +1378,39 @@ export default class SettingsStore {
                     await EncryptedStorage.setItem(MOD_KEY3, 'true');
                 }
 
-                const MOD_KEY4 = 'lsps1-hosts';
+                const MOD_KEY4 = 'lsps1-hosts1';
                 const mod4 = await EncryptedStorage.getItem(MOD_KEY4);
                 if (!mod4) {
-                    if (!this.settings?.lsps1HostMainnet) {
-                        this.settings.lsps1HostMainnet =
+                    if (!newSettings?.lsps1HostMainnet) {
+                        newSettings.lsps1HostMainnet =
                             DEFAULT_LSPS1_HOST_MAINNET;
                     }
-                    if (!this.settings?.lsps1HostTestnet) {
-                        this.settings.lsps1HostTestnet =
+                    if (!newSettings?.lsps1HostTestnet) {
+                        newSettings.lsps1HostTestnet =
                             DEFAULT_LSPS1_HOST_TESTNET;
                     }
-                    if (!this.settings?.lsps1PubkeyMainnet) {
-                        this.settings.lsps1PubkeyMainnet =
+                    if (!newSettings?.lsps1PubkeyMainnet) {
+                        newSettings.lsps1PubkeyMainnet =
                             DEFAULT_LSPS1_PUBKEY_MAINNET;
                     }
-                    if (!this.settings?.lsps1PubkeyTestnet) {
-                        this.settings.lsps1PubkeyTestnet =
+                    if (!newSettings?.lsps1PubkeyTestnet) {
+                        newSettings.lsps1PubkeyTestnet =
                             DEFAULT_LSPS1_PUBKEY_TESTNET;
                     }
-                    if (!this.settings?.lsps1RestMainnet) {
-                        this.settings.lsps1RestMainnet =
+                    if (!newSettings?.lsps1RestMainnet) {
+                        newSettings.lsps1RestMainnet =
                             DEFAULT_LSPS1_REST_MAINNET;
                     }
-                    if (!this.settings?.lsps1RestTestnet) {
-                        this.settings.lsps1RestTestnet =
+                    if (!newSettings?.lsps1RestTestnet) {
+                        newSettings.lsps1RestTestnet =
                             DEFAULT_LSPS1_REST_TESTNET;
                     }
 
-                    if (!this.settings?.lsps1ShowPurchaseButton) {
-                        this.settings.lsps1ShowPurchaseButton = true;
+                    if (!newSettings?.lsps1ShowPurchaseButton) {
+                        newSettings.lsps1ShowPurchaseButton = true;
                     }
 
-                    this.setSettings(JSON.stringify(this.settings));
+                    this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY4, 'true');
                 }
 
