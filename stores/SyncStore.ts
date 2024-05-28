@@ -10,6 +10,8 @@ import SettingsStore from './SettingsStore';
 
 export default class SyncStore {
     @observable public isSyncing: boolean = false;
+    @observable public isRecovering: boolean = false;
+    @observable public recoveryProgress: number | null;
     @observable public isInExpressGraphSync: boolean = false;
     @observable public bestBlockHeight: number;
     @observable public currentBlockHeight: number;
@@ -26,6 +28,7 @@ export default class SyncStore {
     @action
     public reset = () => {
         this.isSyncing = false;
+        this.isRecovering = false;
         this.isInExpressGraphSync = false;
         this.error = false;
     };
@@ -135,6 +138,44 @@ export default class SyncStore {
             }
 
             if (queryMempool) this.getBestBlockHeight();
+        }
+    };
+
+    @action
+    public checkRecoveryStatus = () => {
+        BackendUtils.getRecoveryInfo().then((data: any) => {
+            if (data.recovery_mode && !data.recovery_finished) {
+                this.startRecovering();
+            }
+        });
+    };
+
+    @action
+    public getRecoveryStatus = async () => {
+        await BackendUtils.getRecoveryInfo().then((data: any) => {
+            if (data.recovery_mode) {
+                if (data.progress) {
+                    this.recoveryProgress = data.progress;
+                }
+                if (data.recovery_finished) {
+                    this.isRecovering = false;
+                    this.recoveryProgress = null;
+                }
+            } else {
+                this.isRecovering = false;
+                this.recoveryProgress = null;
+            }
+            return data;
+        });
+    };
+
+    @action
+    public startRecovering = async () => {
+        this.isRecovering = true;
+
+        while (this.isRecovering) {
+            await sleep(2000);
+            await this.getRecoveryStatus();
         }
     };
 }

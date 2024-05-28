@@ -75,6 +75,7 @@ class BackendUtils {
         this.call('subscribeCustomMessages', args);
     getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
     getNetworkInfo = (...args: any[]) => this.call('getNetworkInfo', args);
+    getRecoveryInfo = (...args: any[]) => this.call('getRecoveryInfo', args);
     getInvoices = (...args: any[]) => this.call('getInvoices', args);
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);

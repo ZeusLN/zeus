@@ -23,6 +23,7 @@ import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 import { StackNavigationProp } from '@react-navigation/stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -387,6 +388,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     embeddedLndNetwork === 'Testnet'
                 );
             }
+            if (implementation === 'embedded-lnd')
+                SyncStore.checkRecoveryStatus();
             await NodeInfoStore.getNodeInfo();
             NodeInfoStore.getNetworkInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
@@ -399,6 +402,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 });
             }
             if (recovery) {
+                const isBackedUp = await EncryptedStorage.getItem(
+                    'backup-complete'
+                );
+                if (!isBackedUp) {
+                    await EncryptedStorage.setItem(
+                        'backup-complete',
+                        JSON.stringify(true)
+                    );
+                }
                 if (isSyncing) return;
                 try {
                     await ChannelBackupStore.recoverStaticChannelBackup();

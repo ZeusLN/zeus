@@ -139,6 +139,7 @@ import EditFee from './views/EditFee';
 import Seed from './views/Settings/Seed';
 import SeedRecovery from './views/Settings/SeedRecovery';
 import Sync from './views/Sync';
+import SyncRecovery from './views/SyncRecovery';
 import LspExplanationFees from './views/Explanations/LspExplanationFees';
 import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
 import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
@@ -602,6 +603,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="Sync"
                                                         component={Sync}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="SyncRecovery"
+                                                        component={SyncRecovery}
                                                     />
                                                     <Stack.Screen
                                                         name="BumpFee"
