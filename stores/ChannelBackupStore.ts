@@ -16,6 +16,7 @@ import {
 import BackendUtils from '../utils/BackendUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import Base64Utils from '../utils/Base64Utils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 const BACKUPS_HOST = 'https://backups.lnolymp.us';
 
@@ -24,6 +25,7 @@ export default class ChannelBackupStore {
     @observable public backups: Array<any> = [];
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
+    @observable public error_msg: string;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -36,6 +38,9 @@ export default class ChannelBackupStore {
     @action
     public reset = () => {
         this.channelEventsSubscription = null;
+        this.error_msg = '';
+        this.error = false;
+        this.loading = false;
     };
 
     logBackupStatus = async (status: string) => {
@@ -195,16 +200,33 @@ export default class ChannelBackupStore {
     };
 
     @action
-    public triggerRecovery = async (backup: string) => {
-        const decryptedBytes = CryptoJS.AES.decrypt(
-            backup,
-            this.settingsStore.seedPhrase.toString()
-        );
-        const decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
+    public triggerRecovery = async (backup: string): Promise<void> => {
+        this.error_msg = '';
+        this.loading = true;
 
-        await restoreChannelBackups(decryptedString);
+        return await new Promise(async (resolve, reject) => {
+            try {
+                const decryptedBytes = CryptoJS.AES.decrypt(
+                    backup,
+                    this.settingsStore.seedPhrase.toString()
+                );
+                const decryptedString = decryptedBytes.toString(
+                    CryptoJS.enc.Utf8
+                );
 
-        return;
+                await restoreChannelBackups(decryptedString);
+
+                this.error_msg = '';
+                this.loading = false;
+
+                resolve();
+            } catch (e: any) {
+                this.error_msg = errorToUserFriendly(e);
+                this.loading = false;
+
+                reject(new Error(this.error_msg));
+            }
+        });
     };
 
     @action
