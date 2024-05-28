@@ -780,7 +780,9 @@ export default class AddContact extends React.Component<
                             <TextInput
                                 onChangeText={(text) => {
                                     this.onChangeBolt12Address(text);
-                                    const updatedAddresses = [...bolt12Address];
+                                    const updatedAddresses = bolt12Address
+                                        ? [...bolt12Address]
+                                        : [];
                                     updatedAddresses[0] = text;
                                     this.setState({
                                         bolt12Address: updatedAddresses
@@ -805,7 +807,7 @@ export default class AddContact extends React.Component<
                                 autoCapitalize="none"
                             />
                         </View>
-                        {lnAddress?.slice(1).map((address, index) => (
+                        {bolt12Address?.slice(1).map((address, index) => (
                             <>
                                 <Divider
                                     orientation="horizontal"
@@ -823,16 +825,17 @@ export default class AddContact extends React.Component<
                                     <View>
                                         <TextInput
                                             onChangeText={(text) => {
-                                                this.onChangeLightningAddress(
+                                                this.onChangeBolt12Address(
                                                     text
                                                 );
                                                 const updatedAddresses = [
-                                                    ...lnAddress
+                                                    ...bolt12Address
                                                 ];
                                                 updatedAddresses[index + 1] =
                                                     text;
                                                 this.setState({
-                                                    lnAddress: updatedAddresses
+                                                    bolt12Address:
+                                                        updatedAddresses
                                                 });
                                                 if (!text) {
                                                     this.setState({
@@ -843,7 +846,7 @@ export default class AddContact extends React.Component<
                                             }}
                                             value={address}
                                             placeholder={localeString(
-                                                'views.Settings.AddContact.lnAddress'
+                                                'views.Settings.Bolt12Address'
                                             )}
                                             placeholderTextColor={themeColor(
                                                 'secondaryText'
