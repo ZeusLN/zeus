@@ -781,7 +781,7 @@
     "views.Settings.POS.Product.price": "Cena",
     "views.Settings.POS.Product.active": "Aktivní",
     "views.Settings.POS.saveProduct": "Uložit produkt",
-    "views.Settings.POS.deleteProduct": "Delete product",
+    "views.Settings.POS.deleteProduct": "Odstranit produkt",
     "views.Settings.POS.confirmDelete": "Potvrdit odstranění",
     "views.Settings.POS.standalone": "Samostatný",
     "views.Settings.POS.0conf": "0 potvrzení",
