@@ -28,7 +28,9 @@ export default class Contact extends BaseModel {
             this.lnAddress &&
             this.lnAddress.length === 1 &&
             this.lnAddress[0] !== '' &&
-            (!this.bolt12Address[0] || this.bolt12Address[0] === '') &&
+            (!this.bolt12Address ||
+                !this.bolt12Address[0] ||
+                this.bolt12Address[0] === '') &&
             (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
             (!this.pubkey[0] || this.pubkey[0] === '')
         );
@@ -51,7 +53,9 @@ export default class Contact extends BaseModel {
             this.onchainAddress.length === 1 &&
             this.onchainAddress[0] !== '' &&
             (!this.lnAddress[0] || this.lnAddress[0] === '') &&
-            (!this.bolt12Address[0] || this.bolt12Address[0] === '') &&
+            (!this.bolt12Address ||
+                !this.bolt12Address[0] ||
+                this.bolt12Address[0] === '') &&
             (!this.pubkey[0] || this.pubkey[0] === '')
         );
     }
@@ -62,7 +66,9 @@ export default class Contact extends BaseModel {
             this.pubkey.length === 1 &&
             this.pubkey[0] !== '' &&
             (!this.lnAddress[0] || this.lnAddress[0] === '') &&
-            (!this.bolt12Address[0] || this.bolt12Address[0] === '') &&
+            (!this.bolt12Address ||
+                !this.bolt12Address[0] ||
+                this.bolt12Address[0] === '') &&
             (!this.onchainAddress[0] || this.onchainAddress[0] === '')
         );
     }
@@ -88,7 +94,7 @@ export default class Contact extends BaseModel {
         this.lnAddress.forEach((address) => {
             if (address && address !== '') count++;
         });
-        this.bolt12Address.forEach((address) => {
+        this.bolt12Address?.forEach((address) => {
             if (address && address !== '') count++;
         });
         this.onchainAddress.forEach((address) => {
