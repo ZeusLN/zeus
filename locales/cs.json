@@ -1183,7 +1183,7 @@
     "components.AlertModal.highZombieCount": "Vysoký počet zombie kanálů",
     "components.AlertModal.zombieExplainer": "Zombie channels indicate stale data on your downloaded network graph.",
     "components.AlertModal.resetEGS": "Reset express graph sync data",
-    "components.AlertModal.neutrinoPeers": "Problematic neutrino peers",
-    "components.AlertModal.neutrinoExplainer": "Neutrino peers with over 200ms ping time can cause performance issues in the app.",
+    "components.AlertModal.neutrinoPeers": "Problematické neutrino peery",
+    "components.AlertModal.neutrinoExplainer": "Neutrino peery s časem odezvy vyšším než 200 ms mohou v aplikaci způsobovat výkonnostní problémy.",
     "components.AlertModal.reviewPeers": "Review neutrino peers list"
 }
