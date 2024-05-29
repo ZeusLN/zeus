@@ -313,7 +313,7 @@ export default class NeutrinoPeers extends React.Component<
                                                         : themeColor('text')
                                                 }}
                                                 iconOnly
-                                                onPress={() => {
+                                                onPress={async () => {
                                                     if (!addPeer) return;
                                                     const newNeutrinoPeers = [
                                                         ...neutrinoPeers,
@@ -328,7 +328,7 @@ export default class NeutrinoPeers extends React.Component<
                                                         embeddedLndNetwork ===
                                                         'Mainnet'
                                                     ) {
-                                                        updateSettings({
+                                                        await updateSettings({
                                                             neutrinoPeersMainnet:
                                                                 newNeutrinoPeers
                                                         });
@@ -336,11 +336,13 @@ export default class NeutrinoPeers extends React.Component<
                                                         embeddedLndNetwork ===
                                                         'Testnet'
                                                     ) {
-                                                        updateSettings({
+                                                        await updateSettings({
                                                             neutrinoPeersTestnet:
                                                                 newNeutrinoPeers
                                                         });
                                                     }
+
+                                                    restartNeeded();
                                                 }}
                                             />
                                         </View>
@@ -442,7 +444,7 @@ export default class NeutrinoPeers extends React.Component<
                                                                 )
                                                             }}
                                                             iconOnly
-                                                            onPress={() => {
+                                                            onPress={async () => {
                                                                 const newNeutrinoPeers =
                                                                     this.remove(
                                                                         neutrinoPeers,
@@ -456,7 +458,7 @@ export default class NeutrinoPeers extends React.Component<
                                                                     embeddedLndNetwork ===
                                                                     'Mainnet'
                                                                 ) {
-                                                                    updateSettings(
+                                                                    await updateSettings(
                                                                         {
                                                                             neutrinoPeersMainnet:
                                                                                 newNeutrinoPeers
@@ -466,13 +468,15 @@ export default class NeutrinoPeers extends React.Component<
                                                                     embeddedLndNetwork ===
                                                                     'Testnet'
                                                                 ) {
-                                                                    updateSettings(
+                                                                    await updateSettings(
                                                                         {
                                                                             neutrinoPeersTestnet:
                                                                                 newNeutrinoPeers
                                                                         }
                                                                     );
                                                                 }
+
+                                                                restartNeeded();
                                                             }}
                                                         />
                                                     </View>
@@ -507,14 +511,14 @@ export default class NeutrinoPeers extends React.Component<
                         <View style={{ marginBottom: 10, marginTop: 10 }}>
                             <Button
                                 title={localeString('general.reset')}
-                                onPress={() => {
+                                onPress={async () => {
                                     if (embeddedLndNetwork === 'Mainnet') {
                                         this.setState({
                                             neutrinoPeers:
                                                 DEFAULT_NEUTRINO_PEERS_MAINNET,
                                             dontAllowOtherPeers: false
                                         });
-                                        updateSettings({
+                                        await updateSettings({
                                             neutrinoPeersMainnet:
                                                 DEFAULT_NEUTRINO_PEERS_MAINNET,
                                             dontAllowOtherPeers: false
@@ -527,12 +531,14 @@ export default class NeutrinoPeers extends React.Component<
                                                 DEFAULT_NEUTRINO_PEERS_TESTNET,
                                             dontAllowOtherPeers: false
                                         });
-                                        updateSettings({
+                                        await updateSettings({
                                             neutrinoPeersTestnet:
                                                 DEFAULT_NEUTRINO_PEERS_TESTNET,
                                             dontAllowOtherPeers: false
                                         });
                                     }
+
+                                    restartNeeded();
                                 }}
                             />
                         </View>
