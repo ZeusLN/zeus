@@ -27,6 +27,19 @@ export default class UTXOsStore {
         this.settingsStore = settingsStore;
     }
 
+    @action
+    public reset = () => {
+        this.error = false;
+        this.loading = false;
+        this.success = false;
+        this.loadingAccounts = false;
+        this.importingAccount = false;
+        this.errorMsg = '';
+        this.accounts = [];
+        this.accountToImport = null;
+        this.utxos = [];
+    };
+
     getUtxosError = () => {
         this.error = true;
         this.loading = false;

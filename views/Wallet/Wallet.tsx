@@ -340,6 +340,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LightningAddressStore.reset();
             LSPStore.reset();
             ChannelBackupStore.reset();
+            UTXOsStore.reset();
         }
 
         LnurlPayStore.reset();
