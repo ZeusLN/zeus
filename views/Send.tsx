@@ -194,7 +194,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { route } = nextProps;
-        const { destination, amount, transactionType, contactName } =
+        const { destination, bolt12, amount, transactionType, contactName } =
             route.params ?? {};
 
         if (transactionType === 'Lightning') {
@@ -204,6 +204,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.setState({
             transactionType,
             destination,
+            bolt12,
             isValid: true,
             contactName
         });
@@ -386,7 +387,20 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     payBolt12 = async () => {
         const { amount, bolt12 } = this.state;
-        if (amount === '0' || !bolt12) {
+        if (!bolt12) {
+            this.setState({
+                loading: false,
+                error_msg: localeString(
+                    'views.Send.payBolt12.offerFetchFailure'
+                )
+            });
+            return;
+        }
+        if (!amount || amount === '0') {
+            this.setState({
+                loading: false,
+                error_msg: localeString('views.Send.payBolt12.specifyAmount')
+            });
             return;
         }
         try {
@@ -402,6 +416,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amount
             );
             if (!res.invoice) {
+                this.setState({
+                    loading: false,
+                    error_msg: localeString(
+                        'views.Send.payBolt12.invoiceFetchFailure'
+                    )
+                });
                 return;
             }
             this.props.InvoicesStore.getPayReq(res.invoice);
