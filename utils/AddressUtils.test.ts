@@ -140,6 +140,35 @@ describe('AddressUtils', () => {
                 value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
                 amount: '170003' // amount in sats
             });
+
+            // bolt12 offers
+            expect(
+                AddressUtils.processSendAddress(
+                    'bitcoin:?lno=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual({
+                value: '',
+                lightning:
+                    'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+            });
+            expect(
+                AddressUtils.processSendAddress(
+                    'BITCOIN:?lno=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual({
+                value: '',
+                lightning:
+                    'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+            });
+            expect(
+                AddressUtils.processSendAddress(
+                    'BITCOIN:?LNO=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual({
+                value: '',
+                lightning:
+                    'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+            });
         });
 
         it('validates Bech32m - P2TR properly', () => {

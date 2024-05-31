@@ -56,7 +56,7 @@ export default class PayCodeView extends React.Component<
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('QR', {
-                        value: `lno:${this.state.payCode.bolt12}`
+                        value: `lightning:${this.state.payCode.bolt12}`
                     })
                 }
             >

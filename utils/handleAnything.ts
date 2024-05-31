@@ -178,10 +178,27 @@ const handleAnything = async (
                 isValid: true
             }
         ];
-    } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
+    } else if (
+        !hasAt &&
+        AddressUtils.isValidLightningPaymentRequest(value || lightning)
+    ) {
         if (isClipboardValue) return true;
         await invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
+    } else if (
+        !hasAt &&
+        AddressUtils.isValidLightningOffer(value || lightning)
+    ) {
+        if (isClipboardValue) return true;
+        return [
+            'Send',
+            {
+                destination: value || lightning,
+                bolt12: value || lightning,
+                transactionType: 'BOLT 12',
+                isValid: true
+            }
+        ];
     } else if (value.includes('c-lightning-rest://')) {
         if (isClipboardValue) return true;
         const { host, port, macaroonHex, implementation, enableTor } =

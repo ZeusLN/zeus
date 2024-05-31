@@ -22,6 +22,9 @@ const lnInvoice =
     /^(lnbc|lntb|lntbs|lnbcrt|LNBC|LNTB|LNTBS|LNBCRT)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
+/* BOLT 12 */
+const lnOffer = /^(lno|LNO)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+
 /* testnet */
 const btcNonBechTestnet = /^[2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBechTestnet = /^(bc1|bcrt1|BC1|BCRT1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
@@ -86,8 +89,10 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         amount = amount.toString();
     }
 
-    if (result.lightning || result.LIGHTNING) {
-        lightning = result.lightning || result.LIGHTNING;
+    if (result.lightning || result.LIGHTNING || result.lno || result.LNO) {
+        console.log('result', result.lno);
+        lightning =
+            result.lightning || result.LIGHTNING || result.lno || result.LNO;
     }
 
     return [value, amount, lightning];
@@ -170,6 +175,7 @@ class AddressUtils {
     };
 
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
+    isValidLightningOffer = (input: string) => lnOffer.test(input);
 
     isValidLightningPubKey = (input: string) => lnPubKey.test(input);
 
