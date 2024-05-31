@@ -32,6 +32,7 @@ import SettingsStore from '../stores/SettingsStore';
 import LnurlPayHistorical from './LnurlPay/Historical';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
+import QR from '../assets/images/SVG/QR.svg';
 
 interface PaymentProps {
     navigation: StackNavigationProp<any, any>;
@@ -93,7 +94,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
             isIncomplete,
             isInTransit,
             isFailed,
-            noteKey
+            noteKey,
+            getPaymentRequest
         } = payment;
         const date = getDisplayTime;
 
@@ -102,11 +104,24 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 onPress={() =>
                     navigation.navigate('AddNotes', { payment_hash: noteKey })
                 }
+                style={{ marginRight: 15 }}
             >
                 <EditNotes
                     style={{ alignSelf: 'center' }}
                     fill={themeColor('text')}
                 />
+            </TouchableOpacity>
+        );
+
+        const QRButton = () => (
+            <TouchableOpacity
+                onPress={() =>
+                    navigation.navigate('QR', {
+                        value: `lightning:${getPaymentRequest}`
+                    })
+                }
+            >
+                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
             </TouchableOpacity>
         );
 
@@ -125,7 +140,12 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={<EditNotesButton />}
+                    rightComponent={
+                        <Row>
+                            <EditNotesButton />
+                            {!!getPaymentRequest && <QRButton />}
+                        </Row>
+                    }
                     navigation={navigation}
                 />
                 <ScrollView keyboardShouldPersistTaps="handled">
