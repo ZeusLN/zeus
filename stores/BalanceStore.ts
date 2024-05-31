@@ -66,14 +66,18 @@ export default class BalanceStore {
         return BackendUtils.getBlockchainBalance({})
             .then((data: any) => {
                 // process external accounts
-                const accounts = data.account_balance;
+                const accounts = data?.account_balance;
 
                 const unconfirmedBlockchainBalance = Number(
-                    accounts.default.unconfirmed_balance || 0
+                    accounts?.default?.unconfirmed_balance ||
+                        data.confirmed_balance ||
+                        0
                 );
 
                 const confirmedBlockchainBalance = Number(
-                    accounts.default.confirmed_balance || 0
+                    accounts?.default?.confirmed_balance ||
+                        data.unconfirmed_balance ||
+                        0
                 );
 
                 const totalBlockchainBalance = new BigNumber(
