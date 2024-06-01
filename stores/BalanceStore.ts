@@ -69,15 +69,15 @@ export default class BalanceStore {
                 const accounts = data?.account_balance;
 
                 const unconfirmedBlockchainBalance = Number(
-                    accounts?.default?.unconfirmed_balance ||
-                        data.confirmed_balance ||
-                        0
+                    accounts?.default
+                        ? accounts.default.unconfirmed_balance || 0
+                        : data.unconfirmed_balance || 0
                 );
 
                 const confirmedBlockchainBalance = Number(
-                    accounts?.default?.confirmed_balance ||
-                        data.unconfirmed_balance ||
-                        0
+                    accounts?.default
+                        ? accounts?.default.confirmed_balance || 0
+                        : data.confirmed_balance || 0
                 );
 
                 const totalBlockchainBalance = new BigNumber(
