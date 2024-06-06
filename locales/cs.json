@@ -1189,7 +1189,7 @@
     "components.AlertModal.zeusDetected": "ZEUS detekoval následující problémy:",
     "components.AlertModal.highZombieCount": "Vysoký počet zombie kanálů",
     "components.AlertModal.zombieExplainer": "Zombie channels indicate stale data on your downloaded network graph.",
-    "components.AlertModal.resetEGS": "Reset express graph sync data",
+    "components.AlertModal.resetEGS": "Obnovte data expresní synchronizace grafu",
     "components.AlertModal.neutrinoPeers": "Problematické neutrino peery",
     "components.AlertModal.neutrinoExplainer": "Neutrino peery s časem odezvy vyšším než 200 ms mohou v aplikaci způsobovat výkonnostní problémy.",
     "components.AlertModal.reviewPeers": "Review neutrino peers list"
