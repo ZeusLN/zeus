@@ -6,7 +6,7 @@ The ZEUS team is putting up the tasks listed below for bounty. Working code must
 
 Payout: 5,250,000 sats (0.0525 BTC)
 
-Currently, ZEUS supports remote connections to Core Lightning (CLN) through c-lightning-REST, which is soon being deprecated. We'd like to replace this interface with the new [CLNRest API](https://docs.corelightning.org/docs/rest), a lightweight Python-based built-in Core Lightning plugin (from v23.08) that transforms RPC calls into a REST service - which is officially supported by the Core Lightning team. For the bounty to be accepted it needs to have full feature parity with the c-lightning-REST interface in ZEUS, including the ability to pay and generate BOLT 12 offers.
+Currently, ZEUS supports remote connections to Core Lightning (CLN) through c-lightning-REST, which will soon be deprecated. We'd like to replace this interface with the new [CLNRest API](https://docs.corelightning.org/docs/rest), a lightweight Python-based built-in Core Lightning plugin (from v23.08) that transforms RPC calls into a REST service - which is officially supported by the Core Lightning team. For the bounty to be accepted it needs to have full feature parity with the c-lightning-REST interface in ZEUS, including the ability to pay and generate BOLT 12 offers.
 
 Additional bounty patrons: @sathoarder, Anonymous
 
@@ -22,7 +22,7 @@ Additional bounty patrons: @sathoarder, Seth For Privacy, denis2342
 
 Payout: 5,000,000 sats (0.05 BTC)
 
-We would like to add support for the SATSCARD NFC smartcard in ZEUS. Users should be able to initialize cards, check balances, shuffle through addresses, and generate QR codes of addresses from cards. SATSCARD should have its own dedicated view in the app to manage the cards. Bonus points if you expose the TapSigner endpoints for a future integration down the line.
+We would like to add support for the SATSCARD NFC smartcard in ZEUS. Users should be able to initialize cards, check balances, shuffle through addresses, ,generate QR codes of addresses from cards, and sweep balances. SATSCARD should have its own dedicated view in the app to manage the cards. Bonus points if you expose the TapSigner endpoints for a future integration down the line.
 
 ## Point of Sale: Clover integration
 
