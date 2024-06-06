@@ -7,6 +7,7 @@ import {
 
 import { generateSecureRandom } from 'react-native-securerandom';
 import NetInfo from '@react-native-community/netinfo';
+import Ping from 'react-native-ping';
 
 import Log from '../lndmobile/log';
 const log = Log('utils/LndMobileUtils.ts');
@@ -22,6 +23,11 @@ import {
 } from '../lndmobile/index';
 
 import stores from '../stores/Stores';
+import {
+    DEFAULT_NEUTRINO_PEERS_MAINNET,
+    SECONDARY_NEUTRINO_PEERS_MAINNET,
+    DEFAULT_NEUTRINO_PEERS_TESTNET
+} from '../stores/SettingsStore';
 
 import { lnrpc } from '../proto/lightning';
 
@@ -278,6 +284,100 @@ export async function startLnd(
         });
         await subscribeState();
     });
+}
+
+export async function chooseNeutrinoPeers(isTestnet?: boolean) {
+    console.log('Selecting Neutrino peers with ping times <200ms');
+    let peers = isTestnet
+        ? DEFAULT_NEUTRINO_PEERS_TESTNET
+        : DEFAULT_NEUTRINO_PEERS_MAINNET;
+
+    const results: any = [];
+    for (let i = 0; i < peers.length; i++) {
+        const peer = peers[i];
+        await new Promise(async (resolve) => {
+            try {
+                const ms = await Ping.start(peer, {
+                    timeout: 1000
+                });
+                console.log(`# ${peer} - ${ms}`);
+                results.push({
+                    peer,
+                    ms
+                });
+                resolve(true);
+            } catch (e) {
+                console.log('e', e);
+                results.push({
+                    peer,
+                    ms: 'Timed out'
+                });
+                resolve(true);
+            }
+        });
+    }
+
+    let filteredResults = results.filter((result: any) => {
+        return Number.isInteger(result.ms) && result.ms < 200;
+    });
+
+    if (filteredResults.length < 3 && !isTestnet) {
+        peers = SECONDARY_NEUTRINO_PEERS_MAINNET;
+        for (let i = 0; i < peers.length; i++) {
+            const peer = peers[i];
+            await new Promise(async (resolve) => {
+                try {
+                    const ms = await Ping.start(peer, {
+                        timeout: 1000
+                    });
+                    console.log(`# ${peer} - ${ms}`);
+                    results.push({
+                        peer,
+                        ms
+                    });
+                    resolve(true);
+                } catch (e) {
+                    console.log('e', e);
+                    results.push({
+                        peer,
+                        ms: 'Timed out'
+                    });
+                    resolve(true);
+                }
+            });
+        }
+    }
+
+    filteredResults = results.filter((result: any) => {
+        return Number.isInteger(result.ms) && result.ms < 200;
+    });
+
+    const selectedPeers: string[] = [];
+    filteredResults.forEach((result: any) => {
+        selectedPeers.push(result.peer);
+    });
+
+    if (selectedPeers.length > 0) {
+        if (isTestnet) {
+            await stores.settingsStore.updateSettings({
+                neutrinoPeersTestnet: selectedPeers,
+                dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
+            });
+        } else {
+            await stores.settingsStore.updateSettings({
+                neutrinoPeersMainnet: selectedPeers,
+                dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
+            });
+        }
+
+        console.log('Selected the following Neutrino peers:', selectedPeers);
+    } else {
+        // TODO allow users to manually choose peers if we can't
+        // pick good defaults for them
+        console.log('Falling back to the default Neutrino peers.');
+    }
+
+    return;
 }
 
 export async function createLndWallet(

@@ -51,7 +51,10 @@ import Scan from '../../assets/images/SVG/Scan.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
 import { getPhoto } from '../../utils/PhotoUtils';
-import { createLndWallet } from '../../utils/LndMobileUtils';
+import {
+    chooseNeutrinoPeers,
+    createLndWallet
+} from '../../utils/LndMobileUtils';
 
 interface NodeConfigurationProps {
     navigation: StackNavigationProp<any, any>;
@@ -596,6 +599,8 @@ export default class NodeConfiguration extends React.Component<
         this.setState({
             creatingWallet: true
         });
+
+        await chooseNeutrinoPeers(network === 'Testnet');
 
         const response = await createLndWallet(
             recoveryCipherSeed,

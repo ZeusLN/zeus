@@ -21,7 +21,10 @@ import TextInput from '../../components/TextInput';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
-import { createLndWallet } from '../../utils/LndMobileUtils';
+import {
+    chooseNeutrinoPeers,
+    createLndWallet
+} from '../../utils/LndMobileUtils';
 
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
 
@@ -876,6 +879,10 @@ export default class SeedRecovery extends React.PureComponent<
                                     this.setState({
                                         loading: true
                                     });
+
+                                    await chooseNeutrinoPeers(
+                                        network === 'testnet'
+                                    );
 
                                     try {
                                         const response = await createLndWallet(
