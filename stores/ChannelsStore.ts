@@ -21,6 +21,16 @@ interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
 }
 
+interface PendingHTLC {
+    incoming: boolean;
+    amount: number;
+    hash_lock: string;
+    expiration_height: number;
+    htlc_index: number;
+    forwarding_channel: number;
+    forwarding_htlc_index: number;
+}
+
 export enum ChannelsType {
     Open = 0,
     Pending = 1,
@@ -76,6 +86,8 @@ export default class ChannelsStore {
     // external account funding
     @observable public funded_psbt: string = '';
     @observable public pending_chan_ids: Array<string>;
+    // pending HTLCs
+    @observable public pendingHTLCs: Array<PendingHTLC>;
 
     settingsStore: SettingsStore;
 
@@ -97,7 +109,8 @@ export default class ChannelsStore {
             async () => {
                 if (this.channels) {
                     this.enrichedChannels = await this.enrichChannels(
-                        this.channels
+                        this.channels,
+                        true
                     );
                     this.filterChannels();
                 }
@@ -173,6 +186,7 @@ export default class ChannelsStore {
         this.totalInbound = 0;
         this.totalOffline = 0;
         this.channelsType = ChannelsType.Open;
+        this.pendingHTLCs = [];
     };
 
     @action
@@ -286,7 +300,10 @@ export default class ChannelsStore {
     };
 
     @action
-    enrichChannels = async (channels: Array<Channel>) => {
+    enrichChannels = async (
+        channels: Array<Channel>,
+        setPendingHtlcs?: boolean
+    ) => {
         if (channels.length === 0) return;
 
         const channelsWithMissingAliases = channels?.filter(
@@ -323,6 +340,8 @@ export default class ChannelsStore {
             this.aliasesById[channel.channelId!] = nodeInfo.alias;
         }
 
+        if (setPendingHtlcs) this.pendingHTLCs = [];
+
         for (const channel of channels) {
             if (channel.alias == null) {
                 channel.alias = this.nodes[channel.remotePubkey]?.alias;
@@ -332,7 +351,12 @@ export default class ChannelsStore {
                 channel.remotePubkey ||
                 channel.channelId ||
                 localeString('models.Channel.unknownId');
+
+            if (BackendUtils.isLNDBased() && setPendingHtlcs)
+                this.pendingHTLCs.push(...channel.pending_htlcs);
         }
+
+        console.log('Pending HTLCs', this.pendingHTLCs);
 
         this.loading = false;
         return channels;

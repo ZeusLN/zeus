@@ -1192,5 +1192,10 @@
     "components.AlertModal.resetEGS": "Reset express graph sync data",
     "components.AlertModal.neutrinoPeers": "Problematic neutrino peers",
     "components.AlertModal.neutrinoExplainer": "Neutrino peers with over 200ms ping time can cause performance issues in the app.",
-    "components.AlertModal.reviewPeers": "Review neutrino peers list"
+    "components.AlertModal.reviewPeers": "Review neutrino peers list",
+    "views.PendingHTLCs.title": "Pending HTLCs",
+    "views.PendingHTLCs.noPendingHTLCs": "No pending HTLCs",
+    "views.PendingHTLCs.incoming": "Incoming",
+    "views.PendingHTLCs.outgoing": "Outgoing",
+    "views.PendingHTLCs.expirationHeight": "Expiration height"
 }
