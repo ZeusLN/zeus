@@ -16,6 +16,7 @@ export interface Node {
     port?: string;
     url?: string;
     macaroonHex?: string;
+    rune?: string;
     accessKey?: string;
     implementation?: string;
     certVerification?: boolean;
@@ -205,11 +206,25 @@ export const INTERFACE_KEYS = [
     { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
-    { key: 'Core Lightning (c-lightning-REST)', value: 'c-lightning-REST' },
+    { key: 'Core Lightning REST API', value: 'core-lightning-rest-api' },
     { key: 'LNDHub', value: 'lndhub' },
+    {
+        key: '[DEPRECATED] Core Lightning (c-lightning-REST)',
+        value: 'c-lightning-REST'
+    },
     { key: '[DEPRECATED] Core Lightning (Sparko)', value: 'spark' },
     { key: '[DEPRECATED] Eclair', value: 'eclair' }
 ];
+
+export type Implementations =
+    | 'embedded-lnd'
+    | 'lnd'
+    | 'lightning-node-connect'
+    | 'core-lightning-rest-api'
+    | 'lndhub'
+    | 'c-lightning-REST'
+    | 'spark'
+    | 'eclair';
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
     { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
@@ -1105,8 +1120,9 @@ export default class SettingsStore {
     @observable port: string;
     @observable url: string;
     @observable macaroonHex: string;
+    @observable rune: string;
     @observable accessKey: string;
-    @observable implementation: string;
+    @observable implementation: Implementations;
     @observable certVerification: boolean | undefined;
     @observable public loggedIn = false;
     @observable public connecting = true;
@@ -1450,6 +1466,7 @@ export default class SettingsStore {
                     this.password = node.password;
                     this.lndhubUrl = node.lndhubUrl;
                     this.macaroonHex = node.macaroonHex;
+                    this.rune = node.rune;
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;

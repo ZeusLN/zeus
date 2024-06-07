@@ -99,6 +99,9 @@ export default class LND {
                             }
                         }
                     })
+                    .catch((e) => {
+                        console.error('Fetch threw an error', e);
+                    })
             );
         }
 
