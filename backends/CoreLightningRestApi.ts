@@ -1,16 +1,16 @@
 import stores from '../stores/Stores';
 import LND from './LND';
-import TransactionRequest from './../models/TransactionRequest';
-import OpenChannelRequest from './../models/OpenChannelRequest';
-import VersionUtils from './../utils/VersionUtils';
-import Base64Utils from './../utils/Base64Utils';
+import TransactionRequest from '../models/TransactionRequest';
+import OpenChannelRequest from '../models/OpenChannelRequest';
+import VersionUtils from '../utils/VersionUtils';
+import Base64Utils from '../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
-export default class CLightningREST extends LND {
-    getHeaders = (macaroonHex: string): any => {
+export default class CoreLightningRestApi extends LND {
+    getHeaders = (rune: string): any => {
         return {
-            macaroon: macaroonHex
+            Rune: rune
         };
     };
 
@@ -31,12 +31,43 @@ export default class CLightningREST extends LND {
         return isSupportedVersion(version, minVersion, eosVersion);
     };
 
+    request = (route: string, method: string, data?: any, params?: any) => {
+        const { host, port, rune, certVerification, enableTor } =
+            stores.settingsStore;
+
+        if (params) {
+            route = `${route}?${Object.keys(params)
+                .map((key: string) => key + '=' + params[key])
+                .join('&')}`;
+        }
+
+        const headers: any = this.getHeaders(rune);
+        headers['Content-Type'] = 'application/json';
+
+        const url = this.getURL(host, port, route);
+
+        return this.restReq(
+            headers,
+            url,
+            method,
+            data,
+            certVerification,
+            enableTor
+        );
+    };
+
+    getRequest = (route: string, data?: any) =>
+        this.request(route, 'get', null, data);
+    postRequest = (route: string, data?: any) =>
+        this.request(route, 'post', data);
+    deleteRequest = (route: string) => this.request(route, 'delete', null);
+
     getTransactions = () =>
         this.getRequest('/v1/listFunds').then((data: any) => ({
             transactions: data.outputs
         }));
     getChannels = () =>
-        this.getRequest('/v1/peer/listPeers').then((data: any) => {
+        this.postRequest('/v1/listpeers').then((data: any) => {
             const formattedChannels: any[] = [];
             data.filter((peer: any) => peer.channels.length).map(
                 (peer: any) => {
@@ -152,7 +183,7 @@ export default class CLightningREST extends LND {
         }
         return this.postRequest('/v1/withdraw', request);
     };
-    getMyNodeInfo = () => this.getRequest('/v1/getinfo');
+    getMyNodeInfo = () => this.postRequest('/v1/getinfo');
     getInvoices = () => this.getRequest('/v1/invoice/listInvoices/');
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoice/genInvoice/', {
