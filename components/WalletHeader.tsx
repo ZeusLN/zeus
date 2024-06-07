@@ -37,6 +37,7 @@ import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
+import Airplane from '../assets/images/SVG/Airplane.svg';
 import Alert from '../assets/images/SVG/Alert.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Gear from '../assets/images/SVG/Gear.svg';
@@ -156,6 +157,23 @@ const ClipboardBadge = ({
     </TouchableOpacity>
 );
 
+const PendingHtlcBadge = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+    clipboard: string;
+}) => (
+    <TouchableOpacity
+        onPress={() =>
+            navigation.navigate('PendingHTLCs', {
+                animation: 'slide_from_bottom'
+            })
+        }
+    >
+        <Airplane stroke={themeColor('highlight')} width="35" height="35" />
+    </TouchableOpacity>
+);
+
 const POSBadge = ({
     setPosStatus,
     getOrders
@@ -244,7 +262,7 @@ export default class WalletHeader extends React.Component<
             PosStore,
             SyncStore
         } = this.props;
-        const { filteredPendingChannels } = ChannelsStore!;
+        const { filteredPendingChannels, pendingHTLCs } = ChannelsStore!;
         const { settings, posStatus, setPosStatus, implementation } =
             SettingsStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
@@ -578,6 +596,14 @@ export default class WalletHeader extends React.Component<
                             {!!clipboard && (
                                 <View style={{ marginRight: 15 }}>
                                     <ClipboardBadge
+                                        navigation={navigation}
+                                        clipboard={clipboard}
+                                    />
+                                </View>
+                            )}
+                            {pendingHTLCs.length > 0 && (
+                                <View style={{ marginRight: 15 }}>
+                                    <PendingHtlcBadge
                                         navigation={navigation}
                                         clipboard={clipboard}
                                     />
