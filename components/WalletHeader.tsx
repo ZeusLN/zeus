@@ -37,10 +37,10 @@ import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
-import Airplane from '../assets/images/SVG/Airplane.svg';
 import Alert from '../assets/images/SVG/Alert.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Gear from '../assets/images/SVG/Gear.svg';
+import Hourglass from '../assets/images/SVG/Hourglass.svg';
 import POS from '../assets/images/SVG/POS.svg';
 import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
@@ -170,7 +170,7 @@ const PendingHtlcBadge = ({
             })
         }
     >
-        <Airplane stroke={themeColor('highlight')} width="35" height="35" />
+        <Hourglass fill={themeColor('highlight')} width="35" height="35" />
     </TouchableOpacity>
 );
 
