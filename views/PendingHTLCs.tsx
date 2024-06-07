@@ -1,33 +1,56 @@
 import * as React from 'react';
-import { FlatList, Text, View, StyleSheet } from 'react-native';
+import { FlatList, Platform, Text, View, StyleSheet } from 'react-native';
 import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
+import Switch from '../components/Switch';
 
 import { localeString } from '../utils/LocaleUtils';
+import { restartNeeded } from '../utils/RestartUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import FiatStore from '../stores/FiatStore';
+import SettingsStore from '../stores/SettingsStore';
+
 interface PendingHTLCsProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     FiatStore: FiatStore;
+    SettingsStore: SettingsStore;
     route: Route<'PendingHTLCs', { order: any }>;
 }
 
-@inject('ChannelsStore', 'FiatStore')
+interface PendingHTLCsState {
+    persistentMode: boolean;
+}
+
+const PERSISTENT_KEY = 'persistentServicesEnabled';
+
+@inject('ChannelsStore', 'FiatStore', 'SettingsStore')
 @observer
 export default class PendingHTLCs extends React.PureComponent<
     PendingHTLCsProps,
-    {}
+    PendingHTLCsState
 > {
+    state = {
+        persistentMode: false
+    };
+
+    async UNSAFE_componentWillMount() {
+        const persistentMode = await AsyncStorage.getItem(PERSISTENT_KEY);
+        this.setState({
+            persistentMode: persistentMode === 'true' ? true : false
+        });
+    }
+
     renderSeparator = () => (
         <View
             style={{
@@ -43,8 +66,11 @@ export default class PendingHTLCs extends React.PureComponent<
     };
 
     render() {
-        const { navigation, ChannelsStore, FiatStore } = this.props;
+        const { navigation, ChannelsStore, FiatStore, SettingsStore } =
+            this.props;
+        const { persistentMode } = this.state;
         const { getChannels, pendingHTLCs, loading } = ChannelsStore;
+        const { updateSettings, implementation } = SettingsStore;
 
         return (
             <Screen>
@@ -219,6 +245,108 @@ export default class PendingHTLCs extends React.PureComponent<
                         }}
                     />
                 )}
+                {implementation === 'embedded-lnd' &&
+                    !loading &&
+                    !!pendingHTLCs &&
+                    pendingHTLCs.length > 0 && (
+                        <View
+                            style={{ backgroundColor: themeColor('highlight') }}
+                        >
+                            {Platform.OS === 'ios' && (
+                                <>
+                                    <View
+                                        style={{ marginBottom: 25, margin: 15 }}
+                                    >
+                                        <Text
+                                            style={{
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor('background')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.PendingHTLCs.recommendationIOS'
+                                            )}
+                                        </Text>
+                                    </View>
+                                </>
+                            )}
+                            {Platform.OS === 'android' && (
+                                <>
+                                    <View
+                                        style={{ marginBottom: 0, margin: 15 }}
+                                    >
+                                        <Text
+                                            style={{
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor('background')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.PendingHTLCs.recommendationAndroid'
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={{ marginBottom: 25, margin: 15 }}
+                                    >
+                                        <ListItem
+                                            containerStyle={{
+                                                borderBottomWidth: 0,
+                                                backgroundColor: 'transparent'
+                                            }}
+                                        >
+                                            <ListItem.Title
+                                                style={{
+                                                    color: themeColor(
+                                                        'background'
+                                                    ),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.EmbeddedNode.persistentMode'
+                                                )}
+                                            </ListItem.Title>
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'flex-end'
+                                                }}
+                                            >
+                                                <Switch
+                                                    value={persistentMode}
+                                                    onValueChange={async () => {
+                                                        this.setState({
+                                                            persistentMode:
+                                                                !persistentMode
+                                                        });
+                                                        await updateSettings({
+                                                            persistentMode:
+                                                                !persistentMode
+                                                        });
+                                                        const newValue =
+                                                            !persistentMode;
+                                                        await AsyncStorage.setItem(
+                                                            PERSISTENT_KEY,
+                                                            newValue.toString()
+                                                        );
+                                                        restartNeeded();
+                                                    }}
+                                                    trackEnabledColor={themeColor(
+                                                        'background'
+                                                    )}
+                                                />
+                                            </View>
+                                        </ListItem>
+                                    </View>
+                                </>
+                            )}
+                        </View>
+                    )}
             </Screen>
         );
     }
