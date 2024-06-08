@@ -129,46 +129,58 @@ export default class CoreLightningRestApi extends LND {
         if (data.utxos && data.utxos.length > 0) {
             request = {
                 id: data.id,
-                satoshis: data.satoshis,
-                feeRate,
-                announce: !data.privateChannel ? 'true' : 'false',
-                minfConf: data.min_confs,
+                amount: data.satoshis,
+                feerate: feeRate,
+                announce: !data.privateChannel ? true : false,
+                minconf: data.min_confs,
                 utxos: data.utxos
             };
         } else {
             request = {
                 id: data.id,
-                satoshis: data.satoshis,
-                feeRate,
-                announce: !data.privateChannel ? 'true' : 'false',
-                minfConf: data.min_confs
+                amount: data.satoshis,
+                feerate: feeRate,
+                announce: !data.privateChannel ? true : false,
+                minconf: data.min_confs
             };
         }
 
-        return this.postRequest('/v1/channel/openChannel/', request);
+        return this.postRequest('/v1/fundchannel', request);
     };
-    connectPeer = (data: any) =>
-        this.postRequest('/v1/peer/connect', {
-            id: `${data.addr.pubkey}@${data.addr.host}`
+    connectPeer = (data: any) => {
+        const [host, port] = data.addr.host.split(':');
+
+        return this.postRequest('/v1/connect', {
+            id: data.addr.pubkey,
+            host,
+            port
         });
+    };
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/utility/decode/${urlParams && urlParams[0]}`);
+        this.postRequest('/v1/decode', {
+            string: urlParams && urlParams[0]
+        });
+
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/pay', {
-            invoice: data.payment_request,
-            amount: Number(data.amt && data.amt * 1000),
+            bolt11: data.payment_request,
+            amount_msat: Number(data.amt && data.amt * 1000),
             maxfeepercent: data.max_fee_percent
         });
-    sendKeysend = (data: any) =>
-        this.postRequest('/v1/pay/keysend', {
-            pubkey: data.pubkey,
-            amount: Number(data.amt && data.amt * 1000),
+    sendKeysend = (data: any) => {
+        return this.postRequest('/v1/keysend', {
+            destination: data.pubkey,
+            amount_msat: Number(data.amt && data.amt * 1000),
             maxfeepercent: data.max_fee_percent
         });
-    closeChannel = (urlParams?: Array<string>) =>
-        this.deleteRequest(
-            `/v1/channel/closeChannel/${urlParams && urlParams[0]}/`
-        );
+    };
+    closeChannel = (urlParams?: Array<string>) => {
+        const request = {
+            id: urlParams && urlParams[0],
+            unilateraltimeout: urlParams && urlParams[1] ? 2 : 0
+        };
+        return this.postRequest('/v1/close', request);
+    };
     getNodeInfo = () => this.getRequest('N/A');
     getFees = () =>
         this.getRequest('/v1/getFees/').then(({ feeCollected }: any) => ({
@@ -257,8 +269,12 @@ export default class CoreLightningRestApi extends LND {
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsOffers = async () => {
-        const res = await this.getRequest('/v1/utility/listConfigs');
-        const supportsOffers: boolean = res['experimental-offers'] || false;
+        const { configs } = await this.postRequest('/v1/listconfigs');
+
+        const supportsOffers: boolean = configs['experimental-offers']
+            ? true
+            : false;
+
         return supportsOffers;
     };
     isLNDBased = () => false;

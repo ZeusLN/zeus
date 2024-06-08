@@ -486,10 +486,17 @@ export default class ChannelsStore {
         this.closingChannel = true;
 
         let urlParams: Array<any> = [];
-        if (channelId && !channelPoint) {
+        const implementation = this.settingsStore.implementation;
+
+        if (
+            implementation === 'c-lightning-REST' ||
+            implementation === 'core-lightning-rest-api' ||
+            implementation === 'eclair' ||
+            implementation === 'spark'
+        ) {
             // c-lightning, eclair
             urlParams = [channelId, forceClose];
-        } else if (channelPoint) {
+        } else {
             // lnd
             const { funding_txid_str, output_index } = channelPoint;
 
@@ -502,7 +509,7 @@ export default class ChannelsStore {
             ];
         }
 
-        if (this.settingsStore.implementation === 'lightning-node-connect') {
+        if (implementation === 'lightning-node-connect') {
             return BackendUtils.closeChannel(urlParams);
         } else {
             let resolved = false;
