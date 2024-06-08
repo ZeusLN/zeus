@@ -181,27 +181,27 @@ export default class CoreLightningRestApi extends LND {
         };
         return this.postRequest('/v1/close', request);
     };
-    getNodeInfo = () => this.getRequest('N/A');
     getFees = () =>
-        this.getRequest('/v1/getFees/').then(({ feeCollected }: any) => ({
-            total_fee_sum: feeCollected / 1000
+        this.getRequest('/v1/getinfo').then((res: any) => ({
+            total_fee_sum: res.fees_collected_msat / 1000
         }));
     setFees = (data: any) =>
-        this.postRequest('/v1/channel/setChannelFee/', {
+        this.postRequest('/v1/setchannel', {
             id: data.global ? 'all' : data.channelId,
-            base: data.base_fee_msat,
-            ppm: data.fee_rate
+            feebase: data.base_fee_msat,
+            feeppm: data.fee_rate
         });
     getRoutes = () => this.getRequest('N/A');
     getUTXOs = () => this.postRequest('/v1/listfunds');
     signMessage = (message: string) =>
-        this.postRequest('/v1/utility/signMessage', {
+        this.postRequest('/v1/signmessage', {
             message
         });
     verifyMessage = (data: any) =>
-        this.getRequest(
-            `/v1/utility/checkMessage/${data.msg}/${data.signature}`
-        );
+        this.postRequest('/v1/checkmessage', {
+            message: data.msg,
+            zbase: data.signature
+        });
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
@@ -212,7 +212,8 @@ export default class CoreLightningRestApi extends LND {
     };
 
     // BOLT 12 / Offers
-    listOffers = () => this.getRequest('/v1/offers/listOffers');
+    listOffers = () =>
+        this.postRequest('/v1/listoffers', { active_only: true });
     createOffer = ({
         description,
         label,
@@ -222,18 +223,18 @@ export default class CoreLightningRestApi extends LND {
         label?: string;
         singleUse?: boolean;
     }) =>
-        this.postRequest('/v1/offers/offer', {
+        this.postRequest('/v1/offer', {
             amount: 'any',
             description,
             label,
             single_use: singleUse || false
         });
     disableOffer = ({ offer_id }: { offer_id: string }) =>
-        this.deleteRequest(`/v1/offers/disableOffer/${offer_id}`);
+        this.postRequest('/v1/disableoffer', { offer_id });
     fetchInvoiceFromOffer = async (bolt12: string, amountSatoshis: string) => {
-        return await this.postRequest('/v1/offers/fetchInvoice', {
+        return await this.postRequest('/v1/fetchinvoice', {
             offer: bolt12,
-            msatoshi: Number(amountSatoshis) * 1000,
+            amount_msat: Number(amountSatoshis) * 1000,
             timeout: 60
         });
     };

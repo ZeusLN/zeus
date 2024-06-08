@@ -1426,78 +1426,78 @@ export default class NodeConfiguration extends React.Component<
                             </>
                         )}
 
-                        {implementation === 'lnd' ||
-                            (implementation === 'c-lightning-REST' && (
-                                <>
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.AddEditNode.host'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        placeholder={'localhost'}
-                                        autoCapitalize="none"
-                                        value={host}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                host: text.trim(),
-                                                saved: false
-                                            })
-                                        }
-                                        locked={loading}
-                                    />
+                        {(implementation === 'lnd' ||
+                            implementation === 'c-lightning-REST') && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.host'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'localhost'}
+                                    autoCapitalize="none"
+                                    value={host}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            host: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                />
 
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.AddEditNode.macaroon'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        placeholder={'0A...'}
-                                        value={macaroonHex}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                macaroonHex: text.replace(
-                                                    /\s+/g,
-                                                    ''
-                                                ),
-                                                saved: false
-                                            })
-                                        }
-                                        locked={loading}
-                                    />
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.macaroon'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'0A...'}
+                                    value={macaroonHex}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            macaroonHex: text.replace(
+                                                /\s+/g,
+                                                ''
+                                            ),
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                />
 
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.AddEditNode.restPort'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={'443/8080'}
-                                        value={port}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                port: text.trim(),
-                                                saved: false
-                                            })
-                                        }
-                                        locked={loading}
-                                    />
-                                </>
-                            ))}
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.restPort'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={'443/8080'}
+                                    value={port}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            port: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                />
+                            </>
+                        )}
 
                         {implementation === 'lightning-node-connect' && (
                             <>
