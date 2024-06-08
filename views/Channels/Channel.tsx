@@ -8,7 +8,7 @@ import {
     View
 } from 'react-native';
 
-import { Divider } from 'react-native-elements';
+import { Divider, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -40,6 +40,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import Edit from '../../assets/images/SVG/Edit.svg';
+import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
 
 interface ChannelProps {
     navigation: StackNavigationProp<any, any>;
@@ -205,7 +206,8 @@ export default class ChannelView extends React.Component<
             pendingOpen,
             closing,
             zero_conf,
-            getCommitmentType
+            getCommitmentType,
+            pending_htlcs
         } = channel;
 
         const privateChannel = channel.private;
@@ -434,6 +436,45 @@ export default class ChannelView extends React.Component<
                                 }
                             />
                         )}
+                    {!!pending_htlcs && pending_htlcs.length > 0 && (
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                marginLeft: -13,
+                                marginRight: -20
+                            }}
+                            onPress={() =>
+                                navigation.navigate('PendingHTLCs', {
+                                    pending_htlcs
+                                })
+                            }
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('highlight'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    <View style={{ flexDirection: 'row' }}>
+                                        <HourglassIcon
+                                            fill={themeColor('highlight')}
+                                            width={17}
+                                            height={17}
+                                            style={{ marginRight: 5 }}
+                                        />
+                                    </View>
+                                    {`${localeString(
+                                        'views.PendingHTLCs.title'
+                                    )} (${pending_htlcs.length})`}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+                    )}
                     <KeyValue
                         keyValue={localeString('views.Channel.channelBalance')}
                     />
@@ -712,8 +753,8 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     },
     content: {
-        paddingLeft: 20,
-        paddingRight: 20
+        marginLeft: 20,
+        marginRight: 20
     },
     center: {
         alignItems: 'center'

@@ -25,11 +25,12 @@ interface PendingHTLCsProps {
     ChannelsStore: ChannelsStore;
     FiatStore: FiatStore;
     SettingsStore: SettingsStore;
-    route: Route<'PendingHTLCs', { order: any }>;
+    route: Route<'PendingHTLCs', { pending_htlcs: any }>;
 }
 
 interface PendingHTLCsState {
     persistentMode: boolean;
+    pendingHTLCs: any;
 }
 
 const PERSISTENT_KEY = 'persistentServicesEnabled';
@@ -41,13 +42,17 @@ export default class PendingHTLCs extends React.PureComponent<
     PendingHTLCsState
 > {
     state = {
-        persistentMode: false
+        persistentMode: false,
+        pendingHTLCs: []
     };
 
     async UNSAFE_componentWillMount() {
         const persistentMode = await AsyncStorage.getItem(PERSISTENT_KEY);
+        const pending_htlcs = this.props.route.params?.pending_htlcs;
+
         this.setState({
-            persistentMode: persistentMode === 'true' ? true : false
+            persistentMode: persistentMode === 'true' ? true : false,
+            pendingHTLCs: pending_htlcs || this.props.ChannelsStore.pendingHTLCs
         });
     }
 
@@ -68,8 +73,8 @@ export default class PendingHTLCs extends React.PureComponent<
     render() {
         const { navigation, ChannelsStore, FiatStore, SettingsStore } =
             this.props;
-        const { persistentMode } = this.state;
-        const { getChannels, pendingHTLCs, loading } = ChannelsStore;
+        const { pendingHTLCs, persistentMode } = this.state;
+        const { getChannels, loading } = ChannelsStore;
         const { updateSettings, implementation } = SettingsStore;
 
         return (

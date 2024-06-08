@@ -118,6 +118,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     <ChannelItem
                         title={item.displayName}
                         status={getStatus()}
+                        pendingHTLCs={item?.pending_htlcs?.length > 0}
                         inbound={item.remoteBalance}
                         outbound={item.localBalance}
                         largestTotal={largestChannelSats}
@@ -139,6 +140,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     inbound={item.remoteBalance}
                     outbound={item.localBalance}
                     status={getStatus()}
+                    pendingHTLCs={item?.pending_htlcs?.length > 0}
                     pendingTimelock={
                         item.forceClose
                             ? forceCloseTimeLabel(item.blocks_til_maturity)
