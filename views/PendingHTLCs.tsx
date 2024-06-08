@@ -193,22 +193,18 @@ export default class PendingHTLCs extends React.PureComponent<
                                                     {subTitle}
                                                 </ListItem.Subtitle>
 
-                                                {false && (
-                                                    <ListItem.Subtitle
-                                                        style={{
-                                                            ...styles.rightCell,
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Book'
-                                                        }}
-                                                    >
-                                                        {
-                                                            item.forwarding_channel
-                                                        }
-                                                    </ListItem.Subtitle>
-                                                )}
+                                                <ListItem.Subtitle
+                                                    style={{
+                                                        ...styles.rightCell,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {item.channelDisplayName}
+                                                </ListItem.Subtitle>
                                             </View>
                                         </ListItem.Content>
                                     </ListItem>
