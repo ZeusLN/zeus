@@ -352,6 +352,10 @@ export default class ChannelsStore {
                 channel.channelId ||
                 localeString('models.Channel.unknownId');
 
+            channel.pending_htlcs.forEach((htlc: any) => {
+                htlc.channelDisplayName = channel.displayName;
+            });
+
             if (BackendUtils.isLNDBased() && setPendingHtlcs)
                 this.pendingHTLCs.push(...channel.pending_htlcs);
         }
