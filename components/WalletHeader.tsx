@@ -135,8 +135,9 @@ const MenuBadge = ({
             })
         }
         accessibilityLabel={localeString('views.Settings.title')}
+        style={{ left: 4 }}
     >
-        <Menu fill={themeColor('text')} width={60} height={60} />
+        <Menu fill={themeColor('text')} width={38} height={38} />
     </TouchableOpacity>
 );
 
