@@ -550,15 +550,19 @@ export default class WalletHeader extends React.Component<
                         </View>
                     ) : (
                         <Row style={{ alignItems: 'center', flexGrow: 1 }}>
-                            <StatusBadges />
+                            {!loading && <StatusBadges />}
                         </Row>
                     )
                 }
                 rightComponent={
                     posStatus === 'active' ? (
                         <Row>
-                            <ActivityButton navigation={navigation} />
-                            <TempleButton navigation={navigation} />
+                            {!loading && (
+                                <>
+                                    <ActivityButton navigation={navigation} />
+                                    <TempleButton navigation={navigation} />
+                                </>
+                            )}
                         </Row>
                     ) : channels ? (
                         <Row style={{ marginTop: 1 }}>
@@ -572,13 +576,15 @@ export default class WalletHeader extends React.Component<
                                 alignItems: 'center'
                             }}
                         >
-                            {(stores.balanceStore.loadingBlockchainBalance ||
-                                stores.balanceStore.loadingLightningBalance ||
-                                laLoading) && (
-                                <View style={{ paddingRight: 15 }}>
-                                    <LoadingIndicator size={32} />
-                                </View>
-                            )}
+                            {!loading &&
+                                (stores.balanceStore.loadingBlockchainBalance ||
+                                    stores.balanceStore
+                                        .loadingLightningBalance ||
+                                    laLoading) && (
+                                    <View style={{ paddingRight: 15 }}>
+                                        <LoadingIndicator size={32} />
+                                    </View>
+                                )}
                             {!!clipboard && (
                                 <View style={{ marginRight: 15 }}>
                                     <ClipboardBadge
@@ -597,10 +603,12 @@ export default class WalletHeader extends React.Component<
                                 </View>
                             )}
                             {AlertStore.hasError && <AlertButton />}
-                            <View>
-                                <NodeButton />
-                            </View>
-                            {posEnabled !== PosEnabled.Disabled && (
+                            {posEnabled === PosEnabled.Disabled && (
+                                <View>
+                                    <NodeButton />
+                                </View>
+                            )}
+                            {!loading && posEnabled !== PosEnabled.Disabled && (
                                 <View
                                     style={{
                                         marginLeft: 15
