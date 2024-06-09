@@ -43,7 +43,7 @@ import UnitsStore from '../stores/UnitsStore';
 
 import { version } from '../package.json';
 
-interface SettingsProps {
+interface MenuProps {
     navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     LightningAddressStore: LightningAddressStore;
@@ -51,19 +51,16 @@ interface SettingsProps {
     UnitsStore: UnitsStore;
 }
 
-interface SettingsState {
-    showHiddenSettings: boolean;
+interface MenuState {
+    showHiddenItems: boolean;
     easterEggCount: number;
 }
 
 @inject('NodeInfoStore', 'LightningAddressStore', 'SettingsStore', 'UnitsStore')
 @observer
-export default class Settings extends React.Component<
-    SettingsProps,
-    SettingsState
-> {
+export default class Menu extends React.Component<MenuProps, MenuState> {
     state = {
-        showHiddenSettings: false,
+        showHiddenItems: false,
         easterEggCount: 0
     };
 
@@ -90,7 +87,7 @@ export default class Settings extends React.Component<
             LightningAddressStore,
             SettingsStore
         } = this.props;
-        const { showHiddenSettings, easterEggCount } = this.state;
+        const { showHiddenItems, easterEggCount } = this.state;
         const { implementation, settings, seedPhrase } = SettingsStore;
         const { paid } = LightningAddressStore;
 
@@ -280,6 +277,42 @@ export default class Settings extends React.Component<
                         </View>
                     )}
 
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => {
+                                navigation.navigate('Settings');
+                            }}
+                        >
+                            <View style={styles.icon}>
+                                <GearIcon
+                                    fill={themeColor('text')}
+                                    width={25}
+                                    height={25}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Settings.title')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
                     {selectedNode && BackendUtils.supportsNodeInfo() && (
                         <View
                             style={{
@@ -347,78 +380,6 @@ export default class Settings extends React.Component<
                             )}
                         </View>
                     )}
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => {
-                                navigation.navigate('Settings');
-                            }}
-                        >
-                            <View style={styles.icon}>
-                                <GearIcon
-                                    fill={themeColor('text')}
-                                    width={25}
-                                    height={25}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Settings.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => {
-                                navigation.navigate('Tools');
-                            }}
-                        >
-                            <View style={styles.icon}>
-                                <WrenchIcon
-                                    fill={themeColor('text')}
-                                    width={25}
-                                    height={25}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Tools.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
 
                     {selectedNode &&
                         BackendUtils.supportsCustomPreimages() &&
@@ -608,6 +569,42 @@ export default class Settings extends React.Component<
                     >
                         <TouchableOpacity
                             style={styles.columnField}
+                            onPress={() => {
+                                navigation.navigate('Tools');
+                            }}
+                        >
+                            <View style={styles.icon}>
+                                <WrenchIcon
+                                    fill={themeColor('text')}
+                                    width={25}
+                                    height={25}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Tools.title')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
                             onPress={() => navigation.navigate('Support')}
                         >
                             <View style={styles.icon}>
@@ -670,10 +667,10 @@ export default class Settings extends React.Component<
                     </View>
                     <TouchableWithoutFeedback
                         onPress={() => {
-                            if (!showHiddenSettings) {
+                            if (!showHiddenItems) {
                                 this.setState({
                                     easterEggCount: easterEggCount + 1,
-                                    showHiddenSettings: easterEggCount >= 4
+                                    showHiddenItems: easterEggCount >= 4
                                 });
                             }
                         }}
