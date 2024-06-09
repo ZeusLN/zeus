@@ -38,8 +38,9 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
 import Alert from '../assets/images/SVG/Alert.svg';
+import CaretUp from '../assets/images/SVG/Caret Up.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
-import Gear from '../assets/images/SVG/Gear.svg';
+import Menu from '../assets/images/SVG/Menu.svg';
 import POS from '../assets/images/SVG/POS.svg';
 import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
@@ -92,18 +93,17 @@ const ActivityButton = ({
 }: {
     navigation: StackNavigationProp<any, any>;
 }) => (
-    <View style={{ width: 80 }}>
-        <Button
-            icon={{
-                name: 'list',
-                size: 40,
-                color: themeColor('text')
-            }}
-            containerStyle={{ top: -7 }}
-            iconOnly
-            onPress={() => navigation.navigate('Activity')}
+    <TouchableOpacity
+        onPress={() =>
+            navigation.navigate('Activity', { animation: 'slide_from_bottom' })
+        }
+    >
+        <CaretUp
+            fill={themeColor('text')}
+            width={45}
+            style={{ marginRight: 15, alignSelf: 'center' }}
         />
-    </View>
+    </TouchableOpacity>
 );
 
 const TempleButton = ({
@@ -116,25 +116,27 @@ const TempleButton = ({
     >
         <Temple
             fill={themeColor('text')}
-            width={20.17}
-            height={22}
-            style={{ top: -8, alignSelf: 'center' }}
+            width={30}
+            height={35}
+            style={{ alignSelf: 'center' }}
         />
     </TouchableOpacity>
 );
 
-const SettingsBadge = ({
+const MenuBadge = ({
     navigation
 }: {
     navigation: StackNavigationProp<any, any>;
 }) => (
     <TouchableOpacity
         onPress={() =>
-            navigation.navigate('Settings', { animation: 'slide_from_left' })
+            protectedNavigation(navigation, 'Menu', undefined, {
+                animation: 'fade'
+            })
         }
         accessibilityLabel={localeString('views.Settings.title')}
     >
-        <Gear fill={themeColor('text')} width={33} height={33} />
+        <Menu fill={themeColor('text')} width={60} height={60} />
     </TouchableOpacity>
 );
 
@@ -169,7 +171,7 @@ const POSBadge = ({
             setPosStatus('active');
         }}
     >
-        <POS stroke={themeColor('text')} width="23" height="30" />
+        <POS stroke={themeColor('text')} width="30" height="35" />
     </TouchableOpacity>
 );
 
@@ -280,7 +282,7 @@ export default class WalletHeader extends React.Component<
                 ) : (
                     <NodeIdenticon
                         selectedNode={selectedNode}
-                        width={35}
+                        width={36}
                         rounded
                     />
                 )}
@@ -470,8 +472,8 @@ export default class WalletHeader extends React.Component<
             <Header
                 leftComponent={
                     loading ? undefined : (
-                        <Row>
-                            <SettingsBadge navigation={navigation} />
+                        <Row style={{ flex: 1 }}>
+                            <MenuBadge navigation={navigation} />
                             {paid && paid.length > 0 && (
                                 <TouchableOpacity
                                     onPress={() =>
@@ -480,7 +482,7 @@ export default class WalletHeader extends React.Component<
                                             { skipStatus: true }
                                         )
                                     }
-                                    style={{ left: 18 }}
+                                    style={{ left: 10 }}
                                 >
                                     {redeemingAll ? (
                                         <MailboxAnimated />
@@ -494,17 +496,20 @@ export default class WalletHeader extends React.Component<
                 }
                 centerComponent={
                     title ? (
-                        <View style={{ top: 5 }}>
+                        <View style={{ flex: 1 }}>
                             {toggle ? (
                                 <View
-                                    style={{ top: -9, width: '100%' }}
+                                    style={{ flex: 1, width: '100%' }}
                                     accessibilityLiveRegion="polite"
                                 >
                                     <Button
                                         onPress={() => toggle()}
                                         title={title}
                                         noUppercase
-                                        buttonStyle={{ alignSelf: 'center' }}
+                                        buttonStyle={{
+                                            alignSelf: 'center',
+                                            height: 40
+                                        }}
                                         icon={
                                             filteredPendingChannels?.length > 0
                                                 ? {
@@ -524,7 +529,7 @@ export default class WalletHeader extends React.Component<
                             )}
                         </View>
                     ) : settings.display && settings.display.displayNickname ? (
-                        <View style={{ top: 5 }}>
+                        <View style={{ top: 0 }}>
                             <Row>
                                 <Text
                                     style={{
@@ -563,7 +568,6 @@ export default class WalletHeader extends React.Component<
                     ) : (
                         <View
                             style={{
-                                flexGrow: 1,
                                 flexDirection: 'row',
                                 alignItems: 'center'
                             }}

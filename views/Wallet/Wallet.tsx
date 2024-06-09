@@ -792,19 +792,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 )}
                                         </>
                                     )}
-                                    <Tab.Screen
-                                        name="Camera"
-                                        component={CameraScreen}
-                                        listeners={{
-                                            tabPress: (e) => {
-                                                // Prevent default action
-                                                e.preventDefault();
-                                                navigation.navigate(
-                                                    'HandleAnythingQRScanner'
-                                                );
-                                            }
-                                        }}
-                                    />
+                                    {posStatus !== 'active' && (
+                                        <Tab.Screen
+                                            name="Camera"
+                                            component={CameraScreen}
+                                            listeners={{
+                                                tabPress: (e) => {
+                                                    // Prevent default action
+                                                    e.preventDefault();
+                                                    navigation.navigate(
+                                                        'HandleAnythingQRScanner'
+                                                    );
+                                                }
+                                            }}
+                                        />
+                                    )}
                                 </Tab.Navigator>
                             </NavigationContainer>
                         </NavigationIndependentTree>
