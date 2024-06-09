@@ -37,6 +37,7 @@ import LayerBalances from '../../components/LayerBalances';
 import LoadingColumns from '../../components/LoadingColumns';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import WalletHeader from '../../components/WalletHeader';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
@@ -816,6 +817,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         <Screen>
                             <View
                                 style={{
+                                    position: 'absolute',
+                                    zIndex: 1
+                                }}
+                            >
+                                <WalletHeader navigation={navigation} loading />
+                            </View>
+                            <View
+                                style={{
                                     flex: 1,
                                     justifyContent: 'center',
                                     alignItems: 'center'
@@ -915,7 +924,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         if (settings.nodes)
                                             protectedNavigation(
                                                 navigation,
-                                                'Settings'
+                                                'Menu'
                                             );
                                     }}
                                     adaptiveWidth

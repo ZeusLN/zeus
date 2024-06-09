@@ -296,7 +296,7 @@ export default class SquarePosPane extends React.PureComponent<
                             alignItems: 'center'
                         }}
                         onPress={() => {
-                            protectedNavigation(navigation, 'Settings');
+                            protectedNavigation(navigation, 'Menu');
                         }}
                         adaptiveWidth
                     />
