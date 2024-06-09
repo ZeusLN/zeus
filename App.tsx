@@ -162,6 +162,9 @@ import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
 import PSBT from './views/PSBT';
 import TxHex from './views/TxHex';
 
+import Menu from './views/Menu';
+import Tools from './views/Tools';
+
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
 export default class App extends React.PureComponent {
@@ -321,8 +324,16 @@ export default class App extends React.PureComponent {
                                                         component={EditFee}
                                                     />
                                                     <Stack.Screen
+                                                        name="Menu"
+                                                        component={Menu}
+                                                    />
+                                                    <Stack.Screen
                                                         name="Settings"
                                                         component={Settings}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Tools"
+                                                        component={Tools}
                                                     />
                                                     <Stack.Screen
                                                         name="NodeConfiguration"

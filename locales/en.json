@@ -655,6 +655,7 @@
     "views.ContactDetails.saveToContacts": "Save to Contacts",
     "views.ContactDetails.editAndSaveContact": "Edit and Save Contact",
     "views.ContactInfo.title": "Contact Info",
+    "views.Tools.title": "Tools",
     "views.Settings.title": "Settings",
     "views.Settings.enabled": "Enabled",
     "views.Settings.disabled": "Disabled",
