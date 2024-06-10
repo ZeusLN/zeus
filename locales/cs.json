@@ -497,6 +497,7 @@
     "views.Intro.lightningLiquidity": "Více informací o lightningové likviditě",
     "views.Intro.advancedSetUp": "Pokročilá konfigurace",
     "views.Intro.creatingWallet": "Zeus vytváří vaši peněženku.",
+    "views.Intro.choosingPeers": "ZEUS is choosing your peers.",
     "views.Intro.carousel1.title": "Platby, kterým můžete věřit",
     "views.Intro.carousel1.text": "ZEUS provozuje Bitcoinový a Lightningový uzel, aby ověřoval vaše transakce a udržoval je soukromé.",
     "views.Intro.carousel2.title": "On-chain převody",
@@ -655,6 +656,7 @@
     "views.ContactDetails.saveToContacts": "Uložit do kontaktů",
     "views.ContactDetails.editAndSaveContact": "Upravit a uložit kontakt",
     "views.ContactInfo.title": "Informace o kontaktu",
+    "views.Tools.title": "Tools",
     "views.Settings.title": "Nastavení",
     "views.Settings.enabled": "Povoleno",
     "views.Settings.disabled": "Zakázáno",
@@ -1192,5 +1194,12 @@
     "components.AlertModal.resetEGS": "Obnovte data expresní synchronizace grafu",
     "components.AlertModal.neutrinoPeers": "Problematické neutrino peery",
     "components.AlertModal.neutrinoExplainer": "Neutrino peery s časem odezvy vyšším než 200 ms mohou v aplikaci způsobovat výkonnostní problémy.",
-    "components.AlertModal.reviewPeers": "Review neutrino peers list"
+    "components.AlertModal.reviewPeers": "Review neutrino peers list",
+    "views.PendingHTLCs.title": "Pending HTLCs",
+    "views.PendingHTLCs.noPendingHTLCs": "No pending HTLCs",
+    "views.PendingHTLCs.incoming": "Incoming",
+    "views.PendingHTLCs.outgoing": "Outgoing",
+    "views.PendingHTLCs.expirationHeight": "Expiration height",
+    "views.PendingHTLCs.recommendationIOS": "It's recommended to leave ZEUS running while there are pending HTLCs to prevent force closes.",
+    "views.PendingHTLCs.recommendationAndroid": "It's recommended to enable Persistent LND or leave ZEUS running while there are pending HTLCs to prevent force closes."
 }
