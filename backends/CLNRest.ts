@@ -246,9 +246,8 @@ export default class CLNRest extends LND {
     supportsPendingChannels = () => false;
     supportsMPP = () => false;
     supportsAMP = () => false;
-    supportsCoinControl = () => this.supports('v0.8.2', undefined, 'v0.4.0');
-    supportsChannelCoinControl = () =>
-        this.supports('v0.8.2', undefined, 'v0.4.0');
+    supportsCoinControl = () => true;
+    supportsChannelCoinControl = () => true;
     supportsHopPicking = () => false;
     supportsAccounts = () => false;
     supportsRouting = () => true;
