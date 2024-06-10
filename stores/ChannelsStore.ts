@@ -324,7 +324,9 @@ export default class ChannelsStore {
             publicKeysOfToBeLoadedNodeInfos.map(
                 async (remotePubKey: string) => {
                     if (
-                        this.settingsStore.implementation !== 'c-lightning-REST'
+                        this.settingsStore.implementation !==
+                            'c-lightning-REST' &&
+                        this.settingsStore.implementation !== 'cln-rest'
                     ) {
                         const nodeInfo = await this.getNodeInfo(remotePubKey);
                         if (!nodeInfo) return;

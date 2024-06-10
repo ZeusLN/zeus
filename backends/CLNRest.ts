@@ -1,5 +1,4 @@
 import stores from '../stores/Stores';
-import LND from './LND';
 import TransactionRequest from '../models/TransactionRequest';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';
@@ -11,8 +10,13 @@ import {
     getOffchainBalance,
     listPeers
 } from './CoreLightningRequestHandler';
+import { localeString } from '../utils/LocaleUtils';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
-export default class CLNRest extends LND {
+const calls = new Map<string, Promise<any>>();
+
+export default class CLNRest {
     getHeaders = (rune: string): any => {
         return {
             Rune: rune
@@ -34,6 +38,91 @@ export default class CLNRest extends LND {
             );
         }
         return isSupportedVersion(version, minVersion, eosVersion);
+    };
+
+    clearCachedCalls = () => calls.clear();
+
+    restReq = async (
+        headers: Headers | any,
+        url: string,
+        method: any,
+        data?: any,
+        certVerification?: boolean,
+        useTor?: boolean
+    ) => {
+        // use body data as an identifier too, we don't want to cancel when we
+        // are making multiples calls to get all the node names, for example
+        const id = data ? `${url}${JSON.stringify(data)}` : url;
+        if (calls.has(id)) {
+            return calls.get(id);
+        }
+        // API is a bit of a mess but
+        // If tor enabled in setting, start up the daemon here
+        if (useTor === true) {
+            calls.set(
+                id,
+                doTorRequest(
+                    url,
+                    method as RequestMethod,
+                    JSON.stringify(data),
+                    headers
+                ).then((response: any) => {
+                    calls.delete(id);
+                    return response;
+                })
+            );
+        } else {
+            calls.set(
+                id,
+                ReactNativeBlobUtil.config({
+                    trusty: !certVerification
+                })
+                    .fetch(
+                        method,
+                        url,
+                        headers,
+                        data ? JSON.stringify(data) : data
+                    )
+                    .then((response: any) => {
+                        calls.delete(id);
+                        if (response.info().status < 300) {
+                            // handle ws responses
+                            if (response.data.includes('\n')) {
+                                const split = response.data.split('\n');
+                                const length = split.length;
+                                // last instance is empty
+                                return JSON.parse(split[length - 2]);
+                            }
+                            return response.json();
+                        } else {
+                            try {
+                                const errorInfo = response.json();
+                                throw new Error(
+                                    (errorInfo.error &&
+                                        errorInfo.error.message) ||
+                                        errorInfo.message ||
+                                        errorInfo.error
+                                );
+                            } catch (e) {
+                                if (
+                                    response.data &&
+                                    typeof response.data === 'string'
+                                ) {
+                                    throw new Error(response.data);
+                                } else {
+                                    throw new Error(
+                                        localeString(
+                                            'backends.LND.restReq.connectionError'
+                                        )
+                                    );
+                                }
+                            }
+                        }
+                    })
+            );
+        }
+
+        return await calls.get(id);
     };
 
     request = (route: string, method: string, data?: any, params?: any) => {
@@ -59,6 +148,26 @@ export default class CLNRest extends LND {
             certVerification,
             enableTor
         );
+    };
+
+    getURL = (
+        host: string,
+        port: string | number,
+        route: string,
+        ws?: boolean
+    ) => {
+        const hostPath = host.includes('://') ? host : `https://${host}`;
+        let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
+
+        if (ws) {
+            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
+        }
+
+        if (baseUrl[baseUrl.length - 1] === '/') {
+            baseUrl = baseUrl.slice(0, -1);
+        }
+
+        return `${baseUrl}${route}`;
     };
 
     postRequest = (route: string, data?: any) =>
@@ -188,7 +297,6 @@ export default class CLNRest extends LND {
             feebase: data.base_fee_msat,
             feeppm: data.fee_rate
         });
-    getRoutes = () => this.getRequest('N/A');
     getUTXOs = () => this.postRequest('/v1/listfunds');
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
