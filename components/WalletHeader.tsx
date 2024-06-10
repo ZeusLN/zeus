@@ -493,7 +493,7 @@ export default class WalletHeader extends React.Component<
                     loading ? undefined : (
                         <Row style={{ flex: 1 }}>
                             <MenuBadge navigation={navigation} />
-                            {paid && paid.length > 0 && (
+                            {!loading && paid && paid.length > 0 && (
                                 <TouchableOpacity
                                     onPress={() =>
                                         navigation.navigate(
@@ -604,7 +604,7 @@ export default class WalletHeader extends React.Component<
                                         <LoadingIndicator size={32} />
                                     </View>
                                 )}
-                            {!!clipboard && (
+                            {!loading && !!clipboard && (
                                 <View style={{ marginRight: 15 }}>
                                     <ClipboardBadge
                                         navigation={navigation}
@@ -612,7 +612,7 @@ export default class WalletHeader extends React.Component<
                                     />
                                 </View>
                             )}
-                            {pendingHTLCs?.length > 0 && (
+                            {!loading && pendingHTLCs?.length > 0 && (
                                 <View style={{ marginRight: 15 }}>
                                     <PendingHtlcBadge
                                         navigation={navigation}
@@ -629,7 +629,7 @@ export default class WalletHeader extends React.Component<
                                     <SyncBadge navigation={navigation} />
                                 </View>
                             )}
-                            {AlertStore.hasError && <AlertButton />}
+                            {!loading && AlertStore.hasError && <AlertButton />}
                             {posEnabled === PosEnabled.Disabled && (
                                 <View>
                                     <NodeButton />
