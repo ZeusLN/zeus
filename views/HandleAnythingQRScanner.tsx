@@ -1,9 +1,11 @@
 import * as React from 'react';
+import b58 from 'bs58check';
 import { Alert, View } from 'react-native';
 import { Header } from 'react-native-elements';
 import { observer } from 'mobx-react';
 import { URDecoder } from '@ngraveio/bc-ur';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { CryptoAccount } from '@keystonehq/bc-ur-registry';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
@@ -88,9 +90,57 @@ export default class HandleAnythingQRScanner extends React.Component<
                         // Get the UR representation of the message
                         const ur = this.decoder.resultUR();
 
-                        // Decode the CBOR message to a Buffer
-                        const decoded = ur.decodeCBOR();
-                        handleData = decoded.toString();
+                        if (ur._type === 'crypto-account') {
+                            try {
+                                const cryptoAccount: any =
+                                    CryptoAccount.fromCBOR(ur._cborPayload);
+                                const hdKey: any =
+                                    cryptoAccount.outputDescriptors[0].getCryptoKey();
+                                const version = Buffer.from('04b24746', 'hex');
+                                const parentFingerprint =
+                                    hdKey.getParentFingerprint();
+                                const depth = hdKey.getOrigin().getDepth();
+                                const depthBuf = Buffer.alloc(1);
+                                depthBuf.writeUInt8(depth);
+                                const components = hdKey
+                                    .getOrigin()
+                                    .getComponents();
+                                const lastComponents =
+                                    components[components.length - 1];
+                                const index = lastComponents.isHardened()
+                                    ? lastComponents.getIndex() + 0x80000000
+                                    : lastComponents.getIndex();
+                                const indexBuf = Buffer.alloc(4);
+                                indexBuf.writeUInt32BE(index);
+                                const chainCode = hdKey.getChainCode();
+                                const key = hdKey.getKey();
+                                const data = Buffer.concat([
+                                    version,
+                                    depthBuf,
+                                    parentFingerprint,
+                                    indexBuf,
+                                    chainCode,
+                                    key
+                                ]);
+
+                                const zpub = b58.encode(data);
+                                const xfp = cryptoAccount
+                                    .getMasterFingerprint()
+                                    .toString('hex')
+                                    .toUpperCase();
+
+                                handleData = `{"MasterFingerprint": "${xfp}", "ExtPubKey": "${zpub}"}`;
+                            } catch (e) {
+                                console.log(
+                                    'Error found while decoding BC-UR crypto-account',
+                                    e
+                                );
+                            }
+                        } else {
+                            // Decode the CBOR message to a Buffer
+                            const decoded = ur.decodeCBOR();
+                            handleData = decoded.toString();
+                        }
                     } else {
                         const error = this.decoder.resultError();
                         console.log('Error found while decoding BC-UR', error);
