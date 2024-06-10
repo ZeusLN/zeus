@@ -124,7 +124,7 @@ export default class SetFeesForm extends React.Component<
                 >
                     {`${localeString('components.SetFeesForm.feeRate')} (${
                         implementation === 'c-lightning-REST' ||
-                        implementation === 'core-lightning-rest-api'
+                        implementation === 'cln-rest'
                             ? localeString(
                                   'components.SetFeesForm.ppmMilliMsat'
                               )
@@ -136,7 +136,7 @@ export default class SetFeesForm extends React.Component<
                     placeholder={
                         feeRate ||
                         implementation === 'c-lightning-REST' ||
-                        implementation === 'core-lightning-rest-api'
+                        implementation === 'cln-rest'
                             ? '1'
                             : '0.001'
                     }

@@ -490,7 +490,7 @@ export default class ChannelsStore {
 
         if (
             implementation === 'c-lightning-REST' ||
-            implementation === 'core-lightning-rest-api' ||
+            implementation === 'cln-rest' ||
             implementation === 'eclair' ||
             implementation === 'spark'
         ) {

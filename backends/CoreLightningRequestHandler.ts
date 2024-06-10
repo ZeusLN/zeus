@@ -1,6 +1,6 @@
-import CoreLightningRestApi from './CoreLightningRestApi';
+import CLNRest from './CLNRest';
 
-const api = new CoreLightningRestApi();
+const api = new CLNRest();
 
 // Returns onchain balance of core-lightning node
 export const getBalance = (data: any) => {

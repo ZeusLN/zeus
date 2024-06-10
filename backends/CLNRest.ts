@@ -12,7 +12,7 @@ import {
     listPeers
 } from './CoreLightningRequestHandler';
 
-export default class CoreLightningRestApi extends LND {
+export default class CLNRest extends LND {
     getHeaders = (rune: string): any => {
         return {
             Rune: rune
