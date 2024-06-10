@@ -126,6 +126,7 @@ import Contacts from './views/Settings/Contacts';
 import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
 import CurrencyConverter from './views/Settings/CurrencyConverter';
+import PendingHTLCs from './views/PendingHTLCs';
 
 // POS
 import Order from './views/Order';
@@ -851,6 +852,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="LSPS1Order"
                                                         component={Orders}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="PendingHTLCs"
+                                                        component={PendingHTLCs}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
