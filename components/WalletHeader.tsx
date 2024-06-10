@@ -501,7 +501,7 @@ export default class WalletHeader extends React.Component<
                                             { skipStatus: true }
                                         )
                                     }
-                                    style={{ left: 10 }}
+                                    style={{ left: 20 }}
                                 >
                                     {redeemingAll ? (
                                         <MailboxAnimated />
@@ -620,7 +620,7 @@ export default class WalletHeader extends React.Component<
                                     />
                                 </View>
                             )}
-                            {isSyncing && (
+                            {!loading && isSyncing && (
                                 <View
                                     style={{
                                         marginRight: 15
