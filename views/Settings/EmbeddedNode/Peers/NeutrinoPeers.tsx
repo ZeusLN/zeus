@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, ScrollView, View } from 'react-native';
+import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Ping from 'react-native-ping';
@@ -27,6 +27,8 @@ import { localeString } from '../../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../../utils/RestartUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
 import LoadingIndicator from '../../../../components/LoadingIndicator';
+
+import Stopwatch from '../../../../assets/images/SVG/Stopwatch.svg';
 
 interface NeutrinoPeersProps {
     navigation: StackNavigationProp<any, any>;
@@ -253,22 +255,12 @@ export default class NeutrinoPeers extends React.Component<
                                     <Row>
                                         <View
                                             style={{
+                                                left: 10,
                                                 width: 50,
                                                 height: 60
                                             }}
                                         >
-                                            <Button
-                                                icon={{
-                                                    name: 'hourglass',
-                                                    type: 'font-awesome',
-                                                    size: 25,
-                                                    color: !addPeer
-                                                        ? themeColor(
-                                                              'secondaryText'
-                                                          )
-                                                        : themeColor('text')
-                                                }}
-                                                iconOnly
+                                            <TouchableOpacity
                                                 onPress={async () => {
                                                     if (!addPeer) return;
                                                     try {
@@ -297,7 +289,13 @@ export default class NeutrinoPeers extends React.Component<
                                                         });
                                                     }
                                                 }}
-                                            />
+                                            >
+                                                <Stopwatch
+                                                    fill={themeColor('text')}
+                                                    width="35"
+                                                    height="35"
+                                                />
+                                            </TouchableOpacity>
                                         </View>
 
                                         <View style={{ width: 50, height: 60 }}>
@@ -368,22 +366,12 @@ export default class NeutrinoPeers extends React.Component<
                                                 <Row>
                                                     <View
                                                         style={{
-                                                            alignSelf:
-                                                                'flex-end',
+                                                            left: 10,
                                                             width: 50,
                                                             height: 60
                                                         }}
                                                     >
-                                                        <Button
-                                                            icon={{
-                                                                name: 'hourglass',
-                                                                type: 'font-awesome',
-                                                                size: 25,
-                                                                color: themeColor(
-                                                                    'text'
-                                                                )
-                                                            }}
-                                                            iconOnly
+                                                        <TouchableOpacity
                                                             onPress={async () => {
                                                                 try {
                                                                     this.setState(
@@ -424,7 +412,15 @@ export default class NeutrinoPeers extends React.Component<
                                                                     );
                                                                 }
                                                             }}
-                                                        />
+                                                        >
+                                                            <Stopwatch
+                                                                fill={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                width="35"
+                                                                height="35"
+                                                            />
+                                                        </TouchableOpacity>
                                                     </View>
                                                     <View
                                                         style={{

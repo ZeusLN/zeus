@@ -6,17 +6,18 @@ interface SwitchProps {
     value: boolean;
     onValueChange?: any;
     disabled?: boolean;
+    trackEnabledColor?: string;
 }
 
 function Switch(props: SwitchProps) {
-    const { value, onValueChange, disabled } = props;
+    const { value, onValueChange, disabled, trackEnabledColor } = props;
     return (
         <RNSwitch
             value={value}
             onValueChange={onValueChange}
             trackColor={{
                 false: themeColor('disabled'),
-                true: themeColor('highlight')
+                true: trackEnabledColor || themeColor('highlight')
             }}
             thumbColor={
                 value ? themeColor('highlight') : themeColor('disabled')
