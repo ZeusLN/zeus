@@ -17,6 +17,7 @@ import {
     WarningMessage,
     ErrorMessage
 } from '../../../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../../../components/LoadingIndicator';
 
 import SettingsStore, {
     DEFAULT_NEUTRINO_PEERS_MAINNET,
@@ -26,7 +27,10 @@ import SettingsStore, {
 import { localeString } from '../../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../../utils/RestartUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
-import LoadingIndicator from '../../../../components/LoadingIndicator';
+import {
+    NEUTRINO_PING_THRESHOLD_MS,
+    NEUTRINO_PING_TIMEOUT_MS
+} from '../../../../utils/LndMobileUtils';
 
 import Stopwatch from '../../../../assets/images/SVG/Stopwatch.svg';
 
@@ -128,7 +132,7 @@ export default class NeutrinoPeers extends React.Component<
                         {!pingTimeout &&
                             !pinging &&
                             pingHost &&
-                            pingTime <= 100 && (
+                            pingTime <= 200 && (
                                 <SuccessMessage
                                     message={pingTimeMsg}
                                     dismissable
@@ -137,8 +141,8 @@ export default class NeutrinoPeers extends React.Component<
                         {!pingTimeout &&
                             !pinging &&
                             pingHost &&
-                            pingTime < 200 &&
-                            pingTime > 100 && (
+                            pingTime < NEUTRINO_PING_THRESHOLD_MS &&
+                            pingTime > 200 && (
                                 <WarningMessage
                                     message={pingTimeMsg}
                                     dismissable
@@ -147,7 +151,7 @@ export default class NeutrinoPeers extends React.Component<
                         {!pingTimeout &&
                             !pinging &&
                             pingHost &&
-                            pingTime >= 200 && (
+                            pingTime >= NEUTRINO_PING_THRESHOLD_MS && (
                                 <ErrorMessage
                                     message={pingTimeMsg}
                                     dismissable
@@ -275,7 +279,8 @@ export default class NeutrinoPeers extends React.Component<
                                                             await Ping.start(
                                                                 addPeer,
                                                                 {
-                                                                    timeout: 1000
+                                                                    timeout:
+                                                                        NEUTRINO_PING_TIMEOUT_MS
                                                                 }
                                                             );
                                                         this.setState({
@@ -390,7 +395,8 @@ export default class NeutrinoPeers extends React.Component<
                                                                         await Ping.start(
                                                                             item,
                                                                             {
-                                                                                timeout: 1000
+                                                                                timeout:
+                                                                                    NEUTRINO_PING_TIMEOUT_MS
                                                                             }
                                                                         );
                                                                     this.setState(
