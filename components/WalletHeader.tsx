@@ -612,7 +612,7 @@ export default class WalletHeader extends React.Component<
                                     />
                                 </View>
                             )}
-                            {pendingHTLCs.length > 0 && (
+                            {pendingHTLCs?.length > 0 && (
                                 <View style={{ marginRight: 15 }}>
                                     <PendingHtlcBadge
                                         navigation={navigation}
