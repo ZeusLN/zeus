@@ -497,6 +497,7 @@
     "views.Intro.lightningLiquidity": "Learn about lightning liquidity",
     "views.Intro.advancedSetUp": "Advanced set-up",
     "views.Intro.creatingWallet": "Zeus is creating your wallet.",
+    "views.Intro.choosingPeers": "ZEUS is choosing your peers.",
     "views.Intro.carousel1.title": "Betalingen die u kunt vertrouwen",
     "views.Intro.carousel1.text": "ZEUS runs a Bitcoin and Lightning node to verify and keep your transactions private.",
     "views.Intro.carousel2.title": "On-chain overdrachten",
@@ -655,6 +656,7 @@
     "views.ContactDetails.saveToContacts": "Save to Contacts",
     "views.ContactDetails.editAndSaveContact": "Edit and Save Contact",
     "views.ContactInfo.title": "Contact Info",
+    "views.Tools.title": "Tools",
     "views.Settings.title": "Instellingen",
     "views.Settings.enabled": "Ingeschakeld",
     "views.Settings.disabled": "Uitgeschakeld",
@@ -1192,5 +1194,12 @@
     "components.AlertModal.resetEGS": "Reset express graph sync data",
     "components.AlertModal.neutrinoPeers": "Problematic neutrino peers",
     "components.AlertModal.neutrinoExplainer": "Neutrino peers with over 200ms ping time can cause performance issues in the app.",
-    "components.AlertModal.reviewPeers": "Review neutrino peers list"
+    "components.AlertModal.reviewPeers": "Review neutrino peers list",
+    "views.PendingHTLCs.title": "Pending HTLCs",
+    "views.PendingHTLCs.noPendingHTLCs": "No pending HTLCs",
+    "views.PendingHTLCs.incoming": "Incoming",
+    "views.PendingHTLCs.outgoing": "Outgoing",
+    "views.PendingHTLCs.expirationHeight": "Expiration height",
+    "views.PendingHTLCs.recommendationIOS": "It's recommended to leave ZEUS running while there are pending HTLCs to prevent force closes.",
+    "views.PendingHTLCs.recommendationAndroid": "It's recommended to enable Persistent LND or leave ZEUS running while there are pending HTLCs to prevent force closes."
 }
