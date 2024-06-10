@@ -41,6 +41,7 @@ import Alert from '../assets/images/SVG/Alert.svg';
 import CaretUp from '../assets/images/SVG/Caret Up.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Menu from '../assets/images/SVG/Menu.svg';
+import Hourglass from '../assets/images/SVG/Hourglass.svg';
 import POS from '../assets/images/SVG/POS.svg';
 import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
@@ -159,6 +160,23 @@ const ClipboardBadge = ({
     </TouchableOpacity>
 );
 
+const PendingHtlcBadge = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+    clipboard: string;
+}) => (
+    <TouchableOpacity
+        onPress={() =>
+            navigation.navigate('PendingHTLCs', {
+                animation: 'slide_from_bottom'
+            })
+        }
+    >
+        <Hourglass fill={themeColor('highlight')} width="35" height="35" />
+    </TouchableOpacity>
+);
+
 const POSBadge = ({
     setPosStatus,
     getOrders
@@ -247,7 +265,7 @@ export default class WalletHeader extends React.Component<
             PosStore,
             SyncStore
         } = this.props;
-        const { filteredPendingChannels } = ChannelsStore!;
+        const { filteredPendingChannels, pendingHTLCs } = ChannelsStore!;
         const { settings, posStatus, setPosStatus, implementation } =
             SettingsStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
@@ -589,6 +607,14 @@ export default class WalletHeader extends React.Component<
                             {!!clipboard && (
                                 <View style={{ marginRight: 15 }}>
                                     <ClipboardBadge
+                                        navigation={navigation}
+                                        clipboard={clipboard}
+                                    />
+                                </View>
+                            )}
+                            {pendingHTLCs.length > 0 && (
+                                <View style={{ marginRight: 15 }}>
+                                    <PendingHtlcBadge
                                         navigation={navigation}
                                         clipboard={clipboard}
                                     />

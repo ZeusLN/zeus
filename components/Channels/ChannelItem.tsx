@@ -14,6 +14,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 import Stores from '../../stores/Stores';
 
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
+import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
 import { localeString } from './../../utils/LocaleUtils';
 
 export function ChannelItem({
@@ -22,6 +23,7 @@ export function ChannelItem({
     outbound,
     largestTotal,
     status,
+    pendingHTLCs,
     pendingTimelock,
     noBorder,
     hideLabels,
@@ -32,7 +34,8 @@ export function ChannelItem({
     outbound: number;
     largestTotal?: number;
     status?: Status;
-    pendingTimelock?: String;
+    pendingHTLCs?: boolean;
+    pendingTimelock?: string;
     noBorder?: boolean;
     hideLabels?: boolean;
     selected?: boolean;
@@ -70,6 +73,16 @@ export function ChannelItem({
                         </Body>
                     </View>
                 )}
+                {pendingHTLCs ? (
+                    <View style={{ flexDirection: 'row', marginRight: 5 }}>
+                        <HourglassIcon
+                            fill={themeColor('highlight')}
+                            width={17}
+                            height={17}
+                            style={{ marginRight: 5 }}
+                        />
+                    </View>
+                ) : null}
                 {pendingTimelock ? (
                     <View style={{ flexDirection: 'row', marginRight: 5 }}>
                         <ClockIcon
