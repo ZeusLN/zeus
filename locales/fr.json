@@ -497,6 +497,7 @@
     "views.Intro.lightningLiquidity": "Découvrez la liquidité de Lightning",
     "views.Intro.advancedSetUp": "Configuration avancée",
     "views.Intro.creatingWallet": "Zeus crée votre portefeuille.",
+    "views.Intro.choosingPeers": "ZEUS is choosing your peers.",
     "views.Intro.carousel1.title": "Des paiements fiables",
     "views.Intro.carousel1.text": "Zeus exécute un nœud Bitcoin et Lightning pour vérifier et garder vos transactions privées.",
     "views.Intro.carousel2.title": "Transferts On-chain",
@@ -655,6 +656,7 @@
     "views.ContactDetails.saveToContacts": "Enregistrer dans les contacts",
     "views.ContactDetails.editAndSaveContact": "Modifier et enregistrer le contact",
     "views.ContactInfo.title": "Informations de contact",
+    "views.Tools.title": "Tools",
     "views.Settings.title": "Thème clair",
     "views.Settings.enabled": "Activé",
     "views.Settings.disabled": "Désactivé",
@@ -1192,5 +1194,12 @@
     "components.AlertModal.resetEGS": "Réinitialiser les données de synchronisation du graphique express",
     "components.AlertModal.neutrinoPeers": "Pairs de neutrinos problématiques",
     "components.AlertModal.neutrinoExplainer": "Les pairs Neutrino avec un temps de ping supérieur à 200 ms peuvent entraîner des problèmes de performances dans l'application.",
-    "components.AlertModal.reviewPeers": "Examiner la liste des pairs des neutrinos"
+    "components.AlertModal.reviewPeers": "Examiner la liste des pairs des neutrinos",
+    "views.PendingHTLCs.title": "Pending HTLCs",
+    "views.PendingHTLCs.noPendingHTLCs": "No pending HTLCs",
+    "views.PendingHTLCs.incoming": "Incoming",
+    "views.PendingHTLCs.outgoing": "Outgoing",
+    "views.PendingHTLCs.expirationHeight": "Expiration height",
+    "views.PendingHTLCs.recommendationIOS": "It's recommended to leave ZEUS running while there are pending HTLCs to prevent force closes.",
+    "views.PendingHTLCs.recommendationAndroid": "It's recommended to enable Persistent LND or leave ZEUS running while there are pending HTLCs to prevent force closes."
 }
