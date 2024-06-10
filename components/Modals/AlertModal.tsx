@@ -10,6 +10,7 @@ import ModalStore from '../../stores/ModalStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
+import { NEUTRINO_PING_THRESHOLD_MS } from '../../utils/LndMobileUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -153,9 +154,9 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString(
+                                    {`${localeString(
                                         'components.AlertModal.neutrinoExplainer'
-                                    )}
+                                    )} (>${NEUTRINO_PING_THRESHOLD_MS}ms)`}
                                 </Text>
 
                                 <Text

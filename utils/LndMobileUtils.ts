@@ -70,6 +70,9 @@ export function checkLndStreamErrorResponse(
     return null;
 }
 
+export const NEUTRINO_PING_TIMEOUT_MS = 1500;
+export const NEUTRINO_PING_THRESHOLD_MS = 1000;
+
 const writeLndConfig = async (
     isTestnet?: boolean,
     rescan?: boolean,
@@ -287,7 +290,9 @@ export async function startLnd(
 }
 
 export async function chooseNeutrinoPeers(isTestnet?: boolean) {
-    console.log('Selecting Neutrino peers with ping times <200ms');
+    console.log(
+        `Selecting Neutrino peers with ping times <${NEUTRINO_PING_THRESHOLD_MS}ms`
+    );
     let peers = isTestnet
         ? DEFAULT_NEUTRINO_PEERS_TESTNET
         : DEFAULT_NEUTRINO_PEERS_MAINNET;
@@ -298,7 +303,7 @@ export async function chooseNeutrinoPeers(isTestnet?: boolean) {
         await new Promise(async (resolve) => {
             try {
                 const ms = await Ping.start(peer, {
-                    timeout: 1000
+                    timeout: NEUTRINO_PING_TIMEOUT_MS
                 });
                 console.log(`# ${peer} - ${ms}`);
                 results.push({
@@ -318,7 +323,10 @@ export async function chooseNeutrinoPeers(isTestnet?: boolean) {
     }
 
     let filteredResults = results.filter((result: any) => {
-        return Number.isInteger(result.ms) && result.ms < 200;
+        return (
+            Number.isInteger(result.ms) &&
+            result.ms < NEUTRINO_PING_THRESHOLD_MS
+        );
     });
 
     if (filteredResults.length < 3 && !isTestnet) {
@@ -328,7 +336,7 @@ export async function chooseNeutrinoPeers(isTestnet?: boolean) {
             await new Promise(async (resolve) => {
                 try {
                     const ms = await Ping.start(peer, {
-                        timeout: 1000
+                        timeout: NEUTRINO_PING_TIMEOUT_MS
                     });
                     console.log(`# ${peer} - ${ms}`);
                     results.push({
@@ -349,7 +357,10 @@ export async function chooseNeutrinoPeers(isTestnet?: boolean) {
     }
 
     filteredResults = results.filter((result: any) => {
-        return Number.isInteger(result.ms) && result.ms < 200;
+        return (
+            Number.isInteger(result.ms) &&
+            result.ms < NEUTRINO_PING_THRESHOLD_MS
+        );
     });
 
     const selectedPeers: string[] = [];
