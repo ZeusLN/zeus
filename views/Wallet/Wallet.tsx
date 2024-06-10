@@ -37,6 +37,7 @@ import LayerBalances from '../../components/LayerBalances';
 import LoadingColumns from '../../components/LoadingColumns';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import WalletHeader from '../../components/WalletHeader';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
@@ -792,19 +793,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 )}
                                         </>
                                     )}
-                                    <Tab.Screen
-                                        name="Camera"
-                                        component={CameraScreen}
-                                        listeners={{
-                                            tabPress: (e) => {
-                                                // Prevent default action
-                                                e.preventDefault();
-                                                navigation.navigate(
-                                                    'HandleAnythingQRScanner'
-                                                );
-                                            }
-                                        }}
-                                    />
+                                    {posStatus !== 'active' && (
+                                        <Tab.Screen
+                                            name="Camera"
+                                            component={CameraScreen}
+                                            listeners={{
+                                                tabPress: (e) => {
+                                                    // Prevent default action
+                                                    e.preventDefault();
+                                                    navigation.navigate(
+                                                        'HandleAnythingQRScanner'
+                                                    );
+                                                }
+                                            }}
+                                        />
+                                    )}
                                 </Tab.Navigator>
                             </NavigationContainer>
                         </NavigationIndependentTree>
@@ -812,6 +815,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 {connecting &&
                     (!loginRequired || posEnabled !== PosEnabled.Disabled) && (
                         <Screen>
+                            <View
+                                style={{
+                                    position: 'absolute',
+                                    zIndex: 1
+                                }}
+                            >
+                                <WalletHeader navigation={navigation} loading />
+                            </View>
                             <View
                                 style={{
                                     flex: 1,
@@ -913,7 +924,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         if (settings.nodes)
                                             protectedNavigation(
                                                 navigation,
-                                                'Settings'
+                                                'Menu'
                                             );
                                     }}
                                     adaptiveWidth

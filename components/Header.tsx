@@ -73,7 +73,7 @@ function ZeusHeader(props: HeaderProps) {
                 fill={themeColor('text')}
                 width="30"
                 height="30"
-                style={{ alignSelf: 'center' }}
+                style={{ alignSelf: 'center', marginLeft: 5 }}
             />
         </TouchableOpacity>
     );
