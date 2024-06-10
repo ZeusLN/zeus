@@ -497,6 +497,7 @@
     "views.Intro.lightningLiquidity": "Aflați mai multe despre lichiditatea Lightning",
     "views.Intro.advancedSetUp": "Setari avansate",
     "views.Intro.creatingWallet": "Zeus îți creează portofelul.",
+    "views.Intro.choosingPeers": "ZEUS is choosing your peers.",
     "views.Intro.carousel1.title": "Plăți în care poți avea încredere",
     "views.Intro.carousel1.text": "Zeus rulează un nod Bitcoin și Lightning pentru a verifica și menține tranzacțiile private.",
     "views.Intro.carousel2.title": "Transferuri On-chain",
@@ -655,6 +656,7 @@
     "views.ContactDetails.saveToContacts": "Salvați în Contacte",
     "views.ContactDetails.editAndSaveContact": "Editați și salvați contactul",
     "views.ContactInfo.title": "Informatii de contact",
+    "views.Tools.title": "Tools",
     "views.Settings.title": "Setări",
     "views.Settings.enabled": "Activat",
     "views.Settings.disabled": "Dezactivat",
@@ -1192,5 +1194,12 @@
     "components.AlertModal.resetEGS": "Resetați datele de sincronizare a graficului expres",
     "components.AlertModal.neutrinoPeers": " Perechi neutrino problematici",
     "components.AlertModal.neutrinoExplainer": "Perechile Neutrino cu un timp de ping de peste 200 ms pot cauza probleme de performanță în aplicație.",
-    "components.AlertModal.reviewPeers": "Examinați lista de perechi neutrino"
+    "components.AlertModal.reviewPeers": "Examinați lista de perechi neutrino",
+    "views.PendingHTLCs.title": "Pending HTLCs",
+    "views.PendingHTLCs.noPendingHTLCs": "No pending HTLCs",
+    "views.PendingHTLCs.incoming": "Incoming",
+    "views.PendingHTLCs.outgoing": "Outgoing",
+    "views.PendingHTLCs.expirationHeight": "Expiration height",
+    "views.PendingHTLCs.recommendationIOS": "It's recommended to leave ZEUS running while there are pending HTLCs to prevent force closes.",
+    "views.PendingHTLCs.recommendationAndroid": "It's recommended to enable Persistent LND or leave ZEUS running while there are pending HTLCs to prevent force closes."
 }
