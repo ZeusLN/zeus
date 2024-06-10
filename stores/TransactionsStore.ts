@@ -460,8 +460,7 @@ export default class TransactionsStore {
 
         const payFunc =
             (this.settingsStore.implementation === 'c-lightning-REST' ||
-                this.settingsStore.implementation ===
-                    'core-lightning-rest-api' ||
+                this.settingsStore.implementation === 'cln-rest' ||
                 this.settingsStore.implementation === 'embedded-lnd') &&
             pubkey
                 ? BackendUtils.sendKeysend

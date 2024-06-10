@@ -206,7 +206,7 @@ export const INTERFACE_KEYS = [
     { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
-    { key: 'Core Lightning REST API', value: 'core-lightning-rest-api' },
+    { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
     { key: 'LNDHub', value: 'lndhub' },
     {
         key: '[DEPRECATED] Core Lightning (c-lightning-REST)',
@@ -220,7 +220,7 @@ export type Implementations =
     | 'embedded-lnd'
     | 'lnd'
     | 'lightning-node-connect'
-    | 'core-lightning-rest-api'
+    | 'cln-rest'
     | 'lndhub'
     | 'c-lightning-REST'
     | 'spark'

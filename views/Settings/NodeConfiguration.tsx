@@ -1357,7 +1357,7 @@ export default class NodeConfiguration extends React.Component<
                                 )}
                             </>
                         )}
-                        {implementation === 'core-lightning-rest-api' && (
+                        {implementation === 'cln-rest' && (
                             <>
                                 <Text
                                     style={{
