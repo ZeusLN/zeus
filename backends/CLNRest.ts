@@ -61,11 +61,8 @@ export default class CLNRest extends LND {
         );
     };
 
-    getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
     postRequest = (route: string, data?: any) =>
         this.request(route, 'post', data);
-    deleteRequest = (route: string) => this.request(route, 'delete', null);
 
     getNode = (data: any) =>
         this.postRequest('/v1/listnodes', { id: data.id }).then((res) => {
@@ -182,7 +179,7 @@ export default class CLNRest extends LND {
         return this.postRequest('/v1/close', request);
     };
     getFees = () =>
-        this.getRequest('/v1/getinfo').then((res: any) => ({
+        this.postRequest('/v1/getinfo').then((res: any) => ({
             total_fee_sum: res.fees_collected_msat / 1000
         }));
     setFees = (data: any) =>
