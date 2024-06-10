@@ -575,7 +575,7 @@ export default class StandalonePosPane extends React.PureComponent<
                             alignItems: 'center'
                         }}
                         onPress={() => {
-                            protectedNavigation(navigation, 'Settings');
+                            protectedNavigation(navigation, 'Menu');
                         }}
                         adaptiveWidth
                     />

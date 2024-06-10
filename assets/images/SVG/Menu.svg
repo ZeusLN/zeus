@@ -1,5 +1,5 @@
-<svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-<circle cx="6" cy="15" r="3" fill="white"/>
-<circle cx="15" cy="15" r="3" fill="white"/>
-<circle cx="24" cy="15" r="3" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" id="svg1" version="1.1" data-darkreader-inline-stroke="" style="max-height: 500px; --darkreader-inline-fill: #000000; --darkreader-inline-stroke: #e8e6e3;" stroke="#000" viewBox="0 0 13.344000000000001 10.848" fill="#000" data-v-52a72b4a="" data-darkreader-inline-fill="" width="13.344000000000001" height="10.848">
+  <defs id="defs1"/>
+  
+  <path style="stroke-width:0.839443" id="path1" d="M 0.77964405,0.879226 H 12.54902 M 0.77964405,5.4595038 H 10.472071 M 0.77964405,10.039781 H 12.54902" stroke-linecap="round"/>
 </svg>

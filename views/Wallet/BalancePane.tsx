@@ -10,7 +10,9 @@ import Button from '../../components/Button';
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
 import Conversion from '../../components/Conversion';
+
 import { localeString } from './../../utils/LocaleUtils';
+import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import BalanceStore from '../../stores/BalanceStore';
@@ -367,7 +369,6 @@ export default class BalancePane extends React.PureComponent<
                                             borderRadius: 10,
                                             borderColor:
                                                 themeColor('highlight'),
-                                            top: 10,
                                             margin: 20,
                                             padding: 15,
                                             borderWidth: 1.5
@@ -470,7 +471,7 @@ export default class BalancePane extends React.PureComponent<
                         containerStyle={{
                             alignItems: 'center'
                         }}
-                        onPress={() => navigation.navigate('Settings')}
+                        onPress={() => protectedNavigation(navigation, 'Menu')}
                         adaptiveWidth
                     />
                     <Text
