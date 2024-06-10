@@ -497,6 +497,7 @@
     "views.Intro.lightningLiquidity": "Aprenda sobre a liquidez do Lightning",
     "views.Intro.advancedSetUp": "Configuração avançada",
     "views.Intro.creatingWallet": "Zeus está criando sua carteira.",
+    "views.Intro.choosingPeers": "ZEUS is choosing your peers.",
     "views.Intro.carousel1.title": "Pagamentos em que você pode confiar ",
     "views.Intro.carousel1.text": "ZEUS executa um nó Bitcoin (também conhecido como Bitcoin node) e Lightning para verificar e manter suas transações privadas",
     "views.Intro.carousel2.title": "Transferências on-chain.",
@@ -655,6 +656,7 @@
     "views.ContactDetails.saveToContacts": "Salvar em Contatos",
     "views.ContactDetails.editAndSaveContact": "Editar e salvar contato",
     "views.ContactInfo.title": "Informações de contato",
+    "views.Tools.title": "Tools",
     "views.Settings.title": "Configurações",
     "views.Settings.enabled": "Ativado",
     "views.Settings.disabled": "Desativado",
@@ -1192,5 +1194,12 @@
     "components.AlertModal.resetEGS": "Redefinir dados de sincronização de gráfico expresso",
     "components.AlertModal.neutrinoPeers": "Pares de neutrinos problemáticos",
     "components.AlertModal.neutrinoExplainer": "Pares Neutrino com tempo de ping superior a 200 ms podem causar problemas de desempenho no aplicativo.",
-    "components.AlertModal.reviewPeers": "Revise a lista de pares de neutrinos"
+    "components.AlertModal.reviewPeers": "Revise a lista de pares de neutrinos",
+    "views.PendingHTLCs.title": "Pending HTLCs",
+    "views.PendingHTLCs.noPendingHTLCs": "No pending HTLCs",
+    "views.PendingHTLCs.incoming": "Incoming",
+    "views.PendingHTLCs.outgoing": "Outgoing",
+    "views.PendingHTLCs.expirationHeight": "Expiration height",
+    "views.PendingHTLCs.recommendationIOS": "It's recommended to leave ZEUS running while there are pending HTLCs to prevent force closes.",
+    "views.PendingHTLCs.recommendationAndroid": "It's recommended to enable Persistent LND or leave ZEUS running while there are pending HTLCs to prevent force closes."
 }
