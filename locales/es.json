@@ -497,6 +497,7 @@
     "views.Intro.lightningLiquidity": "Más información sobre la liquidez de Lightning",
     "views.Intro.advancedSetUp": "Configuración avanzada",
     "views.Intro.creatingWallet": "Zeus está creando tu billetera",
+    "views.Intro.choosingPeers": "ZEUS is choosing your peers.",
     "views.Intro.carousel1.title": "Pagos en los que puede confiar",
     "views.Intro.carousel1.text": "Zeus ejecuta un nodo Bitcoin y Lightning para verificar y mantener sus transacciones privadas.",
     "views.Intro.carousel2.title": "Transferencias On-chain",
@@ -655,6 +656,7 @@
     "views.ContactDetails.saveToContacts": "Guardar en contactos",
     "views.ContactDetails.editAndSaveContact": "Editar y guardar contacto",
     "views.ContactInfo.title": "Datos de contacto",
+    "views.Tools.title": "Tools",
     "views.Settings.title": "Ajustes",
     "views.Settings.enabled": "Activado",
     "views.Settings.disabled": "Desactivado",
@@ -1192,5 +1194,12 @@
     "components.AlertModal.resetEGS": "Restablecer datos de sincronización de gráficos rápidos",
     "components.AlertModal.neutrinoPeers": "Pares de neutrinos problemáticos",
     "components.AlertModal.neutrinoExplainer": "Los pares de neutrinos con un tiempo de ping de más de 200 ms pueden causar problemas de rendimiento en la aplicación.",
-    "components.AlertModal.reviewPeers": "Revisar la lista de pares de neutrinos"
+    "components.AlertModal.reviewPeers": "Revisar la lista de pares de neutrinos",
+    "views.PendingHTLCs.title": "Pending HTLCs",
+    "views.PendingHTLCs.noPendingHTLCs": "No pending HTLCs",
+    "views.PendingHTLCs.incoming": "Incoming",
+    "views.PendingHTLCs.outgoing": "Outgoing",
+    "views.PendingHTLCs.expirationHeight": "Expiration height",
+    "views.PendingHTLCs.recommendationIOS": "It's recommended to leave ZEUS running while there are pending HTLCs to prevent force closes.",
+    "views.PendingHTLCs.recommendationAndroid": "It's recommended to enable Persistent LND or leave ZEUS running while there are pending HTLCs to prevent force closes."
 }
