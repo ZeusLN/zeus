@@ -976,6 +976,12 @@ export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
     'sg.lnolymp.us'
 ];
 
+export const SECONDARY_NEUTRINO_PEERS_MAINNET = [
+    'node.blixtwallet.com',
+    'bb1.breez.technology',
+    'bb2.breez.technology'
+];
+
 export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
     'testnet.lnolymp.us',
     'btcd-testnet.lightning.computer',

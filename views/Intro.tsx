@@ -18,7 +18,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
-import { createLndWallet } from '../utils/LndMobileUtils';
+import { chooseNeutrinoPeers, createLndWallet } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
@@ -36,6 +36,7 @@ interface IntroProps {
 
 const Intro: React.FC<IntroProps> = (props) => {
     const [creatingWallet, setCreatingWallet] = useState(false);
+    const [choosingPeers, setChoosingPeers] = useState(false);
     const [error, setError] = useState(false);
 
     let screenWidth: number;
@@ -171,12 +172,19 @@ const Intro: React.FC<IntroProps> = (props) => {
                             <Button
                                 title={localeString('views.Intro.quickStart')}
                                 onPress={async () => {
-                                    setCreatingWallet(true);
                                     const { settingsStore } = stores;
                                     const {
                                         setConnectingStatus,
                                         updateSettings
                                     } = settingsStore;
+
+                                    setChoosingPeers(true);
+
+                                    await chooseNeutrinoPeers(undefined);
+
+                                    setCreatingWallet(true);
+                                    setChoosingPeers(false);
+
                                     const response = await createLndWallet(
                                         undefined
                                     );
@@ -203,6 +211,7 @@ const Intro: React.FC<IntroProps> = (props) => {
                                         });
                                     } else {
                                         setCreatingWallet(false);
+                                        setChoosingPeers(false);
                                         setError(true);
                                     }
                                 }}
@@ -282,7 +291,7 @@ const Intro: React.FC<IntroProps> = (props) => {
         );
     };
 
-    if (creatingWallet) {
+    if (choosingPeers || creatingWallet) {
         return (
             <Screen>
                 <View
@@ -312,10 +321,11 @@ const Intro: React.FC<IntroProps> = (props) => {
                             padding: 8
                         }}
                     >
-                        {localeString('views.Intro.creatingWallet').replace(
-                            'Zeus',
-                            'ZEUS'
-                        )}
+                        {choosingPeers
+                            ? localeString('views.Intro.choosingPeers')
+                            : localeString(
+                                  'views.Intro.creatingWallet'
+                              ).replace('Zeus', 'ZEUS')}
                     </Text>
                     <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />
