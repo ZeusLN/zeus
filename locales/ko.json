@@ -497,6 +497,7 @@
     "views.Intro.lightningLiquidity": "라이트닝 유동성에 대해 더 알아보기",
     "views.Intro.advancedSetUp": "고급 설정",
     "views.Intro.creatingWallet": "Zeus가 지갑을 생성하고 있습니다.",
+    "views.Intro.choosingPeers": "ZEUS is choosing your peers.",
     "views.Intro.carousel1.title": "믿을 수 있는 결제",
     "views.Intro.carousel1.text": "ZEUS는 당신의 트랜잭션들의 프라이버시를 지키고 검증하기 위해 비트코인, 라이트닝 노드를 운영하고 있습니다.",
     "views.Intro.carousel2.title": "온체인 전송",
@@ -655,6 +656,7 @@
     "views.ContactDetails.saveToContacts": "연락처에 저장",
     "views.ContactDetails.editAndSaveContact": "연락처 수정 및 저장",
     "views.ContactInfo.title": "연락처 정보",
+    "views.Tools.title": "Tools",
     "views.Settings.title": "설정",
     "views.Settings.enabled": "활성화",
     "views.Settings.disabled": "비활성화",
@@ -1191,6 +1193,13 @@
     "components.AlertModal.zombieExplainer": "Zombie channels indicate stale data on your downloaded network graph.",
     "components.AlertModal.resetEGS": "Reset express graph sync data",
     "components.AlertModal.neutrinoPeers": "Problematic neutrino peers",
-    "components.AlertModal.neutrinoExplainer": "Neutrino peers with over 200ms ping time can cause performance issues in the app.",
-    "components.AlertModal.reviewPeers": "Review neutrino peers list"
+    "components.AlertModal.neutrinoExplainer": "Neutrino peers with high ping times can cause performance issues in the app.",
+    "components.AlertModal.reviewPeers": "Review neutrino peers list",
+    "views.PendingHTLCs.title": "Pending HTLCs",
+    "views.PendingHTLCs.noPendingHTLCs": "No pending HTLCs",
+    "views.PendingHTLCs.incoming": "Incoming",
+    "views.PendingHTLCs.outgoing": "Outgoing",
+    "views.PendingHTLCs.expirationHeight": "Expiration height",
+    "views.PendingHTLCs.recommendationIOS": "It's recommended to leave ZEUS running while there are pending HTLCs to prevent force closes.",
+    "views.PendingHTLCs.recommendationAndroid": "It's recommended to enable Persistent LND or leave ZEUS running while there are pending HTLCs to prevent force closes."
 }
