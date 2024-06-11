@@ -198,15 +198,15 @@ export default class CLNRest {
         if (data.utxos) {
             request = {
                 destination: data.addr,
-                feeRate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
-                satoshis: data.amount,
+                feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
+                satoshi: data.amount,
                 utxos: data.utxos
             };
         } else {
             request = {
                 destination: data.addr,
-                feeRate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
-                satoshis: data.amount
+                feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
+                satoshi: data.amount
             };
         }
         return this.postRequest('/v1/withdraw', request);
