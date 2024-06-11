@@ -145,19 +145,24 @@ export const getChainTransactions = async () => {
         .map((tx: any) => {
             let amount = 0;
             let txid;
+            let note: string | null = null;
 
             if (tx.tag === 'deposit') {
                 amount = tx.credit_msat;
                 txid = tx.outpoint.split(':')[0];
+                note = 'on-chain deposit';
             } else if (tx.tag === 'withdrawal') {
                 amount = -Math.abs(tx.debit_msat);
                 txid = tx.txid;
+                note = 'on-chain withdrawal';
             } else if (tx.tag === 'channel_open') {
                 amount = -Math.abs(tx.credit_msat);
                 txid = tx.outpoint.split(':')[0];
+                note = 'channel-open';
             } else if (tx.tag === 'channel_close') {
                 amount = tx.debit_msat;
                 txid = tx.txid;
+                note = 'channel-close';
             }
 
             formattedTxs.push({
@@ -165,7 +170,8 @@ export const getChainTransactions = async () => {
                 block_height: tx.blockheight,
                 num_confirmations: getinfo.blockheight - tx.blockheight,
                 time_stamp: tx.timestamp,
-                txid
+                txid,
+                note
             });
         });
 
