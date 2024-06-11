@@ -7,6 +7,7 @@ import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 import {
     getBalance,
+    getChainTransactions,
     getOffchainBalance,
     listPeers
 } from './CoreLightningRequestHandler';
@@ -177,10 +178,7 @@ export default class CLNRest {
         this.postRequest('/v1/listnodes', { id: data.id }).then((res) => {
             return res;
         });
-    getTransactions = () =>
-        this.postRequest('/v1/listfunds').then((res) => ({
-            transactions: res.outputs
-        }));
+    getTransactions = async () => await getChainTransactions();
     getChannels = async () => {
         const channels = await this.postRequest('/v1/listpeerchannels');
         return await listPeers(channels);

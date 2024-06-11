@@ -128,3 +128,48 @@ export const listPeers = async (data: any) => {
 
     return { channels: channelsWithAliases };
 };
+
+// Get all chain transactions from your core-lightnig node
+export const getChainTransactions = async () => {
+    const [transactions, getinfo] = await Promise.all([
+        api.postRequest('/v1/bkpr-listaccountevents'),
+        api.postRequest('/v1/getinfo')
+    ]);
+
+    const formattedTxs: any[] = [];
+
+    console.log('chain txs', transactions);
+
+    transactions.events
+        .filter((tx: any) => tx.type !== 'onchain_fee')
+        .map((tx: any) => {
+            let amount = 0;
+            let txid;
+
+            if (tx.tag === 'deposit') {
+                amount = tx.credit_msat;
+                txid = tx.outpoint.split(':')[0];
+            } else if (tx.tag === 'withdrawal') {
+                amount = -Math.abs(tx.debit_msat);
+                txid = tx.txid;
+            } else if (tx.tag === 'channel_open') {
+                amount = -Math.abs(tx.credit_msat);
+                txid = tx.outpoint.split(':')[0];
+            } else if (tx.tag === 'channel_close') {
+                amount = tx.debit_msat;
+                txid = tx.txid;
+            }
+
+            formattedTxs.push({
+                amount: amount / 1000,
+                block_height: tx.blockheight,
+                num_confirmations: getinfo.blockheight - tx.blockheight,
+                time_stamp: tx.timestamp,
+                txid
+            });
+        });
+
+    return {
+        transactions: formattedTxs
+    };
+};
