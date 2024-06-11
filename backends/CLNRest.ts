@@ -197,14 +197,14 @@ export default class CLNRest {
         let request: any;
         if (data.utxos) {
             request = {
-                address: data.addr,
+                destination: data.addr,
                 feeRate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
                 satoshis: data.amount,
                 utxos: data.utxos
             };
         } else {
             request = {
-                address: data.addr,
+                destination: data.addr,
                 feeRate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
                 satoshis: data.amount
             };
