@@ -1193,7 +1193,7 @@
     "components.AlertModal.zombieExplainer": "Canais zumbis indicam dados obsoletos no gráfico de rede baixado.",
     "components.AlertModal.resetEGS": "Redefinir dados de sincronização de gráfico expresso",
     "components.AlertModal.neutrinoPeers": "Pares de neutrinos problemáticos",
-    "components.AlertModal.neutrinoExplainer": "Pares Neutrino com tempo de ping superior a 200 ms podem causar problemas de desempenho no aplicativo.",
+    "components.AlertModal.neutrinoExplainer": "Neutrino peers with high ping times can cause performance issues in the app.",
     "components.AlertModal.reviewPeers": "Revise a lista de pares de neutrinos",
     "views.PendingHTLCs.title": "HTML pendentes",
     "views.PendingHTLCs.noPendingHTLCs": "Nenhum HTLC pendente",
