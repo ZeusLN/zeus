@@ -1193,7 +1193,7 @@
     "components.AlertModal.zombieExplainer": "I canali zombie indicano dati non aggiornati sul grafico di rete scaricato.",
     "components.AlertModal.resetEGS": "Reimposta i dati di sincronizzazione del grafico rapido",
     "components.AlertModal.neutrinoPeers": "Pari di neutrini problematici",
-    "components.AlertModal.neutrinoExplainer": "Neutrino peers with high ping times can cause performance issues in the app.",
+    "components.AlertModal.neutrinoExplainer": "Coetanei di Neutrino con tempi di ping elevati possono causare problemi di prestazioni nell'app.",
     "components.AlertModal.reviewPeers": "Esamina l'elenco dei pari di neutrini",
     "views.PendingHTLCs.title": "HTLC in sospeso",
     "views.PendingHTLCs.noPendingHTLCs": "Nessun HTLC in sospeso",
