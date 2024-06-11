@@ -219,7 +219,7 @@ export default class IntroSplash extends React.Component<
                                         'views.Intro.advancedSetUp'
                                     )}
                                     onPress={() =>
-                                        navigation.navigate('Settings')
+                                        navigation.navigate('Menu')
                                     }
                                     secondary
                                 />
