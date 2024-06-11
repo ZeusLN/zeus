@@ -218,9 +218,7 @@ export default class IntroSplash extends React.Component<
                                     title={localeString(
                                         'views.Intro.advancedSetUp'
                                     )}
-                                    onPress={() =>
-                                        navigation.navigate('Menu')
-                                    }
+                                    onPress={() => navigation.navigate('Menu')}
                                     secondary
                                 />
                             </View>
