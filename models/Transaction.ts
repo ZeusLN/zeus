@@ -43,6 +43,7 @@ export default class Transaction extends BaseModel {
     public txid: string;
     public outputs: number;
     public address: string;
+    public note: string | null;
 
     @computed public get model(): string {
         return localeString('general.transaction');
