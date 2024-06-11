@@ -1193,7 +1193,7 @@
     "components.AlertModal.zombieExplainer": "Canalele zombie indică date învechite pe graficul rețelei descărcate.",
     "components.AlertModal.resetEGS": "Resetați datele de sincronizare a graficului expres",
     "components.AlertModal.neutrinoPeers": " Perechi neutrino problematici",
-    "components.AlertModal.neutrinoExplainer": "Perechile Neutrino cu un timp de ping de peste 200 ms pot cauza probleme de performanță în aplicație.",
+    "components.AlertModal.neutrinoExplainer": "Neutrino peers with high ping times can cause performance issues in the app.",
     "components.AlertModal.reviewPeers": "Examinați lista de perechi neutrino",
     "views.PendingHTLCs.title": "HTLC în așteptare",
     "views.PendingHTLCs.noPendingHTLCs": "Nu există HTLC în așteptare",
