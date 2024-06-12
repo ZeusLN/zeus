@@ -1130,7 +1130,7 @@
     "views.Settings.Bolt12Address.requestButton": "Vyžádat platební kód",
     "views.Settings.Bolt12Address.changeButton": "Změnit platební kód",
     "views.Settings.Bolt12Address.handle": "Your handle",
-    "views.Settings.Bolt12Address.error.noBolt12": "No BOLT 12 offer found",
+    "views.Settings.Bolt12Address.error.noBolt12": "Nebyla nalezena žádná BOLT 12 nabídka",
     "views.Settings.Bolt12Address.error.failedToGetOffer": "Získání nabídky selhalo",
     "views.Settings.Bolt12Address.error.handleTaken": "Handle is taken",
     "views.Settings.Bolt12Address.error.failedToCreate": "Vytváření adresy selhalo",
