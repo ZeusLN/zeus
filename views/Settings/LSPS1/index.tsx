@@ -80,8 +80,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         this.state = {
             lspBalanceSat: 0,
             clientBalanceSat: '0',
-            requiredChannelConfirmations: '8',
-            confirmsWithinBlocks: '6',
+            requiredChannelConfirmations: '',
+            confirmsWithinBlocks: '',
             channelExpiryBlocks: 0,
             token: '',
             refundOnchainAddress: '',
@@ -247,7 +247,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             advancedSettings,
             lspBalanceSat,
             clientBalanceSat,
-            channelExpiryBlocks
+            channelExpiryBlocks,
+            requiredChannelConfirmations,
+            confirmsWithinBlocks
         } = this.state;
         const { getInfoData, createOrderResponse } = LSPStore;
         const options = getInfoData?.result?.options || getInfoData?.options;
@@ -304,6 +306,26 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         if (channelExpiryBlocks === 0 && options?.max_channel_expiry_blocks) {
             this.setState({
                 channelExpiryBlocks: parseInt(options.max_channel_expiry_blocks)
+            });
+        }
+
+        if (
+            requiredChannelConfirmations === '' &&
+            options?.min_required_channel_confirmations
+        ) {
+            this.setState({
+                requiredChannelConfirmations:
+                    options?.min_required_channel_confirmations.toString()
+            });
+        }
+
+        if (
+            confirmsWithinBlocks === '' &&
+            options?.min_funding_confirms_within_blocks
+        ) {
+            this.setState({
+                confirmsWithinBlocks:
+                    (options?.min_funding_confirms_within_blocks).toString()
             });
         }
 
@@ -570,6 +592,26 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         )})`}
                                                         value={
                                                             options?.min_onchain_payment_size_sat
+                                                        }
+                                                    />
+                                                )}
+                                                {options?.min_funding_confirms_within_blocks && (
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.minFundingConfirmWithingBlocks'
+                                                        )}
+                                                        value={
+                                                            options?.min_funding_confirms_within_blocks
+                                                        }
+                                                    />
+                                                )}
+                                                {options?.min_required_channel_confirmations && (
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.minRequiredChannelConfirmations'
+                                                        )}
+                                                        value={
+                                                            options?.min_required_channel_confirmations
                                                         }
                                                     />
                                                 )}
