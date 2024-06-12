@@ -1193,7 +1193,7 @@
     "components.AlertModal.zombieExplainer": "Les canaux zombies indiquent des données obsolètes sur votre graphique de réseau téléchargé.",
     "components.AlertModal.resetEGS": "Réinitialiser les données de synchronisation du graphique express",
     "components.AlertModal.neutrinoPeers": "Pairs de neutrinos problématiques",
-    "components.AlertModal.neutrinoExplainer": "Neutrino peers with high ping times can cause performance issues in the app.",
+    "components.AlertModal.neutrinoExplainer": "Les pairs Neutrino avec des temps de ping élevés peuvent entraîner des problèmes de performances dans l'application.",
     "components.AlertModal.reviewPeers": "Examiner la liste des pairs des neutrinos",
     "views.PendingHTLCs.title": "HTLC en attente",
     "views.PendingHTLCs.noPendingHTLCs": "Aucun HTLC en attente",
