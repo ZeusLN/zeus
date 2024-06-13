@@ -38,7 +38,6 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                     minHeight: 200
                 }}
                 onClosed={() => toggleInfoModal()}
-                ref="modal"
             >
                 <View
                     style={{
