@@ -131,51 +131,93 @@ export const listPeers = async (data: any) => {
 
 // Get all chain transactions from your core-lightnig node
 export const getChainTransactions = async () => {
-    const [transactions, getinfo] = await Promise.all([
-        api.postRequest('/v1/bkpr-listaccountevents'),
+    const results = await Promise.allSettled([
+        api.postRequest('/v1/bkpr-listaccountevents', { account: 'wallet' }),
+        api.postRequest('/v1/bkpr-listaccountevents', { account: 'external' }),
+        api.postRequest('/v1/listtransactions'),
         api.postRequest('/v1/getinfo')
     ]);
 
-    const formattedTxs: any[] = [];
+    const [walletTxsResult, externalTxsResult, listTxsResult, getinfoResult] =
+        results;
 
-    console.log('chain txs', transactions);
+    // If getinfo fails, return blank txs
+    if (getinfoResult.status !== 'fulfilled') {
+        return { transactions: [] };
+    }
 
-    transactions.events
-        .filter((tx: any) => tx.type !== 'onchain_fee')
+    const getinfo = getinfoResult.value;
+
+    const walletTxs =
+        walletTxsResult.status === 'fulfilled'
+            ? walletTxsResult.value.events.filter(
+                  (tx: any) => tx.tag === 'deposit'
+              )
+            : { events: [] };
+
+    const externalTxs =
+        externalTxsResult.status === 'fulfilled'
+            ? externalTxsResult.value.events.filter(
+                  (tx: any) => tx.tag === 'deposit'
+              )
+            : { events: [] };
+
+    const listTxs =
+        listTxsResult.status === 'fulfilled'
+            ? listTxsResult.value
+            : { transactions: [] };
+
+    console.log('wallet txs', walletTxs);
+    console.log('external txs', externalTxs);
+    console.log('list txs are', JSON.stringify(listTxs));
+
+    const transactions = listTxs.transactions
         .map((tx: any) => {
-            let amount = 0;
-            let txid;
-            let note: string | null = null;
+            const withdrawal = externalTxs.find((n: any) => {
+                const txid = n.outpoint ? n.outpoint.split(':')[0] : null;
 
-            if (tx.tag === 'deposit') {
-                amount = tx.credit_msat;
-                txid = tx.outpoint.split(':')[0];
-                note = 'on-chain deposit';
-            } else if (tx.tag === 'withdrawal') {
-                amount = -Math.abs(tx.debit_msat);
-                txid = tx.txid;
-                note = 'on-chain withdrawal';
-            } else if (tx.tag === 'channel_open') {
-                amount = -Math.abs(tx.credit_msat);
-                txid = tx.outpoint.split(':')[0];
-                note = 'channel-open';
-            } else if (tx.tag === 'channel_close') {
-                amount = tx.debit_msat;
-                txid = tx.txid;
-                note = 'channel-close';
+                console.log(tx.hash, txid);
+                return txid === tx.hash;
+            });
+
+            const deposit = walletTxs.find((n: any) => {
+                const txid = n.outpoint ? n.outpoint.split(':')[0] : null;
+
+                return txid === tx.hash;
+            });
+
+            if (withdrawal) {
+                return {
+                    amount: -Math.abs(withdrawal.credit_msat) / 1000,
+                    block_height: withdrawal.blockheight,
+                    num_confirmations:
+                        getinfo.blockheight - withdrawal.blockheight,
+                    time_stamp: withdrawal.timestamp,
+                    txid: tx.hash,
+                    note: 'on-chain withdrawal'
+                };
             }
 
-            formattedTxs.push({
-                amount: amount / 1000,
-                block_height: tx.blockheight,
-                num_confirmations: getinfo.blockheight - tx.blockheight,
-                time_stamp: tx.timestamp,
-                txid,
-                note
-            });
-        });
+            if (deposit) {
+                return {
+                    amount: deposit.credit_msat / 1000,
+                    block_height: deposit.blockheight,
+                    num_confirmations:
+                        getinfo.blockheight - deposit.blockheight,
+                    time_stamp: deposit.timestamp,
+                    txid: tx.hash,
+                    note: 'on-chain deposit'
+                };
+            }
+
+            return null;
+        })
+        .filter((n: any) => !!n);
+
+    // Sort the transactions array by the time_stamp field (descending order)
+    transactions.sort((a: any, b: any) => b.time_stamp - a.time_stamp);
 
     return {
-        transactions: formattedTxs
+        transactions
     };
 };
