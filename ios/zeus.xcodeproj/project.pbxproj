@@ -98,6 +98,7 @@
 		84DD7E2C561F444780607E4E /* Olympus.svg in Resources */ = {isa = PBXBuildFile; fileRef = C3D9B9B4D130410A8B146CE4 /* Olympus.svg */; };
 		85477FC6256D5D3400A4EAD1 /* dummy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85477FC5256D5D3400A4EAD1 /* dummy.swift */; };
 		85477FC7256D5D3400A4EAD1 /* dummy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85477FC5256D5D3400A4EAD1 /* dummy.swift */; };
+		8DDBA9D94AE480ECACB93254 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3CF3D28EF4DE5068AD876EAB /* PrivacyInfo.xcprivacy */; };
 		8F14873EE5A54A2EBEC7D0A3 /* Checkmark.svg in Resources */ = {isa = PBXBuildFile; fileRef = F049B384F839491FBB33BBA4 /* Checkmark.svg */; };
 		92542E72F705458EBD582CC8 /* BitcoinIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = 3BD89BEBA89A4B678A29E094 /* BitcoinIcon.svg */; };
 		93C795DB3CDC46D8862C3393 /* ExchangeFiat.svg in Resources */ = {isa = PBXBuildFile; fileRef = 6C81853A9EA0452B9999E58D /* ExchangeFiat.svg */; };
@@ -121,6 +122,7 @@
 		BECCE8BEED334E9E86730C95 /* AddressSvg.tsx in Resources */ = {isa = PBXBuildFile; fileRef = 7E518DD5239E4B02AD264302 /* AddressSvg.tsx */; };
 		BFEB12685B664218922995B1 /* Scan.svg in Resources */ = {isa = PBXBuildFile; fileRef = 29E002EDCBDC4FB59A29BA2E /* Scan.svg */; };
 		C192B71058804DFF8F1EAE88 /* Hidden.svg in Resources */ = {isa = PBXBuildFile; fileRef = 565C3A5DD94B417EB83A30FE /* Hidden.svg */; };
+		C26BE00A80C59796641EC9CD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 45A895A8D6C88724D9C5B349 /* PrivacyInfo.xcprivacy */; };
 		C617C53C9731441DB9E9E8DD /* POS.svg in Resources */ = {isa = PBXBuildFile; fileRef = 3814F0A0F1A84AD1AFD7C587 /* POS.svg */; };
 		C941FD1729484DBB8E375B20 /* 3.png in Resources */ = {isa = PBXBuildFile; fileRef = DEE698AC647848D9B6DB13F6 /* 3.png */; };
 		CAB3D33C810A481CBDB5D3FE /* 2.png in Resources */ = {isa = PBXBuildFile; fileRef = 794C8E7556B54F62BEAD1975 /* 2.png */; };
@@ -373,9 +375,11 @@
 		3BD89BEBA89A4B678A29E094 /* BitcoinIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = BitcoinIcon.svg; path = ../assets/images/SVG/BitcoinIcon.svg; sourceTree = "<group>"; };
 		3C37D42473A54AD981B549B4 /* NFC.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = NFC.svg; path = ../assets/images/SVG/NFC.svg; sourceTree = "<group>"; };
 		3C817E9DD0504569B85A84F1 /* Edit.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Edit.svg; path = ../assets/images/SVG/Edit.svg; sourceTree = "<group>"; };
+		3CF3D28EF4DE5068AD876EAB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = zeus/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3D193586DE804DF89F2C9EC4 /* Leaving.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Leaving.svg; path = ../assets/images/SVG/Leaving.svg; sourceTree = "<group>"; };
 		41B36F82E42440E0AD72FC42 /* MailboxFlagDown.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MailboxFlagDown.svg; path = ../assets/images/SVG/MailboxFlagDown.svg; sourceTree = "<group>"; };
 		44AA4B9E77FB4B7E92D6E495 /* lightning1.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = lightning1.json; path = ../assets/images/Lottie/lightning1.json; sourceTree = "<group>"; };
+		45A895A8D6C88724D9C5B349 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = zeus/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		49BD28A15F4B4FECA6EE0CDE /* SimpleLineIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = SimpleLineIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf"; sourceTree = "<group>"; };
 		4A6B733324794E60B618DACE /* Export.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Export.svg; path = ../assets/images/SVG/Export.svg; sourceTree = "<group>"; };
 		4C8C38BFCA8A45C99AA6FF28 /* MaterialCommunityIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialCommunityIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf"; sourceTree = "<group>"; };
@@ -646,6 +650,7 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB11A68108700A75B9A /* LaunchScreen.xib */,
 				13B07FB71A68108700A75B9A /* main.m */,
+				3CF3D28EF4DE5068AD876EAB /* PrivacyInfo.xcprivacy */,
 			);
 			name = zeus;
 			sourceTree = "<group>";
@@ -750,6 +755,7 @@
 				C313040DFF224D8A9EC46990 /* Resources */,
 				97CC1CCA2200A9920031CA45 /* Recovered References */,
 				84DC0E13FD7354A941AB820C /* Pods */,
+				45A895A8D6C88724D9C5B349 /* PrivacyInfo.xcprivacy */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -1408,6 +1414,7 @@
 				B8067346D38044A7B3100972 /* Verified Account.svg in Resources */,
 				615320DD69744BC4A8D3E80E /* Visible.svg in Resources */,
 				E2A87233B6EE487090D3FE9F /* Untitled.png in Resources */,
+				8DDBA9D94AE480ECACB93254 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1415,6 +1422,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C26BE00A80C59796641EC9CD /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1485,6 +1493,7 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-resources.sh",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Entypo.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/EvilIcons.ttf",
@@ -1502,9 +1511,11 @@
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Zocial.ttf",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/RCTI18nStrings.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/SwiftProtobuf/SwiftProtobuf.bundle",
 			);
 			name = "[CP] Copy Pods Resources";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AntDesign.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Entypo.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EvilIcons.ttf",
@@ -1522,6 +1533,7 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SimpleLineIcons.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Zocial.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RCTI18nStrings.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SwiftProtobuf.bundle",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1552,6 +1564,7 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-resources.sh",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Entypo.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/EvilIcons.ttf",
@@ -1569,9 +1582,11 @@
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf",
 				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Zocial.ttf",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/RCTI18nStrings.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/SwiftProtobuf/SwiftProtobuf.bundle",
 			);
 			name = "[CP] Copy Pods Resources";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AntDesign.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Entypo.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EvilIcons.ttf",
@@ -1589,6 +1604,7 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SimpleLineIcons.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Zocial.ttf",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RCTI18nStrings.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SwiftProtobuf.bundle",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -2024,6 +2040,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CC = "";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
@@ -2050,6 +2067,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
+				CXX = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = i386;
@@ -2070,6 +2088,8 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
+				LD = "";
+				LDPLUSPLUS = "";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "$(inherited)";
@@ -2085,6 +2105,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CC = "";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
@@ -2111,6 +2132,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
+				CXX = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = i386;
@@ -2127,6 +2149,8 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
+				LD = "";
+				LDPLUSPLUS = "";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "$(inherited)";
 				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
