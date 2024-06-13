@@ -741,20 +741,24 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'lnAddress',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidLightningAddress && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'lnAddress',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
@@ -851,20 +855,24 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'lnAddress',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidBolt12Address && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'bolt12Address',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
@@ -960,20 +968,24 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'pubkey',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidPubkey && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'pubkey',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
@@ -1075,20 +1087,24 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'onchainAddress',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidOnchainAddress && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'onchainAddress',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
@@ -1182,20 +1198,24 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'nip05',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidNIP05 && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'nip05',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
@@ -1288,20 +1308,24 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'nostrNpub',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidNpub && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'nostrNpub',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
