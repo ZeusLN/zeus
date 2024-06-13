@@ -757,8 +757,9 @@ export default class AddContact extends React.Component<
                             orientation="horizontal"
                             style={{ marginTop: 10 }}
                             color={
-                                pubkey?.length == 1 &&
-                                (!isValidLightningAddress || !isValidPubkey) &&
+                                bolt12Address?.length == 1 &&
+                                (!isValidLightningAddress ||
+                                    !isValidBolt12Address) &&
                                 themeColor('error')
                             }
                         />
@@ -803,8 +804,8 @@ export default class AddContact extends React.Component<
                                     orientation="horizontal"
                                     style={{ marginTop: 16 }}
                                     color={
-                                        index === lnAddress?.length - 2 &&
-                                        !isValidLightningAddress &&
+                                        index === bolt12Address?.length - 2 &&
+                                        !isValidBolt12Address &&
                                         themeColor('error')
                                     }
                                 />
@@ -829,7 +830,7 @@ export default class AddContact extends React.Component<
                                                 });
                                                 if (!text) {
                                                     this.setState({
-                                                        isValidLightningAddress:
+                                                        isValidBolt12Address:
                                                             true
                                                     });
                                                 }
@@ -870,7 +871,7 @@ export default class AddContact extends React.Component<
                             style={{ marginTop: 10 }}
                             color={
                                 pubkey?.length == 1 &&
-                                (!isValidLightningAddress || !isValidPubkey) &&
+                                (!isValidBolt12Address || !isValidPubkey) &&
                                 themeColor('error')
                             }
                         />
