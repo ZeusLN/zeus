@@ -29,6 +29,8 @@ interface SetFeesProps {
 @inject('ChannelsStore', 'FeeStore', 'NodeInfoStore')
 @observer
 export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
+    private scrollViewRef = React.createRef<ScrollView>();
+
     render() {
         const { ChannelsStore, FeeStore, NodeInfoStore, navigation, route } =
             this.props;
@@ -90,7 +92,7 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                     navigation={navigation}
                 />
 
-                <ScrollView ref="_scrollView">
+                <ScrollView ref={this.scrollViewRef}>
                     <View style={{ padding: 15 }}>
                         {channel && policy && BackendUtils.isLNDBased() && (
                             <SetFeesForm
@@ -107,11 +109,9 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                                 }`}
                                 channelPoint={channelPoint}
                                 channelId={channelId}
-                                setFeesCompleted={() => {
-                                    (
-                                        this.refs._scrollView as ScrollView
-                                    ).scrollToEnd();
-                                }}
+                                setFeesCompleted={() =>
+                                    this.scrollViewRef.current?.scrollToEnd()
+                                }
                             />
                         )}
                         {channel && !BackendUtils.isLNDBased() && (
@@ -128,20 +128,16 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                                 }
                                 channelPoint={channelPoint}
                                 channelId={channelId}
-                                setFeesCompleted={() => {
-                                    (
-                                        this.refs._scrollView as ScrollView
-                                    ).scrollToEnd();
-                                }}
+                                setFeesCompleted={() =>
+                                    this.scrollViewRef.current?.scrollToEnd()
+                                }
                             />
                         )}
                         {!channel && (
                             <SetFeesForm
-                                setFeesCompleted={() => {
-                                    (
-                                        this.refs._scrollView as ScrollView
-                                    ).scrollToEnd();
-                                }}
+                                setFeesCompleted={() =>
+                                    this.scrollViewRef.current?.scrollToEnd()
+                                }
                             />
                         )}
                     </View>

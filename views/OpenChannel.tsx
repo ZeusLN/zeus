@@ -273,6 +273,8 @@ export default class OpenChannel extends React.Component<
         });
     };
 
+    private scrollViewRef = React.createRef<ScrollView>();
+
     render() {
         const {
             ChannelsStore,
@@ -366,7 +368,7 @@ export default class OpenChannel extends React.Component<
                         flex: 1
                     }}
                     keyboardShouldPersistTaps="handled"
-                    ref="_scrollView"
+                    ref={this.scrollViewRef}
                 >
                     {!!suggestImport && (
                         <View style={styles.clipboardImport}>
@@ -974,7 +976,7 @@ export default class OpenChannel extends React.Component<
                                     color: 'white'
                                 }}
                                 onPress={() => {
-                                    this.refs._scrollView.scrollTo({
+                                    this.scrollViewRef.current?.scrollTo({
                                         y: 0,
                                         animated: true
                                     });
