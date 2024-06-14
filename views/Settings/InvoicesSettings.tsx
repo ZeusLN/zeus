@@ -81,6 +81,8 @@ export default class InvoicesSettings extends React.Component<
         />
     );
 
+    private modalBoxRef = React.createRef<ModalBox>();
+
     render() {
         const { navigation, SettingsStore } = this.props;
         const {
@@ -135,7 +137,7 @@ export default class InvoicesSettings extends React.Component<
               ];
 
         const SettingsButton = () => (
-            <TouchableOpacity onPress={() => this.refs.modal.open()}>
+            <TouchableOpacity onPress={() => this.modalBoxRef.current?.open()}>
                 <Gear
                     style={{ alignSelf: 'center' }}
                     fill={themeColor('text')}
@@ -441,7 +443,7 @@ export default class InvoicesSettings extends React.Component<
                     swipeToClose={true}
                     backButtonClose={true}
                     position="bottom"
-                    ref="modal"
+                    ref={this.modalBoxRef}
                 >
                     <Text
                         style={{
@@ -471,7 +473,7 @@ export default class InvoicesSettings extends React.Component<
                                         showCustomPreimageField
                                     }
                                 });
-                                this.refs.modal.close();
+                                this.modalBoxRef.current?.close();
                             }}
                             style={{
                                 backgroundColor: themeColor('secondary'),
