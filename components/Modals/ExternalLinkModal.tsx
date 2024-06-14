@@ -42,7 +42,6 @@ export default class ExternalLinkModal extends React.Component<
                 }}
                 onClosed={() => toggleExternalLinkModal(false)}
                 position="bottom"
-                ref="modal"
             >
                 <View
                     style={{

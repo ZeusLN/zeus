@@ -38,7 +38,6 @@ export default class AndroidNfcModal extends React.Component<
                 backButtonClose={false}
                 backdropPressToClose={false}
                 position="bottom"
-                ref="modal"
             >
                 <View
                     style={{

@@ -968,6 +968,8 @@ export default class Receive extends React.Component<
         });
     };
 
+    private modalBoxRef = React.createRef<ModalBox>();
+
     render() {
         const {
             InvoicesStore,
@@ -1055,7 +1057,7 @@ export default class Receive extends React.Component<
         );
 
         const SettingsButton = () => (
-            <TouchableOpacity onPress={() => this.refs.modal.open()}>
+            <TouchableOpacity onPress={() => this.modalBoxRef.current?.open()}>
                 <Gear
                     style={{ alignSelf: 'center' }}
                     fill={themeColor('text')}
@@ -2662,7 +2664,7 @@ export default class Receive extends React.Component<
                     swipeToClose={true}
                     backButtonClose={true}
                     position="bottom"
-                    ref="modal"
+                    ref={this.modalBoxRef}
                 >
                     <Text
                         style={{
@@ -2681,7 +2683,7 @@ export default class Receive extends React.Component<
                             onPress={() => {
                                 InvoicesStore.clearAddress();
                                 this.setState({ addressType: d.value });
-                                this.refs.modal.close();
+                                this.modalBoxRef.current?.close();
                             }}
                             style={{
                                 backgroundColor: themeColor('secondary'),
