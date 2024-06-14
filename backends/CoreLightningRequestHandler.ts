@@ -132,14 +132,12 @@ export const listPeers = async (data: any) => {
 // Get all chain transactions from your core-lightnig node
 export const getChainTransactions = async () => {
     const results = await Promise.allSettled([
-        api.postRequest('/v1/bkpr-listaccountevents', { account: 'wallet' }),
-        api.postRequest('/v1/bkpr-listaccountevents', { account: 'external' }),
+        api.postRequest('/v1/bkpr-listaccountevents'),
         api.postRequest('/v1/listtransactions'),
         api.postRequest('/v1/getinfo')
     ]);
 
-    const [walletTxsResult, externalTxsResult, listTxsResult, getinfoResult] =
-        results;
+    const [walletTxsResult, listTxsResult, getinfoResult] = results;
 
     // If getinfo fails, return blank txs
     if (getinfoResult.status !== 'fulfilled') {
@@ -148,17 +146,24 @@ export const getChainTransactions = async () => {
 
     const getinfo = getinfoResult.value;
 
+    const allTxs =
+        walletTxsResult.status === 'fulfilled'
+            ? walletTxsResult.value.events.filter(
+                  (tx: any) => tx.type !== 'onchain_fee'
+              )
+            : { events: [] };
+
     const walletTxs =
         walletTxsResult.status === 'fulfilled'
             ? walletTxsResult.value.events.filter(
-                  (tx: any) => tx.tag === 'deposit'
+                  (tx: any) => tx.tag === 'deposit' && tx.account === 'wallet'
               )
             : { events: [] };
 
     const externalTxs =
-        externalTxsResult.status === 'fulfilled'
-            ? externalTxsResult.value.events.filter(
-                  (tx: any) => tx.tag === 'deposit'
+        walletTxsResult.status === 'fulfilled'
+            ? walletTxsResult.value.events.filter(
+                  (tx: any) => tx.tag === 'deposit' && tx.account === 'external'
               )
             : { events: [] };
 
@@ -167,21 +172,47 @@ export const getChainTransactions = async () => {
             ? listTxsResult.value
             : { transactions: [] };
 
-    console.log('wallet txs', walletTxs);
-    console.log('external txs', externalTxs);
-    console.log('list txs are', JSON.stringify(listTxs));
-
     const transactions = listTxs.transactions
         .map((tx: any) => {
             const withdrawal = externalTxs.find((n: any) => {
                 const txid = n.outpoint ? n.outpoint.split(':')[0] : null;
 
-                console.log(tx.hash, txid);
+                // Check if the deposit is associated with a channel open or close
+                const isChannelChange = allTxs.find((c: any) => {
+                    if (!c.outpoint) {
+                        return undefined;
+                    }
+
+                    return (
+                        c.outpoint.split(':')[0] === tx.hash &&
+                        (c.tag === 'channel_open' || c.tag === 'channel_close')
+                    );
+                });
+
+                if (isChannelChange) {
+                    return undefined;
+                }
+
                 return txid === tx.hash;
             });
 
             const deposit = walletTxs.find((n: any) => {
                 const txid = n.outpoint ? n.outpoint.split(':')[0] : null;
+
+                // Check if the deposit is associated with a channel open or close
+                const isChannelChange = allTxs.find((c: any) => {
+                    if (!c.outpoint) {
+                        return undefined;
+                    }
+                    return (
+                        c.outpoint.split(':')[0] === tx.hash &&
+                        (c.tag === 'channel_open' || c.tag === 'channel_close')
+                    );
+                });
+
+                if (isChannelChange) {
+                    return undefined;
+                }
 
                 return txid === tx.hash;
             });
