@@ -135,7 +135,7 @@ export default class UTXOPicker extends React.Component<
                         <View
                             style={{
                                 ...styles.modal,
-                                backgroundColor: themeColor('background')
+                                backgroundColor: themeColor('secondary')
                             }}
                         >
                             {showUtxoModal && (
