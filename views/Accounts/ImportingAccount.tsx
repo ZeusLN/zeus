@@ -66,7 +66,7 @@ export default class ImportingAccount extends React.Component<
                         />
                     )}
                     <KeyValue
-                        keyValue={localeString('views.ImportAccount.name')}
+                        keyValue={localeString('general.accountName')}
                         value={name}
                     />
 
@@ -89,9 +89,7 @@ export default class ImportingAccount extends React.Component<
                     )}
 
                     <KeyValue
-                        keyValue={localeString(
-                            'views.ImportAccount.addressType'
-                        )}
+                        keyValue={localeString('general.addressType')}
                         value={
                             walletrpc.AddressType[address_type] || address_type
                         }
