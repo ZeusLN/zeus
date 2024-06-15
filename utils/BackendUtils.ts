@@ -108,6 +108,7 @@ class BackendUtils {
     getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
+    listAddresses = (...args: any[]) => this.call('listAddresses', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
     verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
     lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
@@ -175,6 +176,8 @@ class BackendUtils {
     supportsOffers = () => this.call('supportsOffers');
     supportsBolt11BlindedRoutes = () =>
         this.call('supportsBolt11BlindedRoutes');
+    supportsAddressesWithDerivationPaths = () =>
+        this.call('supportsAddressesWithDerivationPaths');
     isLNDBased = () => this.call('isLNDBased');
     supportInboundFees = () => this.call('supportInboundFees');
 

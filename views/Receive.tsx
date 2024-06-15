@@ -116,6 +116,7 @@ interface ReceiveProps {
             orderTip: string;
             exchangeRate: string;
             rate: number;
+            hideRightHeaderComponent: boolean;
         }
     >;
 }
@@ -148,6 +149,7 @@ interface ReceiveState {
     lspNotConfigured: boolean;
     routeHintMode: RouteHintMode;
     selectedRouteHintChannels?: Channel[];
+    hideRightHeaderComponent?: boolean;
 }
 
 enum RouteHintMode {
@@ -280,19 +282,20 @@ export default class Receive extends React.Component<
             autoGenerate,
             autoGenerateOnChain,
             account,
-            selectedIndex
+            selectedIndex,
+            hideRightHeaderComponent
         } = route.params ?? {};
 
+        if (hideRightHeaderComponent) {
+            this.setState({ hideRightHeaderComponent });
+        }
+
         if (account) {
-            this.setState({
-                account
-            });
+            this.setState({ account });
         }
 
         if (selectedIndex) {
-            this.setState({
-                selectedIndex
-            });
+            this.setState({ selectedIndex });
         }
 
         const {
@@ -1051,7 +1054,8 @@ export default class Receive extends React.Component<
             lspNotConfigured,
             routeHintMode,
             selectedRouteHintChannels,
-            blindedPaths
+            blindedPaths,
+            hideRightHeaderComponent
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1439,7 +1443,8 @@ export default class Receive extends React.Component<
                     rightComponent={
                         loading ||
                         watchedInvoicePaid ||
-                        posStatus === 'active' ? null : haveInvoice ? (
+                        posStatus === 'active' ||
+                        hideRightHeaderComponent ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
                             BackendUtils.supportsAddressTypeSelection() &&
