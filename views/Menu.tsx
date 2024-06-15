@@ -28,6 +28,7 @@ import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
 import ReceiveIcon from '../assets/images/SVG/Receive.svg';
 import RoutingIcon from '../assets/images/SVG/Routing.svg';
 import WrenchIcon from '../assets/images/SVG/Wrench.svg';
+import OnChainAddressesIcon from '../assets/images/SVG/on-chain_addresses.svg';
 
 import Header from '../components/Header';
 import NodeIdenticon, { NodeTitle } from '../components/NodeIdenticon';
@@ -468,6 +469,51 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 </TouchableOpacity>
                             </View>
                         )}
+
+                    {BackendUtils.supportsAddressesWithDerivationPaths() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('OnChainAddresses')
+                                }
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <OnChainAddressesIcon
+                                            fill={themeColor('text')}
+                                            stroke={themeColor('text')}
+                                            color={themeColor('text')}
+                                            height={22}
+                                            width={22}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.OnChainAddresses.title'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {selectedNode && BackendUtils.supportsOffers() && (
                         <View
