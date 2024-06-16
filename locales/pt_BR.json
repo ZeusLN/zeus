@@ -978,6 +978,8 @@
     "views.LSPS1.minOnchainPaymentSize": "Tamanho mínimo de pagamento onchain",
     "views.LSPS1.supportZeroChannelReserve": "Suporta reserva de canal zero",
     "views.LSPS1.requiredChannelConfirmations": "Confirmações de canal necessárias",
+    "views.LSPS1.minFundingConfirmWithingBlocks": "Minimum funding confirm withing blocks",
+    "views.LSPS1.minRequiredChannelConfirmations": "Minimum required channel confirmations",
     "views.LSPS1.token": "Token",
     "views.LSPS1.refundOnchainAddress": "Endereço onchain de reembolso",
     "views.LSPS1.getQuote": "Obter cotação",
