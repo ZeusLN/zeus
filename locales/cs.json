@@ -978,6 +978,8 @@
     "views.LSPS1.minOnchainPaymentSize": "Minimální výše on-chain platby",
     "views.LSPS1.supportZeroChannelReserve": "Podpora nulové rezervy kanálu",
     "views.LSPS1.requiredChannelConfirmations": "Požadovaná potvrzení kanálu",
+    "views.LSPS1.minFundingConfirmWithingBlocks": "Minimum funding confirm withing blocks",
+    "views.LSPS1.minRequiredChannelConfirmations": "Minimální vyžadovaný počet potvrzení kanálu",
     "views.LSPS1.token": "Token",
     "views.LSPS1.refundOnchainAddress": "Refundace on-chain adresy",
     "views.LSPS1.getQuote": "Získat nabídku",
