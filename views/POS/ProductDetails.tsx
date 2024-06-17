@@ -106,7 +106,7 @@ export default class ProductDetails extends React.Component<
                         name: '',
                         sku: '',
                         pricedIn: PricedIn.Fiat,
-                        price: 0,
+                        price: '',
                         category: '',
                         status: ProductStatus.Active
                     }),
@@ -159,10 +159,11 @@ export default class ProductDetails extends React.Component<
                 case 'price':
                     if (
                         value === '' ||
+                        value === '0' ||
                         value === null ||
                         isNaN(parseFloat(value))
                     ) {
-                        value = 0;
+                        value = '';
                     }
                     value = value;
                     break;
@@ -318,11 +319,7 @@ export default class ProductDetails extends React.Component<
                                             />
                                         </View>
                                         <AmountInput
-                                            amount={
-                                                product?.price
-                                                    ? String(product?.price)
-                                                    : ''
-                                            }
+                                            amount={product?.price}
                                             title={localeString(
                                                 'views.Settings.POS.Product.price'
                                             )}
