@@ -31,6 +31,12 @@ import {
 
 import { lnrpc } from '../proto/lightning';
 
+export const NEUTRINO_PING_TIMEOUT_MS = 1500;
+
+export const NEUTRINO_PING_OPTIMAL_MS = 200;
+export const NEUTRINO_PING_LAX_MS = 500;
+export const NEUTRINO_PING_THRESHOLD_MS = 1000;
+
 export const LndMobileEventEmitter =
     Platform.OS == 'android'
         ? DeviceEventEmitter
@@ -69,9 +75,6 @@ export function checkLndStreamErrorResponse(
     }
     return null;
 }
-
-export const NEUTRINO_PING_TIMEOUT_MS = 1500;
-export const NEUTRINO_PING_THRESHOLD_MS = 1000;
 
 const writeLndConfig = async (
     isTestnet?: boolean,
@@ -289,15 +292,13 @@ export async function startLnd(
     });
 }
 
-export async function chooseNeutrinoPeers(isTestnet?: boolean) {
-    console.log(
-        `Selecting Neutrino peers with ping times <${NEUTRINO_PING_THRESHOLD_MS}ms`
-    );
+export async function optimizeNeutrinoPeers(isTestnet?: boolean) {
+    console.log('Optimizing Neutrino peers');
     let peers = isTestnet
         ? DEFAULT_NEUTRINO_PEERS_TESTNET
         : DEFAULT_NEUTRINO_PEERS_MAINNET;
 
-    const results: any = [];
+    const resultsMain: any = [];
     for (let i = 0; i < peers.length; i++) {
         const peer = peers[i];
         await new Promise(async (resolve) => {
@@ -306,14 +307,14 @@ export async function chooseNeutrinoPeers(isTestnet?: boolean) {
                     timeout: NEUTRINO_PING_TIMEOUT_MS
                 });
                 console.log(`# ${peer} - ${ms}`);
-                results.push({
+                resultsMain.push({
                     peer,
                     ms
                 });
                 resolve(true);
             } catch (e) {
                 console.log('e', e);
-                results.push({
+                resultsMain.push({
                     peer,
                     ms: 'Timed out'
                 });
@@ -322,14 +323,75 @@ export async function chooseNeutrinoPeers(isTestnet?: boolean) {
         });
     }
 
-    let filteredResults = results.filter((result: any) => {
+    // Optimal
+
+    const selectedPeers: string[] = [];
+
+    console.log(
+        `Adding Neutrino peers with ping times <${NEUTRINO_PING_OPTIMAL_MS}ms`
+    );
+
+    const optimalResults = resultsMain.filter((result: any) => {
         return (
-            Number.isInteger(result.ms) &&
-            result.ms < NEUTRINO_PING_THRESHOLD_MS
+            Number.isInteger(result.ms) && result.ms < NEUTRINO_PING_OPTIMAL_MS
         );
     });
 
-    if (filteredResults.length < 3 && !isTestnet) {
+    optimalResults.forEach((result: any) => {
+        selectedPeers.push(result.peer);
+    });
+
+    console.log('Peers count:', selectedPeers.length);
+
+    // Lax
+
+    if (selectedPeers.length < 3) {
+        console.log(
+            `Adding Neutrino peers with ping times <${NEUTRINO_PING_LAX_MS}ms`
+        );
+
+        const laxResults = resultsMain.filter((result: any) => {
+            return (
+                Number.isInteger(result.ms) && result.ms < NEUTRINO_PING_LAX_MS
+            );
+        });
+
+        laxResults.forEach((result: any) => {
+            selectedPeers.push(result.peer);
+        });
+
+        console.log('Peers count:', selectedPeers.length);
+    }
+
+    // Threshold
+
+    if (selectedPeers.length < 3) {
+        console.log(
+            `Selecting Neutrino peers with ping times <${NEUTRINO_PING_THRESHOLD_MS}ms`
+        );
+
+        const thresholdResults = resultsMain.filter((result: any) => {
+            return (
+                Number.isInteger(result.ms) &&
+                result.ms < NEUTRINO_PING_THRESHOLD_MS
+            );
+        });
+
+        thresholdResults.forEach((result: any) => {
+            selectedPeers.push(result.peer);
+        });
+
+        console.log('Peers count:', selectedPeers.length);
+    }
+
+    // Extra external peers
+    const resultsSecondary: any = [];
+
+    if (selectedPeers.length < 3 && !isTestnet) {
+        console.log(
+            `Selecting Neutrino peers with ping times <${NEUTRINO_PING_THRESHOLD_MS}ms from alternate set`
+        );
+
         peers = SECONDARY_NEUTRINO_PEERS_MAINNET;
         for (let i = 0; i < peers.length; i++) {
             const peer = peers[i];
@@ -339,14 +401,14 @@ export async function chooseNeutrinoPeers(isTestnet?: boolean) {
                         timeout: NEUTRINO_PING_TIMEOUT_MS
                     });
                     console.log(`# ${peer} - ${ms}`);
-                    results.push({
+                    resultsSecondary.push({
                         peer,
                         ms
                     });
                     resolve(true);
                 } catch (e) {
                     console.log('e', e);
-                    results.push({
+                    resultsSecondary.push({
                         peer,
                         ms: 'Timed out'
                     });
@@ -354,19 +416,20 @@ export async function chooseNeutrinoPeers(isTestnet?: boolean) {
                 }
             });
         }
+
+        const filteredResults = resultsMain.filter((result: any) => {
+            return (
+                Number.isInteger(result.ms) &&
+                result.ms < NEUTRINO_PING_THRESHOLD_MS
+            );
+        });
+
+        filteredResults.forEach((result: any) => {
+            selectedPeers.push(result.peer);
+        });
+
+        console.log('Peers count:', selectedPeers.length);
     }
-
-    filteredResults = results.filter((result: any) => {
-        return (
-            Number.isInteger(result.ms) &&
-            result.ms < NEUTRINO_PING_THRESHOLD_MS
-        );
-    });
-
-    const selectedPeers: string[] = [];
-    filteredResults.forEach((result: any) => {
-        selectedPeers.push(result.peer);
-    });
 
     if (selectedPeers.length > 0) {
         if (isTestnet) {
