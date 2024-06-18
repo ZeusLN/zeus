@@ -22,7 +22,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import {
-    chooseNeutrinoPeers,
+    optimizeNeutrinoPeers,
     createLndWallet
 } from '../../utils/LndMobileUtils';
 
@@ -880,7 +880,7 @@ export default class SeedRecovery extends React.PureComponent<
                                         loading: true
                                     });
 
-                                    await chooseNeutrinoPeers(
+                                    await optimizeNeutrinoPeers(
                                         network === 'testnet'
                                     );
 

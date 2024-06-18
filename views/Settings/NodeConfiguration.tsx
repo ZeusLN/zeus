@@ -52,7 +52,7 @@ import AddIcon from '../../assets/images/SVG/Add.svg';
 
 import { getPhoto } from '../../utils/PhotoUtils';
 import {
-    chooseNeutrinoPeers,
+    optimizeNeutrinoPeers,
     createLndWallet
 } from '../../utils/LndMobileUtils';
 
@@ -600,7 +600,7 @@ export default class NodeConfiguration extends React.Component<
             creatingWallet: true
         });
 
-        await chooseNeutrinoPeers(network === 'Testnet');
+        await optimizeNeutrinoPeers(network === 'Testnet');
 
         const response = await createLndWallet(
             recoveryCipherSeed,

@@ -24,6 +24,7 @@ import SettingsStore, {
     DEFAULT_NEUTRINO_PEERS_TESTNET
 } from '../../../../stores/SettingsStore';
 
+import { optimizeNeutrinoPeers } from '../../../../utils/LndMobileUtils';
 import { localeString } from '../../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../../utils/RestartUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
@@ -46,7 +47,7 @@ interface NeutrinoPeersState {
     pingTime: number;
     pingTimeout: boolean;
     pingHost: string;
-    pinging: boolean;
+    loading: boolean;
 }
 
 @inject('SettingsStore')
@@ -62,7 +63,7 @@ export default class NeutrinoPeers extends React.Component<
         pingTime: 0,
         pingTimeout: false,
         pingHost: '',
-        pinging: false
+        loading: false
     };
 
     remove = (arrOriginal, elementToRemove) => {
@@ -95,7 +96,7 @@ export default class NeutrinoPeers extends React.Component<
             pingTime,
             pingTimeout,
             pingHost,
-            pinging
+            loading
         } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
 
@@ -128,9 +129,9 @@ export default class NeutrinoPeers extends React.Component<
                         navigation={navigation}
                     />
                     <View style={{ flex: 1 }}>
-                        {pinging && <LoadingIndicator />}
+                        {loading && <LoadingIndicator />}
                         {!pingTimeout &&
-                            !pinging &&
+                            !loading &&
                             pingHost &&
                             pingTime <= 200 && (
                                 <SuccessMessage
@@ -139,7 +140,7 @@ export default class NeutrinoPeers extends React.Component<
                                 />
                             )}
                         {!pingTimeout &&
-                            !pinging &&
+                            !loading &&
                             pingHost &&
                             pingTime < NEUTRINO_PING_THRESHOLD_MS &&
                             pingTime > 200 && (
@@ -149,7 +150,7 @@ export default class NeutrinoPeers extends React.Component<
                                 />
                             )}
                         {!pingTimeout &&
-                            !pinging &&
+                            !loading &&
                             pingHost &&
                             pingTime >= NEUTRINO_PING_THRESHOLD_MS && (
                                 <ErrorMessage
@@ -157,7 +158,7 @@ export default class NeutrinoPeers extends React.Component<
                                     dismissable
                                 />
                             )}
-                        {!pinging && pingHost && !!pingTimeout && (
+                        {!loading && pingHost && !!pingTimeout && (
                             <ErrorMessage
                                 message={`${pingHost}: ${localeString(
                                     'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
@@ -272,7 +273,7 @@ export default class NeutrinoPeers extends React.Component<
                                                             pingTime: 0,
                                                             pingTimeout: false,
                                                             pingHost: addPeer,
-                                                            pinging: true
+                                                            loading: true
                                                         });
 
                                                         const ms =
@@ -285,12 +286,12 @@ export default class NeutrinoPeers extends React.Component<
                                                             );
                                                         this.setState({
                                                             pingTime: ms,
-                                                            pinging: false
+                                                            loading: false
                                                         });
                                                     } catch (e) {
                                                         this.setState({
                                                             pingTimeout: true,
-                                                            pinging: false
+                                                            loading: false
                                                         });
                                                     }
                                                 }}
@@ -386,7 +387,7 @@ export default class NeutrinoPeers extends React.Component<
                                                                                 false,
                                                                             pingHost:
                                                                                 item,
-                                                                            pinging:
+                                                                            loading:
                                                                                 true
                                                                         }
                                                                     );
@@ -403,7 +404,7 @@ export default class NeutrinoPeers extends React.Component<
                                                                         {
                                                                             pingTime:
                                                                                 ms,
-                                                                            pinging:
+                                                                            loading:
                                                                                 false
                                                                         }
                                                                     );
@@ -412,7 +413,7 @@ export default class NeutrinoPeers extends React.Component<
                                                                         {
                                                                             pingTimeout:
                                                                                 true,
-                                                                            pinging:
+                                                                            loading:
                                                                                 false
                                                                         }
                                                                     );
@@ -507,6 +508,31 @@ export default class NeutrinoPeers extends React.Component<
                             </View>
                         </ScrollView>
                     </View>
+                    {embeddedLndNetwork === 'Mainnet' && (
+                        <View style={{ marginBottom: 10, marginTop: 10 }}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.EmbeddedNode.NeutrinoPeers.optimize'
+                                )}
+                                onPress={async () => {
+                                    this.setState({
+                                        loading: true
+                                    });
+                                    await optimizeNeutrinoPeers();
+                                    const { getSettings } = SettingsStore;
+                                    const settings = await getSettings();
+                                    this.setState({
+                                        loading: false,
+                                        neutrinoPeers:
+                                            settings.neutrinoPeersMainnet
+                                    });
+
+                                    restartNeeded();
+                                }}
+                                tertiary
+                            />
+                        </View>
+                    )}
                     {(dontAllowOtherPeers ||
                         mainnetPeersChanged ||
                         testnetPeersChanged) && (
