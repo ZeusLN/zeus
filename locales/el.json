@@ -822,6 +822,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Να επιτρέπονται συνδέσεις σε άλλους ομότιμους.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Να μην επιτρέπονται συνδέσεις σε άλλους ομότιμους.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Το σήμα έληξε",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimize peers selection",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Ομότιμοι χρήστες μηδενικών επιβεβαιώσεων",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Ορίστε τους ομότιμους χρήστες από τους οποίους θα θέλατε να δέχεστε lightning κανάλια μηδενικών επιβεβαιώσεων, εκτός από το LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Γρήγορος συγχρονισμός γραφημάτων ",

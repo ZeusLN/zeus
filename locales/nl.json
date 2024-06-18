@@ -822,6 +822,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Allowing connections to other peers.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Not allowing connections to other peers.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimize peers selection",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Set the peers you would like to accept zero conf lightning channels from, other than the LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",

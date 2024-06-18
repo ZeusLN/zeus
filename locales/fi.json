@@ -822,6 +822,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Sallitaan yhteydet muihin vertaisiin.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Ei sallita yhteyksiä muihin vertaisiin.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping aikakatkaistiin",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimize peers selection",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Nollan vahvistuksen vertaiset",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Aseta vertaiset, joilta haluat hyväksyä nollan vahvistuksen salamakanavia, muilta kuin LSP:ltä.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",

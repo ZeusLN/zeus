@@ -822,6 +822,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Verbindungen zu anderen Peers zulassen.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Keine Verbindungen zu anderen Peers zulassen.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping hat Zeitlimit überschritten",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimize peers selection",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero-Conf-Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Lege zusätzliche Peers fest, von denen du Zero-Conf Lightning-Kanäle akzeptieren möchtest (Zero-Conf-Kanäle vom LSP werden immer akzeptiert).",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",
