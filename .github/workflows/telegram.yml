@@ -9,12 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify the commit on Telegram.
-        uses: appleboy/telegram-action@master
+        uses: EverythingSuckz/github-telegram-notify@main
         with:
-          to: ${{ secrets.CHAT_ID }}
-          token: ${{ secrets.BOT_TOKEN }}
-          message: |
-            A ${{ github.event.name }}
-            B ${{ github.actor }}
-            C ${{ github.event.path }}
-            D ${{ github.action }}
+          bot_token: '${{ secrets.BOT_TOKEN }}'
+          chat_id: '${{ secrets.CHAT_ID }}'
