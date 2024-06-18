@@ -822,6 +822,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Consentendo connessioni ad altri coetanei.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Non consente connessioni ad altri coetanei.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Il ping è scaduto",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimize peers selection",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Imposta i coetanei da cui desideri accettare i canali di fulmini a zero conf, oltre all'LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",
