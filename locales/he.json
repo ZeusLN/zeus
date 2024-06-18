@@ -822,6 +822,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "הרשאת חיבורים לעמיתים אחרים.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "חסימת חיבורים לעמיתים אחרים.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimize peers selection",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "עמיתי אפס אישורים",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Set the peers you would like to accept zero conf lightning channels from, other than the LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "סנכרון גרף מהיר",

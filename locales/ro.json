@@ -822,6 +822,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Permițând conexiuni la alți parteneri.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Nu se permite conexiuni la alți parteneri.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping a expirat",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimize peers selection",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Setați partenerii de la care doriți să acceptați canale Lightning Zero Conf, altele decât LSP.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "Express Graph Sync",
