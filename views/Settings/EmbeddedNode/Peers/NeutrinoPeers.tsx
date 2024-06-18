@@ -24,14 +24,14 @@ import SettingsStore, {
     DEFAULT_NEUTRINO_PEERS_TESTNET
 } from '../../../../stores/SettingsStore';
 
-import { optimizeNeutrinoPeers } from '../../../../utils/LndMobileUtils';
-import { localeString } from '../../../../utils/LocaleUtils';
-import { restartNeeded } from '../../../../utils/RestartUtils';
-import { themeColor } from '../../../../utils/ThemeUtils';
 import {
+    optimizeNeutrinoPeers,
     NEUTRINO_PING_THRESHOLD_MS,
     NEUTRINO_PING_TIMEOUT_MS
 } from '../../../../utils/LndMobileUtils';
+import { localeString } from '../../../../utils/LocaleUtils';
+import { restartNeeded } from '../../../../utils/RestartUtils';
+import { themeColor } from '../../../../utils/ThemeUtils';
 
 import Stopwatch from '../../../../assets/images/SVG/Stopwatch.svg';
 
