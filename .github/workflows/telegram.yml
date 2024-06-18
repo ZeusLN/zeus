@@ -14,5 +14,7 @@ jobs:
           to: ${{ secrets.CHAT_ID }}
           token: ${{ secrets.BOT_TOKEN }}
           message: |
-            ${{ github.event.name }}
-            ${{ github.actor }}
+            A ${{ github.event.name }}
+            B ${{ github.actor }}
+            C ${{ github.event.path }}
+            D ${{ github.action }}
