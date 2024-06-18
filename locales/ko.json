@@ -822,6 +822,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "다른 피어들과의 연결을 허용",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "다른 피어들과의 연결을 불허",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping timed out",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimize peers selection",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "제로 컨펌 피어들",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "LSP 외에, 제로 컨펌 라이트닝 채널을 허용할 피어들을 설정합니다.",
     "views.Settings.EmbeddedNode.ExpressGraphSync.title": "고속 그래프 동기화",
