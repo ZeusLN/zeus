@@ -9,6 +9,8 @@ ZEUS is built on TypeScript and React Native. It runs on both Android and iOS.
 
 Read more on our [documentation site](https://docs.zeusln.app/).
 
+We are testing the Telegram bot
+
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple App Store](https://apps.apple.com/us/app/zeus-ln/id1456038895)
