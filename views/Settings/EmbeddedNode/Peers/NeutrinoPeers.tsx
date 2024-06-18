@@ -24,7 +24,7 @@ import SettingsStore, {
     DEFAULT_NEUTRINO_PEERS_TESTNET
 } from '../../../../stores/SettingsStore';
 
-import { chooseNeutrinoPeers } from '../../../../utils/LndMobileUtils';
+import { optimizeNeutrinoPeers } from '../../../../utils/LndMobileUtils';
 import { localeString } from '../../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../../utils/RestartUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
@@ -518,7 +518,7 @@ export default class NeutrinoPeers extends React.Component<
                                     this.setState({
                                         loading: true
                                     });
-                                    await chooseNeutrinoPeers();
+                                    await optimizeNeutrinoPeers();
                                     const { getSettings } = SettingsStore;
                                     const settings = await getSettings();
                                     this.setState({

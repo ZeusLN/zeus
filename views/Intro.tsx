@@ -18,7 +18,10 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
-import { chooseNeutrinoPeers, createLndWallet } from '../utils/LndMobileUtils';
+import {
+    optimizeNeutrinoPeers,
+    createLndWallet
+} from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
@@ -180,7 +183,7 @@ const Intro: React.FC<IntroProps> = (props) => {
 
                                     setChoosingPeers(true);
 
-                                    await chooseNeutrinoPeers(undefined);
+                                    await optimizeNeutrinoPeers(undefined);
 
                                     setCreatingWallet(true);
                                     setChoosingPeers(false);
