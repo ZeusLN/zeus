@@ -21,7 +21,10 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import SettingsStore, { LOCALE_KEYS } from '../stores/SettingsStore';
 
-import { chooseNeutrinoPeers, createLndWallet } from '../utils/LndMobileUtils';
+import {
+    optimizeNeutrinoPeers,
+    createLndWallet
+} from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -252,7 +255,7 @@ export default class IntroSplash extends React.Component<
                                         } = SettingsStore;
 
                                         try {
-                                            await chooseNeutrinoPeers(
+                                            await optimizeNeutrinoPeers(
                                                 undefined
                                             );
                                         } catch (e) {
