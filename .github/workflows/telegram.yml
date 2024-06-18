@@ -13,3 +13,6 @@ jobs:
         with:
           to: ${{ secrets.CHAT_ID }}
           token: ${{ secrets.BOT_TOKEN }}
+          message: |
+            ${{ github.event.name }}
+            ${{ github.actor }}
