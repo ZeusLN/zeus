@@ -58,7 +58,7 @@ export default class Activity extends React.PureComponent<
 
     state = {
         selectedPaymentForOrder: null,
-        isCsvModalVisible: false,
+        isCsvModalVisible: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -139,16 +139,16 @@ export default class Activity extends React.PureComponent<
         const { ActivityStore } = this.props;
         const { startDate, endDate } = ActivityStore.filters;
         const { filteredActivity } = ActivityStore;
-    
+
         if (!startDate || !endDate) {
-          Alert.alert(
-            'Error',
-            'Please select Start and End date.',
-          );
+            Alert.alert('Error', 'Please select Start and End date.');
         } else {
-          this.setState({ isCsvModalVisible: true, filteredData: filteredActivity });
+            this.setState({
+                isCsvModalVisible: true,
+                filteredData: filteredActivity
+            });
         }
-      };
+    };
 
     render() {
         const {
@@ -159,7 +159,7 @@ export default class Activity extends React.PureComponent<
             SettingsStore,
             route
         } = this.props;
-        const { selectedPaymentForOrder , isCsvModalVisible} = this.state;
+        const { selectedPaymentForOrder, isCsvModalVisible } = this.state;
 
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
@@ -274,8 +274,8 @@ export default class Activity extends React.PureComponent<
                                 selectedPaymentForOrder ? (
                                     <MarkPaymentButton />
                                 ) : null
-                                ) : (
-                                    <FilterButton />
+                            ) : (
+                                <FilterButton />
                             )}
                             <DownloadButton />
                         </View>
@@ -283,12 +283,13 @@ export default class Activity extends React.PureComponent<
                     navigation={navigation}
                 />
 
-        <JsonToCsv
-            filteredActivity={filteredActivity}
-            closeModal={() => this.setState({ isCsvModalVisible: false })}
-            isVisible={isCsvModalVisible}
-        />
-
+                <JsonToCsv
+                    filteredActivity={filteredActivity}
+                    closeModal={() =>
+                        this.setState({ isCsvModalVisible: false })
+                    }
+                    isVisible={isCsvModalVisible}
+                />
 
                 {loading ? (
                     <View style={{ padding: 50 }}>
