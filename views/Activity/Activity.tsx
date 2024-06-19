@@ -31,6 +31,8 @@ import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
+import JsonToCsv from './JsonToCsv';
+import { Alert } from 'react-native';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -55,7 +57,8 @@ export default class Activity extends React.PureComponent<
     invoicesListener: any;
 
     state = {
-        selectedPaymentForOrder: null
+        selectedPaymentForOrder: null,
+        isCsvModalVisible: false,
     };
 
     async UNSAFE_componentWillMount() {
@@ -132,6 +135,21 @@ export default class Activity extends React.PureComponent<
         return 'secondaryText';
     };
 
+    handleDownloadPress = () => {
+        const { ActivityStore } = this.props;
+        const { startDate, endDate } = ActivityStore.filters;
+        const { filteredActivity } = ActivityStore;
+    
+        if (!startDate || !endDate) {
+          Alert.alert(
+            'Error',
+            'Please select Start and End date.',
+          );
+        } else {
+          this.setState({ isCsvModalVisible: true, filteredData: filteredActivity });
+        }
+      };
+
     render() {
         const {
             navigation,
@@ -141,7 +159,7 @@ export default class Activity extends React.PureComponent<
             SettingsStore,
             route
         } = this.props;
-        const { selectedPaymentForOrder } = this.state;
+        const { selectedPaymentForOrder , isCsvModalVisible} = this.state;
 
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
@@ -225,6 +243,20 @@ export default class Activity extends React.PureComponent<
             </TouchableOpacity>
         );
 
+        const DownloadButton = () => {
+            return (
+                <Icon
+                    name="download"
+                    type="feather"
+                    onPress={this.handleDownloadPress}
+                    color={themeColor('text')}
+                    underlayColor="transparent"
+                    accessibilityLabel={localeString('general.download')}
+                    size={30}
+                />
+            );
+        };
+
         return (
             <Screen>
                 <Header
@@ -237,16 +269,27 @@ export default class Activity extends React.PureComponent<
                         }
                     }}
                     rightComponent={
-                        order ? (
-                            selectedPaymentForOrder ? (
-                                <MarkPaymentButton />
-                            ) : null
-                        ) : (
-                            <FilterButton />
-                        )
+                        <View style={{ flexDirection: 'row' }}>
+                            {order ? (
+                                selectedPaymentForOrder ? (
+                                    <MarkPaymentButton />
+                                ) : null
+                                ) : (
+                                    <FilterButton />
+                            )}
+                            <DownloadButton />
+                        </View>
                     }
                     navigation={navigation}
                 />
+
+        <JsonToCsv
+            filteredActivity={filteredActivity}
+            closeModal={() => this.setState({ isCsvModalVisible: false })}
+            isVisible={isCsvModalVisible}
+        />
+
+
                 {loading ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
