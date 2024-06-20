@@ -39,7 +39,7 @@ const getSatAmount = (amount: string | number) => {
     const { units } = unitsStore;
 
     // replace , with . for unit separator
-    const value = amount ? amount.toString().replace(/,/g, ',') : '0';
+    const value = amount ? amount.toString().replace(/,/g, ',') : '';
 
     const fiatEntry =
         fiat && fiatRates
@@ -151,8 +151,10 @@ export default class AmountInput extends React.Component<
                         placeholder={'0'}
                         value={amount}
                         onChangeText={(text: string) => {
-                            const satAmount = getSatAmount(text);
-                            onAmountChange(text, satAmount);
+                            // remove spaces and non-numeric chars
+                            const formatted = text.replace(/[^\d.,-]/g, '');
+                            const satAmount = getSatAmount(formatted);
+                            onAmountChange(formatted, satAmount);
                             this.setState({ satAmount });
                         }}
                         locked={locked}
