@@ -554,7 +554,7 @@ export default class CurrencyConverter extends React.Component<
                                                         style={{
                                                             position:
                                                                 'absolute',
-                                                            left: [
+                                                            right: [
                                                                 'BTC',
                                                                 'sats'
                                                             ].includes(item)
