@@ -1,6 +1,6 @@
 name: Notify on Telegram
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, closed, reopened]
   issues:
     types: [opened, pinned, closed, reopened]
