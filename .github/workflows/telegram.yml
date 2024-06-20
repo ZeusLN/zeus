@@ -1,15 +1,16 @@
 name: Notify on Telegram
 on:
-  pull_request_target:
-    types: [opened, closed, reopened]
+  push:
   issues:
     types: [opened, pinned, closed, reopened]
+  release:
+    types: [published]
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
       - name: Notify the commit on Telegram.
-        uses: ZeusLN/github-telegram-notify@main
+        uses: EverythingSuckz/github-telegram-notify@main
         with:
           bot_token: '${{ secrets.BOT_TOKEN }}'
           chat_id: '${{ secrets.CHAT_ID }}'
