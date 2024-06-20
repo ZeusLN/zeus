@@ -163,7 +163,9 @@ export default class ProductDetails extends React.Component<
                         value === null ||
                         isNaN(parseFloat(value))
                     ) {
-                        value = '';
+                        value = '0';
+                    } else {
+                        value = value.replace(/^0+(?=\d)/, '');
                     }
                     value = value;
                     break;
