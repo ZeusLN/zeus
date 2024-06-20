@@ -7,7 +7,6 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
-    secrets: inherit
     steps:
       - name: Notify the commit on Telegram.
         uses: EverythingSuckz/github-telegram-notify@main
