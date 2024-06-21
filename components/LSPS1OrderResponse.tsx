@@ -173,88 +173,247 @@ export default class LSPS1OrderResponse extends React.Component<
                                 }
                             />
                         )}
-                        <KeyValue
-                            keyValue={localeString('views.Payment.title')}
-                        />
-                        {payment?.fee_total_sat && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Transaction.totalFees'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={payment?.fee_total_sat}
-                                        sensitive
-                                        toggleable
+                        {/* Legacy format */}
+                        {payment && !payment.bolt11 && !payment.onchain && (
+                            <>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Payment.title'
+                                    )}
+                                />
+                                {payment?.state && (
+                                    <KeyValue
+                                        keyValue={localeString('general.state')}
+                                        value={payment?.state}
                                     />
-                                }
-                            />
-                        )}
-                        {(payment?.lightning_invoice ||
-                            payment?.bolt11_invoice) && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'general.lightningInvoice'
                                 )}
-                                value={
-                                    payment?.lightning_invoice ||
-                                    payment?.bolt11_invoice
-                                }
-                            />
-                        )}
-                        {payment?.state && (
-                            <KeyValue
-                                keyValue={localeString('general.state')}
-                                value={payment?.state}
-                            />
-                        )}
-                        {payment?.min_fee_for_0conf && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.miniFeeFor0Conf'
-                                )}
-                                value={payment?.min_fee_for_0conf}
-                            />
-                        )}
-                        {payment?.min_onchain_payment_confirmations && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.minOnchainPaymentConfirmations'
-                                )}
-                                value={
-                                    payment?.min_onchain_payment_confirmations
-                                }
-                            />
-                        )}
-                        {payment?.onchain_address && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Settings.AddContact.onchainAddress'
-                                )}
-                                value={payment?.onchain_address}
-                            />
-                        )}
-                        {payment?.onchain_payment && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.onchainPayment'
-                                )}
-                                value={payment?.onchain_payment}
-                            />
-                        )}
-                        {payment?.order_total_sat && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.totalOrderValue'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={payment.order_total_sat}
-                                        toggleable
-                                        sensitive
+                                {payment?.fee_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Transaction.totalFees'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={payment?.fee_total_sat}
+                                                sensitive
+                                                toggleable
+                                            />
+                                        }
                                     />
-                                }
-                            />
+                                )}
+                                {payment?.order_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.totalOrderValue'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={payment?.order_total_sat}
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                )}
+                                {(payment?.lightning_invoice ||
+                                    payment?.bolt11_invoice) && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'general.lightningInvoice'
+                                        )}
+                                        value={
+                                            payment?.lightning_invoice ||
+                                            payment?.bolt11_invoice
+                                        }
+                                    />
+                                )}
+                                {payment?.min_fee_for_0conf && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.miniFeeFor0Conf'
+                                        )}
+                                        value={payment?.min_fee_for_0conf}
+                                    />
+                                )}
+                                {payment?.min_onchain_payment_confirmations && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.minOnchainPaymentConfirmations'
+                                        )}
+                                        value={
+                                            payment?.min_onchain_payment_confirmations
+                                        }
+                                    />
+                                )}
+                                {payment?.onchain_address && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Settings.AddContact.onchainAddress'
+                                        )}
+                                        value={payment?.onchain_address}
+                                    />
+                                )}
+                                {payment?.onchain_payment && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.onchainPayment'
+                                        )}
+                                        value={payment?.onchain_payment}
+                                    />
+                                )}
+                            </>
+                        )}
+                        {/* BOLT11 */}
+                        {payment && payment.bolt11 && (
+                            <>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.LSPS1.bolt11Payment'
+                                    )}
+                                />
+                                {payment?.bolt11.state && (
+                                    <KeyValue
+                                        keyValue={localeString('general.state')}
+                                        value={payment?.bolt11.state}
+                                    />
+                                )}
+                                {payment?.bolt11.fee_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Transaction.totalFees'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    payment?.bolt11
+                                                        .fee_total_sat
+                                                }
+                                                sensitive
+                                                toggleable
+                                            />
+                                        }
+                                    />
+                                )}
+                                {payment?.bolt11.order_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.totalOrderValue'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    payment?.bolt11
+                                                        .order_total_sat
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                )}
+                                {payment?.bolt11.expires_at && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'general.expiresAt'
+                                        )}
+                                        value={moment(
+                                            payment?.bolt11.expires_at
+                                        ).format('MMM Do YYYY, h:mm:ss a')}
+                                    />
+                                )}
+                                {payment?.bolt11.invoice && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Invoice.title'
+                                        )}
+                                        value={payment?.bolt11.invoice}
+                                    />
+                                )}
+                            </>
+                        )}
+                        {/* On-chain */}
+                        {payment && payment.onchain && (
+                            <>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'iews.LSPS1.onchainPayment'
+                                    )}
+                                />
+                                {payment?.onchain.fee_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Transaction.totalFees'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    payment?.onchain
+                                                        .fee_total_sat
+                                                }
+                                                sensitive
+                                                toggleable
+                                            />
+                                        }
+                                    />
+                                )}
+                                {payment?.onchain.order_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.totalOrderValue'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    payment?.onchain
+                                                        .order_total_sat
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                )}
+                                {payment?.onchain.expires_at && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'general.expiresAt'
+                                        )}
+                                        value={moment(
+                                            payment?.onchain.expires_at
+                                        ).format('MMM Do YYYY, h:mm:ss a')}
+                                    />
+                                )}
+                                {payment?.onchain.address && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'general.address'
+                                        )}
+                                        value={payment?.onchain.address}
+                                    />
+                                )}
+                                {payment?.onchain.min_fee_for_0conf && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.miniFeeFor0Conf'
+                                        )}
+                                        value={
+                                            payment?.onchain.min_fee_for_0conf
+                                        }
+                                    />
+                                )}
+                                {payment?.onchain
+                                    .min_onchain_payment_confirmations && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.minOnchainPaymentConfirmations'
+                                        )}
+                                        value={
+                                            payment?.onchain
+                                                .min_onchain_payment_confirmations
+                                        }
+                                    />
+                                )}
+                            </>
                         )}
                         {channel && (
                             <>
@@ -294,30 +453,82 @@ export default class LSPS1OrderResponse extends React.Component<
                             </>
                         )}
                         {orderResponse?.order_state === 'CREATED' && orderView && (
-                            <Button
-                                title={localeString('views.LSPS1.makePayment')}
-                                containerStyle={{
-                                    paddingVertical: 20
-                                }}
-                                onPress={() => {
-                                    InvoicesStore.getPayReq(
-                                        payment.lightning_invoice ||
-                                            payment.bolt11_invoice
-                                    )
-                                        .then(() => {
-                                            navigation.navigate(
-                                                'PaymentRequest',
-                                                {}
-                                            );
-                                        })
-                                        .catch((error: any) =>
-                                            console.error(
-                                                'Error fetching payment request:',
-                                                error
-                                            )
-                                        );
-                                }}
-                            />
+                            <>
+                                {payment.bolt11?.invoice ||
+                                    payment.lightning_invoice ||
+                                    (payment.bolt11_invoice && (
+                                        <>
+                                            <Button
+                                                title={
+                                                    payment.onchain
+                                                        ? localeString(
+                                                              'views.LSPS1.makePaymentLN'
+                                                          )
+                                                        : localeString(
+                                                              'views.LSPS1.makePayment'
+                                                          )
+                                                }
+                                                containerStyle={{
+                                                    paddingVertical: 20
+                                                }}
+                                                onPress={() => {
+                                                    InvoicesStore.getPayReq(
+                                                        payment.bolt11
+                                                            ?.invoice ||
+                                                            payment.lightning_invoice ||
+                                                            payment.bolt11_invoice
+                                                    )
+                                                        .then(() => {
+                                                            navigation.navigate(
+                                                                'PaymentRequest',
+                                                                {}
+                                                            );
+                                                        })
+                                                        .catch((error: any) =>
+                                                            console.error(
+                                                                'Error fetching payment request:',
+                                                                error
+                                                            )
+                                                        );
+                                                }}
+                                            />
+                                        </>
+                                    ))}
+                                {payment.onchain?.address &&
+                                    payment.onchain?.fee_total_sat && (
+                                        <>
+                                            <Button
+                                                title={
+                                                    payment.bolt11
+                                                        ? localeString(
+                                                              'views.LSPS1.makePaymentOnchain'
+                                                          )
+                                                        : localeString(
+                                                              'views.LSPS1.makePayment'
+                                                          )
+                                                }
+                                                containerStyle={{
+                                                    paddingVertical: 20
+                                                }}
+                                                onPress={() => {
+                                                    navigation.navigate(
+                                                        'Send',
+                                                        {
+                                                            destination:
+                                                                payment.onchain
+                                                                    ?.address,
+                                                            amount: payment
+                                                                .onchain
+                                                                ?.fee_total_sat,
+                                                            transactionType:
+                                                                'On-chain'
+                                                        }
+                                                    );
+                                                }}
+                                            />
+                                        </>
+                                    )}
+                            </>
                         )}
                     </View>
                 </ScrollView>
