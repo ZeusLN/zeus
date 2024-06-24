@@ -14,6 +14,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import SwipeButton from '../components/SwipeButton';
 import Conversion from '../components/Conversion';
 import FeeLimit from '../components/FeeLimit';
 import Header from '../components/Header';
@@ -1044,49 +1045,41 @@ export default class PaymentRequest extends React.Component<
                                 </>
                             )}
 
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.PaymentRequest.payInvoice'
-                                    )}
-                                    icon={
-                                        lightningReadyToSend
-                                            ? {
-                                                  name: 'send',
-                                                  size: 25
-                                              }
-                                            : undefined
-                                    }
-                                    onPress={() => {
-                                        if (isZaplocker)
-                                            LnurlPayStore.broadcastAttestation();
-                                        this.sendPayment({
-                                            payment_request: paymentRequest,
-                                            amount: satAmount
-                                                ? satAmount.toString()
-                                                : undefined,
-                                            max_parts: enableMultiPathPayment
-                                                ? maxParts
-                                                : null,
-                                            max_shard_amt:
-                                                enableMultiPathPayment
-                                                    ? maxShardAmt
-                                                    : null,
-                                            fee_limit_sat: isLnd
-                                                ? feeLimitSat
-                                                : null,
-                                            max_fee_percent: isCLightning
-                                                ? maxFeePercentFormatted
-                                                : null,
-                                            outgoing_chan_id: outgoingChanId,
-                                            last_hop_pubkey: lastHopPubkey,
-                                            amp: enableAmp,
-                                            timeout_seconds: timeoutSeconds
-                                        });
-                                    }}
-                                    disabled={!lightningReadyToSend}
-                                />
-                            </View>
+                            <SwipeButton
+                                onSwipeSuccess={() => {
+                                    if (isZaplocker)
+                                        LnurlPayStore.broadcastAttestation();
+                                    this.sendPayment({
+                                        payment_request: paymentRequest,
+                                        amount: satAmount
+                                            ? satAmount.toString()
+                                            : undefined,
+                                        max_parts: enableMultiPathPayment
+                                            ? maxParts
+                                            : null,
+                                        max_shard_amt: enableMultiPathPayment
+                                            ? maxShardAmt
+                                            : null,
+                                        fee_limit_sat: isLnd
+                                            ? feeLimitSat
+                                            : null,
+                                        max_fee_percent: isCLightning
+                                            ? maxFeePercentFormatted
+                                            : null,
+                                        outgoing_chan_id: outgoingChanId,
+                                        last_hop_pubkey: lastHopPubkey,
+                                        amp: enableAmp,
+                                        timeout_seconds: timeoutSeconds
+                                    });
+                                }}
+                                instructionText="SWIPE TO PAY"
+                                containerStyle={{
+                                    backgroundColor: themeColor('secondaryText')
+                                }}
+                                swipeButtonStyle={{
+                                    backgroundColor: themeColor('text')
+                                }}
+                            />
                         </View>
                     )}
             </Screen>
