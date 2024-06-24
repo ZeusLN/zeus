@@ -47,6 +47,30 @@ export default class LSPS1OrderResponse extends React.Component<
             <Screen>
                 <ScrollView>
                     <View style={{ paddingHorizontal: 20 }}>
+                        {orderResponse?.order_id && (
+                            <KeyValue
+                                keyValue={localeString('views.LSPS1.orderId')}
+                                value={orderResponse?.order_id}
+                            />
+                        )}
+                        {orderResponse?.lsp_balance_sat &&
+                            orderResponse?.client_balance_sat && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.channelBalance'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={
+                                                orderResponse?.client_balance_sat +
+                                                orderResponse?.lsp_balance_sat
+                                            }
+                                            sensitive
+                                            toggleable
+                                        />
+                                    }
+                                />
+                            )}
                         {orderResponse?.lsp_balance_sat && (
                             <KeyValue
                                 keyValue={localeString(
@@ -75,24 +99,6 @@ export default class LSPS1OrderResponse extends React.Component<
                                 }
                             />
                         )}
-                        {orderResponse?.lsp_balance_sat &&
-                            orderResponse?.client_balance_sat && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.LSPS1.totalBalance'
-                                    )}
-                                    value={
-                                        <Amount
-                                            sats={
-                                                orderResponse?.client_balance_sat +
-                                                orderResponse?.lsp_balance_sat
-                                            }
-                                            sensitive
-                                            toggleable
-                                        />
-                                    }
-                                />
-                            )}
                         {orderResponse?.announce_channel && (
                             <KeyValue
                                 keyValue={localeString(
@@ -131,29 +137,6 @@ export default class LSPS1OrderResponse extends React.Component<
                                 }
                             />
                         )}
-                        {orderResponse?.created_at && (
-                            <KeyValue
-                                keyValue={localeString('general.createdAt')}
-                                value={moment(orderResponse?.created_at).format(
-                                    'MMM Do YYYY, h:mm:ss a'
-                                )}
-                            />
-                        )}
-                        {orderResponse?.expires_at && (
-                            <KeyValue
-                                keyValue={localeString('general.expiresAt')}
-                                value={moment(orderResponse?.expires_at).format(
-                                    'MMM Do YYYY, h:mm:ss a'
-                                )}
-                            />
-                        )}
-
-                        {orderResponse?.order_id && (
-                            <KeyValue
-                                keyValue={localeString('views.LSPS1.orderId')}
-                                value={orderResponse?.order_id}
-                            />
-                        )}
                         {orderResponse?.order_state && (
                             <KeyValue
                                 keyValue={localeString(
@@ -173,6 +156,22 @@ export default class LSPS1OrderResponse extends React.Component<
                                 }
                             />
                         )}
+                        {orderResponse?.created_at && (
+                            <KeyValue
+                                keyValue={localeString('general.createdAt')}
+                                value={moment(orderResponse?.created_at).format(
+                                    'MMM Do YYYY, h:mm:ss a'
+                                )}
+                            />
+                        )}
+                        {orderResponse?.expires_at && (
+                            <KeyValue
+                                keyValue={localeString('general.expiresAt')}
+                                value={moment(orderResponse?.expires_at).format(
+                                    'MMM Do YYYY, h:mm:ss a'
+                                )}
+                            />
+                        )}
                         {/* Legacy format */}
                         {payment && !payment.bolt11 && !payment.onchain && (
                             <>
@@ -187,30 +186,30 @@ export default class LSPS1OrderResponse extends React.Component<
                                         value={payment?.state}
                                     />
                                 )}
-                                {payment?.fee_total_sat && (
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Transaction.totalFees'
-                                        )}
-                                        value={
-                                            <Amount
-                                                sats={payment?.fee_total_sat}
-                                                sensitive
-                                                toggleable
-                                            />
-                                        }
-                                    />
-                                )}
                                 {payment?.order_total_sat && (
                                     <KeyValue
                                         keyValue={localeString(
-                                            'views.LSPS1.totalOrderValue'
+                                            'views.LSPS1.orderTotal'
                                         )}
                                         value={
                                             <Amount
                                                 sats={payment?.order_total_sat}
                                                 toggleable
                                                 sensitive
+                                            />
+                                        }
+                                    />
+                                )}
+                                {payment?.fee_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.feeTotal'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={payment?.fee_total_sat}
+                                                sensitive
+                                                toggleable
                                             />
                                         }
                                     />
@@ -277,33 +276,16 @@ export default class LSPS1OrderResponse extends React.Component<
                                         value={payment?.bolt11.state}
                                     />
                                 )}
-                                {payment?.bolt11.fee_total_sat && (
+                                {payment?.bolt11?.order_total_sat && (
                                     <KeyValue
                                         keyValue={localeString(
-                                            'views.Transaction.totalFees'
+                                            'views.LSPS1.orderTotal'
                                         )}
                                         value={
                                             <Amount
                                                 sats={
                                                     payment?.bolt11
-                                                        .fee_total_sat
-                                                }
-                                                sensitive
-                                                toggleable
-                                            />
-                                        }
-                                    />
-                                )}
-                                {payment?.bolt11.order_total_sat && (
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.LSPS1.totalOrderValue'
-                                        )}
-                                        value={
-                                            <Amount
-                                                sats={
-                                                    payment?.bolt11
-                                                        .order_total_sat
+                                                        ?.order_total_sat
                                                 }
                                                 toggleable
                                                 sensitive
@@ -311,6 +293,25 @@ export default class LSPS1OrderResponse extends React.Component<
                                         }
                                     />
                                 )}
+                                {payment?.bolt11?.fee_total_sat &&
+                                    payment?.bolt11?.fee_total_sat !==
+                                        payment?.bolt11?.order_total_sat && (
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.LSPS1.feeTotal'
+                                            )}
+                                            value={
+                                                <Amount
+                                                    sats={
+                                                        payment?.bolt11
+                                                            ?.fee_total_sat
+                                                    }
+                                                    sensitive
+                                                    toggleable
+                                                />
+                                            }
+                                        />
+                                    )}
                                 {payment?.bolt11.expires_at && (
                                     <KeyValue
                                         keyValue={localeString(
@@ -423,20 +424,6 @@ export default class LSPS1OrderResponse extends React.Component<
                                     )}
                                 />
                                 <KeyValue
-                                    keyValue={localeString('general.expiresAt')}
-                                    value={moment(channel?.expires_at).format(
-                                        'MMM Do YYYY, h:mm:ss a'
-                                    )}
-                                />
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.LSPS1.fundedAt'
-                                    )}
-                                    value={moment(channel?.funded_at).format(
-                                        'MMM Do YYYY, h:mm:ss a'
-                                    )}
-                                />
-                                <KeyValue
                                     keyValue={localeString(
                                         'views.LSPS1.fundingOutpoint'
                                     )}
@@ -449,6 +436,20 @@ export default class LSPS1OrderResponse extends React.Component<
                                             testnet
                                         )
                                     }
+                                />
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.LSPS1.fundedAt'
+                                    )}
+                                    value={moment(channel?.funded_at).format(
+                                        'MMM Do YYYY, h:mm:ss a'
+                                    )}
+                                />
+                                <KeyValue
+                                    keyValue={localeString('general.expiresAt')}
+                                    value={moment(channel?.expires_at).format(
+                                        'MMM Do YYYY, h:mm:ss a'
+                                    )}
                                 />
                             </>
                         )}

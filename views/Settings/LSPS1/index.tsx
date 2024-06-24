@@ -516,43 +516,53 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         <KeyValue
                                                             keyValue={`${localeString(
                                                                 'views.Channel.channelBalance'
-                                                            )} (${localeString(
-                                                                'general.sats'
-                                                            )})`}
+                                                            )}`}
                                                             value={`${FiatStore.numberWithCommas(
                                                                 info?.min_channel_balance_sat
                                                             )} - ${FiatStore.numberWithCommas(
                                                                 info?.max_channel_balance_sat
+                                                            )} ${localeString(
+                                                                'general.sats'
                                                             )}`}
                                                         />
                                                     )}
-                                                {info?.max_initial_client_balance_sat !==
-                                                    '0' &&
-                                                    info?.min_initial_client_balance_sat !==
-                                                        '0' && (
-                                                        <KeyValue
-                                                            keyValue={`${localeString(
-                                                                'views.LSPS1.initialClientBalance'
-                                                            )} (${localeString(
-                                                                'general.sats'
-                                                            )})`}
-                                                            value={`${info?.min_initial_client_balance_sat} - ${info?.max_initial_client_balance_sat}`}
-                                                        />
-                                                    )}
-
                                                 {info?.max_initial_lsp_balance_sat &&
                                                     info?.min_initial_lsp_balance_sat && (
                                                         <KeyValue
                                                             keyValue={`${localeString(
                                                                 'views.LSPS1.initialLSPBalance'
-                                                            )} (${localeString(
-                                                                'general.sats'
-                                                            )})`}
+                                                            )}`}
                                                             value={`${FiatStore.numberWithCommas(
                                                                 info?.min_initial_lsp_balance_sat
                                                             )} - ${FiatStore.numberWithCommas(
                                                                 info?.max_initial_lsp_balance_sat
+                                                            )} ${localeString(
+                                                                'general.sats'
                                                             )}`}
+                                                        />
+                                                    )}
+                                                {info?.max_initial_client_balance_sat &&
+                                                    info?.min_initial_client_balance_sat && (
+                                                        <KeyValue
+                                                            keyValue={`${localeString(
+                                                                'views.LSPS1.initialClientBalance'
+                                                            )}`}
+                                                            value={
+                                                                info?.max_initial_client_balance_sat ===
+                                                                info?.min_initial_client_balance_sat
+                                                                    ? `${
+                                                                          info?.min_initial_client_balance_sat
+                                                                      } ${localeString(
+                                                                          'general.sats'
+                                                                      )}`
+                                                                    : `${
+                                                                          info?.min_initial_client_balance_sat
+                                                                      } - ${
+                                                                          info?.max_initial_client_balance_sat
+                                                                      } ${localeString(
+                                                                          'general.sats'
+                                                                      )}`
+                                                            }
                                                         />
                                                     )}
                                                 {info?.max_channel_expiry_blocks && (
