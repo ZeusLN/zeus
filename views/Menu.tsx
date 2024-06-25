@@ -24,6 +24,7 @@ import NetworkIcon from '../assets/images/SVG/Network.svg';
 import MailboxFlagUp from '../assets/images/SVG/MailboxFlagUp.svg';
 import MailboxFlagDown from '../assets/images/SVG/MailboxFlagDown.svg';
 import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
+import RoutingIcon from '../assets/images/SVG/Routing.svg';
 import WrenchIcon from '../assets/images/SVG/Wrench.svg';
 
 import Header from '../components/Header';
@@ -475,6 +476,46 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {selectedNode && BackendUtils.supportsRouting() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Routing')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <RoutingIcon
+                                            stroke={themeColor('text')}
+                                            fill={themeColor('text')}
+                                            width={27}
+                                            height={27}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('general.routing')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
                                     </View>
                                 </View>
                             </TouchableOpacity>
