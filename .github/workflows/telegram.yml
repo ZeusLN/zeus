@@ -1,6 +1,8 @@
 name: Notify on Telegram
 on:
   push:
+    branches:
+      - master
   issues:
     types: [opened, pinned, closed, reopened]
   release:
