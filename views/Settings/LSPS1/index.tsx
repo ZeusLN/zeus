@@ -815,7 +815,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     this.state
                                                         .requiredChannelConfirmations
                                                 }
-                                                onChangeText={(text) =>
+                                                onChangeText={(text: string) =>
                                                     this.setState({
                                                         requiredChannelConfirmations:
                                                             text
@@ -844,7 +844,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     this.state
                                                         .confirmsWithinBlocks
                                                 }
-                                                onChangeText={(text) =>
+                                                onChangeText={(text: string) =>
                                                     this.setState({
                                                         confirmsWithinBlocks:
                                                             text
@@ -928,12 +928,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             <TextInput
                                                 placeholder="Token"
                                                 value={this.state.token}
-                                                onChangeText={(text) =>
+                                                onChangeText={(text: string) =>
                                                     this.setState({
                                                         token: text
                                                     })
                                                 }
                                                 style={styles.textInput}
+                                                autoCapitalize="none"
                                             />
 
                                             {info?.min_onchain_payment_confirmations && (
@@ -957,7 +958,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             this.state
                                                                 .refundOnchainAddress
                                                         }
-                                                        onChangeText={(text) =>
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
                                                             this.setState({
                                                                 refundOnchainAddress:
                                                                     text
