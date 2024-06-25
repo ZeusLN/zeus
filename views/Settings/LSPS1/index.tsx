@@ -908,65 +908,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 style={{
                                                     color: themeColor(
                                                         'secondaryText'
-                                                    ),
-                                                    marginTop: 10
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.LSPS1.requiredChannelConfirmations'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.LSPS1.requiredChannelConfirmations'
-                                                )}
-                                                value={
-                                                    this.state
-                                                        .requiredChannelConfirmations
-                                                }
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        requiredChannelConfirmations:
-                                                            text
-                                                    })
-                                                }
-                                                style={styles.textInput}
-                                                keyboardType="numeric"
-                                            />
-
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.LSPS1.confirmWithinBlocks'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.LSPS1.confirmWithinBlocks'
-                                                )}
-                                                value={
-                                                    this.state
-                                                        .confirmsWithinBlocks
-                                                }
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        confirmsWithinBlocks:
-                                                            text
-                                                    })
-                                                }
-                                                style={styles.textInput}
-                                                keyboardType="numeric"
-                                            />
-
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
                                                     )
                                                 }}
                                             >
@@ -1051,6 +992,64 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     }}
                                                 />
                                             </View>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    marginTop: 10
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.LSPS1.requiredChannelConfirmations'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'views.LSPS1.requiredChannelConfirmations'
+                                                )}
+                                                value={
+                                                    this.state
+                                                        .requiredChannelConfirmations
+                                                }
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        requiredChannelConfirmations:
+                                                            text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                                keyboardType="numeric"
+                                            />
+
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.LSPS1.confirmWithinBlocks'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'views.LSPS1.confirmWithinBlocks'
+                                                )}
+                                                value={
+                                                    this.state
+                                                        .confirmsWithinBlocks
+                                                }
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        confirmsWithinBlocks:
+                                                            text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                                keyboardType="numeric"
+                                            />
                                             <Text
                                                 style={{
                                                     color: themeColor(
