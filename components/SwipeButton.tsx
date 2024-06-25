@@ -35,6 +35,12 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     const swipeButtonWidth = 50;
     const maxTranslation = containerWidth - swipeButtonWidth;
 
+    const textOpacity = pan.interpolate({
+        inputRange: [0, maxTranslation / 2, maxTranslation],
+        outputRange: [1, 0, 0],
+        extrapolate: 'clamp'
+    });
+
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
@@ -70,9 +76,15 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
 
     return (
         <View style={[styles.container, containerStyle]}>
-            <View style={[styles.instructionsContainer, instructionsStyle]}>
+            <Animated.View
+                style={[
+                    styles.instructionsContainer,
+                    instructionsStyle,
+                    { opacity: textOpacity }
+                ]}
+            >
                 <Text style={[styles.instructions]}>{instructionText}</Text>
-            </View>
+            </Animated.View>
             <Animated.View
                 style={[
                     styles.swipeButton,
