@@ -31,23 +31,31 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     const pan = useRef(new Animated.Value(0)).current;
     const screenWidth = Dimensions.get('window').width;
 
+    const containerWidth = screenWidth - 40;
+    const swipeButtonWidth = 50;
+    const maxTranslation = containerWidth - swipeButtonWidth;
+
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onPanResponderGrant: () => {
                 pan.setOffset(pan._value);
+                pan.setValue(0);
             },
-            onPanResponderMove: Animated.event([null, { dx: pan }], {
-                useNativeDriver: false
-            }),
+            onPanResponderMove: (e, gesture) => {
+                const newValue = gesture.dx;
+                if (newValue >= 0 && newValue <= maxTranslation) {
+                    pan.setValue(newValue);
+                }
+            },
             onPanResponderRelease: (
                 e: GestureResponderEvent,
                 gesture: PanResponderGestureState
             ) => {
-                if (gesture.dx > screenWidth * 0.6) {
+                if (gesture.dx > maxTranslation * 0.6) {
                     onSwipeSuccess();
                     Animated.spring(pan, {
-                        toValue: screenWidth - 80,
+                        toValue: maxTranslation,
                         useNativeDriver: false
                     }).start();
                 } else {
