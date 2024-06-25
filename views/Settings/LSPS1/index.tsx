@@ -551,7 +551,11 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         </Text>
                                     </Row>
                                     <Slider
-                                        style={{ width: '100%', height: 40 }}
+                                        style={{
+                                            width: '100%',
+                                            height: 40,
+                                            marginBottom: 10
+                                        }}
                                         minimumValue={parseInt(
                                             info?.min_initial_lsp_balance_sat
                                         )}
@@ -571,6 +575,381 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         }
                                         step={10000}
                                     />
+
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.LSPS1.channelExpiryBlocks'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={localeString(
+                                                'views.LSPS1.channelExpiryBlocks'
+                                            )}
+                                            value={FiatStore.numberWithCommas(
+                                                channelExpiryBlocks
+                                            )}
+                                            onChangeText={(text: any) => {
+                                                let newValue: string | number =
+                                                    parseInt(
+                                                        text.replace(/,/g, ''),
+                                                        10
+                                                    );
+                                                if (isNaN(newValue)) {
+                                                    newValue = '';
+                                                }
+
+                                                let expirationIndex = 5;
+                                                if (newValue === 4380) {
+                                                    expirationIndex = 0;
+                                                } else if (newValue === 13140) {
+                                                    expirationIndex = 1;
+                                                } else if (newValue === 26280) {
+                                                    expirationIndex = 2;
+                                                } else if (newValue === 52560) {
+                                                    expirationIndex = 3;
+                                                }
+
+                                                this.setState({
+                                                    channelExpiryBlocks:
+                                                        newValue,
+                                                    expirationIndex
+                                                });
+                                            }}
+                                            style={styles.textInput}
+                                            keyboardType="numeric"
+                                        />
+                                        <View style={{ marginBottom: 10 }}>
+                                            <ButtonGroup
+                                                onPress={
+                                                    this.updateExpirationIndex
+                                                }
+                                                selectedIndex={expirationIndex}
+                                                buttons={expirationButtons}
+                                                selectedButtonStyle={{
+                                                    backgroundColor:
+                                                        themeColor('highlight'),
+                                                    borderRadius: 12
+                                                }}
+                                                containerStyle={{
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderRadius: 12,
+                                                    borderWidth: 0,
+                                                    height: 30
+                                                }}
+                                                innerBorderStyle={{
+                                                    color: themeColor(
+                                                        'secondary'
+                                                    )
+                                                }}
+                                            />
+                                        </View>
+                                    </>
+                                    {Object.keys(getInfoData).length > 0 && (
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                this.setState({
+                                                    advancedSettings:
+                                                        !advancedSettings
+                                                });
+                                            }}
+                                        >
+                                            <View
+                                                style={{
+                                                    marginBottom: 10
+                                                }}
+                                            >
+                                                <Row justify="space-between">
+                                                    <View
+                                                        style={{ width: '95%' }}
+                                                    >
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'general.advancedSettings'
+                                                            )}
+                                                        />
+                                                    </View>
+                                                    {advancedSettings ? (
+                                                        <CaretDown
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    ) : (
+                                                        <CaretRight
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    )}
+                                                </Row>
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
+
+                                    {advancedSettings && (
+                                        <>
+                                            {info?.max_initial_client_balance_sat !==
+                                                '0' && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {`${localeString(
+                                                            'views.LSPS1.initialClientBalance'
+                                                        )} (${localeString(
+                                                            'general.sats'
+                                                        )})`}
+                                                    </Text>
+                                                    <TextInput
+                                                        placeholder={`${localeString(
+                                                            'views.LSPS1.clientBalance'
+                                                        )} (${localeString(
+                                                            'general.sats'
+                                                        )})`}
+                                                        value={FiatStore.numberWithCommas(
+                                                            clientBalanceSat
+                                                        ).toString()}
+                                                        onChangeText={(
+                                                            text: any
+                                                        ) => {
+                                                            const intValue =
+                                                                parseInt(text);
+                                                            if (isNaN(intValue))
+                                                                return;
+                                                            this.setState({
+                                                                clientBalanceSat:
+                                                                    intValue
+                                                            });
+                                                        }}
+                                                        keyboardType="numeric"
+                                                    />
+                                                    <Row
+                                                        justify="space-between"
+                                                        style={{
+                                                            marginVertical: 10
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {FiatStore.numberWithCommas(
+                                                                info?.min_initial_client_balance_sat
+                                                            )}
+                                                        </Text>
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {FiatStore.numberWithCommas(
+                                                                info?.max_initial_client_balance_sat
+                                                            )}
+                                                        </Text>
+                                                    </Row>
+                                                    <Slider
+                                                        style={{
+                                                            width: '100%',
+                                                            height: 40
+                                                        }}
+                                                        minimumValue={parseInt(
+                                                            info?.min_initial_client_balance_sat
+                                                        )}
+                                                        maximumValue={parseInt(
+                                                            info?.max_initial_client_balance_sat
+                                                        )}
+                                                        minimumTrackTintColor={themeColor(
+                                                            'highlight'
+                                                        )}
+                                                        maximumTrackTintColor="black"
+                                                        thumbTintColor={themeColor(
+                                                            'highlight'
+                                                        )}
+                                                        value={clientBalanceSat}
+                                                        onValueChange={(
+                                                            value: number
+                                                        ) =>
+                                                            this.setState({
+                                                                clientBalanceSat:
+                                                                    value
+                                                            })
+                                                        }
+                                                        step={10000}
+                                                    />
+                                                </>
+                                            )}
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    marginTop: 10
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.LSPS1.requiredChannelConfirmations'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'views.LSPS1.requiredChannelConfirmations'
+                                                )}
+                                                value={
+                                                    this.state
+                                                        .requiredChannelConfirmations
+                                                }
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        requiredChannelConfirmations:
+                                                            text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                                keyboardType="numeric"
+                                            />
+
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.LSPS1.confirmWithinBlocks'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'views.LSPS1.confirmWithinBlocks'
+                                                )}
+                                                value={
+                                                    this.state
+                                                        .confirmsWithinBlocks
+                                                }
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        confirmsWithinBlocks:
+                                                            text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                                keyboardType="numeric"
+                                            />
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.LSPS1.token'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder="Token"
+                                                value={this.state.token}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        token: text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                                autoCapitalize="none"
+                                            />
+
+                                            {info?.min_onchain_payment_confirmations && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.LSPS1.refundOnchainAddress'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        placeholder={localeString(
+                                                            'views.LSPS1.refundOnchainAddress'
+                                                        )}
+                                                        value={
+                                                            this.state
+                                                                .refundOnchainAddress
+                                                        }
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                refundOnchainAddress:
+                                                                    text
+                                                            })
+                                                        }
+                                                        style={styles.textInput}
+                                                    />
+                                                </>
+                                            )}
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    justifyContent:
+                                                        'space-between',
+                                                    alignItems: 'center',
+                                                    marginVertical: 10
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontSize: 16,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.announceChannel'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={
+                                                        this.state
+                                                            .announceChannel
+                                                    }
+                                                    onValueChange={async () => {
+                                                        this.setState({
+                                                            announceChannel:
+                                                                !this.state
+                                                                    .announceChannel
+                                                        });
+                                                    }}
+                                                />
+                                            </View>
+                                        </>
+                                    )}
 
                                     {Object.keys(getInfoData).length > 0 && (
                                         <TouchableOpacity
@@ -756,393 +1135,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 )}
                                             </>
                                         )}
-
-                                    {Object.keys(getInfoData).length > 0 && (
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                this.setState({
-                                                    advancedSettings:
-                                                        !advancedSettings
-                                                });
-                                            }}
-                                        >
-                                            <View
-                                                style={{
-                                                    marginBottom: 10
-                                                }}
-                                            >
-                                                <Row justify="space-between">
-                                                    <View
-                                                        style={{ width: '95%' }}
-                                                    >
-                                                        <KeyValue
-                                                            keyValue={localeString(
-                                                                'general.advancedSettings'
-                                                            )}
-                                                        />
-                                                    </View>
-                                                    {advancedSettings ? (
-                                                        <CaretDown
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    ) : (
-                                                        <CaretRight
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    )}
-                                                </Row>
-                                            </View>
-                                        </TouchableOpacity>
-                                    )}
-
-                                    {advancedSettings && (
-                                        <>
-                                            {info?.max_initial_client_balance_sat !==
-                                                '0' && (
-                                                <>
-                                                    <Text
-                                                        style={{
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {`${localeString(
-                                                            'views.LSPS1.initialClientBalance'
-                                                        )} (${localeString(
-                                                            'general.sats'
-                                                        )})`}
-                                                    </Text>
-                                                    <TextInput
-                                                        placeholder={`${localeString(
-                                                            'views.LSPS1.clientBalance'
-                                                        )} (${localeString(
-                                                            'general.sats'
-                                                        )})`}
-                                                        value={FiatStore.numberWithCommas(
-                                                            clientBalanceSat
-                                                        ).toString()}
-                                                        onChangeText={(
-                                                            text: any
-                                                        ) => {
-                                                            const intValue =
-                                                                parseInt(text);
-                                                            if (isNaN(intValue))
-                                                                return;
-                                                            this.setState({
-                                                                clientBalanceSat:
-                                                                    intValue
-                                                            });
-                                                        }}
-                                                        keyboardType="numeric"
-                                                    />
-                                                    <Row
-                                                        justify="space-between"
-                                                        style={{
-                                                            marginVertical: 10
-                                                        }}
-                                                    >
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'text'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {FiatStore.numberWithCommas(
-                                                                info?.min_initial_client_balance_sat
-                                                            )}
-                                                        </Text>
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'text'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {FiatStore.numberWithCommas(
-                                                                info?.max_initial_client_balance_sat
-                                                            )}
-                                                        </Text>
-                                                    </Row>
-                                                    <Slider
-                                                        style={{
-                                                            width: '100%',
-                                                            height: 40
-                                                        }}
-                                                        minimumValue={parseInt(
-                                                            info?.min_initial_client_balance_sat
-                                                        )}
-                                                        maximumValue={parseInt(
-                                                            info?.max_initial_client_balance_sat
-                                                        )}
-                                                        minimumTrackTintColor={themeColor(
-                                                            'highlight'
-                                                        )}
-                                                        maximumTrackTintColor="black"
-                                                        thumbTintColor={themeColor(
-                                                            'highlight'
-                                                        )}
-                                                        value={clientBalanceSat}
-                                                        onValueChange={(
-                                                            value: number
-                                                        ) =>
-                                                            this.setState({
-                                                                clientBalanceSat:
-                                                                    value
-                                                            })
-                                                        }
-                                                        step={10000}
-                                                    />
-                                                </>
-                                            )}
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.LSPS1.channelExpiryBlocks'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.LSPS1.channelExpiryBlocks'
-                                                )}
-                                                value={FiatStore.numberWithCommas(
-                                                    channelExpiryBlocks
-                                                )}
-                                                onChangeText={(text: any) => {
-                                                    let newValue:
-                                                        | string
-                                                        | number = parseInt(
-                                                        text.replace(/,/g, ''),
-                                                        10
-                                                    );
-                                                    if (isNaN(newValue)) {
-                                                        newValue = '';
-                                                    }
-
-                                                    let expirationIndex = 5;
-                                                    if (newValue === 4380) {
-                                                        expirationIndex = 0;
-                                                    } else if (
-                                                        newValue === 13140
-                                                    ) {
-                                                        expirationIndex = 1;
-                                                    } else if (
-                                                        newValue === 26280
-                                                    ) {
-                                                        expirationIndex = 2;
-                                                    } else if (
-                                                        newValue === 52560
-                                                    ) {
-                                                        expirationIndex = 3;
-                                                    }
-
-                                                    this.setState({
-                                                        channelExpiryBlocks:
-                                                            newValue,
-                                                        expirationIndex
-                                                    });
-                                                }}
-                                                style={styles.textInput}
-                                                keyboardType="numeric"
-                                            />
-                                            <View style={{ marginBottom: 20 }}>
-                                                <ButtonGroup
-                                                    onPress={
-                                                        this
-                                                            .updateExpirationIndex
-                                                    }
-                                                    selectedIndex={
-                                                        expirationIndex
-                                                    }
-                                                    buttons={expirationButtons}
-                                                    selectedButtonStyle={{
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'highlight'
-                                                            ),
-                                                        borderRadius: 12
-                                                    }}
-                                                    containerStyle={{
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'secondary'
-                                                            ),
-                                                        borderRadius: 12,
-                                                        borderWidth: 0,
-                                                        height: 30
-                                                    }}
-                                                    innerBorderStyle={{
-                                                        color: themeColor(
-                                                            'secondary'
-                                                        )
-                                                    }}
-                                                />
-                                            </View>
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    marginTop: 10
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.LSPS1.requiredChannelConfirmations'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.LSPS1.requiredChannelConfirmations'
-                                                )}
-                                                value={
-                                                    this.state
-                                                        .requiredChannelConfirmations
-                                                }
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        requiredChannelConfirmations:
-                                                            text
-                                                    })
-                                                }
-                                                style={styles.textInput}
-                                                keyboardType="numeric"
-                                            />
-
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.LSPS1.confirmWithinBlocks'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.LSPS1.confirmWithinBlocks'
-                                                )}
-                                                value={
-                                                    this.state
-                                                        .confirmsWithinBlocks
-                                                }
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        confirmsWithinBlocks:
-                                                            text
-                                                    })
-                                                }
-                                                style={styles.textInput}
-                                                keyboardType="numeric"
-                                            />
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.LSPS1.token'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder="Token"
-                                                value={this.state.token}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        token: text
-                                                    })
-                                                }
-                                                style={styles.textInput}
-                                                autoCapitalize="none"
-                                            />
-
-                                            {info?.min_onchain_payment_confirmations && (
-                                                <>
-                                                    <Text
-                                                        style={{
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.LSPS1.refundOnchainAddress'
-                                                        )}
-                                                    </Text>
-                                                    <TextInput
-                                                        placeholder={localeString(
-                                                            'views.LSPS1.refundOnchainAddress'
-                                                        )}
-                                                        value={
-                                                            this.state
-                                                                .refundOnchainAddress
-                                                        }
-                                                        onChangeText={(
-                                                            text: string
-                                                        ) =>
-                                                            this.setState({
-                                                                refundOnchainAddress:
-                                                                    text
-                                                            })
-                                                        }
-                                                        style={styles.textInput}
-                                                    />
-                                                </>
-                                            )}
-                                            <View
-                                                style={{
-                                                    flexDirection: 'row',
-                                                    justifyContent:
-                                                        'space-between',
-                                                    alignItems: 'center',
-                                                    marginVertical: 10
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        fontSize: 16,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.OpenChannel.announceChannel'
-                                                    )}
-                                                </Text>
-                                                <Switch
-                                                    value={
-                                                        this.state
-                                                            .announceChannel
-                                                    }
-                                                    onValueChange={async () => {
-                                                        this.setState({
-                                                            announceChannel:
-                                                                !this.state
-                                                                    .announceChannel
-                                                        });
-                                                    }}
-                                                />
-                                            </View>
-                                        </>
-                                    )}
                                 </ScrollView>
                             )}
                         </ScrollView>
