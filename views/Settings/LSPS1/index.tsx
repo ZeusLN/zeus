@@ -83,7 +83,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             requiredChannelConfirmations: '',
             confirmsWithinBlocks: '',
             channelExpiryBlocks: 0,
-            token: '',
+            token: props.SettingsStore.settings?.lsps1Token || '',
             refundOnchainAddress: '',
             showInfo: false,
             advancedSettings: false,
@@ -94,7 +94,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
 
     async componentDidMount() {
-        const { LSPStore } = this.props;
+        const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
         if (BackendUtils.supportsLSPS1rest()) {
             LSPStore.getInfoREST();
@@ -105,6 +105,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             await this.subscribeToCustomMessages();
             this.sendCustomMessage_lsps1();
         }
+
+        navigation.addListener('focus', () => {
+            this.setState({
+                token: SettingsStore.settings?.lsps1Token || ''
+            });
+        });
     }
 
     subscribeToCustomMessages() {

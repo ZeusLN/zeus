@@ -40,6 +40,7 @@ interface LSPS1SettingsState {
     host: string;
     restHost: string;
     lsps1ShowPurchaseButton: boolean;
+    lsps1Token: string;
 }
 
 @inject('LSPStore', 'NodeInfoStore', 'SettingsStore')
@@ -54,7 +55,8 @@ export default class LSPS1Settings extends React.Component<
             pubkey: '',
             host: '',
             restHost: '',
-            lsps1ShowPurchaseButton: true
+            lsps1ShowPurchaseButton: true,
+            lsps1Token: ''
         };
     }
 
@@ -70,7 +72,8 @@ export default class LSPS1Settings extends React.Component<
             lsps1ShowPurchaseButton:
                 settings?.lsps1ShowPurchaseButton !== null
                     ? settings.lsps1ShowPurchaseButton
-                    : true
+                    : true,
+            lsps1Token: settings?.lsps1Token || ''
         });
     }
 
@@ -85,7 +88,8 @@ export default class LSPS1Settings extends React.Component<
                 : DEFAULT_LSPS1_HOST_MAINNET,
             restHost: isTestNet
                 ? DEFAULT_LSPS1_REST_TESTNET
-                : DEFAULT_LSPS1_REST_MAINNET
+                : DEFAULT_LSPS1_REST_MAINNET,
+            lsps1Token: ''
         });
         await this.props.SettingsStore.updateSettings({
             lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
@@ -93,12 +97,14 @@ export default class LSPS1Settings extends React.Component<
             lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
             lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
             lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
-            lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET
+            lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+            lsps1Token: ''
         });
     };
 
     render() {
-        const { pubkey, host, restHost, lsps1ShowPurchaseButton } = this.state;
+        const { pubkey, host, restHost, lsps1ShowPurchaseButton, lsps1Token } =
+            this.state;
         const { navigation, SettingsStore, NodeInfoStore } = this.props;
         const { updateSettings } = SettingsStore;
         const { nodeInfo } = NodeInfoStore;
@@ -231,6 +237,27 @@ export default class LSPS1Settings extends React.Component<
                             />
                         </>
                     )}
+                    <>
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontSize: 16,
+                                marginTop: 12
+                            }}
+                        >
+                            {localeString('views.LSPS1.token')}
+                        </Text>
+                        <TextInput
+                            value={lsps1Token}
+                            onChangeText={async (text: string) => {
+                                this.setState({ lsps1Token: text });
+                                await updateSettings({
+                                    lsps1Token: text
+                                });
+                            }}
+                            autoCapitalize="none"
+                        />
+                    </>
 
                     {!isOlympus && (
                         <Button
