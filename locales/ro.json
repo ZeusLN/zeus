@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Semnătura de hash de plată",
     "views.PaymentRequest.isRelaysSigValid": "Semnătura releelor",
     "views.PaymentRequest.notAllowedToSend": "Acest portofel nu are voie să trimită fonduri!",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "Primește",
     "views.Receive.successCreate": "Creare factură cu succes",
     "views.Receive.warningLndHub": "Rețineți că LNDHub are o adresă on-chain fixă",
