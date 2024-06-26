@@ -200,7 +200,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             jsonrpc: '2.0',
             method: 'lsps1.create_order',
             params: {
-                lsp_balance_sat: this.state.lspBalanceSat,
+                lsp_balance_sat: this.state.lspBalanceSat.toString(),
                 client_balance_sat: this.state.clientBalanceSat.toString(),
                 required_channel_confirmations: parseInt(
                     this.state.requiredChannelConfirmations
