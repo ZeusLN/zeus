@@ -1260,7 +1260,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
                                                 // Navigate to the PaymentRequest screen
                                                 InvoicesStore.getPayReq(
-                                                    payment.lightning_invoice ||
+                                                    payment.bolt11?.invoice ||
+                                                        payment.lightning_invoice ||
                                                         payment.bolt11_invoice
                                                 )
                                                     .then(() => {
