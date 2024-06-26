@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Hash podpisu platby",
     "views.PaymentRequest.isRelaysSigValid": "Podpis relé",
     "views.PaymentRequest.notAllowedToSend": "Tato peněženka nemá povolení odesílat prostředky!",
+    "views.PaymentRequest.slideToPay": "Přejetím zaplatit",
     "views.Receive.title": "Přijmout",
     "views.Receive.successCreate": "Faktura byla úspěšně vytvořena",
     "views.Receive.warningLndHub": "Vezměte prosím na vědomí, že LNDHub má pevnou on-chain adresu.",
