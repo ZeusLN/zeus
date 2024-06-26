@@ -996,6 +996,8 @@
     "views.LSPS1.noOrdersError": "No orders are saved yet!",
     "views.LSPS1.showingPreviousState": "showing previous state!",
     "views.LSPS1.bolt11Payment": "BOLT 11 payment",
+    "views.LSPS1.yourBalance": "Your balance",
+    "views.LSPS1.receiveLimit": "Receive limit",
     "components.UTXOPicker.modal.title": "בחירת מטבעות לשימוש",
     "components.UTXOPicker.modal.description": "בחירת מטבעות שישמשו לפעולה זו, בחירת מטבעות יכול לשמש לשמירה על פרטיות.",
     "components.UTXOPicker.modal.set": "בחירת מטבעות",
