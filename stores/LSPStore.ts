@@ -451,8 +451,8 @@ export default class LSPStore {
     @action
     public createOrderREST = (state: any) => {
         const data = JSON.stringify({
-            lsp_balance_sat: state.lspBalanceSat,
-            client_balance_sat: state.clientBalanceSat,
+            lsp_balance_sat: state.lspBalanceSat.toString(),
+            client_balance_sat: state.clientBalanceSat.toString(),
             required_channel_confirmations: parseInt(
                 state.requiredChannelConfirmations
             ),
