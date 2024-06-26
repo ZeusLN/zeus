@@ -996,6 +996,8 @@
     "views.LSPS1.noOrdersError": "Aucune commande n'est encore enregistrée !",
     "views.LSPS1.showingPreviousState": "montrant l'état précédent !",
     "views.LSPS1.bolt11Payment": "Paiement BOLT 11",
+    "views.LSPS1.yourBalance": "Your balance",
+    "views.LSPS1.receiveLimit": "Receive limit",
     "components.UTXOPicker.modal.title": "Sélectionnez les UTXO à utiliser",
     "components.UTXOPicker.modal.description": "Sélectionnez les UTXO à utiliser dans cette opération. Vous souhaiterez peut-être utiliser uniquement des UTXO spécifiques pour préserver votre confidentialité.",
     "components.UTXOPicker.modal.set": "Définir les UTXO",
