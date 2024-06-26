@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Signatur des Zahlungs-Hashes",
     "views.PaymentRequest.isRelaysSigValid": "Relay-Signatur",
     "views.PaymentRequest.notAllowedToSend": "Diese Wallet ist nicht berechtigt, Guthaben zu senden!",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "Empfangen",
     "views.Receive.successCreate": "Erfolgreich erstellte Rechnung",
     "views.Receive.warningLndHub": "Bitte beachte, dass LNDHub eine feste On-Chain-Adresse nutzt",
