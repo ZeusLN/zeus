@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Firma hash de pago",
     "views.PaymentRequest.isRelaysSigValid": "Firma de relés",
     "views.PaymentRequest.notAllowedToSend": "¡Esta billetera no puede enviar fondos!",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "Recibir",
     "views.Receive.successCreate": "Invoice creado satisfactoriamente ",
     "views.Receive.warningLndHub": "Tenga en cuenta que Lndhub tiene una dirección fija en la cadena",
