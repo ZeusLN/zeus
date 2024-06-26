@@ -996,6 +996,8 @@
     "views.LSPS1.noOrdersError": "Es wurden noch keine Bestellungen gespeichert!",
     "views.LSPS1.showingPreviousState": "showing previous state!",
     "views.LSPS1.bolt11Payment": "BOLT 11 payment",
+    "views.LSPS1.yourBalance": "Your balance",
+    "views.LSPS1.receiveLimit": "Receive limit",
     "components.UTXOPicker.modal.title": "Zu benutzende UTXOs auswählen",
     "components.UTXOPicker.modal.description": "UTXOs auswählen, die bei diesem Vorgang verwendet werden sollen. Gegebenenfalls möchtest du nur bestimmte UTXOs verwenden, um deine Privatsphäre zu schützen.",
     "components.UTXOPicker.modal.set": "UTXOs festlegen",
