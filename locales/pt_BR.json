@@ -996,6 +996,8 @@
     "views.LSPS1.noOrdersError": "Nenhum pedido foi salvo ainda!",
     "views.LSPS1.showingPreviousState": "mostrando o estado anterior!",
     "views.LSPS1.bolt11Payment": "Pagamento BOLT 11",
+    "views.LSPS1.yourBalance": "Your balance",
+    "views.LSPS1.receiveLimit": "Receive limit",
     "components.UTXOPicker.modal.title": "Selecione os UTXOs que deseja usar",
     "components.UTXOPicker.modal.description": "Selecione os UTXOs que serão usados nesta operação. Você pode escolher um único e específico UTXO para não revelar muito sobre seus bitcoins.",
     "components.UTXOPicker.modal.set": "Escolher UTXOs",
