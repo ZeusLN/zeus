@@ -56,6 +56,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                 'views.LSPS1.receiveLimit'
                             )}
                             noBorder
+                            highlightLabels
                         />
                         {orderResponse?.order_id && (
                             <KeyValue
@@ -81,34 +82,6 @@ export default class LSPS1OrderResponse extends React.Component<
                                     }
                                 />
                             )}
-                        {orderResponse?.lsp_balance_sat && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.lspBalance'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={orderResponse?.lsp_balance_sat}
-                                        sensitive
-                                        toggleable
-                                    />
-                                }
-                            />
-                        )}
-                        {orderResponse?.client_balance_sat && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.clientBalance'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={orderResponse?.client_balance_sat}
-                                        sensitive
-                                        toggleable
-                                    />
-                                }
-                            />
-                        )}
                         {orderResponse?.announce_channel && (
                             <KeyValue
                                 keyValue={localeString(
