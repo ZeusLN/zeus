@@ -19,6 +19,7 @@ import { localeString } from './../../utils/LocaleUtils';
 
 export function ChannelItem({
     title,
+    secondTitle,
     inbound,
     outbound,
     largestTotal,
@@ -30,6 +31,7 @@ export function ChannelItem({
     selected
 }: {
     title?: string;
+    secondTitle?: string;
     inbound: number;
     outbound: number;
     largestTotal?: number;
@@ -70,6 +72,16 @@ export function ChannelItem({
                             bold={selected}
                         >
                             {PrivacyUtils.sensitiveValue(title)}
+                        </Body>
+                    </View>
+                )}
+                {secondTitle && (
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                        <Body
+                            color={selected ? 'highlight' : 'text'}
+                            bold={selected}
+                        >
+                            {secondTitle}
                         </Body>
                     </View>
                 )}

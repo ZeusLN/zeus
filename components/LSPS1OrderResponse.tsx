@@ -15,6 +15,7 @@ import UrlUtils from '../utils/UrlUtils';
 import InvoicesStore from '../stores/InvoicesStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import FiatStore from '../stores/FiatStore';
+import { ChannelItem } from './Channels/ChannelItem';
 
 interface LSPS1OrderResponseProps {
     navigation: any;
@@ -47,6 +48,15 @@ export default class LSPS1OrderResponse extends React.Component<
             <Screen>
                 <ScrollView>
                     <View style={{ paddingHorizontal: 20 }}>
+                        <ChannelItem
+                            outbound={orderResponse?.client_balance_sat}
+                            inbound={orderResponse?.lsp_balance_sat}
+                            title={localeString('views.LSPS1.yourBalance')}
+                            secondTitle={localeString(
+                                'views.LSPS1.receiveLimit'
+                            )}
+                            noBorder
+                        />
                         {orderResponse?.order_id && (
                             <KeyValue
                                 keyValue={localeString('views.LSPS1.orderId')}
