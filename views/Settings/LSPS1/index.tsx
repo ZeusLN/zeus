@@ -53,8 +53,8 @@ interface LSPS1Props {
 }
 
 interface LSPS1State {
-    lspBalanceSat: any;
-    clientBalanceSat: any;
+    lspBalanceSat: number | string;
+    clientBalanceSat: number | string;
     requiredChannelConfirmations: any;
     confirmsWithinBlocks: any;
     channelExpiryBlocks: string | number;
@@ -81,7 +81,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         super(props);
         this.state = {
             lspBalanceSat: 0,
-            clientBalanceSat: '0',
+            clientBalanceSat: 0,
             requiredChannelConfirmations: '',
             confirmsWithinBlocks: '',
             channelExpiryBlocks: 'N/A',
@@ -516,13 +516,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             lspBalanceSat
                                         )}
                                         onChangeText={(text: any) => {
-                                            const intValue = parseInt(
-                                                text.replace(/,/g, ''),
-                                                10
+                                            const value = text.replace(
+                                                /,/g,
+                                                ''
                                             );
-                                            if (isNaN(intValue)) return;
                                             this.setState({
-                                                lspBalanceSat: intValue
+                                                lspBalanceSat: value
                                             });
                                         }}
                                         keyboardType="numeric"
@@ -567,7 +566,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         )}
                                         maximumTrackTintColor="black"
                                         thumbTintColor={themeColor('highlight')}
-                                        value={lspBalanceSat}
+                                        value={parseInt(
+                                            lspBalanceSat.toString()
+                                        )}
                                         onValueChange={(value: number) =>
                                             this.setState({
                                                 lspBalanceSat: value
@@ -728,13 +729,14 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         onChangeText={(
                                                             text: any
                                                         ) => {
-                                                            const intValue =
-                                                                parseInt(text);
-                                                            if (isNaN(intValue))
-                                                                return;
+                                                            const value =
+                                                                text.replace(
+                                                                    /,/g,
+                                                                    ''
+                                                                );
                                                             this.setState({
                                                                 clientBalanceSat:
-                                                                    intValue
+                                                                    value
                                                             });
                                                         }}
                                                         keyboardType="numeric"
@@ -786,7 +788,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         thumbTintColor={themeColor(
                                                             'highlight'
                                                         )}
-                                                        value={clientBalanceSat}
+                                                        value={parseInt(
+                                                            clientBalanceSat.toString()
+                                                        )}
                                                         onValueChange={(
                                                             value: number
                                                         ) =>
