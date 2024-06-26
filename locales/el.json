@@ -996,6 +996,8 @@
     "views.LSPS1.noOrdersError": "Οι παραγγελίες δεν έχουν αποθηκευτεί ακόμα!",
     "views.LSPS1.showingPreviousState": "προβολή προηγούμενης κατάστασης!",
     "views.LSPS1.bolt11Payment": "BOLT 11 payment",
+    "views.LSPS1.yourBalance": "Your balance",
+    "views.LSPS1.receiveLimit": "Receive limit",
     "components.UTXOPicker.modal.title": "Επέλεξε UTXOs που θα χρησιμοποιηθούν",
     "components.UTXOPicker.modal.description": "Επιλέξτε τα UTXO που θα χρησιμοποιηθούν σε αυτή τη λειτουργία. Ενδέχεται να θέλετε να χρησιμοποιήσετε μόνο συγκεκριμένα UTXO για να διαφυλάξετε το απόρρητό σας.",
     "components.UTXOPicker.modal.set": "Καθορισμός UTXOs",
