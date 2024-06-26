@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Signature de hash de paiement",
     "views.PaymentRequest.isRelaysSigValid": "Signature des relais",
     "views.PaymentRequest.notAllowedToSend": "Ce portefeuille n'est pas autorisé à envoyer des fonds !",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "Recevoir",
     "views.Receive.successCreate": "Facture créée avec succès",
     "views.Receive.warningLndHub": "Veuillez noter que LNDHub a une adresse fixe sur la chaîne.",
