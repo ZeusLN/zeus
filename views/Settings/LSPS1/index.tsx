@@ -4,11 +4,11 @@ import {
     NativeEventEmitter,
     NativeModules,
     View,
-    Text,
     StyleSheet,
     ScrollView,
     TouchableOpacity
 } from 'react-native';
+import { ButtonGroup, Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Slider from '@react-native-community/slider';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -18,12 +18,16 @@ import CaretDown from '../../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../../assets/images/SVG/Caret Right.svg';
 import OrderList from '../../../assets/images/SVG/order-list.svg';
 
-import Header from '../../../components/Header';
-import Screen from '../../../components/Screen';
-import TextInput from '../../../components/TextInput';
 import Button from '../../../components/Button';
+import Header from '../../../components/Header';
 import KeyValue from '../../../components/KeyValue';
+import LoadingIndicator from '../../../components/LoadingIndicator';
+import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
+import Screen from '../../../components/Screen';
 import Switch from '../../../components/Switch';
+import Text from '../../../components/Text';
+import TextInput from '../../../components/TextInput';
+
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import { Row } from '../../../components/layout/Row';
 
@@ -37,9 +41,6 @@ import ChannelsStore from '../../../stores/ChannelsStore';
 import SettingsStore from '../../../stores/SettingsStore';
 import FiatStore from '../../../stores/FiatStore';
 import NodeInfoStore from '../../../stores/NodeInfoStore';
-import { Icon } from 'react-native-elements';
-import LoadingIndicator from '../../../components/LoadingIndicator';
-import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
 
 interface LSPS1Props {
     LSPStore: LSPStore;
@@ -56,7 +57,8 @@ interface LSPS1State {
     clientBalanceSat: any;
     requiredChannelConfirmations: any;
     confirmsWithinBlocks: any;
-    channelExpiryBlocks: any;
+    channelExpiryBlocks: string | number;
+    expirationIndex: number;
     token: any;
     refundOnchainAddress: any;
     announceChannel: boolean;
@@ -82,8 +84,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             clientBalanceSat: '0',
             requiredChannelConfirmations: '',
             confirmsWithinBlocks: '',
-            channelExpiryBlocks: 0,
-            token: '',
+            channelExpiryBlocks: 'N/A',
+            expirationIndex: 0,
+            token: props.SettingsStore.settings?.lsps1Token || '',
             refundOnchainAddress: '',
             showInfo: false,
             advancedSettings: false,
@@ -94,7 +97,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
 
     async componentDidMount() {
-        const { LSPStore } = this.props;
+        const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
         if (BackendUtils.supportsLSPS1rest()) {
             LSPStore.getInfoREST();
@@ -105,6 +108,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             await this.subscribeToCustomMessages();
             this.sendCustomMessage_lsps1();
         }
+
+        navigation.addListener('focus', () => {
+            this.setState({
+                token: SettingsStore.settings?.lsps1Token || ''
+            });
+        });
     }
 
     subscribeToCustomMessages() {
@@ -240,6 +249,30 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         }
     };
 
+    updateExpirationIndex = (expirationIndex: number) => {
+        if (expirationIndex === 0) {
+            this.setState({
+                channelExpiryBlocks: 4380,
+                expirationIndex: 0
+            });
+        } else if (expirationIndex === 1) {
+            this.setState({
+                channelExpiryBlocks: 13140,
+                expirationIndex: 1
+            });
+        } else if (expirationIndex === 2) {
+            this.setState({
+                channelExpiryBlocks: 26280,
+                expirationIndex: 2
+            });
+        } else if (expirationIndex === 3) {
+            this.setState({
+                channelExpiryBlocks: 52560,
+                expirationIndex: 3
+            });
+        }
+    };
+
     render() {
         const { navigation, LSPStore, InvoicesStore, FiatStore } = this.props;
         const {
@@ -249,10 +282,15 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             clientBalanceSat,
             channelExpiryBlocks,
             requiredChannelConfirmations,
-            confirmsWithinBlocks
+            confirmsWithinBlocks,
+            expirationIndex
         } = this.state;
         const { getInfoData, createOrderResponse } = LSPStore;
-        const options = getInfoData?.result?.options || getInfoData?.options;
+        const info =
+            getInfoData?.result?.options ||
+            getInfoData?.options ||
+            getInfoData?.result ||
+            getInfoData;
         const result = createOrderResponse?.result || createOrderResponse;
         const payment = result?.payment;
 
@@ -287,47 +325,120 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             </TouchableOpacity>
         );
 
-        if (lspBalanceSat === 0 && options?.min_initial_lsp_balance_sat) {
+        if (lspBalanceSat === 0 && info?.min_initial_lsp_balance_sat) {
             this.setState({
-                lspBalanceSat: parseInt(options.min_initial_lsp_balance_sat)
+                lspBalanceSat: parseInt(info.min_initial_lsp_balance_sat)
             });
         }
         if (
             clientBalanceSat === 0 &&
-            options?.min_initial_client_balance_sat > 0
+            info?.min_initial_client_balance_sat > 0
         ) {
             this.setState({
-                clientBalanceSat: parseInt(
-                    options.min_initial_client_balance_sat
-                )
+                clientBalanceSat: parseInt(info.min_initial_client_balance_sat)
             });
         }
 
-        if (channelExpiryBlocks === 0 && options?.max_channel_expiry_blocks) {
+        if (channelExpiryBlocks === 'N/A' && info?.max_channel_expiry_blocks) {
+            const channelExpiryBlocks = parseInt(
+                info.max_channel_expiry_blocks
+            );
+            let expirationIndex = 5;
+            if (channelExpiryBlocks === 4380) {
+                expirationIndex = 0;
+            } else if (channelExpiryBlocks === 13140) {
+                expirationIndex = 1;
+            } else if (channelExpiryBlocks === 26280) {
+                expirationIndex = 2;
+            } else if (channelExpiryBlocks === 52560) {
+                expirationIndex = 3;
+            }
+
             this.setState({
-                channelExpiryBlocks: parseInt(options.max_channel_expiry_blocks)
+                channelExpiryBlocks,
+                expirationIndex
             });
         }
 
         if (
             requiredChannelConfirmations === '' &&
-            options?.min_required_channel_confirmations
+            info?.min_required_channel_confirmations
         ) {
             this.setState({
                 requiredChannelConfirmations:
-                    options?.min_required_channel_confirmations.toString()
+                    info?.min_required_channel_confirmations.toString()
             });
         }
 
         if (
             confirmsWithinBlocks === '' &&
-            options?.min_funding_confirms_within_blocks
+            info?.min_funding_confirms_within_blocks
         ) {
             this.setState({
                 confirmsWithinBlocks:
-                    (options?.min_funding_confirms_within_blocks).toString()
+                    (info?.min_funding_confirms_within_blocks).toString()
             });
         }
+
+        const oneMoButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        expirationIndex === 0
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {localeString('time.1mo')}
+            </Text>
+        );
+        const threeMoButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        expirationIndex === 1
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {localeString('time.3mo')}
+            </Text>
+        );
+        const sixMoButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        expirationIndex === 2
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {localeString('time.6mo')}
+            </Text>
+        );
+        const twelveMoButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        expirationIndex === 3
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {localeString('time.12mo')}
+            </Text>
+        );
+
+        const expirationButtons = [
+            { element: oneMoButton },
+            { element: threeMoButton },
+            { element: sixMoButton },
+            { element: twelveMoButton }
+        ];
 
         return (
             <Screen>
@@ -426,7 +537,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             }}
                                         >
                                             {FiatStore.numberWithCommas(
-                                                options?.min_initial_lsp_balance_sat
+                                                info?.min_initial_lsp_balance_sat
                                             )}
                                         </Text>
                                         <Text
@@ -435,17 +546,21 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             }}
                                         >
                                             {FiatStore.numberWithCommas(
-                                                options?.max_initial_lsp_balance_sat
+                                                info?.max_initial_lsp_balance_sat
                                             )}
                                         </Text>
                                     </Row>
                                     <Slider
-                                        style={{ width: '100%', height: 40 }}
+                                        style={{
+                                            width: '100%',
+                                            height: 40,
+                                            marginBottom: 10
+                                        }}
                                         minimumValue={parseInt(
-                                            options?.min_initial_lsp_balance_sat
+                                            info?.min_initial_lsp_balance_sat
                                         )}
                                         maximumValue={parseInt(
-                                            options?.max_initial_lsp_balance_sat
+                                            info?.max_initial_lsp_balance_sat
                                         )}
                                         minimumTrackTintColor={themeColor(
                                             'highlight'
@@ -461,181 +576,82 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         step={10000}
                                     />
 
-                                    {Object.keys(getInfoData).length > 0 && (
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                this.setState({
-                                                    showInfo: !showInfo
-                                                });
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
-                                            <View
-                                                style={{
-                                                    marginBottom: 10
+                                            {localeString(
+                                                'views.LSPS1.channelExpiryBlocks'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={localeString(
+                                                'views.LSPS1.channelExpiryBlocks'
+                                            )}
+                                            value={FiatStore.numberWithCommas(
+                                                channelExpiryBlocks
+                                            )}
+                                            onChangeText={(text: any) => {
+                                                let newValue: string | number =
+                                                    parseInt(
+                                                        text.replace(/,/g, ''),
+                                                        10
+                                                    );
+                                                if (isNaN(newValue)) {
+                                                    newValue = '';
+                                                }
+
+                                                let expirationIndex = 5;
+                                                if (newValue === 4380) {
+                                                    expirationIndex = 0;
+                                                } else if (newValue === 13140) {
+                                                    expirationIndex = 1;
+                                                } else if (newValue === 26280) {
+                                                    expirationIndex = 2;
+                                                } else if (newValue === 52560) {
+                                                    expirationIndex = 3;
+                                                }
+
+                                                this.setState({
+                                                    channelExpiryBlocks:
+                                                        newValue,
+                                                    expirationIndex
+                                                });
+                                            }}
+                                            style={styles.textInput}
+                                            keyboardType="numeric"
+                                        />
+                                        <View style={{ marginBottom: 10 }}>
+                                            <ButtonGroup
+                                                onPress={
+                                                    this.updateExpirationIndex
+                                                }
+                                                selectedIndex={expirationIndex}
+                                                buttons={expirationButtons}
+                                                selectedButtonStyle={{
+                                                    backgroundColor:
+                                                        themeColor('highlight'),
+                                                    borderRadius: 12
                                                 }}
-                                            >
-                                                <Row justify="space-between">
-                                                    <View
-                                                        style={{ width: '95%' }}
-                                                    >
-                                                        <KeyValue keyValue="LSP info" />
-                                                    </View>
-                                                    {showInfo ? (
-                                                        <CaretDown
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    ) : (
-                                                        <CaretRight
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    )}
-                                                </Row>
-                                            </View>
-                                        </TouchableOpacity>
-                                    )}
-
-                                    {showInfo &&
-                                        getInfoData &&
-                                        Object.keys(createOrderResponse)
-                                            .length == 0 &&
-                                        Object.keys(getInfoData).length > 0 &&
-                                        options && (
-                                            <>
-                                                {options?.max_channel_balance_sat &&
-                                                    options?.min_channel_balance_sat && (
-                                                        <KeyValue
-                                                            keyValue={`${localeString(
-                                                                'views.Channel.channelBalance'
-                                                            )} (${localeString(
-                                                                'general.sats'
-                                                            )})`}
-                                                            value={`${FiatStore.numberWithCommas(
-                                                                options?.min_channel_balance_sat
-                                                            )} - ${FiatStore.numberWithCommas(
-                                                                options?.max_channel_balance_sat
-                                                            )}`}
-                                                        />
-                                                    )}
-                                                {options?.max_initial_client_balance_sat !==
-                                                    '0' &&
-                                                    options?.min_initial_client_balance_sat !==
-                                                        '0' && (
-                                                        <KeyValue
-                                                            keyValue={`${localeString(
-                                                                'views.LSPS1.initialClientBalance'
-                                                            )} (${localeString(
-                                                                'general.sats'
-                                                            )})`}
-                                                            value={`${options?.min_initial_client_balance_sat} - ${options?.max_initial_client_balance_sat}`}
-                                                        />
-                                                    )}
-
-                                                {options?.max_initial_lsp_balance_sat &&
-                                                    options?.min_initial_lsp_balance_sat && (
-                                                        <KeyValue
-                                                            keyValue={`${localeString(
-                                                                'views.LSPS1.initialLSPBalance'
-                                                            )} (${localeString(
-                                                                'general.sats'
-                                                            )})`}
-                                                            value={`${FiatStore.numberWithCommas(
-                                                                options?.min_initial_lsp_balance_sat
-                                                            )} - ${FiatStore.numberWithCommas(
-                                                                options?.max_initial_lsp_balance_sat
-                                                            )}`}
-                                                        />
-                                                    )}
-                                                {options?.max_channel_expiry_blocks && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.maxChannelExpiryBlocks'
-                                                        )}
-                                                        value={FiatStore.numberWithCommas(
-                                                            options?.max_channel_expiry_blocks
-                                                        )}
-                                                    />
-                                                )}
-                                                {options?.min_channel_confirmations && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.minChannelConfirmations'
-                                                        )}
-                                                        value={
-                                                            options?.min_channel_confirmations
-                                                        }
-                                                    />
-                                                )}
-                                                {options?.min_onchain_payment_confirmations && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.minOnchainPaymentConfirmations'
-                                                        )}
-                                                        value={
-                                                            options?.min_onchain_payment_confirmations
-                                                        }
-                                                    />
-                                                )}
-                                                {options?.min_onchain_payment_size_sat && (
-                                                    <KeyValue
-                                                        keyValue={`${localeString(
-                                                            'views.LSPS1.minOnchainPaymentSize'
-                                                        )} (${localeString(
-                                                            'general.sats'
-                                                        )})`}
-                                                        value={
-                                                            options?.min_onchain_payment_size_sat
-                                                        }
-                                                    />
-                                                )}
-                                                {options?.min_funding_confirms_within_blocks && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.minFundingConfirmWithingBlocks'
-                                                        )}
-                                                        value={
-                                                            options?.min_funding_confirms_within_blocks
-                                                        }
-                                                    />
-                                                )}
-                                                {options?.min_required_channel_confirmations && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.minRequiredChannelConfirmations'
-                                                        )}
-                                                        value={
-                                                            options?.min_required_channel_confirmations
-                                                        }
-                                                    />
-                                                )}
-                                                {options?.supports_zero_channel_reserve !==
-                                                    null && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.supportZeroChannelReserve'
-                                                        )}
-                                                        value={
-                                                            options?.supports_zero_channel_reserve
-                                                                ? 'True'
-                                                                : 'False'
-                                                        }
-                                                        color={
-                                                            options?.supports_zero_channel_reserve
-                                                                ? 'green'
-                                                                : '#808000'
-                                                        }
-                                                    />
-                                                )}
-                                            </>
-                                        )}
-
+                                                containerStyle={{
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderRadius: 12,
+                                                    borderWidth: 0,
+                                                    height: 30
+                                                }}
+                                                innerBorderStyle={{
+                                                    color: themeColor(
+                                                        'secondary'
+                                                    )
+                                                }}
+                                            />
+                                        </View>
+                                    </>
                                     {Object.keys(getInfoData).length > 0 && (
                                         <TouchableOpacity
                                             onPress={() => {
@@ -684,7 +700,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
                                     {advancedSettings && (
                                         <>
-                                            {options?.max_initial_client_balance_sat !==
+                                            {info?.max_initial_client_balance_sat !==
                                                 '0' && (
                                                 <>
                                                     <Text
@@ -737,7 +753,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             }}
                                                         >
                                                             {FiatStore.numberWithCommas(
-                                                                options?.min_initial_client_balance_sat
+                                                                info?.min_initial_client_balance_sat
                                                             )}
                                                         </Text>
                                                         <Text
@@ -748,7 +764,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             }}
                                                         >
                                                             {FiatStore.numberWithCommas(
-                                                                options?.max_initial_client_balance_sat
+                                                                info?.max_initial_client_balance_sat
                                                             )}
                                                         </Text>
                                                     </Row>
@@ -758,10 +774,10 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             height: 40
                                                         }}
                                                         minimumValue={parseInt(
-                                                            options?.min_initial_client_balance_sat
+                                                            info?.min_initial_client_balance_sat
                                                         )}
                                                         maximumValue={parseInt(
-                                                            options?.max_initial_client_balance_sat
+                                                            info?.max_initial_client_balance_sat
                                                         )}
                                                         minimumTrackTintColor={themeColor(
                                                             'highlight'
@@ -803,7 +819,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     this.state
                                                         .requiredChannelConfirmations
                                                 }
-                                                onChangeText={(text) =>
+                                                onChangeText={(text: string) =>
                                                     this.setState({
                                                         requiredChannelConfirmations:
                                                             text
@@ -832,7 +848,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     this.state
                                                         .confirmsWithinBlocks
                                                 }
-                                                onChangeText={(text) =>
+                                                onChangeText={(text: string) =>
                                                     this.setState({
                                                         confirmsWithinBlocks:
                                                             text
@@ -841,67 +857,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 style={styles.textInput}
                                                 keyboardType="numeric"
                                             />
-
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.LSPS1.channelExpiryBlocks'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.LSPS1.channelExpiryBlocks'
-                                                )}
-                                                value={FiatStore.numberWithCommas(
-                                                    channelExpiryBlocks
-                                                )}
-                                                onChangeText={(text: any) => {
-                                                    const intValue = parseInt(
-                                                        text.replace(/,/g, ''),
-                                                        10
-                                                    );
-                                                    if (isNaN(intValue)) return;
-                                                    this.setState({
-                                                        channelExpiryBlocks:
-                                                            intValue
-                                                    });
-                                                }}
-                                                style={styles.textInput}
-                                                keyboardType="numeric"
-                                            />
-                                            <Slider
-                                                style={{
-                                                    width: '100%',
-                                                    height: 40
-                                                }}
-                                                minimumValue={0}
-                                                maximumValue={parseInt(
-                                                    options?.max_channel_expiry_blocks
-                                                )}
-                                                minimumTrackTintColor={themeColor(
-                                                    'highlight'
-                                                )}
-                                                maximumTrackTintColor="black"
-                                                thumbTintColor={themeColor(
-                                                    'highlight'
-                                                )}
-                                                value={channelExpiryBlocks}
-                                                onValueChange={(
-                                                    value: number
-                                                ) =>
-                                                    this.setState({
-                                                        channelExpiryBlocks:
-                                                            value
-                                                    })
-                                                }
-                                                step={10}
-                                            />
-
                                             <Text
                                                 style={{
                                                     color: themeColor(
@@ -916,15 +871,16 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             <TextInput
                                                 placeholder="Token"
                                                 value={this.state.token}
-                                                onChangeText={(text) =>
+                                                onChangeText={(text: string) =>
                                                     this.setState({
                                                         token: text
                                                     })
                                                 }
                                                 style={styles.textInput}
+                                                autoCapitalize="none"
                                             />
 
-                                            {options?.min_onchain_payment_confirmations && (
+                                            {info?.min_onchain_payment_confirmations && (
                                                 <>
                                                     <Text
                                                         style={{
@@ -945,7 +901,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             this.state
                                                                 .refundOnchainAddress
                                                         }
-                                                        onChangeText={(text) =>
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
                                                             this.setState({
                                                                 refundOnchainAddress:
                                                                     text
@@ -992,6 +950,191 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             </View>
                                         </>
                                     )}
+
+                                    {Object.keys(getInfoData).length > 0 && (
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                this.setState({
+                                                    showInfo: !showInfo
+                                                });
+                                            }}
+                                        >
+                                            <View
+                                                style={{
+                                                    marginBottom: 10
+                                                }}
+                                            >
+                                                <Row justify="space-between">
+                                                    <View
+                                                        style={{ width: '95%' }}
+                                                    >
+                                                        <KeyValue keyValue="LSP info" />
+                                                    </View>
+                                                    {showInfo ? (
+                                                        <CaretDown
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    ) : (
+                                                        <CaretRight
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    )}
+                                                </Row>
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
+
+                                    {showInfo &&
+                                        getInfoData &&
+                                        Object.keys(createOrderResponse)
+                                            .length == 0 &&
+                                        Object.keys(getInfoData).length > 0 &&
+                                        info && (
+                                            <>
+                                                {info?.max_channel_balance_sat &&
+                                                    info?.min_channel_balance_sat && (
+                                                        <KeyValue
+                                                            keyValue={`${localeString(
+                                                                'views.Channel.channelBalance'
+                                                            )}`}
+                                                            value={`${FiatStore.numberWithCommas(
+                                                                info?.min_channel_balance_sat
+                                                            )} - ${FiatStore.numberWithCommas(
+                                                                info?.max_channel_balance_sat
+                                                            )} ${localeString(
+                                                                'general.sats'
+                                                            )}`}
+                                                        />
+                                                    )}
+                                                {info?.max_initial_lsp_balance_sat &&
+                                                    info?.min_initial_lsp_balance_sat && (
+                                                        <KeyValue
+                                                            keyValue={`${localeString(
+                                                                'views.LSPS1.initialLSPBalance'
+                                                            )}`}
+                                                            value={`${FiatStore.numberWithCommas(
+                                                                info?.min_initial_lsp_balance_sat
+                                                            )} - ${FiatStore.numberWithCommas(
+                                                                info?.max_initial_lsp_balance_sat
+                                                            )} ${localeString(
+                                                                'general.sats'
+                                                            )}`}
+                                                        />
+                                                    )}
+                                                {info?.max_initial_client_balance_sat &&
+                                                    info?.min_initial_client_balance_sat && (
+                                                        <KeyValue
+                                                            keyValue={`${localeString(
+                                                                'views.LSPS1.initialClientBalance'
+                                                            )}`}
+                                                            value={
+                                                                info?.max_initial_client_balance_sat ===
+                                                                info?.min_initial_client_balance_sat
+                                                                    ? `${
+                                                                          info?.min_initial_client_balance_sat
+                                                                      } ${localeString(
+                                                                          'general.sats'
+                                                                      )}`
+                                                                    : `${
+                                                                          info?.min_initial_client_balance_sat
+                                                                      } - ${
+                                                                          info?.max_initial_client_balance_sat
+                                                                      } ${localeString(
+                                                                          'general.sats'
+                                                                      )}`
+                                                            }
+                                                        />
+                                                    )}
+                                                {info?.max_channel_expiry_blocks && (
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.maxChannelExpiryBlocks'
+                                                        )}
+                                                        value={FiatStore.numberWithCommas(
+                                                            info?.max_channel_expiry_blocks
+                                                        )}
+                                                    />
+                                                )}
+                                                {info?.min_channel_confirmations && (
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.minChannelConfirmations'
+                                                        )}
+                                                        value={
+                                                            info?.min_channel_confirmations
+                                                        }
+                                                    />
+                                                )}
+                                                {info?.min_onchain_payment_confirmations && (
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.minOnchainPaymentConfirmations'
+                                                        )}
+                                                        value={
+                                                            info?.min_onchain_payment_confirmations
+                                                        }
+                                                    />
+                                                )}
+                                                {info?.min_onchain_payment_size_sat && (
+                                                    <KeyValue
+                                                        keyValue={`${localeString(
+                                                            'views.LSPS1.minOnchainPaymentSize'
+                                                        )} (${localeString(
+                                                            'general.sats'
+                                                        )})`}
+                                                        value={
+                                                            info?.min_onchain_payment_size_sat
+                                                        }
+                                                    />
+                                                )}
+                                                {info?.min_funding_confirms_within_blocks && (
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.minFundingConfirmWithingBlocks'
+                                                        )}
+                                                        value={
+                                                            info?.min_funding_confirms_within_blocks
+                                                        }
+                                                    />
+                                                )}
+                                                {info?.min_required_channel_confirmations && (
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.minRequiredChannelConfirmations'
+                                                        )}
+                                                        value={
+                                                            info?.min_required_channel_confirmations
+                                                        }
+                                                    />
+                                                )}
+                                                {info?.supports_zero_channel_reserve !==
+                                                    null && (
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.supportZeroChannelReserve'
+                                                        )}
+                                                        value={
+                                                            info?.supports_zero_channel_reserve
+                                                                ? 'True'
+                                                                : 'False'
+                                                        }
+                                                        color={
+                                                            info?.supports_zero_channel_reserve
+                                                                ? 'green'
+                                                                : '#808000'
+                                                        }
+                                                    />
+                                                )}
+                                            </>
+                                        )}
                                 </ScrollView>
                             )}
                         </ScrollView>
@@ -1117,7 +1260,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
                                                 // Navigate to the PaymentRequest screen
                                                 InvoicesStore.getPayReq(
-                                                    payment.lightning_invoice ||
+                                                    payment.bolt11?.invoice ||
+                                                        payment.lightning_invoice ||
                                                         payment.bolt11_invoice
                                                 )
                                                     .then(() => {

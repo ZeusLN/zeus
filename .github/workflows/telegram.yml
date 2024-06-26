@@ -1,0 +1,18 @@
+name: Notify on Telegram
+on:
+  push:
+    branches:
+      - master
+  issues:
+    types: [opened, pinned, closed, reopened]
+  release:
+    types: [published]
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify the commit on Telegram.
+        uses: EverythingSuckz/github-telegram-notify@main
+        with:
+          bot_token: '${{ secrets.BOT_TOKEN }}'
+          chat_id: '${{ secrets.CHAT_ID }}'

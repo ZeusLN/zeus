@@ -156,6 +156,7 @@ export interface Settings {
     lsps1PubkeyTestnet: string;
     lsps1HostMainnet: string;
     lsps1HostTestnet: string;
+    lsps1Token: string;
     lsps1ShowPurchaseButton: boolean;
     // Lightning Address
     lightningAddress: LightningAddressSettings;
@@ -1076,6 +1077,7 @@ export default class SettingsStore {
         lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
         lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
         lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+        lsps1Token: '',
         lsps1ShowPurchaseButton: true,
         // Lightning Address
         lightningAddress: {
@@ -1410,6 +1412,10 @@ export default class SettingsStore {
                     if (!newSettings?.lsps1RestTestnet) {
                         newSettings.lsps1RestTestnet =
                             DEFAULT_LSPS1_REST_TESTNET;
+                    }
+
+                    if (!newSettings?.lsps1Token) {
+                        newSettings.lsps1Token = '';
                     }
 
                     if (!newSettings?.lsps1ShowPurchaseButton) {
