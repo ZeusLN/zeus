@@ -996,6 +996,8 @@
     "views.LSPS1.noOrdersError": "Nu sunt încă salvate comenzi!",
     "views.LSPS1.showingPreviousState": "arată starea anterioară!",
     "views.LSPS1.bolt11Payment": "Plata BOLT 11",
+    "views.LSPS1.yourBalance": "Your balance",
+    "views.LSPS1.receiveLimit": "Receive limit",
     "components.UTXOPicker.modal.title": "Selectează UTXO-uri de folosit",
     "components.UTXOPicker.modal.description": "Selectează UTXO-urile de folosit în această tranzacție. Ai posibilitatea să folosești doar anumite UTXO-uri, astfel încât să-ți păstrezi intimitatea.",
     "components.UTXOPicker.modal.set": "Setează UTXO-uri",
