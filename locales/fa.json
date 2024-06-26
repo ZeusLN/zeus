@@ -996,6 +996,8 @@
     "views.LSPS1.noOrdersError": "No orders are saved yet!",
     "views.LSPS1.showingPreviousState": "showing previous state!",
     "views.LSPS1.bolt11Payment": "BOLT 11 payment",
+    "views.LSPS1.yourBalance": "Your balance",
+    "views.LSPS1.receiveLimit": "Receive limit",
     "components.UTXOPicker.modal.title": "انتخاب UTXO برای استفاده",
     "components.UTXOPicker.modal.description": "تراکنش های خروجی مصرف نشده را برای انجام این عملیات انتخاب کنید. ممکن است بخواهید برای حفظ حریم خصوصی خود فقط از تراکنش های خروجی مصرف نشده خاصی استفاده کنید.",
     "components.UTXOPicker.modal.set": "تنظیم تراکنش های خروجی مصرف نشده",
