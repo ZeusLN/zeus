@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Pagamento Hash Signature",
     "views.PaymentRequest.isRelaysSigValid": "Relés assinatura",
     "views.PaymentRequest.notAllowedToSend": "Esta carteira não tem permissão para enviar fundos!",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "Receber",
     "views.Receive.successCreate": "Cobrança criada com sucesso",
     "views.Receive.warningLndHub": "Observe que o LNDHub tem um endereço fixo na cadeia",

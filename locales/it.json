@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Firma hash di pagamento",
     "views.PaymentRequest.isRelaysSigValid": "Firma Relays",
     "views.PaymentRequest.notAllowedToSend": "Questo portafoglio non è autorizzato a inviare fondi!",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "Ricevi",
     "views.Receive.successCreate": "Fattura creata correttamente",
     "views.Receive.warningLndHub": "Si prega di notare che LNDub ha un indirizzo su catena fissa",
