@@ -442,46 +442,45 @@ export default class LSPS1OrderResponse extends React.Component<
                         )}
                         {orderResponse?.order_state === 'CREATED' && orderView && (
                             <>
-                                {payment.bolt11?.invoice ||
+                                {(payment.bolt11?.invoice ||
                                     payment.lightning_invoice ||
-                                    (payment.bolt11_invoice && (
-                                        <>
-                                            <Button
-                                                title={
-                                                    payment.onchain
-                                                        ? localeString(
-                                                              'views.LSPS1.makePaymentLN'
-                                                          )
-                                                        : localeString(
-                                                              'views.LSPS1.makePayment'
-                                                          )
-                                                }
-                                                containerStyle={{
-                                                    paddingVertical: 20
-                                                }}
-                                                onPress={() => {
-                                                    InvoicesStore.getPayReq(
-                                                        payment.bolt11
-                                                            ?.invoice ||
-                                                            payment.lightning_invoice ||
-                                                            payment.bolt11_invoice
-                                                    )
-                                                        .then(() => {
-                                                            navigation.navigate(
-                                                                'PaymentRequest',
-                                                                {}
-                                                            );
-                                                        })
-                                                        .catch((error: any) =>
-                                                            console.error(
-                                                                'Error fetching payment request:',
-                                                                error
-                                                            )
+                                    payment.bolt11_invoice) && (
+                                    <>
+                                        <Button
+                                            title={
+                                                payment.onchain
+                                                    ? localeString(
+                                                          'views.LSPS1.makePaymentLN'
+                                                      )
+                                                    : localeString(
+                                                          'views.LSPS1.makePayment'
+                                                      )
+                                            }
+                                            containerStyle={{
+                                                paddingVertical: 20
+                                            }}
+                                            onPress={() => {
+                                                InvoicesStore.getPayReq(
+                                                    payment.bolt11?.invoice ||
+                                                        payment.lightning_invoice ||
+                                                        payment.bolt11_invoice
+                                                )
+                                                    .then(() => {
+                                                        navigation.navigate(
+                                                            'PaymentRequest',
+                                                            {}
                                                         );
-                                                }}
-                                            />
-                                        </>
-                                    ))}
+                                                    })
+                                                    .catch((error: any) =>
+                                                        console.error(
+                                                            'Error fetching payment request:',
+                                                            error
+                                                        )
+                                                    );
+                                            }}
+                                        />
+                                    </>
+                                )}
                                 {payment.onchain?.address &&
                                     payment.onchain?.fee_total_sat && (
                                         <>
