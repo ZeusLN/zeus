@@ -2,6 +2,7 @@ import * as React from 'react';
 import { inject, observer } from 'mobx-react';
 import { ScrollView, View } from 'react-native';
 import moment from 'moment';
+import BigNumber from 'bignumber.js';
 
 import Screen from './Screen';
 import KeyValue from './KeyValue';
@@ -72,10 +73,13 @@ export default class LSPS1OrderResponse extends React.Component<
                                     )}
                                     value={
                                         <Amount
-                                            sats={
-                                                orderResponse?.client_balance_sat +
-                                                orderResponse?.lsp_balance_sat
-                                            }
+                                            sats={new BigNumber(
+                                                orderResponse?.client_balance_sat
+                                            )
+                                                .plus(
+                                                    orderResponse?.lsp_balance_sat
+                                                )
+                                                .toNumber()}
                                             sensitive
                                             toggleable
                                         />
