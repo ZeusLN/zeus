@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "חתימת גיבוב תשלום",
     "views.PaymentRequest.isRelaysSigValid": "חתימת ממסרים",
     "views.PaymentRequest.notAllowedToSend": "ארנק זה אינו מורשה לשלוח כספים",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "קבלה",
     "views.Receive.successCreate": "חשבונית נוצרה בהצלחה",
     "views.Receive.warningLndHub": "לתשומת לבך, ל- LNDHub יש כתובת ביטקוין קבועה",
