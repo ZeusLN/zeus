@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Κατακερματισμός υπογραφής πληρωμής",
     "views.PaymentRequest.isRelaysSigValid": "Υπογραφή αναμεταδότη",
     "views.PaymentRequest.notAllowedToSend": "Αυτό το πορτοφόλι δεν επιτρέπεται να στείλει κεφάλαια!",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "Λήψη",
     "views.Receive.successCreate": "Το τιμολόγιο δημιουργήθηκε επιτυχώς",
     "views.Receive.warningLndHub": "Παρακαλούμε σημειώσετε ότι το LNDHub έχει μια σταθερή διεύθυνση στην αλυσίδα ",
