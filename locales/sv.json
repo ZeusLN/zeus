@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Betalnings hash signatur",
     "views.PaymentRequest.isRelaysSigValid": "Relä signatur",
     "views.PaymentRequest.notAllowedToSend": "Denna plånbok tillåter dig inte att skicka!",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "Ta emot",
     "views.Receive.successCreate": "Lyckades skapa invoice",
     "views.Receive.warningLndHub": "Var god notera att LNDHub har en fast on-chainadress",
