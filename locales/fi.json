@@ -561,6 +561,7 @@
     "views.PaymentRequest.isPmtHashSigValid": "Maksun tiiviste allekirjoitus",
     "views.PaymentRequest.isRelaysSigValid": "Välityspalvelimen allekirjoitus",
     "views.PaymentRequest.notAllowedToSend": "Tämä lompakko ei voi lähettää varoja.",
+    "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.Receive.title": "Vastaanota",
     "views.Receive.successCreate": "Laskun luominen onnistui",
     "views.Receive.warningLndHub": "Huomaa, että LNDHubilla on kiinteä pääketjuosoite.",
