@@ -996,6 +996,8 @@
     "views.LSPS1.noOrdersError": "No orders are saved yet!",
     "views.LSPS1.showingPreviousState": "showing previous state!",
     "views.LSPS1.bolt11Payment": "BOLT 11 payment",
+    "views.LSPS1.yourBalance": "Your balance",
+    "views.LSPS1.receiveLimit": "Receive limit",
     "components.UTXOPicker.modal.title": "Velg UTXOer som skal brukes",
     "components.UTXOPicker.modal.description": "Velg UTXO-ene som skal brukes i denne operasjonen. Det kan være lurt å bare bruke spesifikke UTXO-er for å beskytte personvernet ditt.",
     "components.UTXOPicker.modal.set": "Sett UTXOer",
