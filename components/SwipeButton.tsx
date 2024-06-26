@@ -110,7 +110,8 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         marginHorizontal: 20,
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+        marginTop: 20
     },
     instructionsContainer: {
         alignItems: 'center'
