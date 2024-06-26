@@ -996,6 +996,8 @@
     "views.LSPS1.noOrdersError": "Nessun ordine è stato ancora salvato!",
     "views.LSPS1.showingPreviousState": "mostrando lo stato precedente!",
     "views.LSPS1.bolt11Payment": "Pagamento BOLT 11",
+    "views.LSPS1.yourBalance": "Your balance",
+    "views.LSPS1.receiveLimit": "Receive limit",
     "components.UTXOPicker.modal.title": "Seleziona UTXOs da usare",
     "components.UTXOPicker.modal.description": "Seleziona l'UTXOS da utilizzare in questa operazione. Potresti voler utilizzare solo UTXOS specifico per preservare la tua privacy.",
     "components.UTXOPicker.modal.set": "Imposta UTXOs",
