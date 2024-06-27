@@ -10,7 +10,7 @@ import {
     Dimensions
 } from 'react-native';
 
-import CaretRight from '../assets/images/SVG/Caret Right.svg';
+import CaretRight from '../assets/images/SVG/Caret Right alt.svg';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface SwipeButtonProps {
@@ -58,7 +58,7 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                 e: GestureResponderEvent,
                 gesture: PanResponderGestureState
             ) => {
-                if (gesture.dx > maxTranslation * 0.6) {
+                if (gesture.dx > maxTranslation * 0.95) {
                     onSwipeSuccess();
                     Animated.spring(pan, {
                         toValue: maxTranslation,
