@@ -17,6 +17,7 @@ import { v4 as uuidv4 } from 'uuid';
 import CaretDown from '../../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../../assets/images/SVG/Caret Right.svg';
 import OrderList from '../../../assets/images/SVG/order-list.svg';
+import OlympusSVG from '../../../assets/images/SVG/Olympus.svg';
 
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
@@ -274,7 +275,14 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     };
 
     render() {
-        const { navigation, LSPStore, InvoicesStore, FiatStore } = this.props;
+        const {
+            navigation,
+            LSPStore,
+            InvoicesStore,
+            FiatStore,
+            NodeInfoStore,
+            SettingsStore
+        } = this.props;
         const {
             showInfo,
             advancedSettings,
@@ -440,6 +448,21 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             { element: twelveMoButton }
         ];
 
+        const { lspNotConfigured } = NodeInfoStore.lspNotConfigured();
+
+        const flowServiceAvailable =
+            SettingsStore.settings?.enableLSP &&
+            BackendUtils.supportsLSPs() &&
+            !lspNotConfigured;
+
+        const isOlympus = LSPStore.isOlympus();
+
+        const lspDisplay = isOlympus
+            ? 'OLYMPUS by ZEUS'
+            : BackendUtils.supportsLSPS1customMessage()
+            ? LSPStore.getLSPS1Pubkey()
+            : LSPStore.getLSPS1Rest();
+
         return (
             <Screen>
                 <Header
@@ -499,6 +522,287 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         paddingHorizontal: 22
                                     }}
                                 >
+                                    <>
+                                        {Object.keys(getInfoData).length >
+                                            0 && (
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    this.setState({
+                                                        showInfo: !showInfo
+                                                    });
+                                                }}
+                                            >
+                                                <View
+                                                    style={{
+                                                        marginBottom: 10
+                                                    }}
+                                                >
+                                                    <Row justify="space-between">
+                                                        <View
+                                                            style={{
+                                                                width: '95%'
+                                                            }}
+                                                        >
+                                                            <Row justify="space-between">
+                                                                {isOlympus && (
+                                                                    <View
+                                                                        style={{
+                                                                            width: '15%'
+                                                                        }}
+                                                                    >
+                                                                        <OlympusSVG
+                                                                            fill={themeColor(
+                                                                                'highlight'
+                                                                            )}
+                                                                        />
+                                                                    </View>
+                                                                )}
+                                                                <View
+                                                                    style={{
+                                                                        width: '85%'
+                                                                    }}
+                                                                >
+                                                                    <KeyValue
+                                                                        keyValue={localeString(
+                                                                            'views.LSPS1.serviceInfo'
+                                                                        )}
+                                                                    />
+                                                                </View>
+                                                            </Row>
+                                                        </View>
+                                                        {showInfo ? (
+                                                            <CaretDown
+                                                                fill={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                width="20"
+                                                                height="20"
+                                                            />
+                                                        ) : (
+                                                            <CaretRight
+                                                                fill={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                width="20"
+                                                                height="20"
+                                                            />
+                                                        )}
+                                                    </Row>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )}
+
+                                        {showInfo &&
+                                            getInfoData &&
+                                            Object.keys(createOrderResponse)
+                                                .length == 0 &&
+                                            Object.keys(getInfoData).length >
+                                                0 &&
+                                            info && (
+                                                <View
+                                                    style={{ marginBottom: 20 }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            fontSize: 16,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book',
+                                                            marginBottom: 10
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.LSPS1.serviceInfoText1'
+                                                        )}
+                                                    </Text>
+                                                    {flowServiceAvailable && (
+                                                        <>
+                                                            <Text
+                                                                style={{
+                                                                    fontSize: 16,
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    ),
+                                                                    fontFamily:
+                                                                        'PPNeueMontreal-Book',
+                                                                    marginBottom: 10
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    'views.LSPS1.serviceInfoText2'
+                                                                )}
+                                                            </Text>
+
+                                                            <View
+                                                                style={{
+                                                                    marginTop: 10,
+                                                                    marginBottom: 20
+                                                                }}
+                                                            >
+                                                                <Button
+                                                                    title={localeString(
+                                                                        'views.LSPS1.useJit'
+                                                                    )}
+                                                                    onPress={() => {
+                                                                        navigation.navigate(
+                                                                            'Receive'
+                                                                        );
+                                                                    }}
+                                                                />
+                                                            </View>
+                                                        </>
+                                                    )}
+
+                                                    <KeyValue
+                                                        keyValue="LSP"
+                                                        value={lspDisplay}
+                                                    />
+
+                                                    {info?.max_channel_balance_sat &&
+                                                        info?.min_channel_balance_sat && (
+                                                            <KeyValue
+                                                                keyValue={`${localeString(
+                                                                    'views.Channel.channelBalance'
+                                                                )}`}
+                                                                value={`${FiatStore.numberWithCommas(
+                                                                    info?.min_channel_balance_sat
+                                                                )} - ${FiatStore.numberWithCommas(
+                                                                    info?.max_channel_balance_sat
+                                                                )} ${localeString(
+                                                                    'general.sats'
+                                                                )}`}
+                                                            />
+                                                        )}
+                                                    {info?.max_initial_lsp_balance_sat &&
+                                                        info?.min_initial_lsp_balance_sat && (
+                                                            <KeyValue
+                                                                keyValue={`${localeString(
+                                                                    'views.LSPS1.initialLSPBalance'
+                                                                )}`}
+                                                                value={`${FiatStore.numberWithCommas(
+                                                                    info?.min_initial_lsp_balance_sat
+                                                                )} - ${FiatStore.numberWithCommas(
+                                                                    info?.max_initial_lsp_balance_sat
+                                                                )} ${localeString(
+                                                                    'general.sats'
+                                                                )}`}
+                                                            />
+                                                        )}
+                                                    {info?.max_initial_client_balance_sat &&
+                                                        info?.min_initial_client_balance_sat && (
+                                                            <KeyValue
+                                                                keyValue={`${localeString(
+                                                                    'views.LSPS1.initialClientBalance'
+                                                                )}`}
+                                                                value={
+                                                                    info?.max_initial_client_balance_sat ===
+                                                                    info?.min_initial_client_balance_sat
+                                                                        ? `${
+                                                                              info?.min_initial_client_balance_sat
+                                                                          } ${localeString(
+                                                                              'general.sats'
+                                                                          )}`
+                                                                        : `${
+                                                                              info?.min_initial_client_balance_sat
+                                                                          } - ${
+                                                                              info?.max_initial_client_balance_sat
+                                                                          } ${localeString(
+                                                                              'general.sats'
+                                                                          )}`
+                                                                }
+                                                            />
+                                                        )}
+                                                    {info?.max_channel_expiry_blocks && (
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'views.LSPS1.maxChannelExpiryBlocks'
+                                                            )}
+                                                            value={FiatStore.numberWithCommas(
+                                                                info?.max_channel_expiry_blocks
+                                                            )}
+                                                        />
+                                                    )}
+                                                    {info?.min_channel_confirmations && (
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'views.LSPS1.minChannelConfirmations'
+                                                            )}
+                                                            value={
+                                                                info?.min_channel_confirmations
+                                                            }
+                                                        />
+                                                    )}
+                                                    {info?.min_onchain_payment_confirmations && (
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'views.LSPS1.minOnchainPaymentConfirmations'
+                                                            )}
+                                                            value={
+                                                                info?.min_onchain_payment_confirmations
+                                                            }
+                                                        />
+                                                    )}
+                                                    {info?.min_onchain_payment_size_sat && (
+                                                        <KeyValue
+                                                            keyValue={`${localeString(
+                                                                'views.LSPS1.minOnchainPaymentSize'
+                                                            )} (${localeString(
+                                                                'general.sats'
+                                                            )})`}
+                                                            value={
+                                                                info?.min_onchain_payment_size_sat
+                                                            }
+                                                        />
+                                                    )}
+                                                    {info?.min_funding_confirms_within_blocks && (
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'views.LSPS1.minFundingConfirmWithingBlocks'
+                                                            )}
+                                                            value={
+                                                                info?.min_funding_confirms_within_blocks
+                                                            }
+                                                        />
+                                                    )}
+                                                    {info?.min_required_channel_confirmations && (
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'views.LSPS1.minRequiredChannelConfirmations'
+                                                            )}
+                                                            value={
+                                                                info?.min_required_channel_confirmations
+                                                            }
+                                                        />
+                                                    )}
+                                                    {info?.supports_zero_channel_reserve !==
+                                                        null && (
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'views.LSPS1.supportZeroChannelReserve'
+                                                            )}
+                                                            value={
+                                                                info?.supports_zero_channel_reserve
+                                                                    ? 'True'
+                                                                    : 'False'
+                                                            }
+                                                            color={
+                                                                info?.supports_zero_channel_reserve
+                                                                    ? 'green'
+                                                                    : '#808000'
+                                                            }
+                                                        />
+                                                    )}
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.spec'
+                                                        )}
+                                                        value="LSPS1"
+                                                    />
+                                                </View>
+                                            )}
+                                    </>
                                     <Text
                                         style={{
                                             color: themeColor('secondaryText')
@@ -954,191 +1258,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             </View>
                                         </>
                                     )}
-
-                                    {Object.keys(getInfoData).length > 0 && (
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                this.setState({
-                                                    showInfo: !showInfo
-                                                });
-                                            }}
-                                        >
-                                            <View
-                                                style={{
-                                                    marginBottom: 10
-                                                }}
-                                            >
-                                                <Row justify="space-between">
-                                                    <View
-                                                        style={{ width: '95%' }}
-                                                    >
-                                                        <KeyValue keyValue="LSP info" />
-                                                    </View>
-                                                    {showInfo ? (
-                                                        <CaretDown
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    ) : (
-                                                        <CaretRight
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    )}
-                                                </Row>
-                                            </View>
-                                        </TouchableOpacity>
-                                    )}
-
-                                    {showInfo &&
-                                        getInfoData &&
-                                        Object.keys(createOrderResponse)
-                                            .length == 0 &&
-                                        Object.keys(getInfoData).length > 0 &&
-                                        info && (
-                                            <>
-                                                {info?.max_channel_balance_sat &&
-                                                    info?.min_channel_balance_sat && (
-                                                        <KeyValue
-                                                            keyValue={`${localeString(
-                                                                'views.Channel.channelBalance'
-                                                            )}`}
-                                                            value={`${FiatStore.numberWithCommas(
-                                                                info?.min_channel_balance_sat
-                                                            )} - ${FiatStore.numberWithCommas(
-                                                                info?.max_channel_balance_sat
-                                                            )} ${localeString(
-                                                                'general.sats'
-                                                            )}`}
-                                                        />
-                                                    )}
-                                                {info?.max_initial_lsp_balance_sat &&
-                                                    info?.min_initial_lsp_balance_sat && (
-                                                        <KeyValue
-                                                            keyValue={`${localeString(
-                                                                'views.LSPS1.initialLSPBalance'
-                                                            )}`}
-                                                            value={`${FiatStore.numberWithCommas(
-                                                                info?.min_initial_lsp_balance_sat
-                                                            )} - ${FiatStore.numberWithCommas(
-                                                                info?.max_initial_lsp_balance_sat
-                                                            )} ${localeString(
-                                                                'general.sats'
-                                                            )}`}
-                                                        />
-                                                    )}
-                                                {info?.max_initial_client_balance_sat &&
-                                                    info?.min_initial_client_balance_sat && (
-                                                        <KeyValue
-                                                            keyValue={`${localeString(
-                                                                'views.LSPS1.initialClientBalance'
-                                                            )}`}
-                                                            value={
-                                                                info?.max_initial_client_balance_sat ===
-                                                                info?.min_initial_client_balance_sat
-                                                                    ? `${
-                                                                          info?.min_initial_client_balance_sat
-                                                                      } ${localeString(
-                                                                          'general.sats'
-                                                                      )}`
-                                                                    : `${
-                                                                          info?.min_initial_client_balance_sat
-                                                                      } - ${
-                                                                          info?.max_initial_client_balance_sat
-                                                                      } ${localeString(
-                                                                          'general.sats'
-                                                                      )}`
-                                                            }
-                                                        />
-                                                    )}
-                                                {info?.max_channel_expiry_blocks && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.maxChannelExpiryBlocks'
-                                                        )}
-                                                        value={FiatStore.numberWithCommas(
-                                                            info?.max_channel_expiry_blocks
-                                                        )}
-                                                    />
-                                                )}
-                                                {info?.min_channel_confirmations && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.minChannelConfirmations'
-                                                        )}
-                                                        value={
-                                                            info?.min_channel_confirmations
-                                                        }
-                                                    />
-                                                )}
-                                                {info?.min_onchain_payment_confirmations && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.minOnchainPaymentConfirmations'
-                                                        )}
-                                                        value={
-                                                            info?.min_onchain_payment_confirmations
-                                                        }
-                                                    />
-                                                )}
-                                                {info?.min_onchain_payment_size_sat && (
-                                                    <KeyValue
-                                                        keyValue={`${localeString(
-                                                            'views.LSPS1.minOnchainPaymentSize'
-                                                        )} (${localeString(
-                                                            'general.sats'
-                                                        )})`}
-                                                        value={
-                                                            info?.min_onchain_payment_size_sat
-                                                        }
-                                                    />
-                                                )}
-                                                {info?.min_funding_confirms_within_blocks && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.minFundingConfirmWithingBlocks'
-                                                        )}
-                                                        value={
-                                                            info?.min_funding_confirms_within_blocks
-                                                        }
-                                                    />
-                                                )}
-                                                {info?.min_required_channel_confirmations && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.minRequiredChannelConfirmations'
-                                                        )}
-                                                        value={
-                                                            info?.min_required_channel_confirmations
-                                                        }
-                                                    />
-                                                )}
-                                                {info?.supports_zero_channel_reserve !==
-                                                    null && (
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.supportZeroChannelReserve'
-                                                        )}
-                                                        value={
-                                                            info?.supports_zero_channel_reserve
-                                                                ? 'True'
-                                                                : 'False'
-                                                        }
-                                                        color={
-                                                            info?.supports_zero_channel_reserve
-                                                                ? 'green'
-                                                                : '#808000'
-                                                        }
-                                                    />
-                                                )}
-                                            </>
-                                        )}
                                 </ScrollView>
                             )}
                         </ScrollView>
@@ -1147,7 +1266,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                 title={
                                     Object.keys(createOrderResponse).length == 0
                                         ? `${localeString(
-                                              'views.LSPS1.getQuote'
+                                              'views.LSPS1.createOrder'
                                           )}`
                                         : `${localeString(
                                               'views.LSPS1.makePayment'
