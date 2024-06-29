@@ -1001,7 +1001,7 @@
     "views.LSPS1.yourBalance": "Váš zůstatek",
     "views.LSPS1.receiveLimit": "Limit příjmu",
     "views.LSPS1.serviceInfo": "Servisní informace",
-    "views.LSPS1.serviceInfoText1": "This service allows you to purchase channels in advance from the LSP directly. Channels must confirm on-chain before you can use them.",
+    "views.LSPS1.serviceInfoText1": "Tato služba vám umožňuje zakoupit kanály předem přímo od LSP. Kanály musí být potvrzeny on-chain předtím, než je budete moci používat.",
     "views.LSPS1.serviceInfoText2": "If you don't want to wait for on-chain confirmation, you can use our just-in-time channel service. The JIT service will create a 0-conf channel of the amount you specify plus 100k sats of inbound (receiving capacity).",
     "views.LSPS1.useJit": "Use just-in-time service",
     "views.LSPS1.spec": "Spec",
