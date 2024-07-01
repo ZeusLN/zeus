@@ -28,7 +28,8 @@ export function ChannelItem({
     pendingTimelock,
     noBorder,
     hideLabels,
-    selected
+    selected,
+    highlightLabels
 }: {
     title?: string;
     secondTitle?: string;
@@ -41,6 +42,7 @@ export function ChannelItem({
     noBorder?: boolean;
     hideLabels?: boolean;
     selected?: boolean;
+    highlightLabels?: boolean;
 }) {
     const { settings } = Stores.settingsStore;
     const { privacy } = settings;
@@ -68,7 +70,13 @@ export function ChannelItem({
                 {title && (
                     <View style={{ flex: 1, paddingRight: 10 }}>
                         <Body
-                            color={selected ? 'highlight' : 'text'}
+                            color={
+                                selected
+                                    ? 'highlight'
+                                    : highlightLabels
+                                    ? 'outbound'
+                                    : 'text'
+                            }
                             bold={selected}
                         >
                             {PrivacyUtils.sensitiveValue(title)}
@@ -78,7 +86,13 @@ export function ChannelItem({
                 {secondTitle && (
                     <View style={{ flex: 1, alignItems: 'flex-end' }}>
                         <Body
-                            color={selected ? 'highlight' : 'text'}
+                            color={
+                                selected
+                                    ? 'highlight'
+                                    : highlightLabels
+                                    ? 'inbound'
+                                    : 'text'
+                            }
                             bold={selected}
                         >
                             {secondTitle}
@@ -128,6 +142,9 @@ export function ChannelItem({
                         accessibilityLabel={localeString(
                             'views.Channel.outboundCapacity'
                         )}
+                        colorOverride={
+                            highlightLabels ? themeColor('outbound') : undefined
+                        }
                     />
                     <Amount
                         sats={inbound}
@@ -136,6 +153,9 @@ export function ChannelItem({
                         accessibilityLabel={localeString(
                             'views.Channel.inboundCapacity'
                         )}
+                        colorOverride={
+                            highlightLabels ? themeColor('inbound') : undefined
+                        }
                     />
                 </Row>
             )}
