@@ -40,7 +40,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
         enableLSP: true,
         lsp: '',
         accessKey: '',
-        requestSimpleTaproot: false
+        requestSimpleTaproot: true
     };
 
     async UNSAFE_componentWillMount() {
@@ -53,7 +53,10 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                 ? settings.lspTestnet
                 : settings.lspMainnet,
             accessKey: settings.lspAccessKey,
-            requestSimpleTaproot: settings.requestSimpleTaproot
+            requestSimpleTaproot:
+                settings?.requestSimpleTaproot !== null
+                    ? settings.requestSimpleTaproot
+                    : true
         });
     }
 
