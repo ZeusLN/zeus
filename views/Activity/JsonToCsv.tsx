@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import {
     StyleSheet,
-    Text,
     View,
     PermissionsAndroid,
     Platform,
     Alert,
-    Modal,
-    TextInput,
-    TouchableOpacity
+    Modal
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import { Parser } from '@json2csv/plainjs';
+import Button from '../../components/Button';
+import TextInput from '../../components/TextInput';
 
 const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const [customFileName, setCustomFileName] = useState('');
@@ -117,21 +116,10 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                         placeholder="File name (optional)"
                         value={customFileName}
                         onChangeText={setCustomFileName}
-                        style={styles.textInput}
                     />
                     <View style={styles.buttonView}>
-                        <TouchableOpacity
-                            style={styles.buttonStyle}
-                            onPress={downloadCsv}
-                        >
-                            <Text style={styles.buttonText}>Download CSV</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.buttonStyle}
-                            onPress={closeModal}
-                        >
-                            <Text style={styles.buttonText}>Close</Text>
-                        </TouchableOpacity>
+                        <Button title="Download CSV" onPress={downloadCsv} />
+                        <Button title="Close" onPress={closeModal} />
                     </View>
                 </View>
             </View>
@@ -152,30 +140,6 @@ const styles = StyleSheet.create({
         padding: 20,
         borderRadius: 10,
         alignItems: 'center'
-    },
-    textInput: {
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        marginBottom: 20,
-        width: '100%',
-        paddingHorizontal: 10
-    },
-    buttonView: {
-        flexDirection: 'row',
-        justifyContent: 'space-between'
-    },
-    buttonStyle: {
-        backgroundColor: '#007BFF',
-        padding: 8,
-        borderRadius: 5,
-        alignItems: 'center',
-        flex: 1,
-        margin: 5
-    },
-    buttonText: {
-        color: 'white',
-        fontSize: 16
     }
 });
 
