@@ -216,7 +216,8 @@ export default class PaymentsSettings extends React.Component<
                         </View>
                     )}
 
-                    {implementation === 'c-lightning-REST' && (
+                    {(implementation === 'c-lightning-REST' ||
+                        implementation === 'cln-rest') && (
                         <View>
                             <Text
                                 style={{

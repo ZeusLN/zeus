@@ -324,7 +324,9 @@ export default class ChannelsStore {
             publicKeysOfToBeLoadedNodeInfos.map(
                 async (remotePubKey: string) => {
                     if (
-                        this.settingsStore.implementation !== 'c-lightning-REST'
+                        this.settingsStore.implementation !==
+                            'c-lightning-REST' &&
+                        this.settingsStore.implementation !== 'cln-rest'
                     ) {
                         const nodeInfo = await this.getNodeInfo(remotePubKey);
                         if (!nodeInfo) return;
@@ -486,10 +488,17 @@ export default class ChannelsStore {
         this.closingChannel = true;
 
         let urlParams: Array<any> = [];
-        if (channelId && !channelPoint) {
+        const implementation = this.settingsStore.implementation;
+
+        if (
+            implementation === 'c-lightning-REST' ||
+            implementation === 'cln-rest' ||
+            implementation === 'eclair' ||
+            implementation === 'spark'
+        ) {
             // c-lightning, eclair
             urlParams = [channelId, forceClose];
-        } else if (channelPoint) {
+        } else {
             // lnd
             const { funding_txid_str, output_index } = channelPoint;
 
@@ -502,7 +511,7 @@ export default class ChannelsStore {
             ];
         }
 
-        if (this.settingsStore.implementation === 'lightning-node-connect') {
+        if (implementation === 'lightning-node-connect') {
             return BackendUtils.closeChannel(urlParams);
         } else {
             let resolved = false;

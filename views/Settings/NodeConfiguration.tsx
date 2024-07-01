@@ -44,7 +44,8 @@ import SettingsStore, {
     LNC_MAILBOX_KEYS,
     EMBEDDED_NODE_NETWORK_KEYS,
     Settings,
-    Node
+    Node,
+    Implementations
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
@@ -79,13 +80,14 @@ interface NodeConfigurationState {
     host: string; // lnd, c-lightning-REST
     port: string; // lnd, c-lightning-REST
     macaroonHex: string; // lnd, c-lightning-REST
+    rune: string; // c-lightning-REST
     url: string; // spark, eclair
     accessKey: string; // spark
     lndhubUrl: string; // lndhub
     username: string | undefined; // lndhub
     password: string | undefined; // lndhub, eclair
     existingAccount: boolean; // lndhub
-    implementation: string;
+    implementation: Implementations;
     certVerification: boolean;
     saved: boolean;
     active: boolean;
@@ -133,6 +135,7 @@ export default class NodeConfiguration extends React.Component<
         host: '',
         port: '',
         macaroonHex: '',
+        rune: '',
         saved: false,
         index: null as number | null,
         active: false,
@@ -309,6 +312,7 @@ export default class NodeConfiguration extends React.Component<
                 host,
                 port,
                 macaroonHex,
+                rune,
                 url,
                 lndhubUrl,
                 existingAccount,
@@ -336,6 +340,7 @@ export default class NodeConfiguration extends React.Component<
                 host,
                 port,
                 macaroonHex,
+                rune,
                 url,
                 lndhubUrl,
                 existingAccount,
@@ -381,6 +386,7 @@ export default class NodeConfiguration extends React.Component<
             lndhubUrl,
             existingAccount,
             macaroonHex,
+            rune,
             accessKey,
             username,
             password,
@@ -413,6 +419,7 @@ export default class NodeConfiguration extends React.Component<
             lndhubUrl,
             existingAccount,
             macaroonHex,
+            rune,
             accessKey,
             username,
             password,
@@ -493,6 +500,7 @@ export default class NodeConfiguration extends React.Component<
             lndhubUrl,
             existingAccount,
             macaroonHex,
+            rune,
             accessKey,
             username,
             password,
@@ -513,6 +521,7 @@ export default class NodeConfiguration extends React.Component<
             lndhubUrl,
             existingAccount,
             macaroonHex,
+            rune,
             accessKey,
             username,
             password,
@@ -640,6 +649,7 @@ export default class NodeConfiguration extends React.Component<
             url,
             lndhubUrl,
             macaroonHex,
+            rune,
             accessKey,
             username,
             password,
@@ -705,7 +715,7 @@ export default class NodeConfiguration extends React.Component<
             <DropdownSetting
                 title={localeString('views.Settings.AddEditNode.nodeInterface')}
                 selectedValue={implementation}
-                onValueChange={(value: string) => {
+                onValueChange={(value: Implementations) => {
                     this.setState({
                         implementation: value,
                         saved: false,
@@ -1347,6 +1357,75 @@ export default class NodeConfiguration extends React.Component<
                                 )}
                             </>
                         )}
+                        {implementation === 'cln-rest' && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.host'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'localhost'}
+                                    autoCapitalize="none"
+                                    value={host}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            host: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                />
+
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.rune'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'Lt1c...'}
+                                    value={rune}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            rune: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                />
+
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.restPort'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={'443/8080'}
+                                    value={port}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            port: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                />
+                            </>
+                        )}
+
                         {(implementation === 'lnd' ||
                             implementation === 'c-lightning-REST') && (
                             <>

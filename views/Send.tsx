@@ -343,7 +343,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             utxos,
             utxoBalance,
             amount:
-                implementation === 'c-lightning-REST'
+                implementation === 'c-lightning-REST' ||
+                implementation === 'cln-rest'
                     ? 'all'
                     : prevState.amount,
             account
@@ -1242,34 +1243,35 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }}
                                 />
 
-                                {implementation !== 'c-lightning-REST' && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                marginTop: 10,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {`${localeString(
-                                                'views.Send.message'
-                                            )} (${localeString(
-                                                'general.optional'
-                                            )})`}
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="default"
-                                            value={message}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    message: text
-                                                })
-                                            }
-                                        />
-                                    </>
-                                )}
+                                {implementation !== 'c-lightning-REST' &&
+                                    implementation !== 'cln-rest' && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    marginTop: 10,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.Send.message'
+                                                )} (${localeString(
+                                                    'general.optional'
+                                                )})`}
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="default"
+                                                value={message}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        message: text
+                                                    })
+                                                }
+                                            />
+                                        </>
+                                    )}
 
                                 <FeeLimit
                                     satAmount={satAmount}
