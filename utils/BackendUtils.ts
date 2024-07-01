@@ -101,6 +101,7 @@ class BackendUtils {
     getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
+    listAddresses = (...args: any[]) => this.call('listAddresses', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
     verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
     lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
@@ -164,6 +165,8 @@ class BackendUtils {
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');
     supportsOffers = () => this.call('supportsOffers');
+    supportsAddressesWithDerivationPaths = () =>
+        this.call('supportsAddressesWithDerivationPaths');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC
