@@ -21,6 +21,7 @@ export default class Payment extends BaseModel {
     bolt: string;
     status: string;
     payment_request: string;
+    failure_reason?: string;
     // c-lightning
     id?: string;
     destination?: string;
@@ -133,18 +134,19 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get isFailed(): boolean {
-        if (!this.isIncomplete) return false;
-        if (!this.htlcs) return false;
         let isFailed = false;
-        for (const htlc of this.htlcs) {
-            if (
-                htlc.status === 'FAILED' ||
-                htlc.status === lnrpc.HTLCAttempt.HTLCStatus.FAILED
-            ) {
-                isFailed = true;
-                break;
+        if (this.htlcs) {
+            for (const htlc of this.htlcs) {
+                if (
+                    htlc.status === 'FAILED' ||
+                    htlc.status === lnrpc.HTLCAttempt.HTLCStatus.FAILED
+                ) {
+                    isFailed = true;
+                    break;
+                }
             }
         }
+        if (this.failure_reason) isFailed = true;
         return isFailed;
     }
 
