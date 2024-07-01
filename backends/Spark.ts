@@ -10,13 +10,13 @@ const calls = new Map<string, Promise<any>>();
 export default class Spark {
     clearCachedCalls = () => calls.clear();
 
-    rpc = (rpcmethod: string, param = {}, range: any = null) => {
+    rpc = (rpcmethod: string, param = {}, range: any = null):Promise<any> => {
         const { accessKey, certVerification, enableTor } = stores.settingsStore;
         let { url } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
         if (calls.has(id)) {
-            return calls.get(id);
+            return calls.get(id)!;
         }
 
         url = url.slice(-4) === '/rpc' ? url : url + '/rpc';
@@ -27,39 +27,35 @@ export default class Spark {
         }
         const body = JSON.stringify({ method: rpcmethod, params: param });
 
-        if (enableTor === true) {
-            calls.set(id, doTorRequest(url, RequestMethod.POST, body, headers));
-        } else {
-            calls.set(
-                id,
-                ReactNativeBlobUtil.config({
-                    trusty: !certVerification
-                })
-                    .fetch('POST', url, headers, body)
-                    .then((response: any) => {
-                        calls.delete(id);
-                        const status = response.info().status;
-                        if (status < 300) {
-                            return response.json();
-                        } else {
-                            let errorInfo;
-                            try {
-                                errorInfo = response.json();
-                            } catch (err) {
-                                throw new Error(
-                                    'response was (' +
-                                        status +
-                                        ')' +
-                                        response.text()
-                                );
-                            }
-                            throw new Error(errorInfo.message);
-                        }
-                    })
-            );
-        }
+        const request = enableTor
+            ? doTorRequest(url, RequestMethod.POST, body, headers)
+            : ReactNativeBlobUtil.config({
+                  trusty: !certVerification
+              })
+                  .fetch('POST', url, headers, body)
+                  .then((response: any) => {
+                      calls.delete(id);
+                      const status = response.info().status;
+                      if (status < 300) {
+                          return response.json();
+                      } else {
+                          let errorInfo;
+                          try {
+                              errorInfo = response.json();
+                          } catch (err) {
+                              throw new Error(
+                                  'response was (' +
+                                      status +
+                                      ')' +
+                                      response.text()
+                              );
+                          }
+                          throw new Error(errorInfo.message);
+                      }
+                  });
+        calls.set(id, request);
 
-        return calls.get(id);
+        return calls.get(id)!;
     };
 
     getTransactions = () =>
