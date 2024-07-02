@@ -982,7 +982,7 @@
     "views.LSPS1.requiredChannelConfirmations": "Required channel confirmations",
     "views.LSPS1.minFundingConfirmWithingBlocks": "Min funding confirm within blocks",
     "views.LSPS1.minRequiredChannelConfirmations": "Min required channel confirmations",
-    "views.LSPS1.token": "Token",
+    "views.LSPS1.token": "Discount code",
     "views.LSPS1.refundOnchainAddress": "Refund onchain address",
     "views.LSPS1.getQuote": "Get quote",
     "views.LSPS1.createOrder": "Create order",
