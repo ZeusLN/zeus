@@ -106,8 +106,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             SettingsStore
         } = this.props;
         const { loading, nodes, selectedNode } = this.state;
-        const { updateSettings, setConnectingStatus, implementation }: any =
-            SettingsStore;
+        const {
+            updateSettings,
+            setConnectingStatus,
+            setInitialStart,
+            implementation
+        }: any = SettingsStore;
 
         const implementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
@@ -242,6 +246,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 NodeInfoStore.reset();
                                                 ChannelsStore.reset();
                                                 setConnectingStatus(true);
+                                                setInitialStart(false);
                                                 navigation.popTo('Wallet', {
                                                     refresh: true
                                                 });
