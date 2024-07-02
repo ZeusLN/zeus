@@ -158,7 +158,7 @@ export default class LSPStore {
                         } catch (e) {}
                     } else {
                         this.error = true;
-                        this.error_msg = data.message;
+                        this.error_msg = errorToUserFriendly(data.message);
                         // handle LSP geoblocking :(
                         if (
                             this.error_msg.includes(
@@ -381,7 +381,9 @@ export default class LSPStore {
             if (data.error) {
                 this.error = true;
                 this.loading = false;
-                this.error_msg = data?.error?.data?.message;
+                this.error_msg = data?.error?.data?.message
+                    ? errorToUserFriendly(data?.error?.data?.message)
+                    : '';
             } else {
                 this.createOrderResponse = data;
                 this.loading = false;
@@ -390,7 +392,9 @@ export default class LSPStore {
             if (data.error) {
                 this.error = true;
                 this.loading = false;
-                this.error_msg = data?.error?.message;
+                this.error_msg = data?.error?.message
+                    ? errorToUserFriendly(data?.error?.message)
+                    : '';
             } else {
                 this.getOrderResponse = data;
             }
@@ -510,7 +514,7 @@ export default class LSPStore {
                 const responseData = JSON.parse(response.data);
                 if (responseData.error) {
                     this.error = true;
-                    this.error_msg = responseData.message;
+                    this.error_msg = errorToUserFriendly(responseData.message);
                     this.loading = false;
                 } else {
                     this.createOrderResponse = responseData;

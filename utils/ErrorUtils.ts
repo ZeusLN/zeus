@@ -15,6 +15,8 @@ const userFriendlyErrors: any = {
     Error: 'general.error'
 };
 
+const pascalCase = /^[A-Z](([a-z0-9]+[A-Z]?)*)$/;
+
 const errorToUserFriendly = (error: Error, localize = true) => {
     let errorMessage: string = error?.message;
     let errorObject: any;
@@ -25,26 +27,34 @@ const errorToUserFriendly = (error: Error, localize = true) => {
         // ignore - using original error message
     }
 
-    const userFriendlyErrorMessage =
+    let errorMsg =
         errorObject?.error?.message ||
         errorObject?.message ||
         errorMessage ||
         error;
 
+    // Handle LSP spec error message formatting
+    if (pascalCase.test(errorMsg)) {
+        // remove capital demarcation with spaces, move all to lowercase
+        errorMsg = errorMsg
+            .split(/(?=[A-Z])/)
+            .join(' ')
+            .toLowerCase();
+        // capitalize first letter
+        errorMsg = errorMsg.charAt(0).toUpperCase() + errorMsg.slice(1);
+    }
+
     if (localize) {
         const localeString = require('./LocaleUtils').localeString;
         return (
-            localeString(userFriendlyErrors[userFriendlyErrorMessage])?.replace(
+            localeString(userFriendlyErrors[errorMsg])?.replace(
                 'Zeus',
                 'ZEUS'
-            ) || userFriendlyErrorMessage
+            ) || errorMsg
         );
     } else {
         const EN = require('../locales/en.json');
-        return (
-            EN[userFriendlyErrors[userFriendlyErrorMessage]] ||
-            userFriendlyErrorMessage
-        );
+        return EN[userFriendlyErrors[errorMsg]] || errorMsg;
     }
 };
 
