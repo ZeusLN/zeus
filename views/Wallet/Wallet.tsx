@@ -237,8 +237,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async getSettingsAndNavigate() {
         const { SettingsStore, navigation } = this.props;
-        const { posStatus, setPosStatus, initialStart, setInitialStart } =
-            SettingsStore;
+        const { posStatus, setPosStatus, initialStart } = SettingsStore;
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
@@ -273,7 +272,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 settings.nodes.length > 0
             ) {
                 if (settings.selectNodeOnStartup && initialStart) {
-                    setInitialStart(false);
                     navigation.navigate('Nodes');
                 }
                 if (!this.state.unlocked) {
@@ -507,7 +505,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         // only navigate to initial url after connection and main calls are made
-        if (this.state.initialLoad) {
+        if (
+            this.state.initialLoad &&
+            !(
+                SettingsStore.settings.selectNodeOnStartup &&
+                SettingsStore.initialStart
+            )
+        ) {
             this.setState({
                 initialLoad: false
             });

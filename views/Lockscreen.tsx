@@ -92,7 +92,6 @@ export default class Lockscreen extends React.Component<
             SettingsStore.settings.selectNodeOnStartup &&
             SettingsStore.initialStart
         ) {
-            SettingsStore.setInitialStart(false);
             navigation.navigate('Nodes');
         } else {
             navigation.pop();
@@ -234,7 +233,14 @@ export default class Lockscreen extends React.Component<
             (pinAttempt && pinAttempt === pin)
         ) {
             SettingsStore.setLoginStatus(true);
-            LinkingUtils.handleInitialUrl(navigation);
+            if (
+                !(
+                    SettingsStore.settings.selectNodeOnStartup &&
+                    SettingsStore.initialStart
+                )
+            ) {
+                LinkingUtils.handleInitialUrl(navigation);
+            }
             if (modifySecurityScreen) {
                 this.resetAuthenticationAttempts();
                 navigation.navigate(modifySecurityScreen);
@@ -252,7 +258,14 @@ export default class Lockscreen extends React.Component<
             (duressPin && pinAttempt === duressPin)
         ) {
             SettingsStore.setLoginStatus(true);
-            LinkingUtils.handleInitialUrl(navigation);
+            if (
+                !(
+                    SettingsStore.settings.selectNodeOnStartup &&
+                    SettingsStore.initialStart
+                )
+            ) {
+                LinkingUtils.handleInitialUrl(navigation);
+            }
             this.deleteNodes();
         } else {
             // need to fetch updated settings to get incremented value of
@@ -268,7 +281,14 @@ export default class Lockscreen extends React.Component<
             });
             if (authenticationAttempts >= maxAuthenticationAttempts) {
                 SettingsStore.setLoginStatus(true);
-                LinkingUtils.handleInitialUrl(navigation);
+                if (
+                    !(
+                        SettingsStore.settings.selectNodeOnStartup &&
+                        SettingsStore.initialStart
+                    )
+                ) {
+                    LinkingUtils.handleInitialUrl(navigation);
+                }
                 // wipe node configs, passwords, and pins
                 this.authenticationFailure();
             } else {
