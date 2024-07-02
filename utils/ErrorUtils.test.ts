@@ -108,5 +108,14 @@ describe('ErrorUtils', () => {
                 'Payment timed out'
             );
         });
+
+        it('Handles PascalCased LSP error messages', () => {
+            expect(
+                errorToUserFriendly(
+                    'ChannelExpiryBlocksTooHighInCreateOrderRequest',
+                    false
+                )
+            ).toEqual('Channel expiry blocks too high in create order request');
+        });
     });
 });
