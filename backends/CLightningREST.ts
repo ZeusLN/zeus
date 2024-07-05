@@ -37,84 +37,81 @@ export default class CLightningREST extends LND {
             transactions: data.outputs
         }));
     getChannels = () =>
-        this.getRequest('/v1/peer/listPeers').then((data: any) => {
+        this.getRequest('/v1/channel/listPeerChannels').then((data: any) => {
             const formattedChannels: any[] = [];
-            data.filter((peer: any) => peer.channels.length).map(
-                (peer: any) => {
-                    peer.channels.forEach((channel: any) => {
-                        if (
-                            channel.state === 'ONCHAIN' ||
-                            channel.state === 'CLOSED' ||
-                            channel.state === 'CHANNELD_AWAITING_LOCKIN'
-                        )
-                            return;
+            const channels = data;
+            channels.forEach((channel: any) => {
+                if (
+                    channel.state === 'ONCHAIN' ||
+                    channel.state === 'CLOSED' ||
+                    channel.state === 'CHANNELD_AWAITING_LOCKIN'
+                )
+                    return;
 
-                        // CLN v23.05 msat deprecations
-                        const to_us_msat =
-                            channel.to_us ||
-                            channel.to_us_msat ||
-                            channel.msatoshi_to_us ||
-                            0;
-                        const total_msat =
-                            channel.total ||
-                            channel.total_msat ||
-                            channel.msatoshi_total ||
-                            0;
-                        const out_fulfilled_msat =
-                            channel.out_fulfilled ||
-                            channel.out_fulfilled_msat ||
-                            channel.out_msatoshi_fulfilled ||
-                            0;
-                        const in_fulfilled_msat =
-                            channel.in_fulfilled ||
-                            channel.in_fulfilled_msat ||
-                            channel.in_msatoshi_fulfilled ||
-                            0;
-                        const our_reserve_msat =
-                            channel.our_reserve ||
-                            channel.our_reserve_msat ||
-                            channel.our_channel_reserve_satoshis ||
-                            0;
-                        const their_reserve_msat =
-                            channel.their_reserve ||
-                            channel.their_reserve_msat ||
-                            channel.their_channel_reserve_satoshi ||
-                            0;
+                // CLN v23.05 msat deprecations
+                const to_us_msat =
+                    channel.to_us ||
+                    channel.to_us_msat ||
+                    channel.msatoshi_to_us ||
+                    0;
+                const total_msat =
+                    channel.total ||
+                    channel.total_msat ||
+                    channel.msatoshi_total ||
+                    0;
+                const out_fulfilled_msat =
+                    channel.out_fulfilled ||
+                    channel.out_fulfilled_msat ||
+                    channel.out_msatoshi_fulfilled ||
+                    0;
+                const in_fulfilled_msat =
+                    channel.in_fulfilled ||
+                    channel.in_fulfilled_msat ||
+                    channel.in_msatoshi_fulfilled ||
+                    0;
+                const our_reserve_msat =
+                    channel.our_reserve ||
+                    channel.our_reserve_msat ||
+                    channel.our_channel_reserve_satoshis ||
+                    0;
+                const their_reserve_msat =
+                    channel.their_reserve ||
+                    channel.their_reserve_msat ||
+                    channel.their_channel_reserve_satoshi ||
+                    0;
 
-                        formattedChannels.push({
-                            active: peer.connected,
-                            remote_pubkey: peer.id,
-                            channel_point: channel.funding_txid,
-                            chan_id: channel.channel_id,
-                            alias: peer.alias,
-                            capacity: Number(total_msat / 1000).toString(),
-                            local_balance: Number(to_us_msat / 1000).toString(),
-                            remote_balance: Number(
-                                (total_msat - to_us_msat) / 1000
-                            ).toString(),
-                            total_satoshis_sent: Number(
-                                out_fulfilled_msat / 1000
-                            ).toString(),
-                            total_satoshis_received: Number(
-                                in_fulfilled_msat / 1000
-                            ).toString(),
-                            num_updates: (
-                                channel.in_payments_offered +
-                                channel.out_payments_offered
-                            ).toString(),
-                            csv_delay: channel.our_to_self_delay,
-                            private: channel.private,
-                            local_chan_reserve_sat: Number(
-                                our_reserve_msat / 1000
-                            ).toString(),
-                            remote_chan_reserve_sat: Number(
-                                their_reserve_msat / 1000
-                            ).toString(),
-                            close_address: channel.close_to_addr
-                        });
-                    });
-                }
-            );
+                formattedChannels.push({
+                    active: channel.peer_connected,
+                    remote_pubkey: channel.peer_id,
+                    channel_point: channel.funding_txid,
+                    chan_id: channel.channel_id,
+                    alias: channel.alias,
+                    capacity: Number(total_msat / 1000).toString(),
+                    local_balance: Number(to_us_msat / 1000).toString(),
+                    remote_balance: Number(
+                        (total_msat - to_us_msat) / 1000
+                    ).toString(),
+                    total_satoshis_sent: Number(
+                        out_fulfilled_msat / 1000
+                    ).toString(),
+                    total_satoshis_received: Number(
+                        in_fulfilled_msat / 1000
+                    ).toString(),
+                    num_updates: (
+                        channel.in_payments_offered +
+                        channel.out_payments_offered
+                    ).toString(),
+                    csv_delay: channel.our_to_self_delay,
+                    private: channel.private,
+                    local_chan_reserve_sat: Number(
+                        our_reserve_msat / 1000
+                    ).toString(),
+                    remote_chan_reserve_sat: Number(
+                        their_reserve_msat / 1000
+                    ).toString(),
+                    close_address: channel.close_to_addr
+                });
+            });
 
             return {
                 channels: formattedChannels
