@@ -11,9 +11,15 @@ import RNFS from 'react-native-fs';
 import { Parser } from '@json2csv/plainjs';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
+import dateTimeUtils from '../../utils/DateTimeUtils';
 
 const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const [customFileName, setCustomFileName] = useState('');
+
+    const closeAndClearInput = () => {
+        setCustomFileName('');
+        closeModal();
+    };
 
     const getFormattedDateTime = () => {
         const now = new Date();
@@ -32,7 +38,13 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             let filteredItem = {};
             keys.forEach((key) => {
                 if (item.hasOwnProperty(key)) {
-                    filteredItem[key] = item[key];
+                    if (key === 'creation_date') {
+                        filteredItem[key] = dateTimeUtils.listFormattedDate(
+                            item[key]
+                        );
+                    } else {
+                        filteredItem[key] = item[key];
+                    }
                 }
             });
             return filteredItem;
@@ -108,7 +120,7 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             visible={isVisible}
             transparent={true}
             animationType="slide"
-            onRequestClose={closeModal}
+            onRequestClose={closeAndClearInput}
         >
             <View style={styles.modalOverlay}>
                 <View style={styles.modalView}>
@@ -117,9 +129,9 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                         value={customFileName}
                         onChangeText={setCustomFileName}
                     />
-                    <View style={styles.buttonView}>
+                    <View>
                         <Button title="Download CSV" onPress={downloadCsv} />
-                        <Button title="Close" onPress={closeModal} />
+                        <Button title="Close" onPress={closeAndClearInput} />
                     </View>
                 </View>
             </View>
