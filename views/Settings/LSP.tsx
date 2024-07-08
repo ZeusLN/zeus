@@ -266,9 +266,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {`${localeString(
-                                        'views.Settings.LSP.lspAccessKey'
-                                    )}`}
+                                    {`${localeString('views.LSPS1.token')}`}
                                 </Text>
                                 <TextInput
                                     value={accessKey}
