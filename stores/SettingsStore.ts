@@ -143,6 +143,8 @@ export interface Settings {
     recovery: boolean;
     initialLoad: boolean;
     embeddedTor: boolean;
+    feeEstimator: string;
+    customFeeEstimator: string;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -199,6 +201,25 @@ export const MEMPOOL_RATES_KEYS = [
         key: 'Minimum fee',
         value: 'minimumFee',
         translateKey: 'views.EditFee.minimumFee'
+    }
+];
+
+export const DEFAULT_FEE_ESTIMATOR =
+    'https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json';
+
+export const FEE_ESTIMATOR_KEYS = [
+    {
+        key: 'lightning.computer',
+        value: 'https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json'
+    },
+    {
+        key: 'strike.me',
+        value: 'https://bitcoinchainfees.strike.me/v1/fee-estimates'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom'
     }
 ];
 
@@ -1064,6 +1085,8 @@ export default class SettingsStore {
         recovery: false,
         initialLoad: true,
         embeddedTor: false,
+        feeEstimator: DEFAULT_FEE_ESTIMATOR,
+        customFeeEstimator: '',
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,

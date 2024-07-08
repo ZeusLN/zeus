@@ -26,7 +26,8 @@ import stores from '../stores/Stores';
 import {
     DEFAULT_NEUTRINO_PEERS_MAINNET,
     SECONDARY_NEUTRINO_PEERS_MAINNET,
-    DEFAULT_NEUTRINO_PEERS_TESTNET
+    DEFAULT_NEUTRINO_PEERS_TESTNET,
+    DEFAULT_FEE_ESTIMATOR
 } from '../stores/SettingsStore';
 
 import { lnrpc } from '../proto/lightning';
@@ -140,7 +141,12 @@ const writeLndConfig = async (
     neutrino.persistfilters=true
 
     [fee]
-    fee.url=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
+    fee.url=${
+        stores.settingsStore?.settings?.feeEstimator === 'Custom'
+            ? stores.settingsStore?.settings?.customFeeEstimator
+            : stores.settingsStore?.settings?.feeEstimator ||
+              DEFAULT_FEE_ESTIMATOR
+    }
     
     [autopilot]
     autopilot.active=0
