@@ -10,7 +10,8 @@ import BigNumber from 'bignumber.js';
 export default class CLightningREST extends LND {
     getHeaders = (macaroonHex: string): any => {
         return {
-            macaroon: macaroonHex
+            macaroon: macaroonHex,
+            encodingtype: 'hex'
         };
     };
 
