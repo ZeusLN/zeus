@@ -212,10 +212,14 @@ export default class CLightningREST extends LND {
             amount: Number(data.amt && data.amt * 1000),
             maxfeepercent: data.max_fee_percent
         });
-    closeChannel = (urlParams?: Array<string>) =>
-        this.deleteRequest(
-            `/v1/channel/closeChannel/${urlParams && urlParams[0]}/`
+    closeChannel = (urlParams?: Array<string>) => {
+        const id = urlParams && urlParams[0];
+        const unilateralTimeout = urlParams && urlParams[1] ? 2 : 0;
+
+        return this.deleteRequest(
+            `/v1/channel/closeChannel/${id}?unilateralTimeout=${unilateralTimeout}`
         );
+    };
     getNodeInfo = () => this.getRequest('N/A');
     getFees = () =>
         this.getRequest('/v1/getFees/').then(({ feeCollected }: any) => ({
