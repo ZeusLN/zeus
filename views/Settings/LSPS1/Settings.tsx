@@ -245,7 +245,7 @@ export default class LSPS1Settings extends React.Component<
                                 marginTop: 12
                             }}
                         >
-                            {localeString('views.LSPS1.token')}
+                            {localeString('general.discountCode')}
                         </Text>
                         <TextInput
                             value={lsps1Token}
