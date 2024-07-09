@@ -28,6 +28,7 @@ interface DisplayState {
     displayNickname: boolean;
     bigKeypadButtons: boolean;
     showAllDecimalPlaces: boolean;
+    showMillisatoshiAmounts: boolean;
     selectNodeOnStartup: boolean;
 }
 
@@ -43,6 +44,7 @@ export default class Display extends React.Component<
         displayNickname: false,
         bigKeypadButtons: false,
         showAllDecimalPlaces: false,
+        showMillisatoshiAmounts: false,
         selectNodeOnStartup: false
     };
 
@@ -62,6 +64,10 @@ export default class Display extends React.Component<
                 false,
             showAllDecimalPlaces:
                 (settings.display && settings.display.showAllDecimalPlaces) ||
+                false,
+            showMillisatoshiAmounts:
+                (settings.display &&
+                    settings.display.showMillisatoshiAmounts) ||
                 false,
             selectNodeOnStartup: settings.selectNodeOnStartup || false
         });
@@ -84,6 +90,7 @@ export default class Display extends React.Component<
             bigKeypadButtons,
             theme,
             showAllDecimalPlaces,
+            showMillisatoshiAmounts,
             selectNodeOnStartup
         } = this.state;
         const { updateSettings }: any = SettingsStore;
@@ -118,7 +125,8 @@ export default class Display extends React.Component<
                                     displayNickname,
                                     bigKeypadButtons,
                                     defaultView,
-                                    showAllDecimalPlaces
+                                    showAllDecimalPlaces,
+                                    showMillisatoshiAmounts
                                 }
                             });
                             SystemNavigationBar.setNavigationColor(
@@ -147,7 +155,8 @@ export default class Display extends React.Component<
                                     displayNickname,
                                     bigKeypadButtons,
                                     theme,
-                                    showAllDecimalPlaces
+                                    showAllDecimalPlaces,
+                                    showMillisatoshiAmounts
                                 }
                             });
                         }}
@@ -190,7 +199,8 @@ export default class Display extends React.Component<
                                             theme,
                                             bigKeypadButtons,
                                             displayNickname: !displayNickname,
-                                            showAllDecimalPlaces
+                                            showAllDecimalPlaces,
+                                            showMillisatoshiAmounts
                                         }
                                     });
                                 }}
@@ -234,7 +244,8 @@ export default class Display extends React.Component<
                                             theme,
                                             displayNickname,
                                             bigKeypadButtons: !bigKeypadButtons,
-                                            showAllDecimalPlaces
+                                            showAllDecimalPlaces,
+                                            showMillisatoshiAmounts
                                         }
                                     });
                                 }}
@@ -280,7 +291,54 @@ export default class Display extends React.Component<
                                             displayNickname,
                                             bigKeypadButtons,
                                             showAllDecimalPlaces:
-                                                !showAllDecimalPlaces
+                                                !showAllDecimalPlaces,
+                                            showMillisatoshiAmounts
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                left: -10
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Display.showMillisatoshiAmounts'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={showMillisatoshiAmounts}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        showMillisatoshiAmounts:
+                                            !showMillisatoshiAmounts
+                                    });
+                                    await updateSettings({
+                                        display: {
+                                            defaultView,
+                                            theme,
+                                            displayNickname,
+                                            bigKeypadButtons,
+                                            showAllDecimalPlaces,
+                                            showMillisatoshiAmounts:
+                                                !showMillisatoshiAmounts
                                         }
                                     });
                                 }}
