@@ -1173,12 +1173,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 }}
                                             >
                                                 {localeString(
-                                                    'views.LSPS1.token'
+                                                    'general.discountCode'
                                                 )}
                                             </Text>
                                             <TextInput
                                                 placeholder={localeString(
-                                                    'views.LSPS1.token'
+                                                    'general.discountCode'
                                                 )}
                                                 value={this.state.token}
                                                 onChangeText={(text: string) =>
