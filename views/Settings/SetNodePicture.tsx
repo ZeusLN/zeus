@@ -73,7 +73,10 @@ export default class SetNodePicture extends React.Component<
             ],
             'embedded-lnd': [require('../../assets/images/LND.jpg')],
             'lightning-node-connect': [require('../../assets/images/LND.jpg')],
-            'cln-rest: [require('../../assets/images/CLN.jpg')]
+            'cln-rest': [
+                require('../../assets/images/CLN.jpg'),
+                require('../../assets/images/BTCpay.jpg')
+            ]
         };
 
         if (implementation && implementation in implementationImagesMap) {
