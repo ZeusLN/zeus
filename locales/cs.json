@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Zobrazit přezdívku uzlu na hlavním zobrazení",
     "views.Settings.Display.bigKeypadButtons": "Velká tlačítka klávesnice",
     "views.Settings.Display.showAllDecimalPlaces": "Zobrazit všechna desetinná místa",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Vybrat uzel při spuštění",
     "views.Settings.privacy": "Soukromí",
     "views.Settings.payments": "Platby",
