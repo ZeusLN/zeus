@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Mostrar apodo de nodo en las vistas principales",
     "views.Settings.Display.bigKeypadButtons": "Botones de teclado grande",
     "views.Settings.Display.showAllDecimalPlaces": "Mostrar todos los decimales",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Seleccionar nodo al iniciar",
     "views.Settings.privacy": "Privacidad",
     "views.Settings.payments": "Pagos",
