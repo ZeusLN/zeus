@@ -1237,6 +1237,8 @@ PODS:
     - React-Core
   - RNCPicker (2.6.1):
     - React-Core
+  - RNDeviceInfo (11.1.0):
+    - React-Core
   - RNFS (2.20.0):
     - React-Core
   - RNGestureHandler (2.16.2):
@@ -1406,6 +1408,7 @@ DEPENDENCIES:
   - "RNCClipboard (from `../node_modules/@react-native-clipboard/clipboard`)"
   - "RNCMaskedView (from `../node_modules/@react-native-masked-view/masked-view`)"
   - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
+  - RNDeviceInfo (from `../node_modules/react-native-device-info`)
   - RNFS (from `../node_modules/react-native-fs`)
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNKeychain (from `../node_modules/react-native-keychain`)
@@ -1585,6 +1588,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-masked-view/masked-view"
   RNCPicker:
     :path: "../node_modules/@react-native-picker/picker"
+  RNDeviceInfo:
+    :path: "../node_modules/react-native-device-info"
   RNFS:
     :path: "../node_modules/react-native-fs"
   RNGestureHandler:
@@ -1691,6 +1696,7 @@ SPEC CHECKSUMS:
   RNCClipboard: 0a720adef5ec193aa0e3de24c3977222c7e52a37
   RNCMaskedView: 090213d32d8b3bb83a4dcb7d12c18f0152591906
   RNCPicker: b18aaf30df596e9b1738e7c1f9ee55402a229dca
+  RNDeviceInfo: b899ce37a403a4dea52b7cb85e16e49c04a5b88e
   RNFS: 4ac0f0ea233904cb798630b3c077808c06931688
   RNGestureHandler: 2282cfbcf86c360d29f44ace393203afd5c6cff7
   RNKeychain: ff836453cba46938e0e9e4c22e43d43fa2c90333
