@@ -32,7 +32,7 @@ import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
-import JsonToCsv from './JsonToCsv';
+import JsonToCsv from './ActivityToCsv';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -246,7 +246,7 @@ export default class Activity extends React.PureComponent<
         const DownloadButton = () => (
             <TouchableOpacity
                 onPress={this.handleDownloadPress}
-                accessibilityLabel={localeString('general.download')}
+                accessibilityLabel={localeString('views.ActivityToCsv.title')}
             >
                 <Icon
                     name="download"
