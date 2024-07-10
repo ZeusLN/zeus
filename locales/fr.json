@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Afficher le surnom du nœud sur les vues principales",
     "views.Settings.Display.bigKeypadButtons": "Gros boutons de clavier",
     "views.Settings.Display.showAllDecimalPlaces": "Montrer toutes les décimales",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Sélectionnez le nœud au démarrage",
     "views.Settings.privacy": "Confidentialité",
     "views.Settings.payments": "Paiements",
