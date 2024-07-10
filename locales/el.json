@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Εμφάνιση ψευδωνύμου κόμβου στις κύριες προβολές",
     "views.Settings.Display.bigKeypadButtons": "Μεγάλα πλήκτρα",
     "views.Settings.Display.showAllDecimalPlaces": "Προβολή όλων των δεκαδικών",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Επιλέξτε κόμβο κατά την εκκίνηση",
     "views.Settings.privacy": "Ιδιωτικότητα",
     "views.Settings.payments": "Πληρωμές",
