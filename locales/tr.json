@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Ana görünümlerde nod'un takma adını göster",
     "views.Settings.Display.bigKeypadButtons": "Büyük tuş takımı düğmeleri",
     "views.Settings.Display.showAllDecimalPlaces": "Tüm ondalık basamakları göster",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "Gizlilik",
     "views.Settings.payments": "Ödemeler",
