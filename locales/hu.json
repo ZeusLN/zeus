@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Display node nickname on main views",
     "views.Settings.Display.bigKeypadButtons": "Big keypad buttons",
     "views.Settings.Display.showAllDecimalPlaces": "Show all decimal places",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "Adatbiztonság",
     "views.Settings.payments": "Kifizetések",
