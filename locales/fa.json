@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "نمایش نام مستعار گره در نمای اصلی",
     "views.Settings.Display.bigKeypadButtons": "دکمه های بزرگ صفحه کلید",
     "views.Settings.Display.showAllDecimalPlaces": "تمام جایگاه های اعشار را نشان بده",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "حریم خصوصی",
     "views.Settings.payments": "پرداخت‌ها",
