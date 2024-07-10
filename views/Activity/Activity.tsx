@@ -255,7 +255,7 @@ export default class Activity extends React.PureComponent<
                     type="feather"
                     color={themeColor('text')}
                     underlayColor="transparent"
-                    size={30}
+                    size={33}
                 />
             </TouchableOpacity>
         );
