@@ -43,6 +43,7 @@ interface DisplaySettings {
     displayNickname?: boolean;
     bigKeypadButtons?: boolean;
     showAllDecimalPlaces?: boolean;
+    showMillisatoshiAmounts?: boolean;
 }
 
 export enum PosEnabled {
@@ -1041,7 +1042,8 @@ export default class SettingsStore {
             defaultView: 'Keypad',
             displayNickname: false,
             bigKeypadButtons: false,
-            showAllDecimalPlaces: false
+            showAllDecimalPlaces: false,
+            showMillisatoshiAmounts: true
         },
         pos: {
             posEnabled: PosEnabled.Disabled,
@@ -1463,6 +1465,17 @@ export default class SettingsStore {
 
                     this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY4, 'true');
+                }
+
+                const MOD_KEY5 = 'millisat_amounts';
+                const mod5 = await EncryptedStorage.getItem(MOD_KEY5);
+                if (!mod5) {
+                    if (!newSettings?.display.showMillisatoshiAmounts) {
+                        newSettings.display.showMillisatoshiAmounts = true;
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY5, 'true');
                 }
 
                 // migrate old POS squareEnabled setting to posEnabled
