@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Prikaži nadimak noda na glavnim pogledima",
     "views.Settings.Display.bigKeypadButtons": "Velike tipke tipkovnice",
     "views.Settings.Display.showAllDecimalPlaces": "Prikaži sva decimalna mjesta",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "Privatnost",
     "views.Settings.payments": "Plaćanja",
