@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Pokaż alias węzła w głównych widokach",
     "views.Settings.Display.bigKeypadButtons": "Duże przyciski klawiatury",
     "views.Settings.Display.showAllDecimalPlaces": "Pokaż wszystkie miejsca dziesiętne",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Wybieraj węzeł podczas uruchamiania",
     "views.Settings.privacy": "Prywatność",
     "views.Settings.payments": "Płatności",
