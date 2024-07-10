@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Onyesha jina la kitengo kwenye maonyesho makuu",
     "views.Settings.Display.bigKeypadButtons": "Vitufe vikubwa vya Keypad",
     "views.Settings.Display.showAllDecimalPlaces": "Onyesha maeneo yote ya desimali",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "Faragha",
     "views.Settings.payments": "Malipo",
