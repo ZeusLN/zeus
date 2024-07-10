@@ -722,6 +722,7 @@
     "views.Settings.Display.displayNickname": "Afișează aliasul nodului în afișările principale",
     "views.Settings.Display.bigKeypadButtons": "Butoane mari",
     "views.Settings.Display.showAllDecimalPlaces": "Arată toate zecimalele",
+    "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Selectați nodul la pornire",
     "views.Settings.privacy": "Intimitate",
     "views.Settings.payments": "Plăți",
