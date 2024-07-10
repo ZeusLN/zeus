@@ -12,6 +12,7 @@ import { Parser } from '@json2csv/plainjs';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
 import dateTimeUtils from '../../utils/DateTimeUtils';
+import { localeString } from 'utils/LocaleUtils';
 
 const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const [customFileName, setCustomFileName] = useState('');
@@ -53,7 +54,6 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
 
     const convertJsonToCsv = async (data) => {
         if (!data || data.length === 0) {
-            console.log('Filtered data is empty.');
             return '';
         }
 
@@ -108,10 +108,16 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             const filePath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
 
             await RNFS.writeFile(filePath, csv, 'utf8');
-            Alert.alert('Success', 'CSV file has been downloaded');
+            Alert.alert(
+                localeString('views.ActivityToCsv.csvDownloadSuccess'),
+                localeString('views.ActivityToCsv.csvDownloaded')
+            );
             closeModal();
         } catch (err) {
-            console.error('Failed to save CSV file:', err);
+            console.error(
+                localeString('views.ActivityToCsv.csvDownloadFailed'),
+                err
+            );
         }
     };
 
@@ -125,13 +131,25 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             <View style={styles.modalOverlay}>
                 <View style={styles.modalView}>
                     <TextInput
-                        placeholder="File name (optional)"
+                        placeholder={localeString(
+                            'views.ActivityToCsv.textInputPlaceholder'
+                        )}
                         value={customFileName}
                         onChangeText={setCustomFileName}
                     />
                     <View>
-                        <Button title="Download CSV" onPress={downloadCsv} />
-                        <Button title="Close" onPress={closeAndClearInput} />
+                        <Button
+                            title={localeString(
+                                'views.ActivityToCsv.downloadButton'
+                            )}
+                            onPress={downloadCsv}
+                        />
+                        <Button
+                            title={localeString(
+                                'views.ActivityToCsv.closeButton'
+                            )}
+                            onPress={closeAndClearInput}
+                        />
                     </View>
                 </View>
             </View>
