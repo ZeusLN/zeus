@@ -11,8 +11,7 @@ import {
     Text,
     TextInput
 } from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import { inject, observer } from 'mobx-react';
 import { Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
@@ -29,6 +28,8 @@ import AddressUtils from '../../utils/AddressUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import ContactStore from '../../stores/ContactStore';
+
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../../assets/images/SVG/Key Security.svg';
@@ -39,10 +40,8 @@ import Star from '../../assets/images/SVG/Star.svg';
 
 interface AddContactProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<
-        'AddContact',
-        { isEdit: boolean; prefillContact: Contact; isNostrContact: boolean }
-    >;
+    route: Route<'AddContact', { isEdit: boolean; isNostrContact: boolean }>;
+    ContactStore: ContactStore;
 }
 
 interface Contact {
@@ -81,6 +80,8 @@ interface AddContactState {
     isValidPubkey: boolean;
 }
 
+@inject('ContactStore')
+@observer
 export default class AddContact extends React.Component<
     AddContactProps,
     AddContactState
@@ -123,140 +124,21 @@ export default class AddContact extends React.Component<
     };
 
     saveContact = async () => {
-        const { navigation, route } = this.props;
-        const {
-            lnAddress,
-            bolt12Address,
-            onchainAddress,
-            nip05,
-            nostrNpub,
-            pubkey,
-            name,
-            description,
-            photo,
-            isFavourite
-        } = this.state;
-
-        const { isEdit, prefillContact, isNostrContact } = route.params ?? {};
-
-        try {
-            // Retrieve existing contacts from storage
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
-            );
-            const existingContacts: Contact[] = contactsString
-                ? JSON.parse(contactsString)
-                : [];
-
-            if (isEdit && prefillContact && !isNostrContact) {
-                // Editing an existing contact
-                const updatedContacts = existingContacts.map((contact) =>
-                    contact.contactId === prefillContact.contactId
-                        ? {
-                              ...contact,
-                              lnAddress,
-                              bolt12Address,
-                              onchainAddress,
-                              nip05,
-                              nostrNpub,
-                              pubkey,
-                              name,
-                              description,
-                              photo,
-                              isFavourite
-                          }
-                        : contact
-                );
-
-                // Sort the updated contacts alphabetically
-                updatedContacts.sort((a, b) => a.name.localeCompare(b.name));
-
-                // Save the updated contacts to encrypted storage
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
-                    JSON.stringify(updatedContacts)
-                );
-
-                console.log('Contact updated successfully!');
-                navigation.popTo('Contacts');
-            } else {
-                // Creating a new contact
-                const contactId = uuidv4();
-
-                const newContact: Contact = {
-                    contactId,
-                    lnAddress,
-                    bolt12Address,
-                    onchainAddress,
-                    nip05,
-                    nostrNpub,
-                    pubkey,
-                    name,
-                    description,
-                    photo,
-                    isFavourite
-                };
-
-                const updatedContacts = [...existingContacts, newContact].sort(
-                    (a, b) => a.name.localeCompare(b.name)
-                );
-
-                // Save the updated contacts to encrypted storage
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
-                    JSON.stringify(updatedContacts)
-                );
-
-                console.log('Contact saved successfully!');
-                navigation.popTo('Contacts');
-
-                // Reset the input fields after saving the contact
-                this.setState({
-                    contacts: updatedContacts,
-                    lnAddress: [],
-                    bolt12Address: [],
-                    onchainAddress: [],
-                    nip05: [],
-                    nostrNpub: [],
-                    pubkey: [],
-                    name: '',
-                    description: '',
-                    photo: null
-                });
-            }
-        } catch (error) {
-            console.log('Error saving contacts:', error);
-        }
+        const { navigation, route, ContactStore } = this.props;
+        const { isEdit, isNostrContact } = route.params ?? {};
+        const contactDetails = { ...this.state };
+        await ContactStore.saveContact(
+            contactDetails,
+            isEdit,
+            isNostrContact,
+            navigation
+        );
     };
 
     deleteContact = async () => {
-        const { navigation, route } = this.props;
-        const prefillContact = route.params?.prefillContact;
+        const { navigation, ContactStore } = this.props;
 
-        if (prefillContact) {
-            try {
-                const contactsString = await EncryptedStorage.getItem(
-                    'zeus-contacts'
-                );
-                const existingContacts: Contact[] = contactsString
-                    ? JSON.parse(contactsString)
-                    : [];
-
-                const updatedContacts = existingContacts.filter(
-                    (contact) => contact.contactId !== prefillContact.contactId
-                );
-
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
-                    JSON.stringify(updatedContacts)
-                );
-
-                console.log('Contact deleted successfully!');
-                navigation.popTo('Contacts');
-            } catch (error) {
-                console.log('Error deleting contact:', error);
-            }
-        }
+        await ContactStore?.deleteContact(navigation);
     };
 
     selectPhoto = () => {
@@ -356,37 +238,26 @@ export default class AddContact extends React.Component<
         this.handlePrefillContact();
     }
 
-    componentDidUpdate(prevProps: AddContactProps) {
-        const prefillContact = this.props.route.params?.prefillContact;
-        const prevPrefillContact = prevProps.route.params?.prefillContact;
-
-        // Check if the prefillContact prop has changed
-        if (prefillContact !== prevPrefillContact) {
+    componentDidUpdate(prevProps) {
+        const { ContactStore } = this.props;
+        if (
+            ContactStore.prefillContact !==
+            prevProps.ContactStore.prefillContact
+        ) {
             this.handlePrefillContact();
         }
     }
 
-    handlePrefillContact() {
-        const prefillContact = this.props.route.params?.prefillContact;
+    handlePrefillContact = () => {
+        const { ContactStore } = this.props;
 
-        if (prefillContact) {
-            this.setState({
-                lnAddress: prefillContact.lnAddress,
-                bolt12Address: prefillContact.bolt12Address,
-                onchainAddress: prefillContact.onchainAddress,
-                nip05: prefillContact.nip05,
-                nostrNpub: prefillContact.nostrNpub,
-                pubkey: prefillContact.pubkey,
-                name: prefillContact.name,
-                description: prefillContact.description,
-                photo: prefillContact.photo,
-                isFavourite: prefillContact.isFavourite
-            });
+        if (ContactStore.prefillContact) {
+            this.setState({ ...ContactStore.prefillContact });
         }
-    }
+    };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, ContactStore } = this.props;
         const {
             lnAddress,
             bolt12Address,
@@ -457,7 +328,7 @@ export default class AddContact extends React.Component<
                 />
             </TouchableOpacity>
         );
-        const { isEdit, prefillContact } = this.props.route.params ?? {};
+        const { isEdit } = this.props.route.params ?? {};
 
         const ScanBadge = ({
             navigation
@@ -1411,7 +1282,7 @@ export default class AddContact extends React.Component<
                             }
                         />
                     </View>
-                    {isEdit && prefillContact && (
+                    {isEdit && ContactStore?.prefillContact && (
                         <View style={styles.button}>
                             <Button
                                 title={
