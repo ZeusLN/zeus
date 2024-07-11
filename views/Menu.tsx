@@ -24,6 +24,7 @@ import NetworkIcon from '../assets/images/SVG/Network.svg';
 import MailboxFlagUp from '../assets/images/SVG/MailboxFlagUp.svg';
 import MailboxFlagDown from '../assets/images/SVG/MailboxFlagDown.svg';
 import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
+import ReceiveIcon from '../assets/images/SVG/Receive.svg';
 import RoutingIcon from '../assets/images/SVG/Routing.svg';
 import WrenchIcon from '../assets/images/SVG/Wrench.svg';
 
@@ -457,9 +458,6 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                     <View>
                                         <Bolt12Icon
                                             fill={themeColor('text')}
-                                            style={{
-                                                marginLeft: 4
-                                            }}
                                             width={48}
                                             height={30}
                                         />
@@ -473,6 +471,44 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         {localeString(
                                             'views.Settings.Bolt12Address'
                                         )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {selectedNode && BackendUtils.supportsOffers() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginTop: 5,
+                                marginBottom: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('PayCodes')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View>
+                                        <ReceiveIcon
+                                            fill={themeColor('text')}
+                                            width={48}
+                                            height={30}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('general.paycodes')}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon />
