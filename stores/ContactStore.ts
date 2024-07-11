@@ -12,6 +12,7 @@ export default class ContactStore {
     public loadContacts = async () => {
         try {
             this.loading = true;
+            console.log('LOADING CONTACTS.....');
             const contactsString = await EncryptedStorage.getItem(
                 'zeus-contacts'
             );
@@ -61,6 +62,8 @@ export default class ContactStore {
                 );
 
                 console.log('Contact updated successfully!', updatedContacts);
+
+                this.loadContacts();
                 navigation.popTo('Contacts');
             } else {
                 // Creating a new contact
@@ -79,6 +82,8 @@ export default class ContactStore {
                 );
 
                 console.log('Contact saved successfully!');
+
+                this.loadContacts();
                 navigation.popTo('Contacts');
             }
             // Clear the prefillContact after saving
@@ -110,6 +115,8 @@ export default class ContactStore {
                 );
 
                 console.log('Contact deleted successfully!');
+
+                this.loadContacts();
                 navigation.popTo('Contacts');
             } catch (error) {
                 console.log('Error deleting contact:', error);

@@ -56,13 +56,6 @@ export default class Contacts extends React.Component<
         };
     }
 
-    componentDidMount() {
-        const { ContactStore } = this.props;
-        this.props.navigation.addListener('focus', () =>
-            ContactStore?.loadContacts()
-        );
-    }
-
     displayAddress = (item: Contact) => {
         const contact = new Contact(item);
         const {

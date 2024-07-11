@@ -238,7 +238,7 @@ export default class AddContact extends React.Component<
         this.handlePrefillContact();
     }
 
-    componentDidUpdate(prevProps) {
+    componentDidUpdate(prevProps: AddContactProps) {
         const { ContactStore } = this.props;
         if (
             ContactStore.prefillContact !==
@@ -368,6 +368,9 @@ export default class AddContact extends React.Component<
                                 <ScanBadge navigation={navigation} />
                             </Row>
                         }
+                        onBack={() => {
+                            ContactStore?.clearPrefillContact();
+                        }}
                         containerStyle={{
                             borderBottomWidth: 0
                         }}

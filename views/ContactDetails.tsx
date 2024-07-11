@@ -142,6 +142,7 @@ export default class ContactDetails extends React.Component<
     };
 
     saveUpdatedContact = async (updatedContact: Contact) => {
+        const { ContactStore } = this.props;
         try {
             const contactsString = await EncryptedStorage.getItem(
                 'zeus-contacts'
@@ -166,6 +167,7 @@ export default class ContactDetails extends React.Component<
                     );
 
                     console.log('Contact updated successfully!');
+                    ContactStore?.loadContacts();
                 }
             }
         } catch (error) {
