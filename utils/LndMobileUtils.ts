@@ -4,6 +4,7 @@ import {
     NativeModules,
     Platform
 } from 'react-native';
+import DeviceInfo from 'react-native-device-info';
 
 import { generateSecureRandom } from 'react-native-securerandom';
 import NetInfo from '@react-native-community/netinfo';
@@ -37,6 +38,9 @@ export const NEUTRINO_PING_TIMEOUT_MS = 1500;
 export const NEUTRINO_PING_OPTIMAL_MS = 200;
 export const NEUTRINO_PING_LAX_MS = 500;
 export const NEUTRINO_PING_THRESHOLD_MS = 1000;
+
+// ~4GB
+const NEUTRINO_PERSISTENT_FILTER_THRESHOLD = 400000000;
 
 export const LndMobileEventEmitter =
     Platform.OS == 'android'
@@ -88,7 +92,15 @@ const writeLndConfig = async (
         ? 'connect'
         : 'addpeer';
 
-    const config = `[Application Options]
+    DeviceInfo.getTotalMemory().then(async (totalMemory) => {
+        console.log('totalMemory', totalMemory);
+
+        const persistFilters =
+            totalMemory >= NEUTRINO_PERSISTENT_FILTER_THRESHOLD;
+
+        console.log('persistFilters', persistFilters);
+
+        const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
     sync-freelist=1
@@ -138,7 +150,7 @@ const writeLndConfig = async (
             : ''
     }
     neutrino.broadcasttimeout=11s
-    neutrino.persistfilters=true
+    neutrino.persistfilters=${persistFilters}
 
     [fee]
     fee.url=${
@@ -170,8 +182,11 @@ const writeLndConfig = async (
             : 'apriori'
     }`;
 
-    await writeConfig(config);
-    return;
+        console.log('config', config);
+
+        await writeConfig(config);
+        return;
+    });
 };
 
 export async function expressGraphSync() {
