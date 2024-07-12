@@ -12,7 +12,8 @@ import { Parser } from '@json2csv/plainjs';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
 import dateTimeUtils from '../../utils/DateTimeUtils';
-import { localeString } from 'utils/LocaleUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const [customFileName, setCustomFileName] = useState('');
@@ -137,18 +138,22 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                         value={customFileName}
                         onChangeText={setCustomFileName}
                     />
-                    <View>
+                    <View style={styles.buttonContainer}>
                         <Button
                             title={localeString(
                                 'views.ActivityToCsv.downloadButton'
                             )}
                             onPress={downloadCsv}
+                            buttonStyle={{
+                                marginBottom: 10
+                            }}
                         />
                         <Button
                             title={localeString(
                                 'views.ActivityToCsv.closeButton'
                             )}
                             onPress={closeAndClearInput}
+                            secondary
                         />
                     </View>
                 </View>
@@ -166,9 +171,13 @@ const styles = StyleSheet.create({
     },
     modalView: {
         width: '80%',
-        backgroundColor: 'white',
+        backgroundColor: themeColor('background'),
         padding: 20,
         borderRadius: 10,
+        alignItems: 'center'
+    },
+    buttonContainer: {
+        width: '100%',
         alignItems: 'center'
     }
 });
