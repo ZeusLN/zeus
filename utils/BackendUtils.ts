@@ -113,6 +113,15 @@ class BackendUtils {
         this.call('subscribeTransactions', args);
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
 
+    // BOLT 12 / Offers
+    getNewOffer = () => this.call('getNewOffer');
+    fetchInvoiceFromOffer = (...args: any[]) =>
+        this.call('fetchInvoiceFromOffer', args);
+
+    // cln
+    supportsLSPS1customMessage = () => this.call('supportsLSPS1customMessage');
+    supportsLSPS1rest = () => this.call('supportsLSPS1rest');
+
     // lndhub
     login = (...args: any[]) => this.call('login', args);
 
@@ -143,6 +152,9 @@ class BackendUtils {
         this.call('supportsSimpleTaprootChannels');
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsSweep = () => this.call('supportsSweep');
+    supportsOnchainBatching = () => this.call('supportsOnchainBatching');
+    supportsChannelBatching = () => this.call('supportsChannelBatching');
+    supportsOffers = () => this.call('supportsOffers');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC
