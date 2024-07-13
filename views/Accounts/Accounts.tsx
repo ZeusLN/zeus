@@ -31,7 +31,13 @@ interface AccountsProps {
     SettingsStore: SettingsStore;
     route: Route<
         'Accounts',
-        { value: string; amount: string; lightning: string; locked: boolean }
+        {
+            value: string;
+            amount: string;
+            lightning: string;
+            offer: string;
+            locked: boolean;
+        }
     >;
 }
 
@@ -39,6 +45,7 @@ interface AccountsState {
     value: string;
     amount: string;
     lightning: string;
+    offer: string;
     locked: boolean;
     editMode: boolean;
 }
@@ -53,6 +60,7 @@ export default class Accounts extends React.Component<
         value: '',
         amount: '',
         lightning: '',
+        offer: '',
         locked: false,
         editMode: false
     };
@@ -64,7 +72,7 @@ export default class Accounts extends React.Component<
 
     componentDidMount() {
         const { route } = this.props;
-        const { value, amount, lightning, locked } = route.params ?? {};
+        const { value, amount, lightning, offer, locked } = route.params ?? {};
 
         if (value) {
             this.setState({ value });
@@ -76,6 +84,10 @@ export default class Accounts extends React.Component<
 
         if (lightning) {
             this.setState({ lightning });
+        }
+
+        if (offer) {
+            this.setState({ offer });
         }
 
         if (locked) {
@@ -91,7 +103,8 @@ export default class Accounts extends React.Component<
             SettingsStore,
             navigation
         } = this.props;
-        const { value, amount, lightning, locked, editMode } = this.state;
+        const { value, amount, lightning, offer, locked, editMode } =
+            this.state;
         const { loadingAccounts, accounts } = UTXOsStore;
 
         const FilterButton = () => (
@@ -173,6 +186,7 @@ export default class Accounts extends React.Component<
                         value={value}
                         amount={amount}
                         lightning={lightning}
+                        offer={offer}
                         locked={locked}
                         editMode={editMode}
                     />
