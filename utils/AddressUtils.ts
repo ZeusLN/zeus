@@ -70,7 +70,7 @@ export const CUSTODIAL_LNDHUBS = [
 ];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let amount, lightning;
+    let amount, lightning, offer;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
@@ -89,25 +89,27 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         amount = amount.toString();
     }
 
-    if (result.lightning || result.LIGHTNING || result.lno || result.LNO) {
-        console.log('result', result.lno);
-        lightning =
-            result.lightning || result.LIGHTNING || result.lno || result.LNO;
+    if (result.lightning || result.LIGHTNING) {
+        lightning = result.lightning || result.LIGHTNING;
     }
 
-    return [value, amount, lightning];
+    if (result.lno || result.LNO) {
+        offer = result.lno || result.LNO;
+    }
+
+    return [value, amount, lightning, offer];
 };
 
 class AddressUtils {
     processSendAddress = (input: string) => {
-        let value, amount, lightning;
+        let value, amount, lightning, offer;
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
         if (input.includes('bitcoin:') || input.includes('BITCOIN:')) {
-            const [parsedValue, parsedAmount, parsedLightning] =
+            const [parsedValue, parsedAmount, parsedLightning, parsedOffer] =
                 bitcoinQrParser(
                     input,
                     input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
@@ -121,6 +123,10 @@ class AddressUtils {
             if (parsedLightning) {
                 lightning = parsedLightning;
             }
+
+            if (parsedOffer) {
+                offer = parsedOffer;
+            }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
         } else if (input.includes('LIGHTNING:')) {
@@ -131,7 +137,7 @@ class AddressUtils {
             value = input;
         }
 
-        return { value, amount, lightning };
+        return { value, amount, lightning, offer };
     };
 
     processLNDHubAddress = (input: string) => {
