@@ -1149,6 +1149,7 @@
     "views.PayCode.singleUse": "Single use",
     "views.PayCode.multiUse": "Multi use",
     "views.PayCode.internalLabel": "Internal label",
+    "views.PayCodes.noPayCodes": "No pay codes created yet",
     "views.Settings.Bolt12Address": "Adres BOLT 12",
     "views.Settings.Bolt12Address.requestButton": "Request Paycode",
     "views.Settings.Bolt12Address.changeButton": "Change Paycode",
