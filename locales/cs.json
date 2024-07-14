@@ -1149,7 +1149,7 @@
     "views.PayCode.singleUse": "Single use",
     "views.PayCode.multiUse": "Multi use",
     "views.PayCode.internalLabel": "Interní štítek",
-    "views.PayCodes.noPayCodes": "No pay codes created yet",
+    "views.PayCodes.noPayCodes": "Dosud nebyly vytvořeny žádné platební kódy",
     "views.Settings.Bolt12Address": "BOLT 12 adresa",
     "views.Settings.Bolt12Address.requestButton": "Vyžádat platební kód",
     "views.Settings.Bolt12Address.changeButton": "Změnit platební kód",
