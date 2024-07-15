@@ -530,6 +530,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const {
             hasLnAddress,
             hasBolt12Address,
+            hasBolt12Offer,
             hasOnchainAddress,
             hasPubkey,
             hasMultiplePayableAddresses
@@ -555,6 +556,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                       10
                   )}...${item.bolt12Address[0].slice(-10)}`
                 : item.bolt12Address[0];
+        }
+
+        if (hasBolt12Offer) {
+            return item.bolt12Offer[0].length > 23
+                ? `${item.bolt12Offer[0].slice(
+                      0,
+                      10
+                  )}...${item.bolt12Offer[0].slice(-10)}`
+                : item.bolt12Offer[0];
         }
 
         if (hasOnchainAddress) {
@@ -585,6 +595,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                         this.validateAddress(item.lnAddress[0]);
                     } else if (contact.isSingleBolt12Address) {
                         this.validateAddress(item.bolt12Address[0]);
+                    } else if (contact.isSingleBolt12Offer) {
+                        this.validateAddress(item.bolt12Offer[0]);
                     } else if (contact.isSingleOnchainAddress) {
                         this.validateAddress(item.onchainAddress[0]);
                     } else if (contact.isSinglePubkey) {
@@ -687,8 +699,12 @@ export default class Send extends React.Component<SendProps, SendState> {
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
         if (BackendUtils.supportsOffers()) {
-            paymentOptions.push(localeString('views.Settings.Bolt12Address'));
+            paymentOptions.push(
+                localeString('views.Settings.Bolt12Address'),
+                localeString('views.Settings.Bolt12Offer')
+            );
         }
+
         if (BackendUtils.supportsOnchainSends()) {
             paymentOptions.push(localeString('views.Send.btcAddress'));
         }
