@@ -157,7 +157,7 @@ export default class CLNRest {
         route: string,
         ws?: boolean
     ) => {
-        const hostPath = host.includes('://') ? host : `http://${host}`;
+        const hostPath = host.includes('://') ? host : `https://${host}`;
         let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
 
         if (ws) {
