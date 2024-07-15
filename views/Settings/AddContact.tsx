@@ -335,7 +335,7 @@ export default class AddContact extends React.Component<
     };
 
     onChangeBolt12Offer = (text: string) => {
-        const isValid = AddressUtils.isValidLightningAddress(text);
+        const isValid = AddressUtils.isValidLightningOffer(text);
         this.setState({
             isValidBolt12Offer: isValid
         });
