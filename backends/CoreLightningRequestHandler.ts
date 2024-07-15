@@ -147,7 +147,8 @@ export const getChainTransactions = async () => {
     }
 
     const getinfo = getinfoResult.value;
-    const allTxs = sqlResult.status === 'fulfilled' ? sqlResult.value : [];
+    const allTxs =
+        sqlResult.status === 'fulfilled' ? sqlResult.value : { rows: [] };
 
     const walletTxs = allTxs.rows.filter(
         (tx: any) =>
