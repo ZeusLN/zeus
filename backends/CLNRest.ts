@@ -157,7 +157,7 @@ export default class CLNRest {
         route: string,
         ws?: boolean
     ) => {
-        const hostPath = host.includes('://') ? host : `https://${host}`;
+        const hostPath = host.includes('://') ? host : `http://${host}`;
         let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
 
         if (ws) {
@@ -210,7 +210,8 @@ export default class CLNRest {
         return this.postRequest('/v1/withdraw', request);
     };
     getMyNodeInfo = () => this.postRequest('/v1/getinfo');
-    getInvoices = () => this.postRequest('/v1/listinvoices');
+    getInvoices = () =>
+        this.postRequest('/v1/listinvoices', { limit: 150, index: 'created' });
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoice', {
             description: data.memo,
