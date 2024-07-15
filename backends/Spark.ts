@@ -194,7 +194,9 @@ export default class Spark {
                     creation_date: inv.expires_at,
                     settle_date: inv.paid_at,
                     payment_request: inv.bolt11,
-                    expiry: inv.expires_at,
+                    expiry: new Date(
+                        new Date().getTime() + inv.expires_at * 1000
+                    ),
                     amt_paid: inv.msatoshi_received / 1000,
                     amt_paid_sat: inv.msatoshi_received / 1000,
                     amt_paid_msat: inv.msatoshi_received
