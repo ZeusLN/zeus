@@ -43,6 +43,7 @@ interface LayerBalancesProps {
     value?: string;
     amount?: string;
     lightning?: string;
+    offer?: string;
     locked?: boolean;
     consolidated?: boolean;
     editMode?: boolean;
@@ -160,6 +161,7 @@ const SwipeableRow = ({
     value,
     amount,
     lightning,
+    offer,
     locked,
     editMode
 }: {
@@ -170,6 +172,7 @@ const SwipeableRow = ({
     value?: string;
     amount?: string;
     lightning?: string;
+    offer?: string;
     locked?: boolean;
     editMode?: boolean;
 }) => {
@@ -178,6 +181,7 @@ const SwipeableRow = ({
             <LightningSwipeableRow
                 navigation={navigation}
                 lightning={lightning}
+                offer={offer}
                 locked={locked}
             >
                 <Row item={item} />
@@ -259,6 +263,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             value,
             amount,
             lightning,
+            offer,
             onRefresh,
             locked,
             consolidated,
@@ -340,6 +345,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                             value={value}
                             amount={amount}
                             lightning={lightning}
+                            offer={offer}
                             locked={locked || editMode}
                             editMode={editMode}
                         />
