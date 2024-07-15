@@ -132,7 +132,7 @@ export const listPeers = async (data: any) => {
 // Get all chain transactions from your core-lightnig node
 export const getChainTransactions = async () => {
     const sqlQuery =
-        `SELECT * FROM bkpr_accountevents WHERE (tag='deposit' OR tag='to_them' OR tag='channel_open' OR tag='channel_close') ORDER BY timestamp DESC LIMIT 5`.trim();
+        `SELECT * FROM bkpr_accountevents WHERE (tag='deposit' OR tag='to_them' OR tag='channel_open' OR tag='channel_close') ORDER BY timestamp DESC LIMIT 150`.trim();
 
     const results = await Promise.allSettled([
         api.postRequest('/v1/sql', { query: sqlQuery.trim() }),
