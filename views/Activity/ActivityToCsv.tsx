@@ -78,35 +78,47 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
         }
     };
 
+    const requestAndroidPermissions = async () => {
+        try {
+            const granted = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+                {
+                    title: 'Storage Permission Required',
+                    message:
+                        'This app needs access to your storage to save CSV files',
+                    buttonNeutral: 'Ask Me Later',
+                    buttonNegative: 'Cancel',
+                    buttonPositive: 'OK'
+                }
+            );
+            return granted === PermissionsAndroid.RESULTS.GRANTED;
+        } catch (err) {
+            console.error('Failed to request permission ', err);
+            return false;
+        }
+    };
+
     const downloadCsv = async () => {
         const csv = await convertJsonToCsv(filteredActivity);
         if (!csv) return;
 
         try {
             if (Platform.OS === 'android') {
-                const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-                    {
-                        title: 'Storage Permission Required',
-                        message:
-                            'This app needs access to your storage to save CSV files',
-                        buttonNeutral: 'Ask Me Later',
-                        buttonNegative: 'Cancel',
-                        buttonPositive: 'OK'
-                    }
-                );
-                if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                const hasPermission = await requestAndroidPermissions();
+                if (!hasPermission) {
                     console.error('Storage permission denied');
                     return;
                 }
             }
 
             const dateTime = getFormattedDateTime();
-
             const fileName = customFileName
                 ? `${customFileName}.csv`
                 : `data_${dateTime}.csv`;
-            const filePath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
+            const filePath =
+                Platform.OS === 'android'
+                    ? `${RNFS.DownloadDirectoryPath}/${fileName}`
+                    : `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
             await RNFS.writeFile(filePath, csv, 'utf8');
             Alert.alert(
