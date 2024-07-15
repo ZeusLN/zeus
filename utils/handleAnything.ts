@@ -332,10 +332,26 @@ const handleAnything = async (
                 bolt12 = bolt12.replace(/("|\\)/g, '');
                 bolt12 = bolt12.replace(/bitcoin:b12=/, '');
 
+                const { value, amount, lightning, offer }: any =
+                    AddressUtils.processSendAddress(bolt12);
+
+                if (value) {
+                    return [
+                        'Accounts',
+                        {
+                            value,
+                            amount,
+                            lightning,
+                            offer,
+                            locked: true
+                        }
+                    ];
+                }
+
                 return [
                     'Send',
                     {
-                        destination: value,
+                        destination: value || offer,
                         bolt12,
                         transactionType: 'BOLT 12',
                         isValid: true
