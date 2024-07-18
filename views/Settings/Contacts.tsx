@@ -81,6 +81,7 @@ export default class Contacts extends React.Component<
         const {
             hasLnAddress,
             hasBolt12Address,
+            hasBolt12Offer,
             hasOnchainAddress,
             hasPubkey,
             hasMultiplePayableAddresses
@@ -106,6 +107,15 @@ export default class Contacts extends React.Component<
                       10
                   )}...${item.bolt12Address[0].slice(-10)}`
                 : item.bolt12Address[0];
+        }
+
+        if (hasBolt12Offer) {
+            return item.bolt12Offer[0].length > 23
+                ? `${item.bolt12Offer[0].slice(
+                      0,
+                      10
+                  )}...${item.bolt12Offer[0].slice(-10)}`
+                : item.bolt12Offer[0];
         }
 
         if (hasOnchainAddress) {
@@ -141,6 +151,12 @@ export default class Contacts extends React.Component<
                             this.state.SendScreen &&
                             this.props.navigation.navigate('Send', {
                                 destination: item.bolt12Address[0],
+                                contactName: item.name
+                            })) ||
+                        (contact.isSingleBolt12Offer &&
+                            this.state.SendScreen &&
+                            this.props.navigation.navigate('Send', {
+                                destination: item.bolt12Offer[0],
                                 contactName: item.name
                             })) ||
                         (contact.isSingleOnchainAddress &&
@@ -228,6 +244,7 @@ export default class Contacts extends React.Component<
                 hasMatch('description') ||
                 hasMatch('lnAddress') ||
                 hasMatch('bolt12Address') ||
+                hasMatch('bolt12Offer') ||
                 hasMatch('nip05') ||
                 hasMatch('onchainAddress') ||
                 hasMatch('nostrNpub') ||
