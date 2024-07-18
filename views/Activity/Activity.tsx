@@ -27,6 +27,7 @@ import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NotesStore from '../../stores/NotesStore';
 import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
@@ -38,6 +39,7 @@ interface ActivityProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
+    NotesStore: NotesStore;
     route: Route<'Activity', { order: any }>;
 }
 
@@ -45,7 +47,7 @@ interface ActivityState {
     selectedPaymentForOrder: any;
 }
 
-@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore')
+@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore', 'NotesStore')
 @observer
 export default class Activity extends React.PureComponent<
     ActivityProps,
@@ -139,6 +141,7 @@ export default class Activity extends React.PureComponent<
             FiatStore,
             PosStore,
             SettingsStore,
+            NotesStore,
             route
         } = this.props;
         const { selectedPaymentForOrder } = this.state;
@@ -225,6 +228,51 @@ export default class Activity extends React.PureComponent<
             </TouchableOpacity>
         );
 
+        const hasMatchingNoteKey = (item: any, noteKeys: string[]): boolean => {
+            const strippedNoteKeys = noteKeys.map((key) =>
+                key.replace(/^note-/, '')
+            );
+
+            const isMatchingValue = (
+                value: any,
+                strippedNoteKeys: string[]
+            ): boolean => {
+                if (
+                    (typeof value === 'string' || typeof value === 'number') &&
+                    value.toString().length === 64
+                ) {
+                    const valueString = value.toString();
+                    for (let key of strippedNoteKeys) {
+                        console.log(
+                            `Comparing item value: ${valueString} with noteKey: ${key}`
+                        );
+                        if (key === valueString) {
+                            console.log(`Match found: ${valueString}`);
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+
+            let valuesToCompare: string[] = [];
+            if (item.model === 'Invoice') {
+                valuesToCompare = [item.getRPreimage, item.payment_hash];
+            } else if (item.model === 'Payment') {
+                valuesToCompare = [item.paymentHash, item.getPreimage];
+            } else if (item.model === 'Transaction') {
+                valuesToCompare = [item.tx];
+            }
+
+            for (let value of valuesToCompare) {
+                if (isMatchingValue(value, strippedNoteKeys)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
         return (
             <Screen>
                 <Header
@@ -255,6 +303,9 @@ export default class Activity extends React.PureComponent<
                     <FlatList
                         data={filteredActivity}
                         renderItem={({ item }: { item: any }) => {
+                            const noteKeys = NotesStore?.noteKeys;
+                            const hasNotes = hasMatchingNoteKey(item, noteKeys);
+
                             let displayName = item.model;
                             let subTitle = item.model;
 
@@ -563,6 +614,41 @@ export default class Activity extends React.PureComponent<
                                                         </ListItem.Subtitle>
                                                     </View>
                                                 )}
+                                            <View style={styles.row}>
+                                                <ListItem.Subtitle
+                                                    style={{
+                                                        ...styles.leftCell,
+                                                        color:
+                                                            item ===
+                                                            selectedPaymentForOrder
+                                                                ? themeColor(
+                                                                      'highlight'
+                                                                  )
+                                                                : themeColor(
+                                                                      'secondaryText'
+                                                                  ),
+                                                        fontFamily:
+                                                            'Lato-Regular'
+                                                    }}
+                                                >
+                                                    Notes
+                                                </ListItem.Subtitle>
+
+                                                <ListItem.Subtitle
+                                                    style={{
+                                                        ...styles.rightCell,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontFamily:
+                                                            'Lato-Regular'
+                                                    }}
+                                                >
+                                                    {hasNotes
+                                                        ? 'Notes Available'
+                                                        : 'No Notes'}
+                                                </ListItem.Subtitle>
+                                            </View>
                                         </ListItem.Content>
                                     </ListItem>
                                 </React.Fragment>

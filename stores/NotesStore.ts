@@ -6,6 +6,10 @@ const NOTES_KEY = 'note-Keys';
 export default class NotesStore {
     @observable public noteKeys: string[] = [];
 
+    constructor() {
+        this.loadNoteKeys();
+    }
+
     @action
     public storeNoteKeys = async (key: string, notes: string) => {
         if (!this.noteKeys.includes(key)) {
@@ -25,6 +29,22 @@ export default class NotesStore {
             await this.writeNoteKeysToLocalStorage();
         }
     };
+
+    @action
+    public async loadNoteKeys() {
+        console.log('Loading note keys...');
+        try {
+            const storedKeys = await EncryptedStorage.getItem(NOTES_KEY);
+            if (storedKeys) {
+                this.noteKeys = JSON.parse(storedKeys);
+            }
+        } catch (error) {
+            console.error(
+                'Error loading note keys from encrypted storage',
+                error
+            );
+        }
+    }
 
     writeNoteKeysToLocalStorage = async () => {
         try {
