@@ -1151,6 +1151,7 @@
     "views.PayCode.internalLabel": "Etichetă internă",
     "views.PayCodes.noPayCodes": "No pay codes created yet",
     "views.Settings.Bolt12Address": "Adresa BOLT 12",
+    "views.Settings.Bolt12Offer": "BOLT 12 offer",
     "views.Settings.Bolt12Address.requestButton": "Solicitați codul de plată",
     "views.Settings.Bolt12Address.changeButton": "Schimbați codul de plată",
     "views.Settings.Bolt12Address.handle": "Aliasul tău",
