@@ -39,6 +39,7 @@ I have tested this PR with the following types of nodes (please specify node ver
 - [ ] LND (REST)
 - [ ] LND (Lightning Node Connect)
 - [ ] Core Lightning (c-lightning-REST)
+- [ ] Core Lightning (CLNRest)
 - [ ] LndHub
 - [ ] [DEPRECATED] Core Lightning (Spark)
 - [ ] [DEPRECATED] Eclair
