@@ -226,6 +226,33 @@ const handleAnything = async (
                 { cancelable: false }
             );
         }
+    } else if (value.includes('clnrest://')) {
+        if (isClipboardValue) return true;
+        const { host, port, rune, implementation, enableTor } =
+            ConnectionFormatUtils.processCLNRestConnectUrl(value);
+
+        if (host && port && rune) {
+            return [
+                'NodeConfiguration',
+                {
+                    node: {
+                        host,
+                        port,
+                        rune,
+                        implementation,
+                        enableTor
+                    },
+                    isValid: true
+                }
+            ];
+        } else {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.LNDConnectConfigQRScanner.error'),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+        }
     } else if (
         value.includes('https://terminal.lightning.engineering#/connect/pair/')
     ) {
