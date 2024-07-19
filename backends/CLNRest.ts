@@ -214,9 +214,9 @@ export default class CLNRest {
         this.postRequest('/v1/sql', {
             query: "SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT 150;"
         }).then((data: any) => {
-            const invoices: any[] = [];
+            const invoicelist: any[] = [];
             data.rows.forEach((invoice: any) => {
-                invoices.push({
+                invoicelist.push({
                     label: invoice[0],
                     bolt11: invoice[1],
                     bolt12: invoice[2],
@@ -232,7 +232,7 @@ export default class CLNRest {
             });
 
             return {
-                invoices: invoices
+                invoices: invoicelist
             };
         });
     createInvoice = (data: any) =>
