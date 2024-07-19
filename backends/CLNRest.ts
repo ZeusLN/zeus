@@ -211,7 +211,30 @@ export default class CLNRest {
     };
     getMyNodeInfo = () => this.postRequest('/v1/getinfo');
     getInvoices = () =>
-        this.postRequest('/v1/listinvoices', { limit: 150, index: 'created' });
+        this.postRequest('/v1/sql', {
+            query: "SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT 150;"
+        }).then((data: any) => {
+            const invoices: any[] = [];
+            data.rows.forEach((invoice: any) => {
+                invoices.push({
+                    label: invoice[0],
+                    bolt11: invoice[1],
+                    bolt12: invoice[2],
+                    payment_hash: invoice[3],
+                    amount_msat: invoice[4],
+                    status: invoice[5],
+                    amount_received_msat: invoice[6],
+                    paid_at: invoice[7],
+                    payment_preimage: invoice[8],
+                    description: invoice[9],
+                    expires_at: invoice[10]
+                });
+            });
+
+            return {
+                invoices: invoices
+            };
+        });
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoice', {
             description: data.memo,
