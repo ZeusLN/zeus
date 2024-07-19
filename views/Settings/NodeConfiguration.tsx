@@ -1312,6 +1312,7 @@ export default class NodeConfiguration extends React.Component<
                                                 })
                                             }
                                             locked={loading}
+                                            autoCapitalize="none"
                                         />
 
                                         <Text
@@ -1336,6 +1337,7 @@ export default class NodeConfiguration extends React.Component<
                                             }
                                             locked={loading}
                                             secureTextEntry={saved}
+                                            autoCapitalize="none"
                                         />
 
                                         {saved && (
