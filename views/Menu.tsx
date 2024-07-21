@@ -13,6 +13,7 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import AddIcon from '../assets/images/SVG/Add.svg';
+import BlockIcon from '../assets/images/SVG/Block.svg';
 import Bolt12Icon from '../assets/images/SVG/AtSign.svg';
 import ForwardIcon from '../assets/images/SVG/Caret Right-3.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
@@ -243,42 +244,6 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {implementation === 'embedded-lnd' && seedPhrase && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('Seed')}
-                            >
-                                <View style={styles.icon}>
-                                    <KeyIcon
-                                        fill={themeColor('text')}
-                                        width={27}
-                                        height={27}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.Settings.Seed.title')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -314,6 +279,72 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             </View>
                         </TouchableOpacity>
                     </View>
+
+                    {implementation === 'embedded-lnd' && seedPhrase && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Seed')}
+                            >
+                                <View style={styles.icon}>
+                                    <KeyIcon
+                                        fill={themeColor('text')}
+                                        width={27}
+                                        height={27}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.Settings.Seed.title')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+
+                            <View style={styles.separationLine} />
+
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('EmbeddedNodeSettings')
+                                }
+                            >
+                                <View style={styles.icon}>
+                                    <BlockIcon
+                                        color={themeColor('text')}
+                                        width={27}
+                                        height={27}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.title'
+                                    )}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {selectedNode && BackendUtils.supportsNodeInfo() && (
                         <View
