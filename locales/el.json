@@ -1151,6 +1151,7 @@
     "views.PayCode.internalLabel": "Εσωτερική ετικέτα",
     "views.PayCodes.noPayCodes": "No pay codes created yet",
     "views.Settings.Bolt12Address": "Διεύθυνση BOLT 12",
+    "views.Settings.Bolt12Offer": "BOLT 12 offer",
     "views.Settings.Bolt12Address.requestButton": "Αίτηση κωδικού πληρωμής",
     "views.Settings.Bolt12Address.changeButton": "Αλλαγή κωδικού πληρωμής",
     "views.Settings.Bolt12Address.handle": "Τ' όνομά σας",
