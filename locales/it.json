@@ -1151,6 +1151,7 @@
     "views.PayCode.internalLabel": "Etichetta interna",
     "views.PayCodes.noPayCodes": "No pay codes created yet",
     "views.Settings.Bolt12Address": "Indirizzo BOLT 12",
+    "views.Settings.Bolt12Offer": "BOLT 12 offer",
     "views.Settings.Bolt12Address.requestButton": "Richiedi codice di pagamento",
     "views.Settings.Bolt12Address.changeButton": "Cambia codice di pagamento",
     "views.Settings.Bolt12Address.handle": "Il tuo manico",

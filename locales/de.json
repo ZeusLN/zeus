@@ -1151,6 +1151,7 @@
     "views.PayCode.internalLabel": "Internal label",
     "views.PayCodes.noPayCodes": "No pay codes created yet",
     "views.Settings.Bolt12Address": "BOLT-12-Adresse",
+    "views.Settings.Bolt12Offer": "BOLT 12 offer",
     "views.Settings.Bolt12Address.requestButton": "Request Paycode",
     "views.Settings.Bolt12Address.changeButton": "Change Paycode",
     "views.Settings.Bolt12Address.handle": "Your handle",
