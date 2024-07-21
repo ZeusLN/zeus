@@ -110,6 +110,58 @@ class ConnectionFormatUtils {
             implementation: 'c-lightning-REST'
         };
     };
+
+    processCLNRestConnectUrl = (input: string) => {
+        let host, port;
+        const forceHttp = input.includes('clnrest://http://');
+        const clrConnectionString = forceHttp
+            ? input.replace('clnrest://http://', '')
+            : input.split('clnrest://')[1];
+        const params = input.split('?')[1];
+
+        const result: any = {};
+        if (params) {
+            params.split('&').forEach(function (part) {
+                // split on only the first = sign
+                const item = part.split(/=(.*)/s);
+                result[item[0]] = decodeURIComponent(item[1]);
+            });
+        }
+
+        // is IPv6
+        if (input.includes('[')) {
+            host =
+                clrConnectionString && clrConnectionString.split(']:')[0] + ']';
+            port =
+                clrConnectionString &&
+                clrConnectionString.split(']:')[1] &&
+                clrConnectionString.split(']:')[1].split('?')[0];
+        } else {
+            host = clrConnectionString && clrConnectionString.split(':')[0];
+            port =
+                clrConnectionString &&
+                clrConnectionString.split(':')[1] &&
+                clrConnectionString.split(':')[1].split('?')[0];
+        }
+        const rune = result.rune;
+
+        // prepend https by default
+        host = host.includes('://')
+            ? host
+            : forceHttp
+            ? 'http://' + host
+            : 'https://' + host;
+
+        const enableTor: boolean = host.includes('.onion');
+
+        return {
+            host,
+            port,
+            rune,
+            enableTor,
+            implementation: 'cln-rest'
+        };
+    };
 }
 
 const connectionFormatUtils = new ConnectionFormatUtils();
