@@ -310,7 +310,8 @@ export default class ImportAccount extends React.Component<
                         )}
                         onPress={() =>
                             this.props.UTXOsStore.importAccount({
-                                ...this.state,
+                                name,
+                                extended_public_key,
                                 address_type: address_type
                                     ? Number(address_type)
                                     : undefined,
