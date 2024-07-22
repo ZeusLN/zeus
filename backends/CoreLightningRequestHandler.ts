@@ -132,7 +132,7 @@ export const listPeers = async (data: any) => {
 // Get all chain transactions from your core-lightnig node
 export const getChainTransactions = async () => {
     const sqlQuery =
-        `SELECT * FROM bkpr_accountevents WHERE (tag='deposit' OR tag='to_them' OR tag='channel_open' OR tag='channel_close') ORDER BY timestamp DESC LIMIT 150`.trim();
+        "SELECT account, tag, outpoint, credit_msat, debit_msat, timestamp, blockheight FROM bkpr_accountevents WHERE (tag='deposit' OR tag='to_them' OR tag='channel_open' OR tag='channel_close') ORDER BY timestamp DESC LIMIT 150";
 
     const results = await Promise.allSettled([
         api.postRequest('/v1/sql', { query: sqlQuery.trim() }),
@@ -152,12 +152,12 @@ export const getChainTransactions = async () => {
 
     const walletTxs = allTxs.rows.filter(
         (tx: any) =>
-            !!tx[3] && tx[3] === 'deposit' && !!tx[1] && tx[1] === 'wallet'
+            !!tx[1] && tx[1] === 'deposit' && !!tx[0] && tx[0] === 'wallet'
     );
 
     const externalTxs = allTxs.rows.filter(
         (tx: any) =>
-            !!tx[3] && tx[3] === 'deposit' && !!tx[1] && tx[1] === 'external'
+            !!tx[1] && tx[1] === 'deposit' && !!tx[0] && tx[0] === 'external'
     );
 
     const listTxs =
@@ -168,17 +168,17 @@ export const getChainTransactions = async () => {
     const transactions = listTxs.transactions
         .map((tx: any) => {
             const withdrawal = externalTxs.find((n: any) => {
-                const txid = n[8] ? n[8].split(':')[0] : null;
+                const txid = n[2] ? n[2].split(':')[0] : null;
 
                 // Check if the deposit is associated with a channel open or close
                 const isChannelChange = allTxs.rows.find((c: any) => {
-                    if (!c[8]) {
+                    if (!c[2]) {
                         return undefined;
                     }
 
                     return (
-                        c[8].split(':')[0] === tx.hash &&
-                        (c[3] === 'channel_open' || c[3] === 'channel_close')
+                        c[2].split(':')[0] === tx.hash &&
+                        (c[1] === 'channel_open' || c[1] === 'channel_close')
                     );
                 });
 
@@ -190,17 +190,17 @@ export const getChainTransactions = async () => {
             });
 
             const deposit = walletTxs.find((n: any) => {
-                const txid = n[8] ? n[8].split(':')[0] : null;
+                const txid = n[2] ? n[2].split(':')[0] : null;
 
                 // Check if the deposit is associated with a channel open or close
                 const isChannelChange = allTxs.rows.find((c: any) => {
-                    if (!c[8]) {
+                    if (!c[2]) {
                         return undefined;
                     }
 
                     return (
-                        c[8].split(':')[0] === tx.hash &&
-                        (c[3] === 'channel_open' || c[3] === 'channel_close')
+                        c[2].split(':')[0] === tx.hash &&
+                        (c[1] === 'channel_open' || c[1] === 'channel_close')
                     );
                 });
 
@@ -213,10 +213,10 @@ export const getChainTransactions = async () => {
 
             if (withdrawal) {
                 return {
-                    amount: -Math.abs(withdrawal[4]) / 1000,
-                    block_height: withdrawal[9],
-                    num_confirmations: getinfo.blockheight - withdrawal[9],
-                    time_stamp: withdrawal[7],
+                    amount: -Math.abs(withdrawal[3]) / 1000,
+                    block_height: withdrawal[6],
+                    num_confirmations: getinfo.blockheight - withdrawal[6],
+                    time_stamp: withdrawal[5],
                     txid: tx.hash,
                     note: 'on-chain withdrawal'
                 };
@@ -224,10 +224,10 @@ export const getChainTransactions = async () => {
 
             if (deposit) {
                 return {
-                    amount: deposit[4] / 1000,
-                    block_height: deposit[9],
-                    num_confirmations: getinfo.blockheight - deposit[9],
-                    time_stamp: deposit[7],
+                    amount: deposit[3] / 1000,
+                    block_height: deposit[6],
+                    num_confirmations: getinfo.blockheight - deposit[6],
+                    time_stamp: deposit[5],
                     txid: tx.hash,
                     note: 'on-chain deposit'
                 };
