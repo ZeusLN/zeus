@@ -141,7 +141,6 @@ export default class Activity extends React.PureComponent<
             FiatStore,
             PosStore,
             SettingsStore,
-            NotesStore,
             route
         } = this.props;
         const { selectedPaymentForOrder } = this.state;
@@ -228,32 +227,11 @@ export default class Activity extends React.PureComponent<
             </TouchableOpacity>
         );
 
-        const hasMatchingNoteKey = (item: any, noteKeys: string[]): boolean => {
-            const strippedNoteKeys = noteKeys.map((key) =>
+        const getMatchingNote = (item: any) => {
+            const { NotesStore } = this.props;
+            const strippedNoteKeys = NotesStore.noteKeys.map((key) =>
                 key.replace(/^note-/, '')
             );
-
-            const isMatchingValue = (
-                value: any,
-                strippedNoteKeys: string[]
-            ): boolean => {
-                if (
-                    (typeof value === 'string' || typeof value === 'number') &&
-                    value.toString().length === 64
-                ) {
-                    const valueString = value.toString();
-                    for (let key of strippedNoteKeys) {
-                        console.log(
-                            `Comparing item value: ${valueString} with noteKey: ${key}`
-                        );
-                        if (key === valueString) {
-                            console.log(`Match found: ${valueString}`);
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            };
 
             let valuesToCompare: string[] = [];
             if (item.model === 'Invoice') {
@@ -265,12 +243,15 @@ export default class Activity extends React.PureComponent<
             }
 
             for (let value of valuesToCompare) {
-                if (isMatchingValue(value, strippedNoteKeys)) {
-                    return true;
+                const matchKey = `note-${value}`;
+                if (
+                    strippedNoteKeys.includes(value) &&
+                    NotesStore.notes[matchKey]
+                ) {
+                    return NotesStore.notes[matchKey];
                 }
             }
-
-            return false;
+            return null;
         };
 
         return (
@@ -303,8 +284,7 @@ export default class Activity extends React.PureComponent<
                     <FlatList
                         data={filteredActivity}
                         renderItem={({ item }: { item: any }) => {
-                            const noteKeys = NotesStore?.noteKeys;
-                            const hasNotes = hasMatchingNoteKey(item, noteKeys);
+                            const note = getMatchingNote(item);
 
                             let displayName = item.model;
                             let subTitle = item.model;
@@ -614,41 +594,37 @@ export default class Activity extends React.PureComponent<
                                                         </ListItem.Subtitle>
                                                     </View>
                                                 )}
-                                            <View style={styles.row}>
-                                                <ListItem.Subtitle
-                                                    style={{
-                                                        ...styles.leftCell,
-                                                        color:
-                                                            item ===
-                                                            selectedPaymentForOrder
-                                                                ? themeColor(
-                                                                      'highlight'
-                                                                  )
-                                                                : themeColor(
-                                                                      'secondaryText'
-                                                                  ),
-                                                        fontFamily:
-                                                            'Lato-Regular'
-                                                    }}
-                                                >
-                                                    Notes
-                                                </ListItem.Subtitle>
+                                            {note && (
+                                                <View style={styles.row}>
+                                                    <ListItem.Subtitle
+                                                        style={{
+                                                            ...styles.leftCell,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontFamily:
+                                                                'Lato-Regular'
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'general.note'
+                                                        )}
+                                                    </ListItem.Subtitle>
 
-                                                <ListItem.Subtitle
-                                                    style={{
-                                                        ...styles.rightCell,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        fontFamily:
-                                                            'Lato-Regular'
-                                                    }}
-                                                >
-                                                    {hasNotes
-                                                        ? 'Notes Available'
-                                                        : 'No Notes'}
-                                                </ListItem.Subtitle>
-                                            </View>
+                                                    <ListItem.Subtitle
+                                                        style={{
+                                                            ...styles.rightCell,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontFamily:
+                                                                'Lato-Regular'
+                                                        }}
+                                                    >
+                                                        {note}
+                                                    </ListItem.Subtitle>
+                                                </View>
+                                            )}
                                         </ListItem.Content>
                                     </ListItem>
                                 </React.Fragment>

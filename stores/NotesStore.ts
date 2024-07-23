@@ -5,6 +5,7 @@ const NOTES_KEY = 'note-Keys';
 
 export default class NotesStore {
     @observable public noteKeys: string[] = [];
+    @observable public notes: { [key: string]: string } = {};
 
     constructor() {
         this.loadNoteKeys();
@@ -12,6 +13,8 @@ export default class NotesStore {
 
     @action
     public storeNoteKeys = async (key: string, notes: string) => {
+        this.notes[key] = notes;
+
         if (!this.noteKeys.includes(key)) {
             if (notes) {
                 this.noteKeys.push(key);
@@ -25,18 +28,27 @@ export default class NotesStore {
         const index = this.noteKeys.indexOf(key);
         if (index !== -1) {
             this.noteKeys.splice(index, 1);
-            // write updated keys to storage
+            delete this.notes[key];
             await this.writeNoteKeysToLocalStorage();
         }
     };
 
     @action
     public async loadNoteKeys() {
-        console.log('Loading note keys...');
+        console.log('Loading notes...');
         try {
             const storedKeys = await EncryptedStorage.getItem(NOTES_KEY);
             if (storedKeys) {
                 this.noteKeys = JSON.parse(storedKeys);
+                // Load all notes
+                await Promise.all(
+                    this.noteKeys.map(async (key) => {
+                        const note = await EncryptedStorage.getItem(key);
+                        if (note) {
+                            this.notes[key] = note;
+                        }
+                    })
+                );
             }
         } catch (error) {
             console.error(
