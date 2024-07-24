@@ -216,10 +216,12 @@ export default class ExpressGraphSync extends React.Component<
                                 selectedValue={speedloader}
                                 onValueChange={async (value: string) => {
                                     this.setState({
-                                        speedloader: value
+                                        speedloader: value,
+                                        resetExpressGraphSyncOnStartup: true
                                     });
                                     await updateSettings({
-                                        speedloader: value
+                                        speedloader: value,
+                                        resetExpressGraphSyncOnStartup: true
                                     });
                                     restartNeeded();
                                 }}
