@@ -4,15 +4,20 @@ import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import DropdownSetting from '../../../components/DropdownSetting';
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
 import Switch from '../../../components/Switch';
-
-import SettingsStore from '../../../stores/SettingsStore';
+import TextInput from '../../../components/TextInput';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+
+import SettingsStore, {
+    DEFAULT_SPEEDLOADER,
+    SPEEDLOADER_KEYS
+} from '../../../stores/SettingsStore';
 
 interface ExpressGraphSyncProps {
     navigation: StackNavigationProp<any, any>;
@@ -22,6 +27,8 @@ interface ExpressGraphSyncProps {
 interface ExpressGraphSyncState {
     expressGraphSync: boolean | undefined;
     resetExpressGraphSyncOnStartup: boolean | undefined;
+    speedloader: string;
+    customSpeedloader: string;
 }
 
 @inject('SettingsStore')
@@ -32,7 +39,9 @@ export default class ExpressGraphSync extends React.Component<
 > {
     state = {
         expressGraphSync: false,
-        resetExpressGraphSyncOnStartup: false
+        resetExpressGraphSyncOnStartup: false,
+        speedloader: DEFAULT_SPEEDLOADER,
+        customSpeedloader: ''
     };
 
     async UNSAFE_componentWillMount() {
@@ -42,13 +51,20 @@ export default class ExpressGraphSync extends React.Component<
         this.setState({
             expressGraphSync: settings.expressGraphSync,
             resetExpressGraphSyncOnStartup:
-                settings.resetExpressGraphSyncOnStartup
+                settings.resetExpressGraphSyncOnStartup,
+            speedloader: settings.speedloader || DEFAULT_SPEEDLOADER,
+            customSpeedloader: settings.customSpeedloader || ''
         });
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { expressGraphSync, resetExpressGraphSyncOnStartup } = this.state;
+        const {
+            expressGraphSync,
+            resetExpressGraphSyncOnStartup,
+            speedloader,
+            customSpeedloader
+        } = this.state;
         const { updateSettings }: any = SettingsStore;
 
         return (
@@ -191,6 +207,55 @@ export default class ExpressGraphSync extends React.Component<
                                 </Text>
                             </View>
                         </>
+
+                        <View style={{ margin: 10 }}>
+                            <DropdownSetting
+                                title={localeString(
+                                    'views.Settings.EmbeddedNode.speedloader'
+                                )}
+                                selectedValue={speedloader}
+                                onValueChange={async (value: string) => {
+                                    this.setState({
+                                        speedloader: value
+                                    });
+                                    await updateSettings({
+                                        speedloader: value
+                                    });
+                                    restartNeeded();
+                                }}
+                                values={SPEEDLOADER_KEYS}
+                            />
+
+                            {speedloader === 'Custom' && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.customSpeedloader'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={customSpeedloader}
+                                        placeholder={DEFAULT_SPEEDLOADER}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                customSpeedloader: text
+                                            });
+
+                                            await updateSettings({
+                                                customSpeedloader: text
+                                            });
+                                        }}
+                                        autoCapitalize="none"
+                                        error={!customSpeedloader}
+                                    />
+                                </>
+                            )}
+                        </View>
                     </ScrollView>
                 </View>
             </Screen>

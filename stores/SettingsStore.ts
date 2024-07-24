@@ -147,6 +147,8 @@ export interface Settings {
     embeddedTor: boolean;
     feeEstimator: string;
     customFeeEstimator: string;
+    speedloader: string;
+    customSpeedloader: string;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -217,6 +219,24 @@ export const FEE_ESTIMATOR_KEYS = [
     {
         key: 'strike.me',
         value: 'https://bitcoinchainfees.strike.me/v1/fee-estimates'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom'
+    }
+];
+
+export const DEFAULT_SPEEDLOADER = 'https://speedloader.lnolymp.us/';
+
+export const SPEEDLOADER_KEYS = [
+    {
+        key: 'Olympus',
+        value: 'https://speedloader.lnolymp.us/'
+    },
+    {
+        key: 'Blixt',
+        value: 'https://primer.blixtwallet.com/'
     },
     {
         key: 'Custom',
@@ -1104,6 +1124,8 @@ export default class SettingsStore {
         embeddedTor: false,
         feeEstimator: DEFAULT_FEE_ESTIMATOR,
         customFeeEstimator: '',
+        speedloader: DEFAULT_SPEEDLOADER,
+        customSpeedloader: '',
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
