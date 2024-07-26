@@ -116,6 +116,10 @@ export default class ChannelView extends React.Component<
         if (contact) {
             return (
                 <TouchableOpacity
+                    style={{
+                        ...styles.container,
+                        backgroundColor: themeColor('secondary')
+                    }}
                     onPress={() => {
                         this.props.navigation.navigate('ContactDetails', {
                             contactId: contact.contactId || contact.id,
@@ -123,14 +127,22 @@ export default class ChannelView extends React.Component<
                         });
                     }}
                 >
-                    <Text
-                        style={{
-                            color: themeColor('highlight'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }}
-                    >
-                        {contact.name}
+                    <Text style={{ fontSize: 16 }}>
+                        {`${localeString(
+                            'views.Channel.matchingContactFound'
+                        )} - `}
                     </Text>
+                    <TouchableOpacity>
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                color: themeColor('highlight'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {contact.name}
+                        </Text>
+                    </TouchableOpacity>
                 </TouchableOpacity>
             );
         }
@@ -831,5 +843,14 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 15
+    },
+    container: {
+        marginTop: 8,
+        paddingHorizontal: 32,
+        paddingVertical: 16,
+        borderRadius: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center'
     }
 });
