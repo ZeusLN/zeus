@@ -1679,6 +1679,19 @@
   dependencies:
     lodash "^4.17.21"
 
+"@json2csv/formatters@^7.0.6":
+  version "7.0.6"
+  resolved "https://registry.yarnpkg.com/@json2csv/formatters/-/formatters-7.0.6.tgz#a4f21daa9d64d6da9a297f7d7b97ba517870f780"
+  integrity sha512-hjIk1H1TR4ydU5ntIENEPgoMGW+Q7mJ+537sDFDbsk+Y3EPl2i4NfFVjw0NJRgT+ihm8X30M67mA8AS6jPidSA==
+
+"@json2csv/plainjs@7.0.6":
+  version "7.0.6"
+  resolved "https://registry.yarnpkg.com/@json2csv/plainjs/-/plainjs-7.0.6.tgz#e4149b26ec6f1c59a27c72534a91e971be397098"
+  integrity sha512-4Md7RPDCSYpmW1HWIpWBOqCd4vWfIqm53S3e/uzQ62iGi7L3r34fK/8nhOMEe+/eVfCx8+gdSCt1d74SlacQHw==
+  dependencies:
+    "@json2csv/formatters" "^7.0.6"
+    "@streamparser/json" "^0.0.20"
+
 "@keystonehq/alias-sampling@^0.1.1":
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/@keystonehq/alias-sampling/-/alias-sampling-0.1.2.tgz#63af931ffe6500aef4c0d87775a5b279189abf8d"
@@ -2645,6 +2658,11 @@
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/@socket.io/component-emitter/-/component-emitter-3.1.2.tgz#821f8442f4175d8f0467b9daf26e3a18e2d02af2"
   integrity sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==
+
+"@streamparser/json@^0.0.20":
+  version "0.0.20"
+  resolved "https://registry.yarnpkg.com/@streamparser/json/-/json-0.0.20.tgz#28c0255dea8d37f5d679d72c361f01edf70a770a"
+  integrity sha512-VqAAkydywPpkw63WQhPVKCD3SdwXuihCUVZbbiY3SfSTGQyHmwRoq27y4dmJdZuJwd5JIlQoMPyGvMbUPY0RKQ==
 
 "@svgr/babel-plugin-add-jsx-attribute@8.0.0":
   version "8.0.0"
