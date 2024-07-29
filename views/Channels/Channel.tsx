@@ -5,7 +5,8 @@ import {
     ScrollView,
     StyleSheet,
     TouchableOpacity,
-    View
+    View,
+    Image
 } from 'react-native';
 
 import { Divider, Icon, ListItem } from 'react-native-elements';
@@ -34,6 +35,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import { getPhoto } from '../../utils/PhotoUtils';
 
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -127,22 +129,23 @@ export default class ChannelView extends React.Component<
                         });
                     }}
                 >
-                    <Text style={{ fontSize: 16 }}>
-                        {`${localeString(
-                            'views.Channel.matchingContactFound'
-                        )} - `}
-                    </Text>
-                    <TouchableOpacity>
+                    {contact.photo && (
+                        <Image
+                            source={{ uri: getPhoto(contact.photo) }}
+                            style={styles.image}
+                        />
+                    )}
+                    <View>
                         <Text
                             style={{
-                                fontSize: 16,
+                                fontSize: 18,
                                 color: themeColor('highlight'),
                                 fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
                             {contact.name}
                         </Text>
-                    </TouchableOpacity>
+                    </View>
                 </TouchableOpacity>
             );
         }
@@ -361,6 +364,16 @@ export default class ChannelView extends React.Component<
                                 </Text>
                             </TouchableOpacity>
                         )}
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                marginBottom: 8
+                            }}
+                        >
+                            {`${localeString(
+                                'views.Channel.matchingContactFound'
+                            )}`}
+                        </Text>
                         {remotePubkey && this.renderContactLink(remotePubkey)}
                     </View>
                     <BalanceSlider
@@ -837,7 +850,7 @@ const styles = StyleSheet.create({
         paddingBottom: 10
     },
     pubkey: {
-        paddingBottom: 16,
+        paddingBottom: 24,
         textAlign: 'center'
     },
     button: {
@@ -846,11 +859,17 @@ const styles = StyleSheet.create({
     },
     container: {
         marginTop: 8,
-        paddingHorizontal: 32,
-        paddingVertical: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         borderRadius: 6,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center'
+    },
+    image: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        marginRight: 14
     }
 });
