@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "로그 기록을 클립보드로 복사",
     "views.Settings.EmbeddedNode.feeEstimator": "Fee estimator",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "라이트닝 서비스 제공자 (LSP) 기능 활성화",
     "views.Settings.LSP.enableLSP.subtitle": "LSP는 당신에게 라이트닝 네트워크에 더욱 높은 연결성을 제공해주는 라이트닝 결제 채널을 개설하여 줍니다.",
     "views.Settings.LSP.requestSimpleTaproot": "Simpe Taproot Channel 요청하기",
