@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "คัดลอก Logs",
     "views.Settings.EmbeddedNode.feeEstimator": "Fee estimator",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "เปิดใช้งานผู้ให้บริการ Lightning Service Provider (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "ผู้ให้บริการ LSP จะทำการเชื่อมต่อเครื่อข่าย Lightning และทำการจัดการเรื่อง Node ให้คุณ",
     "views.Settings.LSP.requestSimpleTaproot": "ร้องขอแชนแนล Simple Taproot",
