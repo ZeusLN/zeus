@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Zkopírovat logy do schránky",
     "views.Settings.EmbeddedNode.feeEstimator": "Odhadce poplatků",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Vlastní odhadce poplatků",
+    "views.Settings.EmbeddedNode.speedloader": "Server expresní synchronizace grafu",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Vlastní server expresní synchronizace grafu",
     "views.Settings.LSP.enableLSP": "Povolit poskytovatele služeb Lightning (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "LSP vás připojí k síti Lightning tím, že pro vás otevře platební kanály.",
     "views.Settings.LSP.requestSimpleTaproot": "Vyžádat jednoduché taproot kanály",
