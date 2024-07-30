@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "رونویسی گزارش در بریده‌دان",
     "views.Settings.EmbeddedNode.feeEstimator": "Fee estimator",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "فعال‌سازی ارائه‌دهنده‌ی خدمات لایتنینگ (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "LSP با باز کردن یک کانال پرداخت، شما را شبکه لایتنینگ وصل می کند.",
     "views.Settings.LSP.requestSimpleTaproot": "Request Simple Taproot Channels",
