@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Nakili magogo kwenye ubao wa kunakili",
     "views.Settings.EmbeddedNode.feeEstimator": "Fee estimator",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "Wezesha Mtoa Huduma wa Umeme (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "LSP itakusaidia kuunganisha kwenye mtandao wa Umeme kwa kufungua vituo vya malipo kwa niaba yako.",
     "views.Settings.LSP.requestSimpleTaproot": "Omba Vituo Rahisi vya Taproot",
