@@ -302,6 +302,7 @@ export default class LND {
             console.log('subscribeCustomMessages ws close');
         });
     };
+    getNetworkInfo = () => this.getRequest('/v1/graph/info');
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = (data: any) =>
         this.getRequest(
@@ -661,7 +662,7 @@ export default class LND {
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
     supportsLSPs = () => true;
-    supportsNetworkInfo = () => false;
+    supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
