@@ -227,12 +227,12 @@ export const FEE_ESTIMATOR_KEYS = [
     }
 ];
 
-export const DEFAULT_SPEEDLOADER = 'https://speedloader.lnolymp.us/';
+export const DEFAULT_SPEEDLOADER = 'https://egs.lnze.us/';
 
 export const SPEEDLOADER_KEYS = [
     {
-        key: 'Olympus',
-        value: 'https://speedloader.lnolymp.us/'
+        key: 'ZEUS',
+        value: 'https://egs.lnze.us/'
     },
     {
         key: 'Blixt',
