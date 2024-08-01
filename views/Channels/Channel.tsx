@@ -5,7 +5,8 @@ import {
     ScrollView,
     StyleSheet,
     TouchableOpacity,
-    View
+    View,
+    Image
 } from 'react-native';
 
 import { Divider, Icon, ListItem } from 'react-native-elements';
@@ -34,6 +35,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import { getPhoto } from '../../utils/PhotoUtils';
 
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -41,6 +43,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import Edit from '../../assets/images/SVG/Edit.svg';
 import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 interface ChannelProps {
     navigation: StackNavigationProp<any, any>;
@@ -56,6 +59,7 @@ interface ChannelState {
     forceCloseChannel: boolean;
     deliveryAddress: string;
     channel: Channel;
+    contacts: any;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore')
@@ -75,13 +79,78 @@ export default class ChannelView extends React.Component<
             satPerByte: '',
             forceCloseChannel: false,
             deliveryAddress: '',
-            channel
+            channel,
+            contacts: []
         };
 
         if (BackendUtils.isLNDBased() && channel.channelId != null) {
             ChannelsStore.loadChannelInfo(channel.channelId);
         }
     }
+
+    componentDidMount() {
+        this.loadContacts();
+    }
+
+    loadContacts = async () => {
+        console.log('LOADING CONTACTS...');
+        try {
+            const contactsString = await EncryptedStorage.getItem(
+                'zeus-contacts'
+            );
+            if (contactsString) {
+                const contacts = JSON.parse(contactsString);
+                this.setState({ contacts });
+            } else {
+            }
+        } catch (error) {
+            console.log('Error loading contacts:', error);
+        }
+    };
+
+    findContactByPubkey = (pubkey: string) => {
+        const { contacts } = this.state;
+        return contacts.find((contact) => contact.pubkey.includes(pubkey));
+    };
+
+    renderContactLink = (remotePubkey: string) => {
+        const contact = this.findContactByPubkey(remotePubkey);
+        if (contact) {
+            return (
+                <TouchableOpacity
+                    style={{
+                        ...styles.container,
+                        backgroundColor: themeColor('secondary')
+                    }}
+                    onPress={() => {
+                        this.props.navigation.navigate('ContactDetails', {
+                            contactId: contact.contactId || contact.id,
+                            isNostrContact: false
+                        });
+                    }}
+                >
+                    {contact.photo && (
+                        <Image
+                            source={{ uri: getPhoto(contact.photo) }}
+                            style={styles.image}
+                        />
+                    )}
+                    <View>
+                        <Text
+                            style={{
+                                fontSize: 18,
+                                color: themeColor('highlight'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {contact.name}
+                        </Text>
+                    </View>
+                </TouchableOpacity>
+            );
+        }
+        return null;
+    };
 
     closeChannel = async (
         channelPoint?: string,
@@ -295,6 +364,17 @@ export default class ChannelView extends React.Component<
                                 </Text>
                             </TouchableOpacity>
                         )}
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                marginBottom: 8
+                            }}
+                        >
+                            {`${localeString(
+                                'views.Channel.matchingContactFound'
+                            )}`}
+                        </Text>
+                        {remotePubkey && this.renderContactLink(remotePubkey)}
                     </View>
                     <BalanceSlider
                         localBalance={lurkerMode ? 50 : localBalance}
@@ -770,11 +850,26 @@ const styles = StyleSheet.create({
         paddingBottom: 10
     },
     pubkey: {
-        paddingBottom: 30,
+        paddingBottom: 24,
         textAlign: 'center'
     },
     button: {
         paddingTop: 15,
         paddingBottom: 15
+    },
+    container: {
+        marginTop: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    image: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        marginRight: 14
     }
 });
