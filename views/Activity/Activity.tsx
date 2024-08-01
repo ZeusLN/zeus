@@ -27,6 +27,7 @@ import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NotesStore from '../../stores/NotesStore';
 import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
@@ -38,6 +39,7 @@ interface ActivityProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
+    NotesStore: NotesStore;
     route: Route<'Activity', { order: any }>;
 }
 
@@ -45,7 +47,7 @@ interface ActivityState {
     selectedPaymentForOrder: any;
 }
 
-@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore')
+@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore', 'NotesStore')
 @observer
 export default class Activity extends React.PureComponent<
     ActivityProps,
@@ -225,6 +227,33 @@ export default class Activity extends React.PureComponent<
             </TouchableOpacity>
         );
 
+        const getMatchingNote = (item: any) => {
+            const { NotesStore } = this.props;
+            const strippedNoteKeys = NotesStore.noteKeys.map((key) =>
+                key.replace(/^note-/, '')
+            );
+
+            let valuesToCompare: string[] = [];
+            if (item.model === 'Invoice') {
+                valuesToCompare = [item.getRPreimage, item.payment_hash];
+            } else if (item.model === 'Payment') {
+                valuesToCompare = [item.paymentHash, item.getPreimage];
+            } else if (item.model === 'Transaction') {
+                valuesToCompare = [item.tx];
+            }
+
+            for (let value of valuesToCompare) {
+                const matchKey = `note-${value}`;
+                if (
+                    strippedNoteKeys.includes(value) &&
+                    NotesStore.notes[matchKey]
+                ) {
+                    return NotesStore.notes[matchKey];
+                }
+            }
+            return null;
+        };
+
         return (
             <Screen>
                 <Header
@@ -255,6 +284,8 @@ export default class Activity extends React.PureComponent<
                     <FlatList
                         data={filteredActivity}
                         renderItem={({ item }: { item: any }) => {
+                            const note = getMatchingNote(item);
+
                             let displayName = item.model;
                             let subTitle = item.model;
 
@@ -563,6 +594,37 @@ export default class Activity extends React.PureComponent<
                                                         </ListItem.Subtitle>
                                                     </View>
                                                 )}
+                                            {note && (
+                                                <View style={styles.row}>
+                                                    <ListItem.Subtitle
+                                                        style={{
+                                                            ...styles.leftCell,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontFamily:
+                                                                'Lato-Regular'
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'general.note'
+                                                        )}
+                                                    </ListItem.Subtitle>
+
+                                                    <ListItem.Subtitle
+                                                        style={{
+                                                            ...styles.rightCell,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontFamily:
+                                                                'Lato-Regular'
+                                                        }}
+                                                    >
+                                                        {note}
+                                                    </ListItem.Subtitle>
+                                                </View>
+                                            )}
                                         </ListItem.Content>
                                     </ListItem>
                                 </React.Fragment>
