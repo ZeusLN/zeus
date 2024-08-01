@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Скопировать логи в буфер обмена",
     "views.Settings.EmbeddedNode.feeEstimator": "Fee estimator",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "Активировать провайдера лайтнинг-сервисов (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "LSP поможет вам подключиться к сети Лайтнинг и откроет для вас платежные каналы.",
     "views.Settings.LSP.requestSimpleTaproot": "Request Simple Taproot Channels",

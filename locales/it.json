@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Copia i registri sugli appunti",
     "views.Settings.EmbeddedNode.feeEstimator": "Stimatore delle tariffe",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Stima delle tariffe personalizzate",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "Abilitare Lightning Service Provider (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "L'LSP ti farà connettere alla rete Lightning aprendo i canali di pagamento per te.",
     "views.Settings.LSP.requestSimpleTaproot": "Richiedi semplici canali di taproot",

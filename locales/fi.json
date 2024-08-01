@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Kopioi lokit leikepöydälle",
     "views.Settings.EmbeddedNode.feeEstimator": "Fee estimator",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "Ota käyttöön salamapalveluntarjoaja (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "LSP yhdistää sinut salamaverkkoon avaamalla maksukanavia sinulle.",
     "views.Settings.LSP.requestSimpleTaproot": "Pyydä yksinkertaisia Taproot-kanavia",
