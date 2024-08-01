@@ -178,8 +178,8 @@ export default class Payment extends BaseModel {
         return this.amount_msat
             ? Number(this.amount_msat.toString().replace('msat', '')) / 1000
             : this.value_sat ||
-                  Number(this.msatoshi_sent) / 1000 ||
                   this.value ||
+                  Number(this.msatoshi_sent) / 1000 ||
                   0;
     }
 
