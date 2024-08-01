@@ -4,6 +4,7 @@ import {
     NativeModules,
     Platform
 } from 'react-native';
+import DeviceInfo from 'react-native-device-info';
 
 import { generateSecureRandom } from 'react-native-securerandom';
 import NetInfo from '@react-native-community/netinfo';
@@ -26,7 +27,9 @@ import stores from '../stores/Stores';
 import {
     DEFAULT_NEUTRINO_PEERS_MAINNET,
     SECONDARY_NEUTRINO_PEERS_MAINNET,
-    DEFAULT_NEUTRINO_PEERS_TESTNET
+    DEFAULT_NEUTRINO_PEERS_TESTNET,
+    DEFAULT_FEE_ESTIMATOR,
+    DEFAULT_SPEEDLOADER
 } from '../stores/SettingsStore';
 
 import { lnrpc } from '../proto/lightning';
@@ -36,6 +39,9 @@ export const NEUTRINO_PING_TIMEOUT_MS = 1500;
 export const NEUTRINO_PING_OPTIMAL_MS = 200;
 export const NEUTRINO_PING_LAX_MS = 500;
 export const NEUTRINO_PING_THRESHOLD_MS = 1000;
+
+// ~4GB
+const NEUTRINO_PERSISTENT_FILTER_THRESHOLD = 400000000;
 
 export const LndMobileEventEmitter =
     Platform.OS == 'android'
@@ -87,7 +93,15 @@ const writeLndConfig = async (
         ? 'connect'
         : 'addpeer';
 
-    const config = `[Application Options]
+    DeviceInfo.getTotalMemory().then(async (totalMemory) => {
+        console.log('totalMemory', totalMemory);
+
+        const persistFilters =
+            totalMemory >= NEUTRINO_PERSISTENT_FILTER_THRESHOLD;
+
+        console.log('persistFilters', persistFilters);
+
+        const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
     sync-freelist=1
@@ -137,10 +151,15 @@ const writeLndConfig = async (
             : ''
     }
     neutrino.broadcasttimeout=11s
-    neutrino.persistfilters=true
+    neutrino.persistfilters=${persistFilters}
 
     [fee]
-    fee.url=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
+    fee.url=${
+        stores.settingsStore?.settings?.feeEstimator === 'Custom'
+            ? stores.settingsStore?.settings?.customFeeEstimator
+            : stores.settingsStore?.settings?.feeEstimator ||
+              DEFAULT_FEE_ESTIMATOR
+    }
     
     [autopilot]
     autopilot.active=0
@@ -164,8 +183,11 @@ const writeLndConfig = async (
             : 'apriori'
     }`;
 
-    await writeConfig(config);
-    return;
+        console.log('config', config);
+
+        await writeConfig(config);
+        return;
+    });
 };
 
 export async function expressGraphSync() {
@@ -201,7 +223,10 @@ export async function expressGraphSync() {
         try {
             const connectionState = await NetInfo.fetch();
             const gossipStatus = await gossipSync(
-                'https://speedloader.lnolymp.us/',
+                stores.settingsStore?.settings?.speedloader === 'Custom'
+                    ? stores.settingsStore?.settings?.customSpeedloader
+                    : stores.settingsStore?.settings?.speedloader ||
+                          DEFAULT_SPEEDLOADER,
                 connectionState.type
             );
 

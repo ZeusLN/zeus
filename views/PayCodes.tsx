@@ -174,7 +174,7 @@ export default class PayCodes extends React.Component<PayCodesProps, {}> {
                                 textAlign: 'center'
                             }}
                         >
-                            No pay codes created yet
+                            {localeString('views.PayCodes.noPayCodes')}
                         </Text>
                     )}
                 </ScrollView>

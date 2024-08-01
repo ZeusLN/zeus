@@ -66,6 +66,7 @@ export default class ContactDetails extends React.Component<
             contact: {
                 lnAddress: [''],
                 bolt12Address: [''],
+                bolt12Offer: [''],
                 onchainAddress: [''],
                 pubkey: [''],
                 nip05: [''],
@@ -438,6 +439,43 @@ export default class ContactDetails extends React.Component<
                             {contact.hasBolt12Address && (
                                 <View>
                                     {contact.bolt12Address.map(
+                                        (address: string, index: number) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                onPress={() =>
+                                                    this.sendAddress(address)
+                                                }
+                                            >
+                                                <View style={styles.contactRow}>
+                                                    <LightningBolt />
+                                                    <Text
+                                                        style={{
+                                                            ...styles.contactFields,
+                                                            color: themeColor(
+                                                                'chain'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {address.length > 23
+                                                            ? `${address.substring(
+                                                                  0,
+                                                                  10
+                                                              )}...${address.substring(
+                                                                  address.length -
+                                                                      10
+                                                              )}`
+                                                            : address}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )
+                                    )}
+                                </View>
+                            )}
+
+                            {contact.hasBolt12Offer && (
+                                <View>
+                                    {contact.bolt12Offer.map(
                                         (address: string, index: number) => (
                                             <TouchableOpacity
                                                 key={index}

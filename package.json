@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "0.9.0-alpha11",
+  "version": "0.9.0-beta3",
   "private": true,
   "jest": {
     "preset": "react-native",
@@ -101,6 +101,7 @@
     "react-native-circular-progress-indicator": "4.4.2",
     "react-native-crypto": "2.2.0",
     "react-native-date-picker": "4.3.3",
+    "react-native-device-info": "11.1.0",
     "react-native-draglist": "3.5.1",
     "react-native-elements": "3.4.3",
     "react-native-encrypted-storage": "4.0.3",

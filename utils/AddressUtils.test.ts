@@ -148,8 +148,7 @@ describe('AddressUtils', () => {
                 )
             ).toEqual({
                 value: '',
-                lightning:
-                    'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
             });
             expect(
                 AddressUtils.processSendAddress(
@@ -157,8 +156,7 @@ describe('AddressUtils', () => {
                 )
             ).toEqual({
                 value: '',
-                lightning:
-                    'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
             });
             expect(
                 AddressUtils.processSendAddress(
@@ -166,8 +164,7 @@ describe('AddressUtils', () => {
                 )
             ).toEqual({
                 value: '',
-                lightning:
-                    'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
             });
         });
 

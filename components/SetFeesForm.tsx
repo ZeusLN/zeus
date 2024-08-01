@@ -123,7 +123,8 @@ export default class SetFeesForm extends React.Component<
                     }}
                 >
                     {`${localeString('components.SetFeesForm.feeRate')} (${
-                        implementation === 'c-lightning-REST'
+                        implementation === 'c-lightning-REST' ||
+                        implementation === 'cln-rest'
                             ? localeString(
                                   'components.SetFeesForm.ppmMilliMsat'
                               )
@@ -133,7 +134,9 @@ export default class SetFeesForm extends React.Component<
                 <TextInput
                     keyboardType="numeric"
                     placeholder={
-                        feeRate || implementation === 'c-lightning-REST'
+                        feeRate ||
+                        implementation === 'c-lightning-REST' ||
+                        implementation === 'cln-rest'
                             ? '1'
                             : '0.001'
                     }
