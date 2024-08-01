@@ -134,6 +134,7 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get isFailed(): boolean {
+        if (!this.isIncomplete) return false;
         let isFailed = false;
         if (this.htlcs) {
             for (const htlc of this.htlcs) {
