@@ -33,6 +33,7 @@ interface TextInputProps {
     onPressIn?: any;
     right?: number;
     ref?: React.Ref<TextInputRN>;
+    error?: boolean;
 }
 
 const TextInput: React.FC<TextInputProps> = (
@@ -56,7 +57,8 @@ const TextInput: React.FC<TextInputProps> = (
         suffix,
         toggleUnits,
         onPressIn,
-        right
+        right,
+        error
     },
     ref
 ) => {
@@ -125,7 +127,9 @@ const TextInput: React.FC<TextInputProps> = (
                 opacity: locked ? 0.8 : 1,
                 ...defaultStyle,
                 ...styles.wrapper,
-                ...style
+                ...style,
+                borderWidth: error ? 1.0 : 0,
+                borderColor: error ? themeColor('error') : undefined
             }}
         >
             {prefix ? (

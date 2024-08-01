@@ -25,7 +25,7 @@ export default class FiatStore {
     @observable public error = false;
 
     @observable public numberWithCommas = (x: string | number) =>
-        x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        x?.toString()?.replace(/\B(?=(\d{3})+(?!\d))/g, ',') || '0';
 
     @observable public numberWithDecimals = (x: string | number) =>
         this.numberWithCommas(x).replace(/[,.]/g, (y: string) =>

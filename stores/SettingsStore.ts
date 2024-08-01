@@ -16,6 +16,7 @@ export interface Node {
     port?: string;
     url?: string;
     macaroonHex?: string;
+    rune?: string;
     accessKey?: string;
     implementation?: string;
     certVerification?: boolean;
@@ -42,6 +43,7 @@ interface DisplaySettings {
     displayNickname?: boolean;
     bigKeypadButtons?: boolean;
     showAllDecimalPlaces?: boolean;
+    showMillisatoshiAmounts?: boolean;
 }
 
 export enum PosEnabled {
@@ -143,6 +145,10 @@ export interface Settings {
     recovery: boolean;
     initialLoad: boolean;
     embeddedTor: boolean;
+    feeEstimator: string;
+    customFeeEstimator: string;
+    speedloader: string;
+    customSpeedloader: string;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -202,15 +208,66 @@ export const MEMPOOL_RATES_KEYS = [
     }
 ];
 
+export const DEFAULT_FEE_ESTIMATOR =
+    'https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json';
+
+export const FEE_ESTIMATOR_KEYS = [
+    {
+        key: 'lightning.computer',
+        value: 'https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json'
+    },
+    {
+        key: 'strike.me',
+        value: 'https://bitcoinchainfees.strike.me/v1/fee-estimates'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom'
+    }
+];
+
+export const DEFAULT_SPEEDLOADER = 'https://egs.lnze.us/';
+
+export const SPEEDLOADER_KEYS = [
+    {
+        key: 'ZEUS',
+        value: 'https://egs.lnze.us/'
+    },
+    {
+        key: 'Blixt',
+        value: 'https://primer.blixtwallet.com/'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom'
+    }
+];
+
 export const INTERFACE_KEYS = [
     { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
-    { key: 'Core Lightning (c-lightning-REST)', value: 'c-lightning-REST' },
+    { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
     { key: 'LNDHub', value: 'lndhub' },
+    {
+        key: '[DEPRECATED] Core Lightning (c-lightning-REST)',
+        value: 'c-lightning-REST'
+    },
     { key: '[DEPRECATED] Core Lightning (Sparko)', value: 'spark' },
     { key: '[DEPRECATED] Eclair', value: 'eclair' }
 ];
+
+export type Implementations =
+    | 'embedded-lnd'
+    | 'lnd'
+    | 'lightning-node-connect'
+    | 'cln-rest'
+    | 'lndhub'
+    | 'c-lightning-REST'
+    | 'spark'
+    | 'eclair';
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
     { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
@@ -1005,7 +1062,8 @@ export default class SettingsStore {
             defaultView: 'Keypad',
             displayNickname: false,
             bigKeypadButtons: false,
-            showAllDecimalPlaces: false
+            showAllDecimalPlaces: false,
+            showMillisatoshiAmounts: true
         },
         pos: {
             posEnabled: PosEnabled.Disabled,
@@ -1064,6 +1122,10 @@ export default class SettingsStore {
         recovery: false,
         initialLoad: true,
         embeddedTor: false,
+        feeEstimator: DEFAULT_FEE_ESTIMATOR,
+        customFeeEstimator: '',
+        speedloader: DEFAULT_SPEEDLOADER,
+        customSpeedloader: '',
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
@@ -1107,8 +1169,9 @@ export default class SettingsStore {
     @observable port: string;
     @observable url: string;
     @observable macaroonHex: string;
+    @observable rune: string;
     @observable accessKey: string;
-    @observable implementation: string;
+    @observable implementation: Implementations;
     @observable certVerification: boolean | undefined;
     @observable public loggedIn = false;
     @observable public connecting = true;
@@ -1426,6 +1489,17 @@ export default class SettingsStore {
                     await EncryptedStorage.setItem(MOD_KEY4, 'true');
                 }
 
+                const MOD_KEY5 = 'millisat_amounts';
+                const mod5 = await EncryptedStorage.getItem(MOD_KEY5);
+                if (!mod5) {
+                    if (!newSettings?.display.showMillisatoshiAmounts) {
+                        newSettings.display.showMillisatoshiAmounts = true;
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY5, 'true');
+                }
+
                 // migrate old POS squareEnabled setting to posEnabled
                 if (newSettings?.pos?.squareEnabled) {
                     newSettings.pos.posEnabled = PosEnabled.Square;
@@ -1456,6 +1530,7 @@ export default class SettingsStore {
                     this.password = node.password;
                     this.lndhubUrl = node.lndhubUrl;
                     this.macaroonHex = node.macaroonHex;
+                    this.rune = node.rune;
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;

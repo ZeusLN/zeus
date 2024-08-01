@@ -173,7 +173,7 @@ const PendingHtlcBadge = ({
             })
         }
     >
-        <Hourglass fill={themeColor('highlight')} width="35" height="35" />
+        <Hourglass fill={themeColor('highlight')} width="30" height="30" />
     </TouchableOpacity>
 );
 
@@ -601,7 +601,7 @@ export default class WalletHeader extends React.Component<
                                         .loadingLightningBalance ||
                                     laLoading) && (
                                     <View style={{ paddingRight: 15 }}>
-                                        <LoadingIndicator size={32} />
+                                        <LoadingIndicator size={35} />
                                     </View>
                                 )}
                             {!loading && !!clipboard && (

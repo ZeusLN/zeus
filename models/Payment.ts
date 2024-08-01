@@ -21,7 +21,7 @@ export default class Payment extends BaseModel {
     bolt: string;
     status: string;
     payment_request: string;
-    failure_reason?: string;
+    failure_reason?: string | number;
     // c-lightning
     id?: string;
     destination?: string;
@@ -146,7 +146,13 @@ export default class Payment extends BaseModel {
                 }
             }
         }
-        if (this.failure_reason) isFailed = true;
+        if (
+            this.failure_reason &&
+            this.failure_reason !== 'FAILURE_REASON_NONE' &&
+            this.failure_reason !==
+                lnrpc.PaymentFailureReason.FAILURE_REASON_NONE
+        )
+            isFailed = true;
         return isFailed;
     }
 

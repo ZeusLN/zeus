@@ -13,6 +13,8 @@ import { Row } from './layout/Row';
 import { Body } from './text/Body';
 import LoadingIndicator from './LoadingIndicator';
 
+import stores from '../stores/Stores';
+
 type Units = 'sats' | 'BTC' | 'fiat';
 
 interface AmountDisplayProps {
@@ -95,6 +97,14 @@ function AmountDisplay({
     // TODO this could probably be made more readable by componentizing the repeat bits
     switch (unit) {
         case 'sats':
+            const hideMsats =
+                !stores.settingsStore?.settings?.display
+                    ?.showMillisatoshiAmounts;
+            if (hideMsats) {
+                const [wholeSats] = amount.toString().split('.');
+                amount = wholeSats;
+                plural = amount === '1' ? false : true;
+            }
             return (
                 <Row
                     style={styles.row}
