@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Kopiera loggar till urklipp",
     "views.Settings.EmbeddedNode.feeEstimator": "Fee estimator",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "Aktivera Lightning Service Provider (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "LSP:n kommer att få dig ansluten till Lightning-nätverket genom att öppna upp betalningskanaler för dig.",
     "views.Settings.LSP.requestSimpleTaproot": "Begär enkla taprootkanaler",

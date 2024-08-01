@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Copiați jurnalele logs in clipboard",
     "views.Settings.EmbeddedNode.feeEstimator": "Estimator de comision",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Estimator de comision personalizat",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "Activati Lightning Service Provider (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "LSP vă va conecta la rețeaua Lightning prin deschiderea canalelor de plată pentru dvs.",
     "views.Settings.LSP.requestSimpleTaproot": "Solicitați canale simple taproot",

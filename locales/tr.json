@@ -887,6 +887,8 @@
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Copy logs to clipboard",
     "views.Settings.EmbeddedNode.feeEstimator": "Fee estimator",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
+    "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
+    "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
     "views.Settings.LSP.enableLSP": "Lightning Servis Sağlayıcısını (LSP) Etkinleştir",
     "views.Settings.LSP.enableLSP.subtitle": "LSP, sizin için ödeme kanalları açarak Lightning ağına bağlanmanızı sağlayacaktır.",
     "views.Settings.LSP.requestSimpleTaproot": "Request Simple Taproot Channels",
