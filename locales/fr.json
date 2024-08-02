@@ -291,7 +291,6 @@
     "views.ImportAccount.Warning.text1": "L'importation de comptes externes est actuellement une fonctionnalité expérimentale.",
     "views.ImportAccount.Warning.text2": "En cliquant sur « Je comprends », vous acceptez de procéder à vos propres risques.",
     "views.ImportAccount.Warning.text3": "Si vous créez une chaîne ouverte avec un compte externe, veuillez suivre toutes les instructions à l'écran et NE Diffusez PAS la transaction depuis n'importe où, sauf depuis votre portefeuille ZEUS.",
-    "views.ImportAccount.Warning.text4": "REMARQUE : Les événements (dépôts/dépenses) pour les clés dérivées d'un compte ne seront détectés par LND que s'ils se produisent après l'importation. Les nouvelles analyses pour détecter les événements passés seront prises en charge ultérieurement.",
     "views.Wallet.Channels.open": "Ouvrir un canal",
     "views.Wallet.Channels.inactive": "INACTIF",
     "views.Wallet.Channels.private": "Privé",
