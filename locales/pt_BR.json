@@ -291,7 +291,6 @@
     "views.ImportAccount.Warning.text1": "A importação de contas externas é atualmente um recurso experimental.",
     "views.ImportAccount.Warning.text2": "Ao clicar em 'Eu entendo' você concorda em prosseguir por sua própria conta e risco.",
     "views.ImportAccount.Warning.text3": "Se estiver abrindo um canal com uma conta externa, siga todas as instruções na tela e NÃO transmita a transação de qualquer lugar, exceto de sua carteira ZEUS.",
-    "views.ImportAccount.Warning.text4": "NOTA: Eventos (depósitos/gastos) de chaves derivadas de uma conta só serão detectados pelo LND se ocorrerem após a importação. Novas varreduras para detectar eventos passados serão suportadas posteriormente.",
     "views.Wallet.Channels.open": "Abrir Canal",
     "views.Wallet.Channels.inactive": "INATIVO",
     "views.Wallet.Channels.private": "Privado",
