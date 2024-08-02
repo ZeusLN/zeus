@@ -291,7 +291,6 @@
     "views.ImportAccount.Warning.text1": "Importování externích účtů je v současnosti experimentální funkce.",
     "views.ImportAccount.Warning.text2": "Klepnutím na tlačítko „Rozumím“ souhlasíte s tím, že dále pokračujete na vlastní riziko.",
     "views.ImportAccount.Warning.text3": "Pokud vytváříte kanál otevřený pomocí externího účtu, postupujte prosím podle všech pokynů na obrazovce a NEODESÍLEJTE transakci od jinud než z vaší peněženky ZEUS.",
-    "views.ImportAccount.Warning.text4": "POZNÁMKA: Události (vklady/výdaje) pro klíče odvozené z účtu budou v systému LND zjištěny pouze tehdy, pokud k nim dojde po importu. Opětovné skenování za účelem zjištění minulých událostí bude podporováno později.",
     "views.Wallet.Channels.open": "Otevřít kanál",
     "views.Wallet.Channels.inactive": "NEAKTIVNÍ",
     "views.Wallet.Channels.private": "Soukromý",
