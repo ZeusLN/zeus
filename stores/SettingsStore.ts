@@ -1500,6 +1500,18 @@ export default class SettingsStore {
                     await EncryptedStorage.setItem(MOD_KEY5, 'true');
                 }
 
+                const MOD_KEY6 = 'egs-host';
+                const mod6 = await EncryptedStorage.getItem(MOD_KEY6);
+                if (!mod6) {
+                    if (!newSettings?.speedloader) {
+                        newSettings.speedloader = DEFAULT_SPEEDLOADER;
+                        newSettings.customSpeedloader = '';
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY6, 'true');
+                }
+
                 // migrate old POS squareEnabled setting to posEnabled
                 if (newSettings?.pos?.squareEnabled) {
                     newSettings.pos.posEnabled = PosEnabled.Square;
