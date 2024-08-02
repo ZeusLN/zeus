@@ -24,6 +24,8 @@ Payout: 5,000,000 sats (0.05 BTC)
 
 We would like to add support for the SATSCARD NFC smartcard in ZEUS. Users should be able to initialize cards, check balances, shuffle through addresses, ,generate QR codes of addresses from cards, and sweep balances. SATSCARD should have its own dedicated view in the app to manage the cards. Bonus points if you expose the TapSigner endpoints for a future integration down the line.
 
+[This library](https://github.com/schjonhaug/tapcards) may prove helpful in the integration.
+
 ## Point of Sale: Clover integration
 
 Payout: 1,500,000 sats (0.015 BTC)
