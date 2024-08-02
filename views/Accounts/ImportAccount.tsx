@@ -191,7 +191,7 @@ export default class ImportAccount extends React.Component<
                         style={{
                             alignSelf: 'center',
                             position: 'absolute',
-                            bottom: 35,
+                            bottom: 10,
                             width: '100%'
                         }}
                     >
@@ -295,15 +295,6 @@ export default class ImportAccount extends React.Component<
                     </ScrollView>
                 </View>
                 <View style={{ bottom: 10 }}>
-                    <Text
-                        style={{
-                            ...styles.label,
-                            color: themeColor('text'),
-                            padding: 15
-                        }}
-                    >
-                        {localeString('views.ImportAccount.note')}
-                    </Text>
                     <Button
                         title={localeString(
                             'views.ImportAccount.importAccount'
