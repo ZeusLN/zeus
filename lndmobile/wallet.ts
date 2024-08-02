@@ -1,6 +1,5 @@
 import Long from 'long';
 
-import { Platform } from 'react-native';
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
 import { lnrpc, signrpc, walletrpc } from './../proto/lightning';
 
