@@ -291,7 +291,6 @@
     "views.ImportAccount.Warning.text1": "La importación de cuentas externas es actualmente una función experimental.",
     "views.ImportAccount.Warning.text2": "Al presionar \"Entiendo\", usted acepta continuar bajo su propio riesgo.",
     "views.ImportAccount.Warning.text3": "Si crea un canal abierto con una cuenta externa, siga todas las instrucciones en pantalla y NO transmita la transacción desde ningún lugar excepto su billetera ZEUS.",
-    "views.ImportAccount.Warning.text4": "NOTA: LND solo detectará los eventos (depósitos/gastos) de claves derivadas de una cuenta si ocurren después de la importación. Más adelante se admitirán nuevos escaneos para detectar eventos pasados.",
     "views.Wallet.Channels.open": "Abrir Canal",
     "views.Wallet.Channels.inactive": "INACTIVO",
     "views.Wallet.Channels.private": "Privado",
