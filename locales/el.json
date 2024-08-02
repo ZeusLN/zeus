@@ -291,7 +291,6 @@
     "views.ImportAccount.Warning.text1": "Importing external accounts is currently an experimental feature.",
     "views.ImportAccount.Warning.text2": "By hitting 'I Understand' you are agreeing to proceed at your own risk.",
     "views.ImportAccount.Warning.text3": "If crafting a channel open with an external account, please follow all instructions on screen and DO NOT broadcast the transaction from anywhere except your ZEUS wallet.",
-    "views.ImportAccount.Warning.text4": "ΣΗΜΕΙΩΣΗ: Γεγονότα (καταθέσεις/δαπάνες) για κλειδιά που προέρχονται από έναν λογαριασμό θα ανιχνεύονται από το LND μόνο εάν συμβαίνουν μετά την εισαγωγή. Θα υποστηριχθούν αργότερα επαναληπτικές σαρώσεις για τον εντοπισμό παρελθοντικών συμβάντων.",
     "views.Wallet.Channels.open": "Άνοιγμα καναλιού",
     "views.Wallet.Channels.inactive": "ΑΝΕΝΕΡΓΟ",
     "views.Wallet.Channels.private": "Ιδιωτικό",
