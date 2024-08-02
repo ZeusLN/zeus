@@ -185,7 +185,7 @@ export default class ImportAccount extends React.Component<
                             fontSize: 20
                         }}
                     >
-                        {localeString('views.ImportAccount.Warning.text4')}
+                        {localeString('views.ImportAccount.note')}
                     </Text>
                     <View
                         style={{
