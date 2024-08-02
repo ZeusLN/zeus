@@ -1,5 +1,6 @@
 import Long from 'long';
 
+import { Platform } from 'react-native';
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
 import { lnrpc, signrpc, walletrpc } from './../proto/lightning';
 
@@ -34,7 +35,7 @@ export const bumpFee = async ({
     >({
         request: walletrpc.BumpFeeRequest,
         response: walletrpc.BumpFeeResponse,
-        method: 'BumpFee',
+        method: 'WalletKitBumpFee',
         options
     });
     return response;
@@ -70,7 +71,7 @@ export const fundPsbt = async ({
     >({
         request: walletrpc.FundPsbtRequest,
         response: walletrpc.FundPsbtResponse,
-        method: 'FundPsbt',
+        method: 'WalletKitFundPsbt',
         options
     });
     return response;
@@ -94,7 +95,7 @@ export const signPsbt = async ({
     >({
         request: walletrpc.SignPsbtRequest,
         response: walletrpc.SignPsbtResponse,
-        method: 'SignPsbt',
+        method: 'WalletKitSignPsbt',
         options
     });
     return response;
@@ -118,7 +119,7 @@ export const finalizePsbt = async ({
     >({
         request: walletrpc.FinalizePsbtRequest,
         response: walletrpc.FinalizePsbtResponse,
-        method: 'FinalizePsbt',
+        method: 'WalletKitFinalizePsbt',
         options
     });
     return response;
@@ -136,7 +137,7 @@ export const listAccounts =
         >({
             request: walletrpc.ListAccountsRequest,
             response: walletrpc.ListAccountsResponse,
-            method: 'ListAccounts',
+            method: 'WalletKitListAccounts',
             options: {}
         });
         return response;
@@ -172,7 +173,7 @@ export const importAccount = async ({
     >({
         request: walletrpc.ImportAccountRequest,
         response: walletrpc.ImportAccountResponse,
-        method: 'ImportAccount',
+        method: 'WalletKitImportAccount',
         options
     });
     return response;
@@ -196,7 +197,7 @@ export const publishTransaction = async ({
     >({
         request: walletrpc.Transaction,
         response: walletrpc.PublishResponse,
-        method: 'PublishTransaction',
+        method: 'WalletKitPublishTransaction',
         options
     });
     return response;
@@ -326,7 +327,7 @@ export const derivePrivateKey = async (
     >({
         request: signrpc.KeyDescriptor,
         response: signrpc.KeyDescriptor,
-        method: 'WalletKitDerivePrivateKey',
+        method: 'DerivePrivateKey',
         options: {
             key_loc: {
                 key_family,
