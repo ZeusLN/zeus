@@ -291,7 +291,6 @@
     "views.ImportAccount.Warning.text1": "Importarea conturilor externe este în prezent o caracteristică experimentală.",
     "views.ImportAccount.Warning.text2": "Atingând „Înțeleg”, sunteți de acord să continuați pe propriul risc.",
     "views.ImportAccount.Warning.text3": "Dacă creați un canal deschis cu un cont extern, vă rugăm să urmați toate instrucțiunile de pe ecran și NU difuzați tranzacția de oriunde, cu excepția portofelului dvs. ZEUS.",
-    "views.ImportAccount.Warning.text4": "NOTĂ: Evenimentele (depozite/cheltuieli) pentru cheile derivate dintr-un cont vor fi detectate de LND numai dacă au loc după import. Rescanările pentru a detecta evenimentele trecute vor fi acceptate mai târziu.",
     "views.Wallet.Channels.open": "Deschide Canal",
     "views.Wallet.Channels.inactive": "INACTIV",
     "views.Wallet.Channels.private": "Privat",
