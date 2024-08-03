@@ -388,7 +388,11 @@ const handleAnything = async (
         }
 
         const [username, domain] = value.split('@');
-        const url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        if domain.includes('.onion') {
+          const url = `http://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        }else{
+          const url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        }
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
