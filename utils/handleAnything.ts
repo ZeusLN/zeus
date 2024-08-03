@@ -388,7 +388,7 @@ const handleAnything = async (
         }
 
         const [username, domain] = value.split('@');
-        if domain.includes('.onion') {
+        if (domain.includes('.onion')) {
           const url = `http://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
         }else{
           const url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
