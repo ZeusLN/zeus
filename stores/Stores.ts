@@ -16,6 +16,7 @@ import ActivityStore from './ActivityStore';
 import PosStore from './PosStore';
 import ModalStore from './ModalStore';
 import NotesStore from './NotesStore';
+import ContactStore from './ContactStore';
 import SyncStore from './SyncStore';
 import LSPStore from './LSPStore';
 import LightningAddressStore from './LightningAddressStore';
@@ -42,6 +43,7 @@ class Stores {
     public posStore: PosStore;
     public modalStore: ModalStore;
     public notesStore: NotesStore;
+    public contactStore: ContactStore;
     public syncStore: SyncStore;
     public lspStore: LSPStore;
     public lightningAddressStore: LightningAddressStore;
@@ -101,6 +103,7 @@ class Stores {
         this.utxosStore = new UTXOsStore(this.settingsStore);
         this.messageSignStore = new MessageSignStore();
         this.notesStore = new NotesStore();
+        this.contactStore = new ContactStore();
         this.syncStore = new SyncStore(this.settingsStore);
         this.activityStore = new ActivityStore(
             this.settingsStore,

@@ -9,6 +9,7 @@ import {
     Animated,
     Easing
 } from 'react-native';
+import { inject, observer } from 'mobx-react';
 import { CheckBox, Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { relayInit, nip05, nip19 } from 'nostr-tools';
@@ -28,12 +29,14 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
+import ContactStore from '../stores/ContactStore';
 
 import SelectOff from '../assets/images/SVG/Select Off.svg';
 import SelectOn from '../assets/images/SVG/Select On.svg';
 
 interface NostrContactsProps {
     navigation: StackNavigationProp<any, any>;
+    ContactStore: ContactStore;
 }
 
 interface NostrContactsState {
@@ -49,6 +52,8 @@ interface NostrContactsState {
     error: string;
 }
 
+@inject('ContactStore')
+@observer
 export default class NostrContacts extends React.Component<
     NostrContactsProps,
     NostrContactsState
@@ -367,6 +372,7 @@ export default class NostrContacts extends React.Component<
     };
 
     importContacts = async () => {
+        const { ContactStore } = this.props;
         this.setState({
             loading: true
         });
@@ -420,6 +426,8 @@ export default class NostrContacts extends React.Component<
             );
 
             console.log('Contacts imported successfully!');
+
+            ContactStore?.loadContacts();
             this.setState({
                 loading: false
             });
