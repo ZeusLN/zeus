@@ -21,6 +21,7 @@ import SuccessAnimation from '../components/SuccessAnimation';
 
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
+import PaymentsStore from '../stores/PaymentsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -34,19 +35,32 @@ interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
+    PaymentsStore: PaymentsStore;
 }
 
-@inject('TransactionsStore', 'LnurlPayStore')
+interface SendingLightningState {
+    storedNotes: '';
+    wasSuccessful: boolean;
+    currentPayment: any;
+}
+
+@inject('TransactionsStore', 'LnurlPayStore', 'PaymentsStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
-    {}
+    SendingLightningState
 > {
     private backPressSubscription: NativeEventSubscription;
 
-    state = {
-        storedNotes: ''
-    };
+    constructor(props: SendingLightningProps) {
+        super(props);
+        this.state = {
+            storedNotes: '',
+            currentPayment: null,
+            wasSuccessful: false
+        };
+    }
+
     componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
@@ -72,6 +86,33 @@ export default class SendingLightning extends React.Component<
         );
     }
 
+    componentDidUpdate(_prevProps: SendingLightningProps) {
+        const { TransactionsStore } = this.props;
+        const wasSuccessful = this.successfullySent(TransactionsStore);
+
+        if (wasSuccessful && !this.state.wasSuccessful) {
+            this.fetchPayments();
+            this.setState({ wasSuccessful: true }); // Update success state
+        } else if (!wasSuccessful && this.state.wasSuccessful) {
+            this.setState({ wasSuccessful: false }); // Reset success state if needed
+        }
+    }
+
+    fetchPayments = async () => {
+        const { PaymentsStore, TransactionsStore } = this.props;
+        try {
+            const payments = await PaymentsStore.getPayments();
+            const matchingPayment = payments.find(
+                (payment: any) =>
+                    payment.payment_preimage ===
+                    TransactionsStore.payment_preimage
+            );
+            this.setState({ currentPayment: matchingPayment });
+        } catch (error) {
+            this.setState({ currentPayment: null });
+            console.error('Failed to fetch payments', error);
+        }
+    };
     private handleBackPress(): boolean {
         const { TransactionsStore, navigation } = this.props;
         if (
@@ -116,7 +157,9 @@ export default class SendingLightning extends React.Component<
             payment_error,
             isIncomplete
         } = TransactionsStore;
-        const { storedNotes } = this.state;
+        const { storedNotes, currentPayment } = this.state;
+
+        const enhancedPath = currentPayment?.enhancedPath;
 
         const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
@@ -347,6 +390,23 @@ export default class SendingLightning extends React.Component<
                                 !noteKey && { marginTop: 14 }
                             ]}
                         >
+                            {enhancedPath?.length > 0 && enhancedPath[0][0] && (
+                                <Button
+                                    title={` View Payment ${
+                                        enhancedPath?.length > 1
+                                            ? `${localeString(
+                                                  'views.Payment.paths'
+                                              )} (${enhancedPath.length})`
+                                            : localeString('views.Payment.path')
+                                    } `}
+                                    onPress={() =>
+                                        navigation.navigate('PaymentPaths', {
+                                            enhancedPath
+                                        })
+                                    }
+                                    secondary
+                                />
+                            )}
                             {noteKey && !error && !payment_error && (
                                 <Button
                                     title={

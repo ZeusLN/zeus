@@ -1,3 +1,4 @@
+//PaymentStore.tsx
 import { action, observable } from 'mobx';
 import Payment from './../models/Payment';
 import SettingsStore from './SettingsStore';
@@ -31,20 +32,21 @@ export default class PaymentsStore {
     @action
     public getPayments = async () => {
         this.loading = true;
-        await BackendUtils.getPayments()
-            .then((data: any) => {
-                const payments = data.payments;
-                this.payments = payments
-                    .slice()
-                    .reverse()
-                    .map(
-                        (payment: any) =>
-                            new Payment(payment, this.channelsStore.nodes)
-                    );
-                this.loading = false;
-            })
-            .catch(() => {
-                this.resetPayments();
-            });
+        try {
+            const data = await BackendUtils.getPayments();
+            const payments = data.payments;
+            this.payments = payments
+                .slice()
+                .reverse()
+                .map(
+                    (payment: any) =>
+                        new Payment(payment, this.channelsStore.nodes)
+                );
+            this.loading = false;
+            return this.payments;
+        } catch (error) {
+            this.resetPayments();
+            throw error;
+        }
     };
 }
