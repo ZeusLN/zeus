@@ -182,12 +182,22 @@ export default class UTXOsStore {
         this.success = false;
         this.importingAccount = true;
 
+        let start_height: number;
+        if (data.start_height) {
+            start_height = data.start_height;
+            delete data.start_height;
+        }
+
         return BackendUtils.importAccount(data)
             .then((response: any) => {
                 this.importingAccount = false;
                 this.error = false;
                 if (response === this.accountToImport && !data.dry_run) {
                     this.success = true;
+                    if (start_height)
+                        BackendUtils.rescan({
+                            start_height
+                        });
                     return;
                 } else {
                     this.accountToImport = response;

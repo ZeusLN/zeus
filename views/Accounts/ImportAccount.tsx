@@ -401,7 +401,7 @@ export default class ImportAccount extends React.Component<
                                       )
                                     : undefined,
                                 dry_run: true,
-                                block_height: existing_account
+                                start_height: existing_account
                                     ? block_height
                                     : undefined
                             }).then((response) => {
