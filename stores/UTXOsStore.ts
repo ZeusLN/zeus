@@ -8,6 +8,8 @@ import BackendUtils from '../utils/BackendUtils';
 import Account from '../models/Account';
 import Utxo from '../models/Utxo';
 
+import { walletrpc } from '../proto/lightning';
+
 export default class UTXOsStore {
     // utxos
     @observable public loading = false;
@@ -194,20 +196,37 @@ export default class UTXOsStore {
                 this.error = false;
                 if (!data.dry_run) {
                     this.success = true;
-                    if (this.start_height)
+                    if (this.start_height) {
+                        // generate 50 addresses from account
+                        for (let i = 0; i <= 50; i++) {
+                            BackendUtils.getNewAddress({
+                                account: this.accountToImport.account.name,
+                                type: walletrpc.AddressType[
+                                    this.accountToImport.account.address_type
+                                ]
+                            }).then((response: any) => {
+                                console.log(
+                                    'generated address',
+                                    response.address
+                                );
+                            });
+                        }
+
                         console.log(
                             'Starting rescan at height',
                             this.start_height
                         );
-                    BackendUtils.rescan({
-                        start_height: this.start_height
-                    })
-                        .then((response: any) => {
-                            console.log('rescan resp', response);
+
+                        BackendUtils.rescan({
+                            start_height: this.start_height
                         })
-                        .catch((err: Error) => {
-                            console.log('rescan err', err);
-                        });
+                            .then((response: any) => {
+                                console.log('rescan resp', response);
+                            })
+                            .catch((err: Error) => {
+                                console.log('rescan err', err);
+                            });
+                    }
                     return;
                 } else {
                     this.accountToImport = response;
