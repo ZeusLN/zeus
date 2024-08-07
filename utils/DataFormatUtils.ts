@@ -1,4 +1,7 @@
-import { snakeCase, isArray, isObject, transform } from 'lodash';
+import snakeCase from 'lodash/snakeCase';
+import isArray from 'lodash/isArray';
+import isObject from 'lodash/isObject';
+import transform from 'lodash/transform';
 
 // change responses from camel-case to snake-case
 const snakeize = (obj) =>
