@@ -77,7 +77,7 @@ const ColorChangingButton = ({ onPress }) => {
             style={[styles.button, { backgroundColor }]}
         >
             <Text style={styles.buttonText}>
-                {localeString('views.Wallet.Channels.purchaseInbound')}
+                {localeString('views.LSPS1.purchaseInbound')}
             </Text>
         </TouchableOpacity>
     );
