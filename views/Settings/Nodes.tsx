@@ -23,7 +23,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import LoadingIndicator from '../../components/LoadingIndicator';
-import { cloneDeep } from 'lodash';
+import cloneDeep from 'lodash/cloneDeep';
 
 interface NodesProps {
     nodes: any[];

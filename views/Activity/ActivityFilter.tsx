@@ -2,7 +2,7 @@ import * as React from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import { isEqual } from 'lodash';
+import isEqual from 'lodash/isEqual';
 import DatePicker from 'react-native-date-picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 
