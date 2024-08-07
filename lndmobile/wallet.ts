@@ -145,6 +145,30 @@ export const listAccounts =
 /**
  * @throws
  */
+export const rescan = async ({
+    start_height
+}: {
+    start_height: number;
+}): Promise<walletrpc.RescanResponse> => {
+    const options: walletrpc.IRescanRequest = {
+        start_height
+    };
+    const response = await sendCommand<
+        walletrpc.IRescanRequest,
+        walletrpc.RescanRequest,
+        walletrpc.RescanResponse
+    >({
+        request: walletrpc.RescanRequest,
+        response: walletrpc.RescanResponse,
+        method: 'WalletKitRescan',
+        options
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
 export const importAccount = async ({
     name,
     extended_public_key,

@@ -8,6 +8,8 @@ import BackendUtils from '../utils/BackendUtils';
 import Account from '../models/Account';
 import Utxo from '../models/Utxo';
 
+import { walletrpc } from '../proto/lightning';
+
 export default class UTXOsStore {
     // utxos
     @observable public loading = false;
@@ -20,6 +22,7 @@ export default class UTXOsStore {
     @observable public importingAccount = false;
     @observable public accounts: any = [];
     @observable public accountToImport: any | null;
+    @observable public start_height?: number;
     //
     settingsStore: SettingsStore;
 
@@ -182,12 +185,48 @@ export default class UTXOsStore {
         this.success = false;
         this.importingAccount = true;
 
+        if (data.start_height) {
+            this.start_height = data.start_height;
+            delete data.start_height;
+        }
+
         return BackendUtils.importAccount(data)
             .then((response: any) => {
                 this.importingAccount = false;
                 this.error = false;
-                if (response === this.accountToImport && !data.dry_run) {
+                if (!data.dry_run) {
                     this.success = true;
+                    if (this.start_height) {
+                        // generate 50 addresses from account
+                        for (let i = 0; i <= 50; i++) {
+                            BackendUtils.getNewAddress({
+                                account: this.accountToImport.account.name,
+                                type: walletrpc.AddressType[
+                                    this.accountToImport.account.address_type
+                                ]
+                            }).then((response: any) => {
+                                console.log(
+                                    'generated address',
+                                    response.address
+                                );
+                            });
+                        }
+
+                        console.log(
+                            'Starting rescan at height',
+                            this.start_height
+                        );
+
+                        BackendUtils.rescan({
+                            start_height: this.start_height
+                        })
+                            .then((response: any) => {
+                                console.log('rescan resp', response);
+                            })
+                            .catch((err: Error) => {
+                                console.log('rescan err', err);
+                            });
+                    }
                     return;
                 } else {
                     this.accountToImport = response;
@@ -200,6 +239,7 @@ export default class UTXOsStore {
                 this.success = false;
                 this.accountToImport = null;
                 this.importingAccount = false;
+                this.start_height = undefined;
                 this.getUtxosError();
             });
     };
