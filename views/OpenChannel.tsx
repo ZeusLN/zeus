@@ -16,6 +16,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import DropdownSetting from '../components/DropdownSetting';
 import Header from '../components/Header';
 import OnchainFeeInput from '../components/OnchainFeeInput';
 import KeyValue from '../components/KeyValue';
@@ -63,6 +64,7 @@ interface OpenChannelProps {
 }
 
 interface OpenChannelState {
+    channelDestination: string;
     node_pubkey_string: string;
     local_funding_amount: string;
     fundMax: boolean;
@@ -101,6 +103,7 @@ export default class OpenChannel extends React.Component<
     constructor(props: any) {
         super(props);
         this.state = {
+            channelDestination: 'Olympus',
             node_pubkey_string: '',
             host: '',
             local_funding_amount: '',
@@ -213,14 +216,28 @@ export default class OpenChannel extends React.Component<
     }
 
     initFromProps(props: OpenChannelProps) {
-        const { route } = props;
+        const { route, NodeInfoStore } = props;
 
         const node_pubkey_string = route.params?.node_pubkey_string ?? '';
         const host = route.params?.host ?? '';
 
+        let olympusPubkey, olympusHost;
+        if (NodeInfoStore.nodeInfo.isTestNet) {
+            olympusPubkey =
+                '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df';
+            olympusHost = '139.144.22.237:9735';
+        } else {
+            olympusPubkey =
+                '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581';
+            olympusHost = '45.79.192.236:9735';
+        }
+
         this.setState({
-            node_pubkey_string,
-            host
+            channelDestination: node_pubkey_string ? 'Custom' : 'Olympus',
+            node_pubkey_string: node_pubkey_string
+                ? node_pubkey_string
+                : olympusPubkey,
+            host: node_pubkey_string ? host : olympusHost
         });
     }
 
@@ -285,6 +302,7 @@ export default class OpenChannel extends React.Component<
             navigation
         } = this.props;
         const {
+            channelDestination,
             node_pubkey_string,
             local_funding_amount,
             fundMax,
@@ -434,76 +452,100 @@ export default class OpenChannel extends React.Component<
                             />
                         )}
 
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString('views.OpenChannel.nodePubkey')}
-                        </Text>
-                        <TextInput
-                            placeholder={'0A...'}
-                            value={node_pubkey_string}
-                            onChangeText={(text: string) =>
-                                this.setState({ node_pubkey_string: text })
+                        <DropdownSetting
+                            title={
+                                connectPeerOnly
+                                    ? localeString('general.peer')
+                                    : localeString('general.channelPartner')
                             }
-                            locked={openingChannel}
+                            selectedValue={channelDestination}
+                            values={[
+                                {
+                                    key: 'Olympus',
+                                    translateKey: 'views.Settings.disabled',
+                                    value: 'Olympus'
+                                },
+                                {
+                                    key: 'Custom',
+                                    translateKey: 'general.custom',
+                                    value: 'Custom'
+                                }
+                            ]}
+                            onValueChange={(value: string) => {
+                                console.log('~~', value);
+                                if (value === 'Olympus') {
+                                    if (NodeInfoStore.nodeInfo.isTestNet) {
+                                        this.setState({
+                                            channelDestination: 'Olympus',
+                                            node_pubkey_string:
+                                                '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
+                                            host: '139.144.22.237:9735'
+                                        });
+                                    } else {
+                                        this.setState({
+                                            channelDestination: 'Olympus',
+                                            node_pubkey_string:
+                                                '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
+                                            host: '45.79.192.236:9735'
+                                        });
+                                    }
+                                } else {
+                                    this.setState({
+                                        channelDestination: 'Custom',
+                                        node_pubkey_string: '',
+                                        host: ''
+                                    });
+                                }
+                            }}
                         />
 
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString('views.OpenChannel.host')}
-                        </Text>
-                        <TextInput
-                            placeholder={localeString(
-                                'views.OpenChannel.hostPort'
-                            )}
-                            value={host}
-                            onChangeText={(text: string) =>
-                                this.setState({ host: text })
-                            }
-                            locked={openingChannel}
-                        />
-
-                        {!(connectingToPeer || openingChannel) &&
-                            !node_pubkey_string &&
-                            !host && (
-                                <View style={{ margin: 10, marginBottom: 25 }}>
-                                    <Button
-                                        title={
-                                            connectPeerOnly
-                                                ? localeString(
-                                                      'views.OpenChannel.peerToOlympus'
-                                                  )
-                                                : localeString(
-                                                      'views.OpenChannel.openChannelToOlympus'
-                                                  )
-                                        }
-                                        onPress={() => {
-                                            if (
-                                                NodeInfoStore.nodeInfo.isTestNet
-                                            ) {
-                                                this.setState({
-                                                    node_pubkey_string:
-                                                        '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
-                                                    host: '139.144.22.237:9735'
-                                                });
-                                            } else {
-                                                this.setState({
-                                                    node_pubkey_string:
-                                                        '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
-                                                    host: '45.79.192.236:9735'
-                                                });
-                                            }
+                        {channelDestination === 'Custom' && (
+                            <>
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
                                         }}
+                                    >
+                                        {localeString(
+                                            'views.OpenChannel.nodePubkey'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={'0A...'}
+                                        value={node_pubkey_string}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                node_pubkey_string: text
+                                            })
+                                        }
+                                        locked={openingChannel}
                                     />
-                                </View>
-                            )}
+                                </>
+
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString('views.OpenChannel.host')}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={localeString(
+                                            'views.OpenChannel.hostPort'
+                                        )}
+                                        value={host}
+                                        onChangeText={(text: string) =>
+                                            this.setState({ host: text })
+                                        }
+                                        locked={openingChannel}
+                                    />
+                                </>
+                            </>
+                        )}
 
                         {!connectPeerOnly && (
                             <>
