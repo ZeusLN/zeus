@@ -1,6 +1,6 @@
 import { action, observable, reaction } from 'mobx';
 import BigNumber from 'bignumber.js';
-import chain from 'lodash/chain';
+import _ from 'lodash';
 import { randomBytes } from 'react-native-randombytes';
 
 import Channel from '../models/Channel';
@@ -312,7 +312,7 @@ export default class ChannelsStore {
         const channelsWithMissingNodeInfos = channels?.filter(
             (c) => this.nodes[c.remotePubkey] == null
         );
-        const publicKeysOfToBeLoadedNodeInfos = chain(
+        const publicKeysOfToBeLoadedNodeInfos = _.chain(
             channelsWithMissingAliases.concat(channelsWithMissingNodeInfos)
         )
             .map((c) => c.remotePubkey)
