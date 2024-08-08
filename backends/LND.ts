@@ -554,6 +554,7 @@ export default class LND {
     getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
+    listAddresses = () => this.getRequest('/v2/wallet/addresses');
     importAccount = (data: any) =>
         this.postRequest('/v2/wallet/accounts/import', data);
     signMessage = (message: string) =>
@@ -671,5 +672,6 @@ export default class LND {
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = (): Promise<boolean> | boolean => false;
+    supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
 }

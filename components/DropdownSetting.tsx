@@ -46,9 +46,9 @@ export default class DropdownSetting extends React.Component<
             }
         );
 
-        const displayItem = values.filter(
+        const displayItem = values.find(
             (value: any) => value.value === selectedValue
-        )[0];
+        );
 
         const display = displayItem ? displayItem.key : null;
 
