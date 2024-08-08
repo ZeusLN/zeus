@@ -550,6 +550,7 @@ public class LndMobileService extends Service {
     if (mClients.isEmpty()) {
       // HyperLog.i(TAG, "Last client unbound. Stopping lnd.");
       stopLnd(null, -1);
+      stopSelf();
     }
 
     return false;
