@@ -13,6 +13,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { inject, observer } from 'mobx-react';
 import Amount from '../Amount';
+import Button from '../Button';
 import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
 import LightningSwipeableRow from './LightningSwipeableRow';
@@ -331,6 +332,15 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         return (
             <View style={{ flex: 1 }}>
+                {lightningBalance === 0 && totalBlockchainBalance !== 0 && (
+                    <Button
+                        title={localeString(
+                            'components.LayerBalances.moveFundsToLn'
+                        )}
+                        onPress={() => navigation.navigate('OpenChannel')}
+                        secondary
+                    />
+                )}
                 <FlatList
                     data={DATA}
                     ItemSeparatorComponent={() => (
