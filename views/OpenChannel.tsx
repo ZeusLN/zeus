@@ -762,42 +762,6 @@ export default class OpenChannel extends React.Component<
                                         </View>
                                     )}
 
-                                {BackendUtils.supportsChannelCoinControl() && (
-                                    <View
-                                        style={{
-                                            marginTop: 10,
-                                            marginBottom: 20
-                                        }}
-                                    >
-                                        <UTXOPicker
-                                            onValueChange={this.selectUTXOs}
-                                            UTXOsStore={UTXOsStore}
-                                        />
-                                    </View>
-                                )}
-
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.OpenChannel.satsPerVbyte'
-                                        )}
-                                    </Text>
-                                    <OnchainFeeInput
-                                        fee={sat_per_vbyte}
-                                        onChangeFee={(text: string) => {
-                                            this.setState({
-                                                sat_per_vbyte: text
-                                            });
-                                        }}
-                                        navigation={navigation}
-                                    />
-                                </>
-
                                 <TouchableOpacity
                                     onPress={() => {
                                         this.setState({
@@ -839,33 +803,77 @@ export default class OpenChannel extends React.Component<
 
                                 {advancedSettingsToggle && (
                                     <>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.OpenChannel.numConf'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            placeholder={'1'}
-                                            value={min_confs.toString()}
-                                            onChangeText={(text: string) => {
-                                                const newMinConfs =
-                                                    Number(text);
-                                                this.setState({
-                                                    min_confs: newMinConfs,
-                                                    spend_unconfirmed:
-                                                        newMinConfs === 0
-                                                });
-                                            }}
-                                            locked={openingChannel}
-                                        />
+                                        {BackendUtils.supportsChannelCoinControl() && (
+                                            <View
+                                                style={{
+                                                    marginTop: 10,
+                                                    marginBottom: 20
+                                                }}
+                                            >
+                                                <UTXOPicker
+                                                    onValueChange={
+                                                        this.selectUTXOs
+                                                    }
+                                                    UTXOsStore={UTXOsStore}
+                                                />
+                                            </View>
+                                        )}
+
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.OpenChannel.satsPerVbyte'
+                                                )}
+                                            </Text>
+                                            <OnchainFeeInput
+                                                fee={sat_per_vbyte}
+                                                onChangeFee={(text: string) => {
+                                                    this.setState({
+                                                        sat_per_vbyte: text
+                                                    });
+                                                }}
+                                                navigation={navigation}
+                                            />
+                                        </>
+
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.OpenChannel.numConf'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                placeholder={'1'}
+                                                value={min_confs.toString()}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    const newMinConfs =
+                                                        Number(text);
+                                                    this.setState({
+                                                        min_confs: newMinConfs,
+                                                        spend_unconfirmed:
+                                                            newMinConfs === 0
+                                                    });
+                                                }}
+                                                locked={openingChannel}
+                                            />
+                                        </>
 
                                         <>
                                             <Text
