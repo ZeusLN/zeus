@@ -37783,17 +37783,11 @@ export namespace routerrpc {
         /** SendPaymentRequest amt */
         amt?: Long | null;
 
-        /** SendPaymentRequest amt_msat */
-        amt_msat?: Long | null;
-
         /** SendPaymentRequest payment_hash */
         payment_hash?: Uint8Array | null;
 
         /** SendPaymentRequest final_cltv_delta */
         final_cltv_delta?: number | null;
-
-        /** SendPaymentRequest payment_addr */
-        payment_addr?: Uint8Array | null;
 
         /** SendPaymentRequest payment_request */
         payment_request?: string | null;
@@ -37804,17 +37798,8 @@ export namespace routerrpc {
         /** SendPaymentRequest fee_limit_sat */
         fee_limit_sat?: Long | null;
 
-        /** SendPaymentRequest fee_limit_msat */
-        fee_limit_msat?: Long | null;
-
         /** SendPaymentRequest outgoing_chan_id */
         outgoing_chan_id?: Long | null;
-
-        /** SendPaymentRequest outgoing_chan_ids */
-        outgoing_chan_ids?: Long[] | null;
-
-        /** SendPaymentRequest last_hop_pubkey */
-        last_hop_pubkey?: Uint8Array | null;
 
         /** SendPaymentRequest cltv_limit */
         cltv_limit?: number | null;
@@ -37824,6 +37809,15 @@ export namespace routerrpc {
 
         /** SendPaymentRequest dest_custom_records */
         dest_custom_records?: { [k: string]: Uint8Array } | null;
+
+        /** SendPaymentRequest amt_msat */
+        amt_msat?: Long | null;
+
+        /** SendPaymentRequest fee_limit_msat */
+        fee_limit_msat?: Long | null;
+
+        /** SendPaymentRequest last_hop_pubkey */
+        last_hop_pubkey?: Uint8Array | null;
 
         /** SendPaymentRequest allow_self_payment */
         allow_self_payment?: boolean | null;
@@ -37836,6 +37830,12 @@ export namespace routerrpc {
 
         /** SendPaymentRequest no_inflight_updates */
         no_inflight_updates?: boolean | null;
+
+        /** SendPaymentRequest outgoing_chan_ids */
+        outgoing_chan_ids?: Long[] | null;
+
+        /** SendPaymentRequest payment_addr */
+        payment_addr?: Uint8Array | null;
 
         /** SendPaymentRequest max_shard_size_msat */
         max_shard_size_msat?: Long | null;
@@ -37861,17 +37861,11 @@ export namespace routerrpc {
         /** SendPaymentRequest amt. */
         public amt: Long;
 
-        /** SendPaymentRequest amt_msat. */
-        public amt_msat: Long;
-
         /** SendPaymentRequest payment_hash. */
         public payment_hash: Uint8Array;
 
         /** SendPaymentRequest final_cltv_delta. */
         public final_cltv_delta: number;
-
-        /** SendPaymentRequest payment_addr. */
-        public payment_addr: Uint8Array;
 
         /** SendPaymentRequest payment_request. */
         public payment_request: string;
@@ -37882,17 +37876,8 @@ export namespace routerrpc {
         /** SendPaymentRequest fee_limit_sat. */
         public fee_limit_sat: Long;
 
-        /** SendPaymentRequest fee_limit_msat. */
-        public fee_limit_msat: Long;
-
         /** SendPaymentRequest outgoing_chan_id. */
         public outgoing_chan_id: Long;
-
-        /** SendPaymentRequest outgoing_chan_ids. */
-        public outgoing_chan_ids: Long[];
-
-        /** SendPaymentRequest last_hop_pubkey. */
-        public last_hop_pubkey: Uint8Array;
 
         /** SendPaymentRequest cltv_limit. */
         public cltv_limit: number;
@@ -37902,6 +37887,15 @@ export namespace routerrpc {
 
         /** SendPaymentRequest dest_custom_records. */
         public dest_custom_records: { [k: string]: Uint8Array };
+
+        /** SendPaymentRequest amt_msat. */
+        public amt_msat: Long;
+
+        /** SendPaymentRequest fee_limit_msat. */
+        public fee_limit_msat: Long;
+
+        /** SendPaymentRequest last_hop_pubkey. */
+        public last_hop_pubkey: Uint8Array;
 
         /** SendPaymentRequest allow_self_payment. */
         public allow_self_payment: boolean;
@@ -37914,6 +37908,12 @@ export namespace routerrpc {
 
         /** SendPaymentRequest no_inflight_updates. */
         public no_inflight_updates: boolean;
+
+        /** SendPaymentRequest outgoing_chan_ids. */
+        public outgoing_chan_ids: Long[];
+
+        /** SendPaymentRequest payment_addr. */
+        public payment_addr: Uint8Array;
 
         /** SendPaymentRequest max_shard_size_msat. */
         public max_shard_size_msat: Long;
@@ -38259,6 +38259,12 @@ export namespace routerrpc {
 
         /** RouteFeeRequest amt_sat */
         amt_sat?: Long | null;
+
+        /** RouteFeeRequest payment_request */
+        payment_request?: string | null;
+
+        /** RouteFeeRequest timeout */
+        timeout?: number | null;
     }
 
     /** Represents a RouteFeeRequest. */
@@ -38274,6 +38280,12 @@ export namespace routerrpc {
 
         /** RouteFeeRequest amt_sat. */
         public amt_sat: Long;
+
+        /** RouteFeeRequest payment_request. */
+        public payment_request: string;
+
+        /** RouteFeeRequest timeout. */
+        public timeout: number;
 
         /**
          * Creates a new RouteFeeRequest instance using the specified properties.
@@ -38378,6 +38390,9 @@ export namespace routerrpc {
 
         /** RouteFeeResponse time_lock_delay */
         time_lock_delay?: Long | null;
+
+        /** RouteFeeResponse failure_reason */
+        failure_reason?: lnrpc.PaymentFailureReason | null;
     }
 
     /** Represents a RouteFeeResponse. */
@@ -38393,6 +38408,9 @@ export namespace routerrpc {
 
         /** RouteFeeResponse time_lock_delay. */
         public time_lock_delay: Long;
+
+        /** RouteFeeResponse failure_reason. */
+        public failure_reason: lnrpc.PaymentFailureReason;
 
         /**
          * Creates a new RouteFeeResponse instance using the specified properties.
@@ -44353,6 +44371,9 @@ export namespace signrpc {
 
         /** SignMessageReq schnorr_sig_tap_tweak */
         schnorr_sig_tap_tweak?: Uint8Array | null;
+
+        /** SignMessageReq tag */
+        tag?: Uint8Array | null;
     }
 
     /** Represents a SignMessageReq. */
@@ -44380,6 +44401,9 @@ export namespace signrpc {
 
         /** SignMessageReq schnorr_sig_tap_tweak. */
         public schnorr_sig_tap_tweak: Uint8Array;
+
+        /** SignMessageReq tag. */
+        public tag: Uint8Array;
 
         /**
          * Creates a new SignMessageReq instance using the specified properties.
@@ -44603,6 +44627,9 @@ export namespace signrpc {
 
         /** VerifyMessageReq is_schnorr_sig */
         is_schnorr_sig?: boolean | null;
+
+        /** VerifyMessageReq tag */
+        tag?: Uint8Array | null;
     }
 
     /** Represents a VerifyMessageReq. */
@@ -44624,6 +44651,9 @@ export namespace signrpc {
 
         /** VerifyMessageReq is_schnorr_sig. */
         public is_schnorr_sig: boolean;
+
+        /** VerifyMessageReq tag. */
+        public tag: Uint8Array;
 
         /**
          * Creates a new VerifyMessageReq instance using the specified properties.
@@ -45592,6 +45622,9 @@ export namespace signrpc {
 
         /** MuSig2SessionRequest version */
         version?: signrpc.MuSig2Version | null;
+
+        /** MuSig2SessionRequest pregenerated_local_nonce */
+        pregenerated_local_nonce?: Uint8Array | null;
     }
 
     /** Represents a MuSig2SessionRequest. */
@@ -45619,6 +45652,9 @@ export namespace signrpc {
 
         /** MuSig2SessionRequest version. */
         public version: signrpc.MuSig2Version;
+
+        /** MuSig2SessionRequest pregenerated_local_nonce. */
+        public pregenerated_local_nonce: Uint8Array;
 
         /**
          * Creates a new MuSig2SessionRequest instance using the specified properties.
@@ -46953,6 +46989,25 @@ export namespace walletrpc {
         ): Promise<walletrpc.AddrResponse>;
 
         /**
+         * Calls GetTransaction.
+         * @param request GetTransactionRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and Transaction
+         */
+        public getTransaction(
+            request: walletrpc.IGetTransactionRequest,
+            callback: walletrpc.WalletKit.GetTransactionCallback
+        ): void;
+
+        /**
+         * Calls GetTransaction.
+         * @param request GetTransactionRequest message or plain object
+         * @returns Promise
+         */
+        public getTransaction(
+            request: walletrpc.IGetTransactionRequest
+        ): Promise<lnrpc.Transaction>;
+
+        /**
          * Calls ListAccounts.
          * @param request ListAccountsRequest message or plain object
          * @param callback Node-style callback called with the error, if any, and ListAccountsResponse
@@ -47124,6 +47179,25 @@ export namespace walletrpc {
         ): Promise<walletrpc.PublishResponse>;
 
         /**
+         * Calls RemoveTransaction.
+         * @param request GetTransactionRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and RemoveTransactionResponse
+         */
+        public removeTransaction(
+            request: walletrpc.IGetTransactionRequest,
+            callback: walletrpc.WalletKit.RemoveTransactionCallback
+        ): void;
+
+        /**
+         * Calls RemoveTransaction.
+         * @param request GetTransactionRequest message or plain object
+         * @returns Promise
+         */
+        public removeTransaction(
+            request: walletrpc.IGetTransactionRequest
+        ): Promise<walletrpc.RemoveTransactionResponse>;
+
+        /**
          * Calls SendOutputs.
          * @param request SendOutputsRequest message or plain object
          * @param callback Node-style callback called with the error, if any, and SendOutputsResponse
@@ -47293,6 +47367,25 @@ export namespace walletrpc {
         public finalizePsbt(
             request: walletrpc.IFinalizePsbtRequest
         ): Promise<walletrpc.FinalizePsbtResponse>;
+
+        /**
+         * Calls Rescan.
+         * @param request RescanRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and RescanResponse
+         */
+        public rescan(
+            request: walletrpc.IRescanRequest,
+            callback: walletrpc.WalletKit.RescanCallback
+        ): void;
+
+        /**
+         * Calls Rescan.
+         * @param request RescanRequest message or plain object
+         * @returns Promise
+         */
+        public rescan(
+            request: walletrpc.IRescanRequest
+        ): Promise<walletrpc.RescanResponse>;
     }
 
     namespace WalletKit {
@@ -47364,6 +47457,16 @@ export namespace walletrpc {
         type NextAddrCallback = (
             error: Error | null,
             response?: walletrpc.AddrResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link walletrpc.WalletKit#getTransaction}.
+         * @param error Error, if any
+         * @param [response] Transaction
+         */
+        type GetTransactionCallback = (
+            error: Error | null,
+            response?: lnrpc.Transaction
         ) => void;
 
         /**
@@ -47457,6 +47560,16 @@ export namespace walletrpc {
         ) => void;
 
         /**
+         * Callback as used by {@link walletrpc.WalletKit#removeTransaction}.
+         * @param error Error, if any
+         * @param [response] RemoveTransactionResponse
+         */
+        type RemoveTransactionCallback = (
+            error: Error | null,
+            response?: walletrpc.RemoveTransactionResponse
+        ) => void;
+
+        /**
          * Callback as used by {@link walletrpc.WalletKit#sendOutputs}.
          * @param error Error, if any
          * @param [response] SendOutputsResponse
@@ -47544,6 +47657,16 @@ export namespace walletrpc {
         type FinalizePsbtCallback = (
             error: Error | null,
             response?: walletrpc.FinalizePsbtResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link walletrpc.WalletKit#rescan}.
+         * @param error Error, if any
+         * @param [response] RescanResponse
+         */
+        type RescanCallback = (
+            error: Error | null,
+            response?: walletrpc.RescanResponse
         ) => void;
     }
 
@@ -48784,6 +48907,12 @@ export namespace walletrpc {
 
         /** AddressProperty balance */
         balance?: Long | null;
+
+        /** AddressProperty derivation_path */
+        derivation_path?: string | null;
+
+        /** AddressProperty public_key */
+        public_key?: Uint8Array | null;
     }
 
     /** Represents an AddressProperty. */
@@ -48802,6 +48931,12 @@ export namespace walletrpc {
 
         /** AddressProperty balance. */
         public balance: Long;
+
+        /** AddressProperty derivation_path. */
+        public derivation_path: string;
+
+        /** AddressProperty public_key. */
+        public public_key: Uint8Array;
 
         /**
          * Creates a new AddressProperty instance using the specified properties.
@@ -49720,6 +49855,119 @@ export namespace walletrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a GetTransactionRequest. */
+    interface IGetTransactionRequest {
+        /** GetTransactionRequest txid */
+        txid?: string | null;
+    }
+
+    /** Represents a GetTransactionRequest. */
+    class GetTransactionRequest implements IGetTransactionRequest {
+        /**
+         * Constructs a new GetTransactionRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IGetTransactionRequest);
+
+        /** GetTransactionRequest txid. */
+        public txid: string;
+
+        /**
+         * Creates a new GetTransactionRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns GetTransactionRequest instance
+         */
+        public static create(
+            properties?: walletrpc.IGetTransactionRequest
+        ): walletrpc.GetTransactionRequest;
+
+        /**
+         * Encodes the specified GetTransactionRequest message. Does not implicitly {@link walletrpc.GetTransactionRequest.verify|verify} messages.
+         * @param message GetTransactionRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IGetTransactionRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified GetTransactionRequest message, length delimited. Does not implicitly {@link walletrpc.GetTransactionRequest.verify|verify} messages.
+         * @param message GetTransactionRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IGetTransactionRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a GetTransactionRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns GetTransactionRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.GetTransactionRequest;
+
+        /**
+         * Decodes a GetTransactionRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns GetTransactionRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.GetTransactionRequest;
+
+        /**
+         * Verifies a GetTransactionRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a GetTransactionRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns GetTransactionRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.GetTransactionRequest;
+
+        /**
+         * Creates a plain object from a GetTransactionRequest message. Also converts values to other types if specified.
+         * @param message GetTransactionRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.GetTransactionRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this GetTransactionRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for GetTransactionRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a SignMessageWithAddrRequest. */
     interface ISignMessageWithAddrRequest {
         /** SignMessageWithAddrRequest msg */
@@ -50216,6 +50464,9 @@ export namespace walletrpc {
 
         /** ImportAccountRequest dry_run */
         dry_run?: boolean | null;
+
+        /** ImportAccountRequest birthday_height */
+        birthday_height?: number | null;
     }
 
     /** Represents an ImportAccountRequest. */
@@ -50240,6 +50491,9 @@ export namespace walletrpc {
 
         /** ImportAccountRequest dry_run. */
         public dry_run: boolean;
+
+        /** ImportAccountRequest birthday_height. */
+        public birthday_height: number;
 
         /**
          * Creates a new ImportAccountRequest instance using the specified properties.
@@ -50462,6 +50716,232 @@ export namespace walletrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a RescanRequest. */
+    interface IRescanRequest {
+        /** RescanRequest start_height */
+        start_height?: number | null;
+    }
+
+    /** Represents a RescanRequest. */
+    class RescanRequest implements IRescanRequest {
+        /**
+         * Constructs a new RescanRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IRescanRequest);
+
+        /** RescanRequest start_height. */
+        public start_height: number;
+
+        /**
+         * Creates a new RescanRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns RescanRequest instance
+         */
+        public static create(
+            properties?: walletrpc.IRescanRequest
+        ): walletrpc.RescanRequest;
+
+        /**
+         * Encodes the specified RescanRequest message. Does not implicitly {@link walletrpc.RescanRequest.verify|verify} messages.
+         * @param message RescanRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IRescanRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified RescanRequest message, length delimited. Does not implicitly {@link walletrpc.RescanRequest.verify|verify} messages.
+         * @param message RescanRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IRescanRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a RescanRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns RescanRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.RescanRequest;
+
+        /**
+         * Decodes a RescanRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns RescanRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.RescanRequest;
+
+        /**
+         * Verifies a RescanRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a RescanRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns RescanRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.RescanRequest;
+
+        /**
+         * Creates a plain object from a RescanRequest message. Also converts values to other types if specified.
+         * @param message RescanRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.RescanRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this RescanRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for RescanRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a RescanResponse. */
+    interface IRescanResponse {
+        /** RescanResponse status */
+        status?: string | null;
+    }
+
+    /** Represents a RescanResponse. */
+    class RescanResponse implements IRescanResponse {
+        /**
+         * Constructs a new RescanResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IRescanResponse);
+
+        /** RescanResponse status. */
+        public status: string;
+
+        /**
+         * Creates a new RescanResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns RescanResponse instance
+         */
+        public static create(
+            properties?: walletrpc.IRescanResponse
+        ): walletrpc.RescanResponse;
+
+        /**
+         * Encodes the specified RescanResponse message. Does not implicitly {@link walletrpc.RescanResponse.verify|verify} messages.
+         * @param message RescanResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IRescanResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified RescanResponse message, length delimited. Does not implicitly {@link walletrpc.RescanResponse.verify|verify} messages.
+         * @param message RescanResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IRescanResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a RescanResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns RescanResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.RescanResponse;
+
+        /**
+         * Decodes a RescanResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns RescanResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.RescanResponse;
+
+        /**
+         * Verifies a RescanResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a RescanResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns RescanResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.RescanResponse;
+
+        /**
+         * Creates a plain object from a RescanResponse message. Also converts values to other types if specified.
+         * @param message RescanResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.RescanResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this RescanResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for RescanResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of an ImportPublicKeyRequest. */
     interface IImportPublicKeyRequest {
         /** ImportPublicKeyRequest public_key */
@@ -50469,6 +50949,12 @@ export namespace walletrpc {
 
         /** ImportPublicKeyRequest address_type */
         address_type?: walletrpc.AddressType | null;
+
+        /** ImportPublicKeyRequest rescan */
+        rescan?: boolean | null;
+
+        /** ImportPublicKeyRequest birthday_height */
+        birthday_height?: number | null;
     }
 
     /** Represents an ImportPublicKeyRequest. */
@@ -50484,6 +50970,12 @@ export namespace walletrpc {
 
         /** ImportPublicKeyRequest address_type. */
         public address_type: walletrpc.AddressType;
+
+        /** ImportPublicKeyRequest rescan. */
+        public rescan: boolean;
+
+        /** ImportPublicKeyRequest birthday_height. */
+        public birthday_height: number;
 
         /**
          * Creates a new ImportPublicKeyRequest instance using the specified properties.
@@ -51528,6 +52020,119 @@ export namespace walletrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a RemoveTransactionResponse. */
+    interface IRemoveTransactionResponse {
+        /** RemoveTransactionResponse status */
+        status?: string | null;
+    }
+
+    /** Represents a RemoveTransactionResponse. */
+    class RemoveTransactionResponse implements IRemoveTransactionResponse {
+        /**
+         * Constructs a new RemoveTransactionResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IRemoveTransactionResponse);
+
+        /** RemoveTransactionResponse status. */
+        public status: string;
+
+        /**
+         * Creates a new RemoveTransactionResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns RemoveTransactionResponse instance
+         */
+        public static create(
+            properties?: walletrpc.IRemoveTransactionResponse
+        ): walletrpc.RemoveTransactionResponse;
+
+        /**
+         * Encodes the specified RemoveTransactionResponse message. Does not implicitly {@link walletrpc.RemoveTransactionResponse.verify|verify} messages.
+         * @param message RemoveTransactionResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IRemoveTransactionResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified RemoveTransactionResponse message, length delimited. Does not implicitly {@link walletrpc.RemoveTransactionResponse.verify|verify} messages.
+         * @param message RemoveTransactionResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IRemoveTransactionResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a RemoveTransactionResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns RemoveTransactionResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.RemoveTransactionResponse;
+
+        /**
+         * Decodes a RemoveTransactionResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns RemoveTransactionResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.RemoveTransactionResponse;
+
+        /**
+         * Verifies a RemoveTransactionResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a RemoveTransactionResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns RemoveTransactionResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.RemoveTransactionResponse;
+
+        /**
+         * Creates a plain object from a RemoveTransactionResponse message. Also converts values to other types if specified.
+         * @param message RemoveTransactionResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.RemoveTransactionResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this RemoveTransactionResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for RemoveTransactionResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a SendOutputsRequest. */
     interface ISendOutputsRequest {
         /** SendOutputsRequest sat_per_kw */
@@ -51544,6 +52149,9 @@ export namespace walletrpc {
 
         /** SendOutputsRequest spend_unconfirmed */
         spend_unconfirmed?: boolean | null;
+
+        /** SendOutputsRequest coin_selection_strategy */
+        coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
     }
 
     /** Represents a SendOutputsRequest. */
@@ -51568,6 +52176,9 @@ export namespace walletrpc {
 
         /** SendOutputsRequest spend_unconfirmed. */
         public spend_unconfirmed: boolean;
+
+        /** SendOutputsRequest coin_selection_strategy. */
+        public coin_selection_strategy: lnrpc.CoinSelectionStrategy;
 
         /**
          * Creates a new SendOutputsRequest instance using the specified properties.
@@ -52028,7 +52639,20 @@ export namespace walletrpc {
         LEASE_COMMITMENT_TO_REMOTE_CONFIRMED = 19,
         LEASE_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL = 20,
         LEASE_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL = 21,
-        TAPROOT_PUB_KEY_SPEND = 22
+        TAPROOT_PUB_KEY_SPEND = 22,
+        TAPROOT_LOCAL_COMMIT_SPEND = 23,
+        TAPROOT_REMOTE_COMMIT_SPEND = 24,
+        TAPROOT_ANCHOR_SWEEP_SPEND = 25,
+        TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL = 26,
+        TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL = 27,
+        TAPROOT_HTLC_SECOND_LEVEL_REVOKE = 28,
+        TAPROOT_HTLC_ACCEPTED_REVOKE = 29,
+        TAPROOT_HTLC_OFFERED_REVOKE = 30,
+        TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT = 31,
+        TAPROOT_HTLC_LOCAL_OFFERED_TIMEOUT = 32,
+        TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS = 33,
+        TAPROOT_HTLC_ACCEPTED_LOCAL_SUCCESS = 34,
+        TAPROOT_COMMITMENT_REVOKE = 35
     }
 
     /** Properties of a PendingSweep. */
@@ -52051,6 +52675,9 @@ export namespace walletrpc {
         /** PendingSweep next_broadcast_height */
         next_broadcast_height?: number | null;
 
+        /** PendingSweep force */
+        force?: boolean | null;
+
         /** PendingSweep requested_conf_target */
         requested_conf_target?: number | null;
 
@@ -52063,8 +52690,14 @@ export namespace walletrpc {
         /** PendingSweep requested_sat_per_vbyte */
         requested_sat_per_vbyte?: Long | null;
 
-        /** PendingSweep force */
-        force?: boolean | null;
+        /** PendingSweep immediate */
+        immediate?: boolean | null;
+
+        /** PendingSweep budget */
+        budget?: Long | null;
+
+        /** PendingSweep deadline_height */
+        deadline_height?: number | null;
     }
 
     /** Represents a PendingSweep. */
@@ -52093,6 +52726,9 @@ export namespace walletrpc {
         /** PendingSweep next_broadcast_height. */
         public next_broadcast_height: number;
 
+        /** PendingSweep force. */
+        public force: boolean;
+
         /** PendingSweep requested_conf_target. */
         public requested_conf_target: number;
 
@@ -52105,8 +52741,14 @@ export namespace walletrpc {
         /** PendingSweep requested_sat_per_vbyte. */
         public requested_sat_per_vbyte: Long;
 
-        /** PendingSweep force. */
-        public force: boolean;
+        /** PendingSweep immediate. */
+        public immediate: boolean;
+
+        /** PendingSweep budget. */
+        public budget: Long;
+
+        /** PendingSweep deadline_height. */
+        public deadline_height: number;
 
         /**
          * Creates a new PendingSweep instance using the specified properties.
@@ -52440,6 +53082,12 @@ export namespace walletrpc {
 
         /** BumpFeeRequest sat_per_vbyte */
         sat_per_vbyte?: Long | null;
+
+        /** BumpFeeRequest immediate */
+        immediate?: boolean | null;
+
+        /** BumpFeeRequest budget */
+        budget?: Long | null;
     }
 
     /** Represents a BumpFeeRequest. */
@@ -52464,6 +53112,12 @@ export namespace walletrpc {
 
         /** BumpFeeRequest sat_per_vbyte. */
         public sat_per_vbyte: Long;
+
+        /** BumpFeeRequest immediate. */
+        public immediate: boolean;
+
+        /** BumpFeeRequest budget. */
+        public budget: Long;
 
         /**
          * Creates a new BumpFeeRequest instance using the specified properties.
@@ -52562,7 +53216,10 @@ export namespace walletrpc {
     }
 
     /** Properties of a BumpFeeResponse. */
-    interface IBumpFeeResponse {}
+    interface IBumpFeeResponse {
+        /** BumpFeeResponse status */
+        status?: string | null;
+    }
 
     /** Represents a BumpFeeResponse. */
     class BumpFeeResponse implements IBumpFeeResponse {
@@ -52571,6 +53228,9 @@ export namespace walletrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: walletrpc.IBumpFeeResponse);
+
+        /** BumpFeeResponse status. */
+        public status: string;
 
         /**
          * Creates a new BumpFeeResponse instance using the specified properties.
@@ -52672,6 +53332,9 @@ export namespace walletrpc {
     interface IListSweepsRequest {
         /** ListSweepsRequest verbose */
         verbose?: boolean | null;
+
+        /** ListSweepsRequest start_height */
+        start_height?: number | null;
     }
 
     /** Represents a ListSweepsRequest. */
@@ -52684,6 +53347,9 @@ export namespace walletrpc {
 
         /** ListSweepsRequest verbose. */
         public verbose: boolean;
+
+        /** ListSweepsRequest start_height. */
+        public start_height: number;
 
         /**
          * Creates a new ListSweepsRequest instance using the specified properties.
@@ -53266,6 +53932,9 @@ export namespace walletrpc {
         /** FundPsbtRequest raw */
         raw?: walletrpc.ITxTemplate | null;
 
+        /** FundPsbtRequest coin_select */
+        coin_select?: walletrpc.IPsbtCoinSelect | null;
+
         /** FundPsbtRequest target_conf */
         target_conf?: number | null;
 
@@ -53283,6 +53952,9 @@ export namespace walletrpc {
 
         /** FundPsbtRequest change_type */
         change_type?: walletrpc.ChangeAddressType | null;
+
+        /** FundPsbtRequest coin_selection_strategy */
+        coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
     }
 
     /** Represents a FundPsbtRequest. */
@@ -53298,6 +53970,9 @@ export namespace walletrpc {
 
         /** FundPsbtRequest raw. */
         public raw?: walletrpc.ITxTemplate | null;
+
+        /** FundPsbtRequest coin_select. */
+        public coin_select?: walletrpc.IPsbtCoinSelect | null;
 
         /** FundPsbtRequest target_conf. */
         public target_conf?: number | null;
@@ -53317,8 +53992,11 @@ export namespace walletrpc {
         /** FundPsbtRequest change_type. */
         public change_type: walletrpc.ChangeAddressType;
 
+        /** FundPsbtRequest coin_selection_strategy. */
+        public coin_selection_strategy: lnrpc.CoinSelectionStrategy;
+
         /** FundPsbtRequest template. */
-        public template?: 'psbt' | 'raw';
+        public template?: 'psbt' | 'raw' | 'coin_select';
 
         /** FundPsbtRequest fees. */
         public fees?: 'target_conf' | 'sat_per_vbyte';
@@ -53657,6 +54335,134 @@ export namespace walletrpc {
 
         /**
          * Gets the default type url for TxTemplate
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a PsbtCoinSelect. */
+    interface IPsbtCoinSelect {
+        /** PsbtCoinSelect psbt */
+        psbt?: Uint8Array | null;
+
+        /** PsbtCoinSelect existing_output_index */
+        existing_output_index?: number | null;
+
+        /** PsbtCoinSelect add */
+        add?: boolean | null;
+    }
+
+    /** Represents a PsbtCoinSelect. */
+    class PsbtCoinSelect implements IPsbtCoinSelect {
+        /**
+         * Constructs a new PsbtCoinSelect.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IPsbtCoinSelect);
+
+        /** PsbtCoinSelect psbt. */
+        public psbt: Uint8Array;
+
+        /** PsbtCoinSelect existing_output_index. */
+        public existing_output_index?: number | null;
+
+        /** PsbtCoinSelect add. */
+        public add?: boolean | null;
+
+        /** PsbtCoinSelect change_output. */
+        public change_output?: 'existing_output_index' | 'add';
+
+        /**
+         * Creates a new PsbtCoinSelect instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns PsbtCoinSelect instance
+         */
+        public static create(
+            properties?: walletrpc.IPsbtCoinSelect
+        ): walletrpc.PsbtCoinSelect;
+
+        /**
+         * Encodes the specified PsbtCoinSelect message. Does not implicitly {@link walletrpc.PsbtCoinSelect.verify|verify} messages.
+         * @param message PsbtCoinSelect message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IPsbtCoinSelect,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified PsbtCoinSelect message, length delimited. Does not implicitly {@link walletrpc.PsbtCoinSelect.verify|verify} messages.
+         * @param message PsbtCoinSelect message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IPsbtCoinSelect,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a PsbtCoinSelect message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns PsbtCoinSelect
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.PsbtCoinSelect;
+
+        /**
+         * Decodes a PsbtCoinSelect message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns PsbtCoinSelect
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.PsbtCoinSelect;
+
+        /**
+         * Verifies a PsbtCoinSelect message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a PsbtCoinSelect message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns PsbtCoinSelect
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.PsbtCoinSelect;
+
+        /**
+         * Creates a plain object from a PsbtCoinSelect message. Also converts values to other types if specified.
+         * @param message PsbtCoinSelect
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.PsbtCoinSelect,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this PsbtCoinSelect to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for PsbtCoinSelect
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */

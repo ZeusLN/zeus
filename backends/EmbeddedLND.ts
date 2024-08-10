@@ -48,7 +48,8 @@ const {
     finalizePsbt,
     publishTransaction,
     listAccounts,
-    importAccount
+    importAccount,
+    rescan
 } = lndMobile.wallet;
 const { walletBalance, newAddress, getTransactions, sendCoins } =
     lndMobile.onchain;
@@ -265,6 +266,7 @@ export default class EmbeddedLND extends LND {
 
     listAccounts = async () => await listAccounts();
     importAccount = async (data: any) => await importAccount(data);
+    rescan = async (data: any) => await rescan(data);
 
     // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>

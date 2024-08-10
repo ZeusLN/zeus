@@ -124,6 +124,7 @@ class BackendUtils {
     subscribeTransactions = (...args: any[]) =>
         this.call('subscribeTransactions', args);
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
+    rescan = (...args: any[]) => this.call('rescan', args);
 
     // BOLT 12 / Offers
     listOffers = (...args: any[]) => this.call('listOffers', args);
