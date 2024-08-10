@@ -328,7 +328,7 @@ export default class LND {
         let request: any = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
-            local_funding_amount: data.local_funding_amount,
+            local_funding_amount: data.local_funding_amount || 0,
             min_confs: data.min_confs,
             node_pubkey_string: data.node_pubkey_string,
             sat_per_vbyte: data.sat_per_vbyte,
@@ -337,6 +337,7 @@ export default class LND {
 
         if (data.fundMax) {
             request.fund_max = true;
+            delete request.local_funding_amount;
         }
 
         if (data.simpleTaprootChannel) {
