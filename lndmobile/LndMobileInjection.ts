@@ -88,7 +88,8 @@ import {
     finalizePsbt,
     publishTransaction,
     listAccounts,
-    importAccount
+    importAccount,
+    rescan
 } from './wallet';
 import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
@@ -433,6 +434,11 @@ export interface ILndMobileInjections {
             address_type?: number;
             dry_run: boolean;
         }) => Promise<walletrpc.ImportAccountResponse>;
+        rescan: ({
+            start_height
+        }: {
+            start_height: number;
+        }) => Promise<walletrpc.RescanResponse>;
     };
     autopilot: {
         status: () => Promise<autopilotrpc.StatusResponse>;
@@ -536,7 +542,8 @@ export default {
         finalizePsbt,
         publishTransaction,
         listAccounts,
-        importAccount
+        importAccount,
+        rescan
     },
     autopilot: {
         status,
