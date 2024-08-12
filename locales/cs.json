@@ -1022,7 +1022,7 @@
     "components.ChannelPicker.modal.description": "Zvolte kanál, který bude použit pro tuto operaci. Pro zachování vašeho soukromí možná budete chtít použít pouze určité kanály.",
     "components.ChannelPicker.modal.description.multiple": "Zvolte kanál(y), který (které) bude (budou) použit(y) pro tuto operaci. Pro zachování vašeho soukromí možná budete chtít použít pouze určité kanály.",
     "components.LayerBalances.moreAccounts": "Další účty",
-    "components.LayerBalances.moveFundsToLn": "Move on-chain funds to lightning",
+    "components.LayerBalances.moveFundsToLn": "Převést on-chain prostředky na Lightning",
     "backends.LND.wsReq.warning": "Možná budete muset povolit ověřování certifikátů, abyste mohli tato volání uskutečnit",
     "backends.LND.restReq.connectionError": "Chyba připojení",
     "utils.handleAnything.lightningAddressError": "Chyba při načítání dat Lightning adresy",
