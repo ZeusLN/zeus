@@ -45,7 +45,6 @@ export default class ContactStore {
                 : [];
 
             if (isEdit && this.prefillContact && !isNostrContact) {
-                console.log('heree', this.prefillContact);
                 const updatedContacts = existingContacts.map((contact) =>
                     contact.contactId === this.prefillContact.contactId
                         ? { ...contact, ...contactDetails }
