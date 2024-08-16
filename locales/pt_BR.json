@@ -1022,6 +1022,7 @@
     "components.ChannelPicker.modal.description": "Selecione o canal a ser utilizado nesta operação. Você pode usar apenas canais específicos para preservar sua privacidade.",
     "components.ChannelPicker.modal.description.multiple": "Selecione os canal(is) a serem utilizados nesta operação. Você pode usar apenas canais específicos para preservar sua privacidade.",
     "components.LayerBalances.moreAccounts": "Mais contas",
+    "components.LayerBalances.moveFundsToLn": "Move on-chain funds to lightning",
     "backends.LND.wsReq.warning": "Talvez seja necessário habilitar a Verificação de certificado para fazer esse tipo de chamada",
     "backends.LND.restReq.connectionError": "Erro de conexão",
     "utils.handleAnything.lightningAddressError": "Erro ao buscar dados de endereço do Lightning",
