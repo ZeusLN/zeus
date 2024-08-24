@@ -128,6 +128,7 @@ open class Lnd {
     "WalletKitListUnspent": { bytes, cb in LndmobileWalletKitListUnspent(bytes, cb) },
     "WalletKitDeriveKey": { bytes, cb in LndmobileWalletKitDeriveKey(bytes, cb) },
     "WalletKitRescan": { bytes, cb in LndmobileWalletKitRescan(bytes, cb) },
+    "WalletKitNextAddr": { bytes, cb in LndmobileWalletKitNextAddr(bytes, cb) },
   
     // derivePrivateKey
     "VerifyMessage": { bytes, cb in LndmobileVerifyMessage(bytes, cb) },

@@ -199,6 +199,8 @@ export default class UTXOsStore {
             data.birthday_height = this.start_height;
         }
 
+        console.log('importAccount req', data);
+
         return BackendUtils.importAccount(data)
             .then(async (response: any) => {
                 this.importingAccount = false;
@@ -217,6 +219,18 @@ export default class UTXOsStore {
                                 console.log(
                                     'generated address',
                                     response.address
+                                );
+                            });
+                            await BackendUtils.getNewChangeAddress({
+                                account: this.accountToImport.account.name,
+                                type: walletrpc.AddressType[
+                                    this.accountToImport.account.address_type
+                                ],
+                                change: true
+                            }).then((response: any) => {
+                                console.log(
+                                    'generated change address',
+                                    response.addr
                                 );
                             });
                         }

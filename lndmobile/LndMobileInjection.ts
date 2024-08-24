@@ -66,6 +66,7 @@ import {
 import {
     getTransactions,
     newAddress,
+    newChangeAddress,
     sendCoins,
     sendCoinsAll,
     walletBalance,
@@ -328,6 +329,10 @@ export interface ILndMobileInjections {
             type: lnrpc.AddressType,
             account?: string
         ) => Promise<lnrpc.NewAddressResponse>;
+        newChangeAddress: (
+            type: walletrpc.AddressType,
+            account?: string
+        ) => Promise<walletrpc.AddrResponse>;
         sendCoins: (
             address: string,
             sat: number,
@@ -520,6 +525,7 @@ export default {
     onchain: {
         getTransactions,
         newAddress,
+        newChangeAddress,
         sendCoins,
         sendCoinsAll,
         walletBalance,

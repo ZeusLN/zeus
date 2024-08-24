@@ -1,6 +1,6 @@
-import Long from 'long';
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
-import { lnrpc } from '../proto/lightning';
+import { lnrpc, walletrpc } from './../proto/lightning';
+import Long from 'long';
 
 /**
  * @throws
@@ -37,6 +37,30 @@ export const newAddress = async (
         options: {
             type,
             account
+        }
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
+export const newChangeAddress = async (
+    type: walletrpc.AddressType = walletrpc.AddressType.WITNESS_PUBKEY_HASH,
+    account: string = 'default'
+): Promise<walletrpc.AddrResponse> => {
+    const response = await sendCommand<
+        walletrpc.IAddrRequest,
+        walletrpc.AddrRequest,
+        walletrpc.AddrResponse
+    >({
+        request: walletrpc.AddrRequest,
+        response: walletrpc.AddrResponse,
+        method: 'WalletKitNextAddr',
+        options: {
+            type,
+            account,
+            change: true
         }
     });
     return response;

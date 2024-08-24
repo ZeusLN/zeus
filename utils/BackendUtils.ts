@@ -85,6 +85,8 @@ class BackendUtils {
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
+    getNewChangeAddress = (...args: any[]) =>
+        this.call('getNewChangeAddress', args);
     openChannelSync = (...args: any[]) => this.call('openChannelSync', args);
     openChannelStream = (...args: any[]) =>
         this.call('openChannelStream', args);
