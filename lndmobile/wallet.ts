@@ -174,20 +174,23 @@ export const importAccount = async ({
     extended_public_key,
     master_key_fingerprint,
     address_type,
-    dry_run
+    dry_run,
+    birthday_height
 }: {
     name: string;
     extended_public_key: string;
     master_key_fingerprint?: Uint8Array;
     address_type?: number;
     dry_run: boolean;
+    birthday_height?: number;
 }): Promise<walletrpc.ImportAccountResponse> => {
     const options: walletrpc.IImportAccountRequest = {
         name,
         extended_public_key,
         master_key_fingerprint,
         address_type,
-        dry_run
+        dry_run,
+        birthday_height
     };
     const response = await sendCommand<
         walletrpc.IImportAccountRequest,
