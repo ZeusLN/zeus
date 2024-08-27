@@ -1131,7 +1131,7 @@ export default class SettingsStore {
         lspMainnet: DEFAULT_LSP_MAINNET,
         lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: '',
-        requestSimpleTaproot: false,
+        requestSimpleTaproot: true,
         //lsps1
         lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
         lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
@@ -1386,25 +1386,10 @@ export default class SettingsStore {
                         localeMigrationMapping[newSettings.locale];
                 }
 
-                // TODO PEGASUS
-                // temporarily toggle all beta users settings for now
-                const MOD_KEY = 'beta5-mod';
+                const MOD_KEY = 'lsp-taproot-mod';
                 const mod = await EncryptedStorage.getItem(MOD_KEY);
                 if (!mod) {
-                    newSettings.expressGraphSync = true;
-                    if (newSettings.payments) {
-                        newSettings.payments.defaultFeePercentage = '5.0';
-                        newSettings.payments.defaultFeeFixed = '1000';
-                    } else {
-                        newSettings.payments = {
-                            defaultFeeMethod: 'fixed', // deprecated
-                            defaultFeePercentage: '5.0',
-                            defaultFeeFixed: '1000',
-                            timeoutSeconds: '60',
-                            preferredMempoolRate: 'fastestFee'
-                        };
-                    }
-                    newSettings.automaticDisasterRecoveryBackup = true;
+                    newSettings.requestSimpleTaproot = true;
                     this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
