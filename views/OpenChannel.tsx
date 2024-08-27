@@ -103,7 +103,7 @@ export default class OpenChannel extends React.Component<
     constructor(props: any) {
         super(props);
         this.state = {
-            channelDestination: 'Olympus',
+            channelDestination: 'Olympus by ZEUS',
             node_pubkey_string: '',
             host: '',
             local_funding_amount: '',
@@ -233,7 +233,9 @@ export default class OpenChannel extends React.Component<
         }
 
         this.setState({
-            channelDestination: node_pubkey_string ? 'Custom' : 'Olympus',
+            channelDestination: node_pubkey_string
+                ? 'Custom'
+                : 'Olympus by ZEUS',
             node_pubkey_string: node_pubkey_string
                 ? node_pubkey_string
                 : olympusPubkey,
@@ -461,9 +463,9 @@ export default class OpenChannel extends React.Component<
                             selectedValue={channelDestination}
                             values={[
                                 {
-                                    key: 'Olympus',
+                                    key: 'Olympus by ZEUS',
                                     translateKey: 'views.Settings.disabled',
-                                    value: 'Olympus'
+                                    value: 'Olympus by ZEUS'
                                 },
                                 {
                                     key: 'Custom',
@@ -472,18 +474,19 @@ export default class OpenChannel extends React.Component<
                                 }
                             ]}
                             onValueChange={(value: string) => {
-                                console.log('~~', value);
-                                if (value === 'Olympus') {
+                                if (value === 'Olympus by ZEUS') {
                                     if (NodeInfoStore.nodeInfo.isTestNet) {
                                         this.setState({
-                                            channelDestination: 'Olympus',
+                                            channelDestination:
+                                                'Olympus by ZEUS',
                                             node_pubkey_string:
                                                 '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
                                             host: '139.144.22.237:9735'
                                         });
                                     } else {
                                         this.setState({
-                                            channelDestination: 'Olympus',
+                                            channelDestination:
+                                                'Olympus by ZEUS',
                                             node_pubkey_string:
                                                 '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
                                             host: '45.79.192.236:9735'
