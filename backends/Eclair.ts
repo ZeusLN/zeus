@@ -6,61 +6,82 @@ import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
-
-// keep track of all active calls so we can cancel when appropriate
-const calls = new Map<string, Promise<any>>();
+interface ApiResponse {
+    [key: string]: any;
+}
 
 export default class Eclair {
-    clearCachedCalls = () => calls.clear();
-
-    api = (method: string, params: any = {}): Promise<any> => {
-        const { password, certVerification, enableTor } = stores.settingsStore;
-        let { url } = stores.settingsStore;
-
-        const id: string = method + JSON.stringify(params);
-        if (calls.has(id)) {
-            return calls.get(id)!;
-        }
-
-        url = url.slice(-1) === '/' ? url : url + '/';
-        const headers = {
-            Authorization: 'Basic ' + Base64Utils.utf8ToBase64(':' + password),
+    private calls: Map<string, Promise<ApiResponse>> = new Map();
+    clearCachedCalls = () => this.calls.clear();
+    private generateCallId(method: string, params: any): string {
+        return method + JSON.stringify(params);
+    }
+    private createHeaders(): Record<string, string> {
+        return {
+            Authorization:
+                'Basic ' +
+                Base64Utils.utf8ToBase64(':' + stores.settingsStore.password),
             'Content-Type': 'application/x-www-form-urlencoded'
         };
-        const body = querystring.stringify(params);
-        const requestPromise = enableTor
-            ? doTorRequest(url + method, RequestMethod.POST, body, headers)
-            : ReactNativeBlobUtil.config({ trusty: !certVerification })
-                  .fetch('POST', url + method, headers, body)
-                  .then((response) => {
-                      const status = response.info().status;
-                      if (status < 300) {
-                          return response.json();
-                      } else {
-                          let errorInfo;
-                          try {
-                              errorInfo = response.json();
-                          } catch (err) {
-                              throw new Error(
-                                  `response was (${status}) ${response.text()}`
-                              );
-                          }
-                          throw new Error(errorInfo.error);
-                      }
-                  })
-                  .finally(() => {
-                      calls.delete(id);
-                  });
-        calls.set(id, requestPromise);
-        setTimeout(
-            (id: string) => {
-                calls.delete(id);
-            },
-            9000,
-            id
-        );
+    }
+    private normalizeUrl(url: string): string {
+        return url.endsWith('/') ? url : url + '/';
+    }
+    private async makeTorRequest(
+        url: string,
+        method: string,
+        body: string,
+        headers: Record<string, string>
+    ): Promise<ApiResponse> {
+        return doTorRequest(url + method, RequestMethod.POST, body, headers);
+    }
+    private async makeRegularRequest(
+        url: string,
+        method: string,
+        body: string,
+        headers: Record<string, string>
+    ): Promise<ApiResponse> {
+        try {
+            const response = await ReactNativeBlobUtil.config({
+                trusty: !stores.settingsStore.certVerification
+            }).fetch('POST', url + method, headers, body);
 
-        return calls.get(id)!;
+            const status = response.info().status;
+            if (status < 300) {
+                return response.json();
+            } else {
+                const errorInfo = await response.json();
+                throw new Error(errorInfo.error);
+            }
+        } catch (error) {
+            if (error instanceof Error) {
+                throw error;
+            }
+            throw new Error('Unknown error occurred');
+        }
+    }
+    private setCallCleanupTimeout(id: string): void {
+        setTimeout(() => {
+            this.calls.delete(id);
+        }, 9000);
+    }
+    api = (method: string, params: any = {}) => {
+        const id = this.generateCallId(method, params);
+
+        if (this.calls.has(id)) {
+            return this.calls.get(id)!;
+        }
+
+        const url = this.normalizeUrl(stores.settingsStore.url);
+        const headers = this.createHeaders();
+        const body = querystring.stringify(params);
+        const apiCall = stores.settingsStore.enableTor
+            ? this.makeTorRequest(url, method, body, headers)
+            : this.makeRegularRequest(url, method, body, headers);
+        this.calls.set(id, apiCall);
+        this.setCallCleanupTimeout(id);
+
+        return apiCall;
     };
 
     getTransactions = () =>
@@ -494,9 +515,10 @@ export default class Eclair {
     supportsSweep = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
-    isLNDBased = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsOffers = () => false;
+    isLNDBased = () => false;
 }
 
 const mapInvoice =
