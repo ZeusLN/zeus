@@ -161,6 +161,9 @@ export default class SendingLightning extends React.Component<
 
         const enhancedPath = currentPayment?.enhancedPath;
 
+        const isPaymentPathExist =
+            enhancedPath?.length > 0 && enhancedPath[0][0];
+
         const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
         const windowSize = Dimensions.get('window');
@@ -385,14 +388,20 @@ export default class SendingLightning extends React.Component<
                         </View>
 
                         <View
-                            style={[
-                                styles.buttons,
-                                !noteKey && { marginTop: 14 }
-                            ]}
+                            style={{
+                                flexDirection: isPaymentPathExist && 'row',
+                                justifyContent: 'space-between',
+                                width: isPaymentPathExist ? '48%' : '100%',
+                                marginLeft: isPaymentPathExist && 19,
+                                gap: 15,
+                                bottom: 38
+                            }}
                         >
-                            {enhancedPath?.length > 0 && enhancedPath[0][0] && (
+                            {isPaymentPathExist && (
                                 <Button
-                                    title={` View Payment ${
+                                    title={`${localeString(
+                                        'views.Payment.title'
+                                    )} ${
                                         enhancedPath?.length > 1
                                             ? `${localeString(
                                                   'views.Payment.paths'
@@ -427,6 +436,14 @@ export default class SendingLightning extends React.Component<
                                     buttonStyle={{ height: 40 }}
                                 />
                             )}
+                        </View>
+
+                        <View
+                            style={[
+                                styles.buttons,
+                                !noteKey && { marginTop: 14 }
+                            ]}
+                        >
                             {(payment_error == 'FAILURE_REASON_NO_ROUTE' ||
                                 payment_error ==
                                     localeString(
