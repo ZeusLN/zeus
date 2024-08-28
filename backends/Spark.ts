@@ -4,58 +4,75 @@ import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 
-// keep track of all active calls so we can cancel when appropriate
-const calls = new Map<string, Promise<any>>();
-
 export default class Spark {
-    clearCachedCalls = () => calls.clear();
-
-    rpc = (rpcmethod: string, param = {}, range: any = null):Promise<any> => {
-        const { accessKey, certVerification, enableTor } = stores.settingsStore;
-        let { url } = stores.settingsStore;
-
-        const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
-        if (calls.has(id)) {
-            return calls.get(id)!;
+    // keep track of all active calls so we can cancel when appropriate
+    private calls = new Map<string, Promise<any>>();
+    clearCachedCalls = () => this.calls.clear();
+    private async makeRegularRequest(
+        url: string,
+        headers: Record<string, string>,
+        body: string,
+        certVerification: boolean | undefined
+    ): Promise<any> {
+        return ReactNativeBlobUtil.config({ trusty: !certVerification })
+            .fetch('POST', url, headers, body)
+            .then(this.handleResponse);
+    }
+    private handleResponse(response: any): any {
+        const status = response.info().status;
+        if (status < 300) {
+            return response.json();
+        } else {
+            return response
+                .json()
+                .catch(() => ({ message: response.text() }))
+                .then((error: Error) => {
+                    throw new Error(
+                        `HTTP ${status}: ${(error as Error).message}`
+                    );
+                });
         }
+    }
+    rpc = (
+        method: string,
+        params = {},
+        range: { unit: string; slice: string } | null = null
+    ): Promise<any> => {
+        const { accessKey, certVerification, enableTor, url } =
+            stores.settingsStore;
+        const rpcUrl = url.endsWith('/rpc') ? url : `${url}/rpc`;
+        const id = `${method}${JSON.stringify(params)}${JSON.stringify(range)}`;
 
-        url = url.slice(-4) === '/rpc' ? url : url + '/rpc';
+        if (this.calls.has(id)) {
+            return this.calls.get(id)!;
+        }
+        const headers: Record<string, string> = { 'X-Access': accessKey };
 
-        const headers: any = { 'X-Access': accessKey };
         if (range) {
             headers.Range = `${range.unit}=${range.slice}`;
         }
-        const body = JSON.stringify({ method: rpcmethod, params: param });
-
-        const request = enableTor
-            ? doTorRequest(url, RequestMethod.POST, body, headers)
-            : ReactNativeBlobUtil.config({
-                  trusty: !certVerification
-              })
-                  .fetch('POST', url, headers, body)
-                  .then((response: any) => {
-                      calls.delete(id);
-                      const status = response.info().status;
-                      if (status < 300) {
-                          return response.json();
-                      } else {
-                          let errorInfo;
-                          try {
-                              errorInfo = response.json();
-                          } catch (err) {
-                              throw new Error(
-                                  'response was (' +
-                                      status +
-                                      ')' +
-                                      response.text()
-                              );
-                          }
-                          throw new Error(errorInfo.message);
-                      }
-                  });
-        calls.set(id, request);
-
-        return calls.get(id)!;
+        const body = JSON.stringify({ method, params });
+        const request = (
+            enableTor
+                ? doTorRequest(rpcUrl, RequestMethod.POST, body, headers)
+                : this.makeRegularRequest(
+                      rpcUrl,
+                      headers,
+                      body,
+                      certVerification
+                  )
+        ).then(
+            (response) => {
+                this.calls.delete(id);
+                return response;
+            },
+            (error) => {
+                this.calls.delete(id);
+                throw error;
+            }
+        );
+        this.calls.set(id, request);
+        return request;
     };
 
     getTransactions = () =>
