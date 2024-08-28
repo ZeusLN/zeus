@@ -202,6 +202,7 @@ export default class Contacts extends React.Component<
 
     render() {
         const { navigation, ContactStore } = this.props;
+        const { loading } = ContactStore;
         const { search, SendScreen, deletionAwaitingConfirmation } = this.state;
         const { contacts } = ContactStore;
         const filteredContacts = contacts.filter((contact: any) => {
@@ -402,7 +403,7 @@ export default class Contacts extends React.Component<
                         keyExtractor={(_, index) => index.toString()}
                         scrollEnabled={false}
                     />
-                    {!ContactStore?.loading && contacts.length > 1 && (
+                    {!loading && contacts.length > 1 && (
                         <Button
                             title={
                                 deletionAwaitingConfirmation
@@ -438,7 +439,7 @@ export default class Contacts extends React.Component<
                             secondary
                         />
                     )}
-                    {ContactStore?.loading ? (
+                    {loading ? (
                         <LoadingIndicator />
                     ) : (
                         contacts.length === 0 && (

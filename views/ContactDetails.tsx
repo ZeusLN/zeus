@@ -222,6 +222,7 @@ export default class ContactDetails extends React.Component<
     render() {
         const { isLoading, isNostrContact } = this.state;
         const { navigation, ContactStore } = this.props;
+        const { setPrefillContact } = ContactStore;
 
         const contact = new Contact(this.state.contact);
         const nostrContact = this.props.route.params?.nostrContact;
@@ -239,7 +240,7 @@ export default class ContactDetails extends React.Component<
         const EditContactButton = () => (
             <TouchableOpacity
                 onPress={() => {
-                    ContactStore.setPrefillContact(contact);
+                    setPrefillContact(contact);
                     navigation.navigate('AddContact', {
                         isEdit: true
                     });
@@ -681,9 +682,7 @@ export default class ContactDetails extends React.Component<
                                 <Button
                                     onPress={() => {
                                         navigation.goBack();
-                                        ContactStore.setPrefillContact(
-                                            nostrContact
-                                        );
+                                        setPrefillContact(nostrContact);
                                         navigation.navigate('AddContact', {
                                             isEdit: true,
                                             isNostrContact
