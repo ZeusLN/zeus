@@ -364,16 +364,6 @@ export default class ChannelView extends React.Component<
                                 </Text>
                             </TouchableOpacity>
                         )}
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                marginBottom: 8
-                            }}
-                        >
-                            {`${localeString(
-                                'views.Channel.matchingContactFound'
-                            )}`}
-                        </Text>
                         {remotePubkey && this.renderContactLink(remotePubkey)}
                     </View>
                     <BalanceSlider
@@ -858,7 +848,6 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     container: {
-        marginTop: 8,
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderRadius: 6,
