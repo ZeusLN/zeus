@@ -11,6 +11,7 @@ interface ApiResponse {
 }
 
 export default class Eclair {
+    // keep track of all active calls so we can cancel when appropriate
     private calls: Map<string, Promise<ApiResponse>> = new Map();
     clearCachedCalls = () => this.calls.clear();
     private generateCallId(method: string, params: any): string {
