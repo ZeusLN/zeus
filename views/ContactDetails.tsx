@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     ScrollView
 } from 'react-native';
+import { inject, observer } from 'mobx-react';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,6 +17,8 @@ import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
 import { Row } from '../components/layout/Row';
+
+import ContactStore from '../stores/ContactStore';
 
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
@@ -41,6 +44,7 @@ interface ContactDetailsProps {
             nostrContact: any;
         }
     >;
+    ContactStore: ContactStore;
 }
 
 interface ContactDetailsState {
@@ -48,6 +52,9 @@ interface ContactDetailsState {
     isLoading: boolean;
     isNostrContact: boolean;
 }
+
+@inject('ContactStore')
+@observer
 export default class ContactDetails extends React.Component<
     ContactDetailsProps,
     ContactDetailsState
@@ -136,6 +143,7 @@ export default class ContactDetails extends React.Component<
     };
 
     saveUpdatedContact = async (updatedContact: Contact) => {
+        const { ContactStore } = this.props;
         try {
             const contactsString = await EncryptedStorage.getItem(
                 'zeus-contacts'
@@ -160,6 +168,7 @@ export default class ContactDetails extends React.Component<
                     );
 
                     console.log('Contact updated successfully!');
+                    ContactStore?.loadContacts();
                 }
             }
         } catch (error) {
@@ -212,7 +221,8 @@ export default class ContactDetails extends React.Component<
 
     render() {
         const { isLoading, isNostrContact } = this.state;
-        const { navigation } = this.props;
+        const { navigation, ContactStore } = this.props;
+        const { setPrefillContact } = ContactStore;
 
         const contact = new Contact(this.state.contact);
         const nostrContact = this.props.route.params?.nostrContact;
@@ -229,12 +239,12 @@ export default class ContactDetails extends React.Component<
 
         const EditContactButton = () => (
             <TouchableOpacity
-                onPress={() =>
+                onPress={() => {
+                    setPrefillContact(contact);
                     navigation.navigate('AddContact', {
-                        prefillContact: contact,
                         isEdit: true
-                    })
-                }
+                    });
+                }}
             >
                 <EditContact
                     fill={themeColor('text')}
@@ -672,8 +682,8 @@ export default class ContactDetails extends React.Component<
                                 <Button
                                     onPress={() => {
                                         navigation.goBack();
+                                        setPrefillContact(nostrContact);
                                         navigation.navigate('AddContact', {
-                                            prefillContact: nostrContact,
                                             isEdit: true,
                                             isNostrContact
                                         });

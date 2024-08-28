@@ -214,6 +214,7 @@ export default class App extends React.PureComponent {
                 InventoryStore={Stores.inventoryStore}
                 ModalStore={Stores.modalStore}
                 NotesStore={Stores.notesStore}
+                ContactStore={Stores.contactStore}
                 SyncStore={Stores.syncStore}
                 LSPStore={Stores.lspStore}
                 LightningAddressStore={Stores.lightningAddressStore}
