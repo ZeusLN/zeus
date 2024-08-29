@@ -28,7 +28,8 @@ import {
     DEFAULT_NEUTRINO_PEERS_MAINNET,
     SECONDARY_NEUTRINO_PEERS_MAINNET,
     DEFAULT_NEUTRINO_PEERS_TESTNET,
-    DEFAULT_FEE_ESTIMATOR
+    DEFAULT_FEE_ESTIMATOR,
+    DEFAULT_SPEEDLOADER
 } from '../stores/SettingsStore';
 
 import { lnrpc } from '../proto/lightning';
@@ -222,7 +223,10 @@ export async function expressGraphSync() {
         try {
             const connectionState = await NetInfo.fetch();
             const gossipStatus = await gossipSync(
-                'https://speedloader.lnolymp.us/',
+                stores.settingsStore?.settings?.speedloader === 'Custom'
+                    ? stores.settingsStore?.settings?.customSpeedloader
+                    : stores.settingsStore?.settings?.speedloader ||
+                          DEFAULT_SPEEDLOADER,
                 connectionState.type
             );
 

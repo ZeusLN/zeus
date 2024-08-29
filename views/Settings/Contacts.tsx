@@ -7,6 +7,7 @@ import {
     Image,
     ScrollView
 } from 'react-native';
+import { inject, observer } from 'mobx-react';
 import { SearchBar, Divider } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Route } from '@react-navigation/native';
@@ -22,22 +23,25 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import Contact from '../../models/Contact';
 
+import ContactStore from '../../stores/ContactStore';
+
 import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 interface ContactsSettingsProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<'Contacts', { SendScreen: boolean }>;
+    ContactStore: ContactStore;
 }
 
 interface ContactsSettingsState {
-    contacts: Contact[];
     search: string;
     SendScreen: boolean;
-    loading: boolean;
     deletionAwaitingConfirmation: boolean;
 }
 
+@inject('ContactStore')
+@observer
 export default class Contacts extends React.Component<
     ContactsSettingsProps,
     ContactsSettingsState
@@ -46,35 +50,11 @@ export default class Contacts extends React.Component<
         super(props);
         const SendScreen = this.props.route.params?.SendScreen;
         this.state = {
-            contacts: [],
             search: '',
             SendScreen,
-            loading: true,
             deletionAwaitingConfirmation: false
         };
     }
-
-    componentDidMount() {
-        this.props.navigation.addListener('focus', () => this.loadContacts());
-    }
-
-    loadContacts = async () => {
-        try {
-            this.setState({ loading: true });
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
-            );
-            if (contactsString) {
-                const contacts: Contact[] = JSON.parse(contactsString);
-                this.setState({ contacts, loading: false });
-            } else {
-                this.setState({ loading: false });
-            }
-        } catch (error) {
-            console.log('Error loading contacts:', error);
-            this.setState({ loading: false });
-        }
-    };
 
     displayAddress = (item: Contact) => {
         const contact = new Contact(item);
@@ -221,15 +201,11 @@ export default class Contacts extends React.Component<
     };
 
     render() {
-        const { navigation } = this.props;
-        const {
-            search,
-            contacts,
-            SendScreen,
-            loading,
-            deletionAwaitingConfirmation
-        } = this.state;
-        const filteredContacts = contacts.filter((contact) => {
+        const { navigation, ContactStore } = this.props;
+        const { loading } = ContactStore;
+        const { search, SendScreen, deletionAwaitingConfirmation } = this.state;
+        const { contacts } = ContactStore;
+        const filteredContacts = contacts.filter((contact: any) => {
             const hasMatch = (field: string) =>
                 Array.isArray(contact[field])
                     ? contact[field].some((input) =>
@@ -451,7 +427,7 @@ export default class Contacts extends React.Component<
                                     this.setState({
                                         deletionAwaitingConfirmation: false
                                     });
-                                    this.loadContacts();
+                                    ContactStore?.loadContacts();
                                 }
                             }}
                             containerStyle={{

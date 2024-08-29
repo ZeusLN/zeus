@@ -388,10 +388,16 @@ const handleAnything = async (
         }
 
         const [username, domain] = value.split('@');
-        const url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        let url;
+        if (domain.includes('.onion')) {
+            url = `http://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        } else {
+            url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        }
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
+
         // handle Tor LN addresses
         if (settingsStore.enableTor && domain.includes('.onion')) {
             await doTorRequest(url, RequestMethod.GET)
