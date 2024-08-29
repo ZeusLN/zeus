@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createRef } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
@@ -41,6 +41,8 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
             );
         });
 
+        const ref = createRef();
+
         return (
             <ModalBox
                 isOpen={showAlertModal}
@@ -48,7 +50,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                     backgroundColor: 'transparent',
                     minHeight: 200
                 }}
-                ref="modal"
+                ref={ref}
             >
                 <View
                     style={{

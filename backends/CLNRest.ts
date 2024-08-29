@@ -245,9 +245,30 @@ export default class CLNRest {
         });
 
     getPayments = () =>
-        this.postRequest('/v1/listpays').then((data: any) => ({
-            payments: data.pays
-        }));
+        this.postRequest('/v1/sql', {
+            query: "select sp.payment_hash, sp.groupid, min(sp.status) as status, min(sp.destination) as destination, min(sp.created_at) as created_at, min(sp.description) as description, min(sp.bolt11) as bolt11, min(sp.bolt12) as bolt12, sum(case when sp.status = 'complete' then sp.amount_sent_msat else null end) as amount_sent_msat, sum(case when sp.status = 'complete' then sp.amount_msat else 0 end) as amount_msat, max(sp.payment_preimage) as preimage from sendpays sp group by sp.payment_hash, sp.groupid order by created_index desc limit 150"
+        }).then((data: any) => {
+            const paymentList: any[] = [];
+            data.rows.forEach((pay: any) => {
+                paymentList.push({
+                    payment_hash: pay[0],
+                    groupid: pay[1],
+                    status: pay[2],
+                    destination: pay[3],
+                    created_at: pay[4],
+                    description: pay[5],
+                    bolt11: pay[6],
+                    bolt12: pay[7],
+                    amount_sent_msat: pay[8],
+                    amount_msat: pay[9],
+                    preimage: pay[10]
+                });
+            });
+
+            return {
+                payments: paymentList
+            };
+        });
     getNewAddress = () => this.postRequest('/v1/newaddr');
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
