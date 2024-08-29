@@ -40,16 +40,17 @@ import { getPhoto } from '../../utils/PhotoUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import ContactStore from '../../stores/ContactStore';
 
 import Edit from '../../assets/images/SVG/Edit.svg';
 import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
-import EncryptedStorage from 'react-native-encrypted-storage';
 
 interface ChannelProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
+    ContactStore: ContactStore;
     route: Route<'Channel', { channel: Channel }>;
 }
 
@@ -59,10 +60,9 @@ interface ChannelState {
     forceCloseChannel: boolean;
     deliveryAddress: string;
     channel: Channel;
-    contacts: any;
 }
 
-@inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore')
+@inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore', 'ContactStore')
 @observer
 export default class ChannelView extends React.Component<
     ChannelProps,
@@ -79,8 +79,7 @@ export default class ChannelView extends React.Component<
             satPerByte: '',
             forceCloseChannel: false,
             deliveryAddress: '',
-            channel,
-            contacts: []
+            channel
         };
 
         if (BackendUtils.isLNDBased() && channel.channelId != null) {
@@ -88,28 +87,9 @@ export default class ChannelView extends React.Component<
         }
     }
 
-    componentDidMount() {
-        this.loadContacts();
-    }
-
-    loadContacts = async () => {
-        console.log('LOADING CONTACTS...');
-        try {
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
-            );
-            if (contactsString) {
-                const contacts = JSON.parse(contactsString);
-                this.setState({ contacts });
-            } else {
-            }
-        } catch (error) {
-            console.log('Error loading contacts:', error);
-        }
-    };
-
     findContactByPubkey = (pubkey: string) => {
-        const { contacts } = this.state;
+        const { ContactStore } = this.props;
+        const { contacts } = ContactStore;
         return contacts.find((contact) => contact.pubkey.includes(pubkey));
     };
 
