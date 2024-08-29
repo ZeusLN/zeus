@@ -8,12 +8,13 @@ import {
     Modal
 } from 'react-native';
 import RNFS from 'react-native-fs';
-import { Parser } from '@json2csv/plainjs';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
-import dateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import Invoice from '../../models/Invoice';
+import Payment from '../../models/Payment';
+import Transaction from '../../models/Transaction';
 
 const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const [customFileName, setCustomFileName] = useState('');
@@ -26,7 +27,7 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const getFormattedDateTime = () => {
         const now = new Date();
         const year = now.getFullYear();
-        const month = (now.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
         const day = now.getDate().toString().padStart(2, '0');
         const hours = now.getHours().toString().padStart(2, '0');
         const minutes = now.getMinutes().toString().padStart(2, '0');
@@ -35,43 +36,155 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
         return `${year}${month}${day}_${hours}${minutes}${seconds}`;
     };
 
-    const filterData = (data, keys) => {
+    const filterData = (data, invoiceKeys, paymentKeys, transactionKeys) => {
         return data.map((item) => {
             let filteredItem = {};
-            keys.forEach((key) => {
-                if (item.hasOwnProperty(key)) {
-                    if (key === 'creation_date') {
-                        filteredItem[key] = dateTimeUtils.listFormattedDate(
-                            item[key]
-                        );
-                    } else {
-                        filteredItem[key] = item[key];
+            if (item instanceof Invoice) {
+                invoiceKeys.forEach((key) => {
+                    switch (key) {
+                        case 'amt_paid':
+                        case 'amt_paid_sat':
+                            filteredItem[key] = item.getAmount;
+                            break;
+                        case 'cltv_expiry':
+                            filteredItem[key] =
+                                item.originalTimeUntilExpiryInSeconds;
+                            break;
+                        case 'creation_date':
+                            filteredItem[key] = item.formattedCreationDate;
+                            break;
+                        case 'expiry':
+                            filteredItem[key] = item.formattedTimeUntilExpiry;
+                            break;
+                        default:
+                            filteredItem[key] = item[key];
                     }
-                }
-            });
+                });
+            } else if (item instanceof Payment) {
+                paymentKeys.forEach((key) => {
+                    switch (key) {
+                        case 'payment_addr':
+                            filteredItem[key] = item.getDestination;
+                            break;
+                        case 'value':
+                            filteredItem[key] = item.getAmount;
+                            break;
+                        case 'amount_msat':
+                            filteredItem[key] = item.amount_msat;
+                            break;
+                        case 'creation_date':
+                            filteredItem[key] = item.getDisplayTime;
+                            break;
+                        default:
+                            filteredItem[key] = item[key];
+                    }
+                });
+            } else if (item instanceof Transaction) {
+                transactionKeys.forEach((key) => {
+                    switch (key) {
+                        case 'tx_hash':
+                            filteredItem[key] = item.tx;
+                            break;
+                        case 'value':
+                            filteredItem[key] = item.getAmount;
+                            break;
+                        case 'total_fees':
+                            filteredItem[key] = item.getFee;
+                            break;
+                        case 'time_stamp':
+                            filteredItem[key] = item.getDisplayTime;
+                            break;
+                        default:
+                            filteredItem[key] = item[key];
+                    }
+                });
+            }
             return filteredItem;
         });
     };
 
-    const convertJsonToCsv = async (data) => {
+    const convertJsonToCsv = async (data, type) => {
         if (!data || data.length === 0) {
             return '';
         }
 
-        const keysToInclude = [
-            'amt_paid',
-            'amt_paid_sat',
-            'cltv_expiry',
-            'creation_date',
-            'expiry'
+        const invoiceKeysToInclude = [
+            { label: 'Amount Paid', value: 'amt_paid' },
+            { label: 'Amount Paid (Sat)', value: 'amt_paid_sat' },
+            { label: 'CLTV Expiry', value: 'cltv_expiry' },
+            { label: 'Creation Date', value: 'creation_date' },
+            { label: 'Expiry', value: 'expiry' }
         ];
 
-        const filteredData = filterData(data, keysToInclude);
+        const paymentKeysToInclude = [
+            { label: 'Payment Address', value: 'payment_addr' },
+            { label: 'Value', value: 'value' },
+            { label: 'Amount (msat)', value: 'amount_msat' },
+            { label: 'Creation Date', value: 'creation_date' }
+        ];
+
+        const transactionKeysToInclude = [
+            { label: 'Transaction Hash', value: 'tx_hash' },
+            { label: 'Amount', value: 'amount' },
+            { label: 'Total Fees', value: 'total_fees' },
+            { label: 'Timestamp', value: 'time_stamp' }
+        ];
+
+        const filteredData = filterData(
+            data,
+            invoiceKeysToInclude.map((key) => key.value),
+            paymentKeysToInclude.map((key) => key.value),
+            transactionKeysToInclude.map((key) => key.value)
+        );
 
         try {
-            const parser = new Parser();
-            const csv = parser.parse(filteredData);
-            return csv;
+            if (type === 'transaction') {
+                const transactionData = filteredData.filter(
+                    (item) => item.tx_hash
+                );
+
+                const header = transactionKeysToInclude
+                    .map((field) => field.label)
+                    .join(',');
+                const rows = transactionData
+                    .map((item) =>
+                        transactionKeysToInclude
+                            .map((field) => item[field.value] || '')
+                            .join(',')
+                    )
+                    .join('\n');
+
+                return `Transaction Section\n${header}\n${rows}`;
+            } else {
+                const invoiceData = filteredData.filter(
+                    (item) => item.amt_paid
+                );
+                const paymentData = filteredData.filter(
+                    (item) => item.creation_date
+                );
+
+                const invoiceSection = [
+                    'Invoice Section',
+                    invoiceKeysToInclude.map((field) => field.label).join(','),
+                    ...invoiceData.map((item) =>
+                        invoiceKeysToInclude
+                            .map((field) => item[field.value] || '')
+                            .join(',')
+                    )
+                ].join('\n');
+
+                const paymentSection = [
+                    'Payment Section',
+                    paymentKeysToInclude.map((field) => field.label).join(','),
+                    ...paymentData.map((item) =>
+                        paymentKeysToInclude
+                            .map((field) => item[field.value] || '')
+                            .join(',')
+                    )
+                ].join('\n');
+
+                return `${invoiceSection}\n\n${paymentSection}`;
+            }
         } catch (err) {
             console.error(err);
             return '';
@@ -99,8 +212,16 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     };
 
     const downloadCsv = async () => {
-        const csv = await convertJsonToCsv(filteredActivity);
-        if (!csv) return;
+        const invoicePaymentCsv = await convertJsonToCsv(
+            filteredActivity.filter((item) => !(item instanceof Transaction)),
+            'invoice_payment'
+        );
+        const transactionCsv = await convertJsonToCsv(
+            filteredActivity.filter((item) => item instanceof Transaction),
+            'transaction'
+        );
+
+        if (!invoicePaymentCsv && !transactionCsv) return;
 
         try {
             if (Platform.OS === 'android') {
@@ -112,15 +233,36 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             }
 
             const dateTime = getFormattedDateTime();
-            const fileName = customFileName
-                ? `${customFileName}.csv`
-                : `data_${dateTime}.csv`;
-            const filePath =
-                Platform.OS === 'android'
-                    ? `${RNFS.DownloadDirectoryPath}/${fileName}`
-                    : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+            const baseFileName = customFileName || `data_${dateTime}`;
+            const invoicePaymentFileName = `${baseFileName}_invoice_payment.csv`;
+            const transactionFileName = `${baseFileName}_transaction.csv`;
 
-            await RNFS.writeFile(filePath, csv, 'utf8');
+            const invoicePaymentFilePath =
+                Platform.OS === 'android'
+                    ? `${RNFS.DownloadDirectoryPath}/${invoicePaymentFileName}`
+                    : `${RNFS.DocumentDirectoryPath}/${invoicePaymentFileName}`;
+
+            const transactionFilePath =
+                Platform.OS === 'android'
+                    ? `${RNFS.DownloadDirectoryPath}/${transactionFileName}`
+                    : `${RNFS.DocumentDirectoryPath}/${transactionFileName}`;
+
+            if (invoicePaymentCsv) {
+                await RNFS.writeFile(
+                    invoicePaymentFilePath,
+                    invoicePaymentCsv,
+                    'utf8'
+                );
+            }
+
+            if (transactionCsv) {
+                await RNFS.writeFile(
+                    transactionFilePath,
+                    transactionCsv,
+                    'utf8'
+                );
+            }
+
             Alert.alert(
                 localeString('views.ActivityToCsv.csvDownloadSuccess'),
                 localeString('views.ActivityToCsv.csvDownloaded')
@@ -186,11 +328,12 @@ const styles = StyleSheet.create({
         backgroundColor: themeColor('background'),
         padding: 20,
         borderRadius: 10,
-        alignItems: 'center'
+        alignItems: 'center',
+        elevation: 5
     },
     buttonContainer: {
         width: '100%',
-        alignItems: 'center'
+        marginTop: 20
     }
 });
 
