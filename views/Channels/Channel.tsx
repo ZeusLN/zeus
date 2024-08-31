@@ -509,13 +509,13 @@ export default class ChannelView extends React.Component<
                         />
                     )}
                     <KeyValue
-                        keyValue={localeString('views.Channel.outbound')}
+                        keyValue={localeString('views.Channel.Total.outbound')}
                         value={
                             <Amount sats={localBalance} sensitive toggleable />
                         }
                     />
                     <KeyValue
-                        keyValue={localeString('views.Channel.inbound')}
+                        keyValue={localeString('views.Channel.Total.inbound')}
                         value={
                             <Amount sats={remoteBalance} sensitive toggleable />
                         }
