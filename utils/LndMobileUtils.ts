@@ -382,7 +382,9 @@ export async function optimizeNeutrinoPeers(isTestnet?: boolean) {
         });
 
         laxResults.forEach((result: any) => {
-            selectedPeers.push(result.peer);
+            if (!selectedPeers.includes(result.peer)) {
+                selectedPeers.push(result.peer);
+            }
         });
 
         console.log('Peers count:', selectedPeers.length);
@@ -403,7 +405,9 @@ export async function optimizeNeutrinoPeers(isTestnet?: boolean) {
         });
 
         thresholdResults.forEach((result: any) => {
-            selectedPeers.push(result.peer);
+            if (!selectedPeers.includes(result.peer)) {
+                selectedPeers.push(result.peer);
+            }
         });
 
         console.log('Peers count:', selectedPeers.length);
