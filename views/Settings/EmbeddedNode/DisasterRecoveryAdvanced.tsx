@@ -6,14 +6,15 @@ import moment from 'moment';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
-import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
+import LoadingIndicator from '../../../components/LoadingIndicator';
+import Screen from '../../../components/Screen';
+import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 import ChannelBackupStore from '../../../stores/ChannelBackupStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import LoadingIndicator from '../../../components/LoadingIndicator';
 
 interface DisasterRecoveryAdvancedProps {
     navigation: StackNavigationProp<any, any>;
@@ -35,7 +36,9 @@ export default class DisasterRecoveryAdvanced extends React.Component<
     };
 
     UNSAFE_componentWillMount(): void {
-        this.props.ChannelBackupStore.advancedRecoveryList();
+        const { ChannelBackupStore } = this.props;
+        ChannelBackupStore.reset();
+        ChannelBackupStore.advancedRecoveryList();
     }
 
     render() {
@@ -46,7 +49,8 @@ export default class DisasterRecoveryAdvanced extends React.Component<
             triggerRecovery,
             backups,
             loading,
-            error
+            error,
+            error_msg
         } = ChannelBackupStore;
 
         const noneSelected = Object.keys(selected).length === 0;
@@ -110,14 +114,19 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                                     disabled={noneSelected}
                                     onPress={async () => {
                                         if (selected.backup) {
-                                            await triggerRecovery(
-                                                selected.backup
-                                            );
-                                            navigation.popTo('Wallet');
+                                            try {
+                                                await triggerRecovery(
+                                                    selected.backup
+                                                );
+                                                navigation.popTo('Wallet');
+                                            } catch (e) {}
                                         }
                                     }}
                                 />
                             </View>
+                        )}
+                        {!loading && error_msg && (
+                            <ErrorMessage message={error_msg} />
                         )}
                         {!loading && backups.length > 0 && (
                             <FlatList

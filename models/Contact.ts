@@ -8,6 +8,8 @@ export default class Contact extends BaseModel {
     id: string; // deprecated
     public contactId: string;
     public lnAddress: Array<string>;
+    public bolt12Address: Array<string>;
+    public bolt12Offer: Array<string>;
     public onchainAddress: Array<string>;
     public pubkey: Array<string>;
     public nip05: Array<string>;
@@ -27,8 +29,42 @@ export default class Contact extends BaseModel {
             this.lnAddress &&
             this.lnAddress.length === 1 &&
             this.lnAddress[0] !== '' &&
+            (!this.bolt12Address ||
+                !this.bolt12Address[0] ||
+                this.bolt12Address[0] === '') &&
             (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
-            (!this.pubkey[0] || this.pubkey[0] === '')
+            (!this.pubkey[0] || this.pubkey[0] === '') &&
+            (!this.bolt12Offer ||
+                !this.bolt12Offer[0] ||
+                this.bolt12Offer[0] === '')
+        );
+    }
+
+    @computed public get isSingleBolt12Address(): boolean {
+        return (
+            this.bolt12Address &&
+            this.bolt12Address.length === 1 &&
+            this.bolt12Address[0] !== '' &&
+            (!this.lnAddress[0] || this.lnAddress[0] === '') &&
+            (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
+            (!this.pubkey[0] || this.pubkey[0] === '') &&
+            (!this.bolt12Offer ||
+                !this.bolt12Offer[0] ||
+                this.bolt12Offer[0] === '')
+        );
+    }
+
+    @computed public get isSingleBolt12Offer(): boolean {
+        return (
+            this.bolt12Offer &&
+            this.bolt12Offer.length === 1 &&
+            this.bolt12Offer[0] !== '' &&
+            (!this.lnAddress[0] || this.lnAddress[0] === '') &&
+            (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
+            (!this.pubkey[0] || this.pubkey[0] === '') &&
+            (!this.bolt12Address ||
+                !this.bolt12Address[0] ||
+                this.bolt12Address[0] === '')
         );
     }
 
@@ -38,7 +74,13 @@ export default class Contact extends BaseModel {
             this.onchainAddress.length === 1 &&
             this.onchainAddress[0] !== '' &&
             (!this.lnAddress[0] || this.lnAddress[0] === '') &&
-            (!this.pubkey[0] || this.pubkey[0] === '')
+            (!this.bolt12Address ||
+                !this.bolt12Address[0] ||
+                this.bolt12Address[0] === '') &&
+            (!this.pubkey[0] || this.pubkey[0] === '') &&
+            (!this.bolt12Offer ||
+                !this.bolt12Offer[0] ||
+                this.bolt12Offer[0] === '')
         );
     }
 
@@ -48,12 +90,26 @@ export default class Contact extends BaseModel {
             this.pubkey.length === 1 &&
             this.pubkey[0] !== '' &&
             (!this.lnAddress[0] || this.lnAddress[0] === '') &&
-            (!this.onchainAddress[0] || this.onchainAddress[0] === '')
+            (!this.bolt12Address ||
+                !this.bolt12Address[0] ||
+                this.bolt12Address[0] === '') &&
+            (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
+            (!this.bolt12Offer ||
+                !this.bolt12Offer[0] ||
+                this.bolt12Offer[0] === '')
         );
     }
 
     @computed public get hasLnAddress(): boolean {
         return this.lnAddress?.length > 0 && this.lnAddress[0] !== '';
+    }
+
+    @computed public get hasBolt12Address(): boolean {
+        return this.bolt12Address?.length > 0 && this.bolt12Address[0] !== '';
+    }
+
+    @computed public get hasBolt12Offer(): boolean {
+        return this.bolt12Offer?.length > 0 && this.bolt12Offer[0] !== '';
     }
 
     @computed public get hasOnchainAddress(): boolean {
@@ -67,6 +123,12 @@ export default class Contact extends BaseModel {
     @computed public get hasMultiplePayableAddresses(): boolean {
         let count = 0;
         this.lnAddress.forEach((address) => {
+            if (address && address !== '') count++;
+        });
+        this.bolt12Address?.forEach((address) => {
+            if (address && address !== '') count++;
+        });
+        this.bolt12Offer?.forEach((address) => {
             if (address && address !== '') count++;
         });
         this.onchainAddress.forEach((address) => {

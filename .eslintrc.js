@@ -28,6 +28,7 @@ module.exports = {
     'import/default': 'off',
     'import/named': 'off',
     'import/namespace': 'off',
+    'import/no-duplicates': 2,
     'import/no-named-as-default': 'off',
     'import/no-named-as-default-member': 'off',
     'react/no-string-refs': 'off',

@@ -2,7 +2,12 @@ import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { v4 as uuidv4 } from 'uuid';
 
-import SettingsStore from './SettingsStore';
+import SettingsStore, {
+    DEFAULT_LSPS1_PUBKEY_MAINNET,
+    DEFAULT_LSPS1_PUBKEY_TESTNET,
+    DEFAULT_LSPS1_REST_MAINNET,
+    DEFAULT_LSPS1_REST_TESTNET
+} from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
 
@@ -74,6 +79,28 @@ export default class LSPStore {
         this.error_msg = '';
     };
 
+    isOlympus = () => {
+        const olympusREST = this.nodeInfoStore!.nodeInfo.isTestNet
+            ? DEFAULT_LSPS1_REST_TESTNET
+            : DEFAULT_LSPS1_REST_MAINNET;
+        const olympusPubkey = this.nodeInfoStore!.nodeInfo.isTestNet
+            ? DEFAULT_LSPS1_PUBKEY_TESTNET
+            : DEFAULT_LSPS1_PUBKEY_MAINNET;
+        if (
+            BackendUtils.supportsLSPS1customMessage() &&
+            this.getLSPS1Pubkey() == olympusPubkey
+        ) {
+            return true;
+        } else if (
+            BackendUtils.supportsLSPS1rest() &&
+            this.getLSPS1Rest() === olympusREST
+        ) {
+            return true;
+        }
+
+        return false;
+    };
+
     getLSPHost = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lspTestnet
@@ -131,7 +158,7 @@ export default class LSPStore {
                         } catch (e) {}
                     } else {
                         this.error = true;
-                        this.error_msg = data.message;
+                        this.error_msg = errorToUserFriendly(data.message);
                         // handle LSP geoblocking :(
                         if (
                             this.error_msg.includes(
@@ -354,7 +381,9 @@ export default class LSPStore {
             if (data.error) {
                 this.error = true;
                 this.loading = false;
-                this.error_msg = data?.error?.data?.message;
+                this.error_msg = data?.error?.data?.message
+                    ? errorToUserFriendly(data?.error?.data?.message)
+                    : '';
             } else {
                 this.createOrderResponse = data;
                 this.loading = false;
@@ -363,7 +392,9 @@ export default class LSPStore {
             if (data.error) {
                 this.error = true;
                 this.loading = false;
-                this.error_msg = data?.error?.message;
+                this.error_msg = data?.error?.message
+                    ? errorToUserFriendly(data?.error?.message)
+                    : '';
             } else {
                 this.getOrderResponse = data;
             }
@@ -451,8 +482,8 @@ export default class LSPStore {
     @action
     public createOrderREST = (state: any) => {
         const data = JSON.stringify({
-            lsp_balance_sat: state.lspBalanceSat,
-            client_balance_sat: state.clientBalanceSat,
+            lsp_balance_sat: state.lspBalanceSat.toString(),
+            client_balance_sat: state.clientBalanceSat.toString(),
             required_channel_confirmations: parseInt(
                 state.requiredChannelConfirmations
             ),
@@ -483,7 +514,7 @@ export default class LSPStore {
                 const responseData = JSON.parse(response.data);
                 if (responseData.error) {
                     this.error = true;
-                    this.error_msg = responseData.message;
+                    this.error_msg = errorToUserFriendly(responseData.message);
                     this.loading = false;
                 } else {
                     this.createOrderResponse = responseData;

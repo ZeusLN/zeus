@@ -341,7 +341,7 @@ export default class TransactionsStore {
             (BackendUtils.isLNDBased() &&
                 transactionRequest.utxos &&
                 transactionRequest.utxos.length > 0) ||
-            transactionRequest.additional_outputs.length > 0
+            transactionRequest?.additional_outputs?.length > 0
         ) {
             return this.sendCoinsLNDCoinControl(transactionRequest);
         }
@@ -448,7 +448,8 @@ export default class TransactionsStore {
         // max fee percent for c-lightning
         if (
             max_fee_percent &&
-            this.settingsStore.implementation === 'c-lightning-REST'
+            (this.settingsStore.implementation === 'c-lightning-REST' ||
+                this.settingsStore.implementation === 'cln-rest')
         ) {
             data.max_fee_percent = max_fee_percent;
         }
@@ -460,6 +461,7 @@ export default class TransactionsStore {
 
         const payFunc =
             (this.settingsStore.implementation === 'c-lightning-REST' ||
+                this.settingsStore.implementation === 'cln-rest' ||
                 this.settingsStore.implementation === 'embedded-lnd') &&
             pubkey
                 ? BackendUtils.sendKeysend

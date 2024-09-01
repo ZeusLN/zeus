@@ -14,6 +14,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import SwipeButton from '../components/SwipeButton';
 import Conversion from '../components/Conversion';
 import FeeLimit from '../components/FeeLimit';
 import Header from '../components/Header';
@@ -347,7 +348,9 @@ export default class PaymentRequest extends React.Component<
         const { enableTor, implementation } = SettingsStore;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
-        const isCLightning: boolean = implementation === 'c-lightning-REST';
+        const isCLightning: boolean =
+            implementation === 'c-lightning-REST' ||
+            implementation === 'cln-rest';
 
         const isNoAmountInvoice: boolean =
             !requestAmount || requestAmount === 0;
@@ -1043,21 +1046,9 @@ export default class PaymentRequest extends React.Component<
                                     <LoadingIndicator size={30} />
                                 </>
                             )}
-
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.PaymentRequest.payInvoice'
-                                    )}
-                                    icon={
-                                        lightningReadyToSend
-                                            ? {
-                                                  name: 'send',
-                                                  size: 25
-                                              }
-                                            : undefined
-                                    }
-                                    onPress={() => {
+                            {requestAmount >= 10000 ? (
+                                <SwipeButton
+                                    onSwipeSuccess={() => {
                                         if (isZaplocker)
                                             LnurlPayStore.broadcastAttestation();
                                         this.sendPayment({
@@ -1084,9 +1075,64 @@ export default class PaymentRequest extends React.Component<
                                             timeout_seconds: timeoutSeconds
                                         });
                                     }}
-                                    disabled={!lightningReadyToSend}
+                                    instructionText={localeString(
+                                        'views.PaymentRequest.slideToPay'
+                                    )}
+                                    containerStyle={{
+                                        backgroundColor:
+                                            themeColor('secondaryText')
+                                    }}
+                                    swipeButtonStyle={{
+                                        backgroundColor: themeColor('text')
+                                    }}
                                 />
-                            </View>
+                            ) : (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.PaymentRequest.payInvoice'
+                                        )}
+                                        icon={
+                                            lightningReadyToSend
+                                                ? {
+                                                      name: 'send',
+                                                      size: 25
+                                                  }
+                                                : undefined
+                                        }
+                                        onPress={() => {
+                                            if (isZaplocker)
+                                                LnurlPayStore.broadcastAttestation();
+                                            this.sendPayment({
+                                                payment_request: paymentRequest,
+                                                amount: satAmount
+                                                    ? satAmount.toString()
+                                                    : undefined,
+                                                max_parts:
+                                                    enableMultiPathPayment
+                                                        ? maxParts
+                                                        : null,
+                                                max_shard_amt:
+                                                    enableMultiPathPayment
+                                                        ? maxShardAmt
+                                                        : null,
+                                                fee_limit_sat: isLnd
+                                                    ? feeLimitSat
+                                                    : null,
+                                                max_fee_percent: isCLightning
+                                                    ? maxFeePercentFormatted
+                                                    : null,
+                                                outgoing_chan_id:
+                                                    outgoingChanId,
+                                                last_hop_pubkey: lastHopPubkey,
+                                                amp: enableAmp,
+                                                timeout_seconds: timeoutSeconds
+                                            });
+                                        }}
+                                        disabled={!lightningReadyToSend}
+                                    />
+                                </View>
+                            )}
                         </View>
                     )}
             </Screen>

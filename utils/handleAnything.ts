@@ -178,10 +178,27 @@ const handleAnything = async (
                 isValid: true
             }
         ];
-    } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
+    } else if (
+        !hasAt &&
+        AddressUtils.isValidLightningPaymentRequest(value || lightning)
+    ) {
         if (isClipboardValue) return true;
         await invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
+    } else if (
+        !hasAt &&
+        AddressUtils.isValidLightningOffer(value || lightning)
+    ) {
+        if (isClipboardValue) return true;
+        return [
+            'Send',
+            {
+                destination: value || lightning,
+                bolt12: value || lightning,
+                transactionType: 'BOLT 12',
+                isValid: true
+            }
+        ];
     } else if (value.includes('c-lightning-rest://')) {
         if (isClipboardValue) return true;
         const { host, port, macaroonHex, implementation, enableTor } =
@@ -195,6 +212,33 @@ const handleAnything = async (
                         host,
                         port,
                         macaroonHex,
+                        implementation,
+                        enableTor
+                    },
+                    isValid: true
+                }
+            ];
+        } else {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.LNDConnectConfigQRScanner.error'),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+        }
+    } else if (value.includes('clnrest://')) {
+        if (isClipboardValue) return true;
+        const { host, port, rune, implementation, enableTor } =
+            ConnectionFormatUtils.processCLNRestConnectUrl(value);
+
+        if (host && port && rune) {
+            return [
+                'NodeConfiguration',
+                {
+                    node: {
+                        host,
+                        port,
+                        rune,
                         implementation,
                         enableTor
                     },
@@ -294,11 +338,66 @@ const handleAnything = async (
         ];
     } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
         if (isClipboardValue) return true;
+
+        // try BOLT 12 address first, if supported
+        if (BackendUtils.supportsOffers()) {
+            const [localPart, domain] = value.split('@');
+            const dnsUrl = 'https://cloudflare-dns.com/dns-query';
+
+            const name = `${localPart}.user._bitcoin-payment.${domain}`;
+            const url = `${dnsUrl}?name=${name}&type=TXT`;
+            let bolt12: string;
+            try {
+                const res = await fetch(url, {
+                    headers: {
+                        accept: 'application/dns-json'
+                    }
+                });
+                const json = await res.json();
+                if (!json.Answer && !json.Answer[0]) throw 'Bad';
+                bolt12 = json.Answer[0].data;
+                bolt12 = bolt12.replace(/("|\\)/g, '');
+                bolt12 = bolt12.replace(/bitcoin:b12=/, '');
+
+                const { value, amount, lightning, offer }: any =
+                    AddressUtils.processSendAddress(bolt12);
+
+                if (value) {
+                    return [
+                        'Accounts',
+                        {
+                            value,
+                            amount,
+                            lightning,
+                            offer,
+                            locked: true
+                        }
+                    ];
+                }
+
+                return [
+                    'Send',
+                    {
+                        destination: value || offer,
+                        bolt12,
+                        transactionType: 'BOLT 12',
+                        isValid: true
+                    }
+                ];
+            } catch (e: any) {}
+        }
+
         const [username, domain] = value.split('@');
-        const url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        let url;
+        if (domain.includes('.onion')) {
+            url = `http://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        } else {
+            url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        }
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
+
         // handle Tor LN addresses
         if (settingsStore.enableTor && domain.includes('.onion')) {
             await doTorRequest(url, RequestMethod.GET)

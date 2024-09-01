@@ -887,6 +887,47 @@ export default class Receive extends React.Component<
             }
         }
 
+        if (implementation === 'cln-rest') {
+            if (rHash) {
+                this.lnInterval = setInterval(() => {
+                    // only fetch the last 10 invoices
+                    BackendUtils.getInvoices({ limit: 10 }).then(
+                        (response: any) => {
+                            const invoices = response.invoices;
+                            for (let i = 0; i < invoices.length; i++) {
+                                const result = invoices[i];
+                                if (
+                                    result.payment_hash
+                                        .replace(/\+/g, '-')
+                                        .replace(/\//g, '_') === rHash &&
+                                    Number(
+                                        result.amount_received_msat / 1000
+                                    ) >= Number(value) &&
+                                    Number(result.amount_received_msat) !== 0
+                                ) {
+                                    setWatchedInvoicePaid(
+                                        result.amount_received_msat / 1000
+                                    );
+                                    if (orderId)
+                                        PosStore.recordPayment({
+                                            orderId,
+                                            orderTotal,
+                                            orderTip,
+                                            exchangeRate,
+                                            rate,
+                                            type: 'ln',
+                                            tx: result.bolt11
+                                        });
+                                    this.clearIntervals();
+                                    break;
+                                }
+                            }
+                        }
+                    );
+                }, 5000);
+            }
+        }
+
         if (implementation === 'lndhub') {
             if (rHash) {
                 this.lnInterval = setInterval(() => {
@@ -967,6 +1008,8 @@ export default class Receive extends React.Component<
             selectedIndex
         });
     };
+
+    private modalBoxRef = React.createRef<ModalBox>();
 
     render() {
         const {
@@ -1055,7 +1098,7 @@ export default class Receive extends React.Component<
         );
 
         const SettingsButton = () => (
-            <TouchableOpacity onPress={() => this.refs.modal.open()}>
+            <TouchableOpacity onPress={() => this.modalBoxRef.current?.open()}>
                 <Gear
                     style={{ alignSelf: 'center' }}
                     fill={themeColor('text')}
@@ -2662,7 +2705,7 @@ export default class Receive extends React.Component<
                     swipeToClose={true}
                     backButtonClose={true}
                     position="bottom"
-                    ref="modal"
+                    ref={this.modalBoxRef}
                 >
                     <Text
                         style={{
@@ -2681,7 +2724,7 @@ export default class Receive extends React.Component<
                             onPress={() => {
                                 InvoicesStore.clearAddress();
                                 this.setState({ addressType: d.value });
-                                this.refs.modal.close();
+                                this.modalBoxRef.current?.close();
                             }}
                             style={{
                                 backgroundColor: themeColor('secondary'),

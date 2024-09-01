@@ -1,3 +1,4 @@
+import AlertStore from './AlertStore';
 import ChannelsStore from './ChannelsStore';
 import InvoicesStore from './InvoicesStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -15,13 +16,16 @@ import ActivityStore from './ActivityStore';
 import PosStore from './PosStore';
 import ModalStore from './ModalStore';
 import NotesStore from './NotesStore';
+import ContactStore from './ContactStore';
 import SyncStore from './SyncStore';
 import LSPStore from './LSPStore';
 import LightningAddressStore from './LightningAddressStore';
 import ChannelBackupStore from './ChannelBackupStore';
 import InventoryStore from './InventoryStore';
+import OffersStore from './OffersStore';
 
 class Stores {
+    public alertStore: AlertStore;
     public channelsStore: ChannelsStore;
     public invoicesStore: InvoicesStore;
     public nodeInfoStore: NodeInfoStore;
@@ -39,20 +43,27 @@ class Stores {
     public posStore: PosStore;
     public modalStore: ModalStore;
     public notesStore: NotesStore;
+    public contactStore: ContactStore;
     public syncStore: SyncStore;
     public lspStore: LSPStore;
     public lightningAddressStore: LightningAddressStore;
     public channelBackupStore: ChannelBackupStore;
     public inventoryStore: InventoryStore;
+    public offersStore: OffersStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
         this.modalStore = new ModalStore();
+        this.offersStore = new OffersStore();
         this.fiatStore = new FiatStore(this.settingsStore);
         this.channelsStore = new ChannelsStore(this.settingsStore);
         this.nodeInfoStore = new NodeInfoStore(
             this.channelsStore,
             this.settingsStore
+        );
+        this.alertStore = new AlertStore(
+            this.settingsStore,
+            this.nodeInfoStore
         );
         this.lspStore = new LSPStore(
             this.settingsStore,
@@ -92,6 +103,7 @@ class Stores {
         this.utxosStore = new UTXOsStore(this.settingsStore);
         this.messageSignStore = new MessageSignStore();
         this.notesStore = new NotesStore();
+        this.contactStore = new ContactStore();
         this.syncStore = new SyncStore(this.settingsStore);
         this.activityStore = new ActivityStore(
             this.settingsStore,

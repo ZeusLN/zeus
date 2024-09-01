@@ -21,7 +21,10 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import SettingsStore, { LOCALE_KEYS } from '../stores/SettingsStore';
 
-import { createLndWallet } from '../utils/LndMobileUtils';
+import {
+    optimizeNeutrinoPeers,
+    createLndWallet
+} from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -33,6 +36,7 @@ interface IntroSplashProps {
 }
 
 interface IntroSplashState {
+    choosingPeers: boolean;
     creatingWallet: boolean;
     error: boolean;
     modalBlur: number;
@@ -46,6 +50,7 @@ export default class IntroSplash extends React.Component<
 > {
     private backPressSubscription: NativeEventSubscription;
     state = {
+        choosingPeers: false,
         creatingWallet: false,
         error: false,
         modalBlur: 90
@@ -77,6 +82,7 @@ export default class IntroSplash extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
+        const { creatingWallet, choosingPeers } = this.state;
         const { settings } = SettingsStore;
         const locale = settings.locale || '';
 
@@ -86,7 +92,7 @@ export default class IntroSplash extends React.Component<
         let localeName;
         if (localeItem[0]) localeName = localeItem[0].value;
 
-        if (this.state.creatingWallet) {
+        if (choosingPeers || creatingWallet) {
             return (
                 <Screen>
                     <View
@@ -116,10 +122,11 @@ export default class IntroSplash extends React.Component<
                                 padding: 8
                             }}
                         >
-                            {localeString('views.Intro.creatingWallet').replace(
-                                'Zeus',
-                                'ZEUS'
-                            )}
+                            {choosingPeers
+                                ? localeString('views.Intro.choosingPeers')
+                                : localeString(
+                                      'views.Intro.creatingWallet'
+                                  ).replace('Zeus', 'ZEUS')}
                         </Text>
                         <View style={{ marginTop: 40 }}>
                             <LoadingIndicator />
@@ -214,9 +221,7 @@ export default class IntroSplash extends React.Component<
                                     title={localeString(
                                         'views.Intro.advancedSetUp'
                                     )}
-                                    onPress={() =>
-                                        navigation.navigate('Settings')
-                                    }
+                                    onPress={() => navigation.navigate('Menu')}
                                     secondary
                                 />
                             </View>
@@ -241,13 +246,30 @@ export default class IntroSplash extends React.Component<
                                     )}
                                     onPress={async () => {
                                         this.setState({
-                                            creatingWallet: true
+                                            choosingPeers: true
                                         });
                                         const { SettingsStore } = this.props;
                                         const {
                                             setConnectingStatus,
                                             updateSettings
                                         } = SettingsStore;
+
+                                        try {
+                                            await optimizeNeutrinoPeers(
+                                                undefined
+                                            );
+                                        } catch (e) {
+                                            this.setState({
+                                                error: true,
+                                                choosingPeers: false,
+                                                creatingWallet: false
+                                            });
+                                        }
+
+                                        this.setState({
+                                            choosingPeers: false,
+                                            creatingWallet: true
+                                        });
 
                                         let response;
                                         try {
@@ -257,6 +279,7 @@ export default class IntroSplash extends React.Component<
                                         } catch (e) {
                                             this.setState({
                                                 error: true,
+                                                choosingPeers: false,
                                                 creatingWallet: false
                                             });
                                         }

@@ -21,6 +21,7 @@ const {
     sendKeysendPaymentV2,
     listPayments,
     getNetworkInfo,
+    getRecoveryInfo,
     queryRoutes,
     lookupInvoice,
     fundingStateStep,
@@ -75,6 +76,7 @@ export default class EmbeddedLND extends LND {
     subscribeCustomMessages = async () => await subscribeCustomMessages();
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
+    getRecoveryInfo = async () => await getRecoveryInfo();
     getInvoices = async () => await listInvoices();
     createInvoice = async (data: any) =>
         await addInvoice({
@@ -294,7 +296,8 @@ export default class EmbeddedLND extends LND {
     supportsSweep = () => true;
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
-    isLNDBased = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
+    supportsOffers = () => false;
+    isLNDBased = () => true;
 }

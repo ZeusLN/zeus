@@ -10,6 +10,7 @@ import Stores from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
 import { AppContainer } from './components/layout/AppContainer';
+import AlertModal from './components/Modals/AlertModal';
 import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
 import InfoModal from './components/Modals/InfoModal';
@@ -87,6 +88,12 @@ import NostrKeys from './views/Settings/LightningAddress/NostrKeys';
 import NostrRelays from './views/Settings/LightningAddress/NostrRelays';
 import ChangeAddress from './views/Settings/LightningAddress/ChangeAddress';
 
+// BOLT 12
+import PayCodes from './views/PayCodes';
+import PayCode from './views/PayCode';
+import CreatePayCode from './views/PayCodeCreate';
+import Bolt12Address from './views/Settings/Bolt12Address';
+
 //Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
@@ -119,6 +126,7 @@ import Contacts from './views/Settings/Contacts';
 import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
 import CurrencyConverter from './views/Settings/CurrencyConverter';
+import PendingHTLCs from './views/PendingHTLCs';
 
 // POS
 import Order from './views/Order';
@@ -132,11 +140,15 @@ import EditFee from './views/EditFee';
 import Seed from './views/Settings/Seed';
 import SeedRecovery from './views/Settings/SeedRecovery';
 import Sync from './views/Sync';
+import SyncRecovery from './views/SyncRecovery';
 import LspExplanationFees from './views/Explanations/LspExplanationFees';
 import LspExplanationRouting from './views/Explanations/LspExplanationRouting';
 import LspExplanationWrappedInvoices from './views/Explanations/LspExplanationWrappedInvoices';
 import LspExplanationOverview from './views/Explanations/LspExplanationOverview';
 import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelBackups';
+
+// LSP
+import LSPServicesList from './views/Settings/LSPServicesList';
 
 // LSPS1
 import LSPS1 from './views/Settings/LSPS1/index';
@@ -150,6 +162,9 @@ import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
 
 import PSBT from './views/PSBT';
 import TxHex from './views/TxHex';
+
+import Menu from './views/Menu';
+import Tools from './views/Tools';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
@@ -180,6 +195,7 @@ export default class App extends React.PureComponent {
         const Stack = createStackNavigator();
         return (
             <Provider
+                AlertStore={Stores.alertStore}
                 BalanceStore={Stores.balanceStore}
                 TransactionsStore={Stores.transactionsStore}
                 ChannelsStore={Stores.channelsStore}
@@ -198,10 +214,12 @@ export default class App extends React.PureComponent {
                 InventoryStore={Stores.inventoryStore}
                 ModalStore={Stores.modalStore}
                 NotesStore={Stores.notesStore}
+                ContactStore={Stores.contactStore}
                 SyncStore={Stores.syncStore}
                 LSPStore={Stores.lspStore}
                 LightningAddressStore={Stores.lightningAddressStore}
                 ChannelBackupStore={Stores.channelBackupStore}
+                OffersStore={Stores.offersStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -308,8 +326,16 @@ export default class App extends React.PureComponent {
                                                         component={EditFee}
                                                     />
                                                     <Stack.Screen
+                                                        name="Menu"
+                                                        component={Menu}
+                                                    />
+                                                    <Stack.Screen
                                                         name="Settings"
                                                         component={Settings}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Tools"
+                                                        component={Tools}
                                                     />
                                                     <Stack.Screen
                                                         name="NodeConfiguration"
@@ -592,6 +618,10 @@ export default class App extends React.PureComponent {
                                                         component={Sync}
                                                     />
                                                     <Stack.Screen
+                                                        name="SyncRecovery"
+                                                        component={SyncRecovery}
+                                                    />
+                                                    <Stack.Screen
                                                         name="BumpFee"
                                                         component={BumpFee}
                                                     />
@@ -736,6 +766,26 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
+                                                        name="PayCodes"
+                                                        component={PayCodes}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="PayCode"
+                                                        component={PayCode}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CreatePayCode"
+                                                        component={
+                                                            CreatePayCode
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Bolt12Address"
+                                                        component={
+                                                            Bolt12Address
+                                                        }
+                                                    />
+                                                    <Stack.Screen
                                                         name="SocialMedia"
                                                         component={SocialMedia}
                                                     />
@@ -792,6 +842,12 @@ export default class App extends React.PureComponent {
                                                         component={TxHex}
                                                     />
                                                     <Stack.Screen
+                                                        name="LSPServicesList"
+                                                        component={
+                                                            LSPServicesList
+                                                        }
+                                                    />
+                                                    <Stack.Screen
                                                         name="LSPS1"
                                                         component={LSPS1}
                                                     />
@@ -809,12 +865,17 @@ export default class App extends React.PureComponent {
                                                         name="LSPS1Order"
                                                         component={Orders}
                                                     />
+                                                    <Stack.Screen
+                                                        name="PendingHTLCs"
+                                                        component={PendingHTLCs}
+                                                    />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
                                         </>
                                     )}
                                 </Observer>
                             </SafeAreaView>
+                            <AlertModal />
                             <ExternalLinkModal />
                             <AndroidNfcModal />
                             <InfoModal />

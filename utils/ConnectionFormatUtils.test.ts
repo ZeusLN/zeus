@@ -152,4 +152,48 @@ describe('ConnectionFormatUtils', () => {
             });
         });
     });
+
+    describe('processCLNRestConnectUrl', () => {
+        it('handles plainnet properly - w/o http forced', () => {
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest://8.8.0.0:2056?&rune=OSqc7ixY6F-gjcigBfxtzKUI54uzgFSA6YfBQoWGDV89MA==&protocol=http'
+                )
+            ).toEqual({
+                host: 'https://8.8.0.0',
+                rune: 'OSqc7ixY6F-gjcigBfxtzKUI54uzgFSA6YfBQoWGDV89MA==',
+                port: '2056',
+                enableTor: false,
+                implementation: 'cln-rest'
+            });
+        });
+
+        it('handles plainnet properly - with http forced', () => {
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest://http://8.8.0.0:2056?&rune=OSqc7ixY6F-gjcigBfxtzKUI54uzgFSA6YfBQoWGDV89MA==&protocol=http'
+                )
+            ).toEqual({
+                host: 'http://8.8.0.0',
+                rune: 'OSqc7ixY6F-gjcigBfxtzKUI54uzgFSA6YfBQoWGDV89MA==',
+                port: '2056',
+                enableTor: false,
+                implementation: 'cln-rest'
+            });
+        });
+
+        it('handles Tor properly', () => {
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest://http://y7enfk2mdfawf.onion:2056?&rune=OSqc7ixY6F-gjcigBfxtzKUI54uzgFSA6YfBQoWGDV89MA==&protocol=http'
+                )
+            ).toEqual({
+                host: 'http://y7enfk2mdfawf.onion',
+                rune: 'OSqc7ixY6F-gjcigBfxtzKUI54uzgFSA6YfBQoWGDV89MA==',
+                port: '2056',
+                enableTor: true,
+                implementation: 'cln-rest'
+            });
+        });
+    });
 });

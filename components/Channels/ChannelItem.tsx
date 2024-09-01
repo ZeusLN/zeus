@@ -14,28 +14,35 @@ import { themeColor } from './../../utils/ThemeUtils';
 import Stores from '../../stores/Stores';
 
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
+import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
 import { localeString } from './../../utils/LocaleUtils';
 
 export function ChannelItem({
     title,
+    secondTitle,
     inbound,
     outbound,
     largestTotal,
     status,
+    pendingHTLCs,
     pendingTimelock,
     noBorder,
     hideLabels,
-    selected
+    selected,
+    highlightLabels
 }: {
     title?: string;
+    secondTitle?: string;
     inbound: number;
     outbound: number;
     largestTotal?: number;
     status?: Status;
-    pendingTimelock?: String;
+    pendingHTLCs?: boolean;
+    pendingTimelock?: string;
     noBorder?: boolean;
     hideLabels?: boolean;
     selected?: boolean;
+    highlightLabels?: boolean;
 }) {
     const { settings } = Stores.settingsStore;
     const { privacy } = settings;
@@ -63,13 +70,45 @@ export function ChannelItem({
                 {title && (
                     <View style={{ flex: 1, paddingRight: 10 }}>
                         <Body
-                            color={selected ? 'highlight' : 'text'}
+                            color={
+                                selected
+                                    ? 'highlight'
+                                    : highlightLabels
+                                    ? 'outbound'
+                                    : 'text'
+                            }
                             bold={selected}
                         >
                             {PrivacyUtils.sensitiveValue(title)}
                         </Body>
                     </View>
                 )}
+                {secondTitle && (
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                        <Body
+                            color={
+                                selected
+                                    ? 'highlight'
+                                    : highlightLabels
+                                    ? 'inbound'
+                                    : 'text'
+                            }
+                            bold={selected}
+                        >
+                            {secondTitle}
+                        </Body>
+                    </View>
+                )}
+                {pendingHTLCs ? (
+                    <View style={{ flexDirection: 'row', marginRight: 5 }}>
+                        <HourglassIcon
+                            fill={themeColor('highlight')}
+                            width={17}
+                            height={17}
+                            style={{ marginRight: 5 }}
+                        />
+                    </View>
+                ) : null}
                 {pendingTimelock ? (
                     <View style={{ flexDirection: 'row', marginRight: 5 }}>
                         <ClockIcon
@@ -103,6 +142,9 @@ export function ChannelItem({
                         accessibilityLabel={localeString(
                             'views.Channel.outboundCapacity'
                         )}
+                        colorOverride={
+                            highlightLabels ? themeColor('outbound') : undefined
+                        }
                     />
                     <Amount
                         sats={inbound}
@@ -111,6 +153,9 @@ export function ChannelItem({
                         accessibilityLabel={localeString(
                             'views.Channel.inboundCapacity'
                         )}
+                        colorOverride={
+                            highlightLabels ? themeColor('inbound') : undefined
+                        }
                     />
                 </Row>
             )}

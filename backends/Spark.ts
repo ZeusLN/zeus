@@ -393,7 +393,8 @@ export default class Spark {
     supportsSweep = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => true;
-    isLNDBased = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsOffers = () => false;
+    isLNDBased = () => false;
 }

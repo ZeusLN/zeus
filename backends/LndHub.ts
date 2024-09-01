@@ -123,6 +123,7 @@ export default class LndHub extends LND {
             stores?.settingsStore?.lndhubUrl?.includes('lntxbot') ||
             // Alby
             stores?.settingsStore?.lndhubUrl?.includes('ln.getalby.com') ||
+            stores?.settingsStore?.lndhubUrl?.includes('getalby.com/lndhub') ||
             // LNBits
             stores?.settingsStore?.lndhubUrl?.includes('/lndhub/ext/')
         );
@@ -154,7 +155,8 @@ export default class LndHub extends LND {
     supportsSweep = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => true;
-    isLNDBased = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => false;
+    supportsOffers = () => false;
+    isLNDBased = () => false;
 }

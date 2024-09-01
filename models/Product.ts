@@ -17,7 +17,7 @@ export default class Product extends BaseModel {
     @observable public name: string;
     @observable public sku: string;
     @observable public pricedIn: PricedIn;
-    @observable public price: number;
+    @observable public price: string;
     @observable public category: string;
     @observable public status: ProductStatus;
 

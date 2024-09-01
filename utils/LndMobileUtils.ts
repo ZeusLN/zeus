@@ -4,9 +4,11 @@ import {
     NativeModules,
     Platform
 } from 'react-native';
+import DeviceInfo from 'react-native-device-info';
 
 import { generateSecureRandom } from 'react-native-securerandom';
 import NetInfo from '@react-native-community/netinfo';
+import Ping from 'react-native-ping';
 
 import Log from '../lndmobile/log';
 const log = Log('utils/LndMobileUtils.ts');
@@ -22,8 +24,24 @@ import {
 } from '../lndmobile/index';
 
 import stores from '../stores/Stores';
+import {
+    DEFAULT_NEUTRINO_PEERS_MAINNET,
+    SECONDARY_NEUTRINO_PEERS_MAINNET,
+    DEFAULT_NEUTRINO_PEERS_TESTNET,
+    DEFAULT_FEE_ESTIMATOR,
+    DEFAULT_SPEEDLOADER
+} from '../stores/SettingsStore';
 
 import { lnrpc } from '../proto/lightning';
+
+export const NEUTRINO_PING_TIMEOUT_MS = 1500;
+
+export const NEUTRINO_PING_OPTIMAL_MS = 200;
+export const NEUTRINO_PING_LAX_MS = 500;
+export const NEUTRINO_PING_THRESHOLD_MS = 1000;
+
+// ~4GB
+const NEUTRINO_PERSISTENT_FILTER_THRESHOLD = 400000000;
 
 export const LndMobileEventEmitter =
     Platform.OS == 'android'
@@ -75,7 +93,15 @@ const writeLndConfig = async (
         ? 'connect'
         : 'addpeer';
 
-    const config = `[Application Options]
+    DeviceInfo.getTotalMemory().then(async (totalMemory) => {
+        console.log('totalMemory', totalMemory);
+
+        const persistFilters =
+            totalMemory >= NEUTRINO_PERSISTENT_FILTER_THRESHOLD;
+
+        console.log('persistFilters', persistFilters);
+
+        const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
     sync-freelist=1
@@ -125,10 +151,15 @@ const writeLndConfig = async (
             : ''
     }
     neutrino.broadcasttimeout=11s
-    neutrino.persistfilters=true
+    neutrino.persistfilters=${persistFilters}
 
     [fee]
-    fee.url=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json
+    fee.url=${
+        stores.settingsStore?.settings?.feeEstimator === 'Custom'
+            ? stores.settingsStore?.settings?.customFeeEstimator
+            : stores.settingsStore?.settings?.feeEstimator ||
+              DEFAULT_FEE_ESTIMATOR
+    }
     
     [autopilot]
     autopilot.active=0
@@ -152,8 +183,11 @@ const writeLndConfig = async (
             : 'apriori'
     }`;
 
-    await writeConfig(config);
-    return;
+        console.log('config', config);
+
+        await writeConfig(config);
+        return;
+    });
 };
 
 export async function expressGraphSync() {
@@ -189,7 +223,10 @@ export async function expressGraphSync() {
         try {
             const connectionState = await NetInfo.fetch();
             const gossipStatus = await gossipSync(
-                'https://speedloader.lnolymp.us/',
+                stores.settingsStore?.settings?.speedloader === 'Custom'
+                    ? stores.settingsStore?.settings?.customSpeedloader
+                    : stores.settingsStore?.settings?.speedloader ||
+                          DEFAULT_SPEEDLOADER,
                 connectionState.type
             );
 
@@ -278,6 +315,168 @@ export async function startLnd(
         });
         await subscribeState();
     });
+}
+
+export async function optimizeNeutrinoPeers(isTestnet?: boolean) {
+    console.log('Optimizing Neutrino peers');
+    let peers = isTestnet
+        ? DEFAULT_NEUTRINO_PEERS_TESTNET
+        : DEFAULT_NEUTRINO_PEERS_MAINNET;
+
+    const resultsMain: any = [];
+    for (let i = 0; i < peers.length; i++) {
+        const peer = peers[i];
+        await new Promise(async (resolve) => {
+            try {
+                const ms = await Ping.start(peer, {
+                    timeout: NEUTRINO_PING_TIMEOUT_MS
+                });
+                console.log(`# ${peer} - ${ms}`);
+                resultsMain.push({
+                    peer,
+                    ms
+                });
+                resolve(true);
+            } catch (e) {
+                console.log('e', e);
+                resultsMain.push({
+                    peer,
+                    ms: 'Timed out'
+                });
+                resolve(true);
+            }
+        });
+    }
+
+    // Optimal
+
+    const selectedPeers: string[] = [];
+
+    console.log(
+        `Adding Neutrino peers with ping times <${NEUTRINO_PING_OPTIMAL_MS}ms`
+    );
+
+    const optimalResults = resultsMain.filter((result: any) => {
+        return (
+            Number.isInteger(result.ms) && result.ms < NEUTRINO_PING_OPTIMAL_MS
+        );
+    });
+
+    optimalResults.forEach((result: any) => {
+        selectedPeers.push(result.peer);
+    });
+
+    console.log('Peers count:', selectedPeers.length);
+
+    // Lax
+
+    if (selectedPeers.length < 3) {
+        console.log(
+            `Adding Neutrino peers with ping times <${NEUTRINO_PING_LAX_MS}ms`
+        );
+
+        const laxResults = resultsMain.filter((result: any) => {
+            return (
+                Number.isInteger(result.ms) && result.ms < NEUTRINO_PING_LAX_MS
+            );
+        });
+
+        laxResults.forEach((result: any) => {
+            selectedPeers.push(result.peer);
+        });
+
+        console.log('Peers count:', selectedPeers.length);
+    }
+
+    // Threshold
+
+    if (selectedPeers.length < 3) {
+        console.log(
+            `Selecting Neutrino peers with ping times <${NEUTRINO_PING_THRESHOLD_MS}ms`
+        );
+
+        const thresholdResults = resultsMain.filter((result: any) => {
+            return (
+                Number.isInteger(result.ms) &&
+                result.ms < NEUTRINO_PING_THRESHOLD_MS
+            );
+        });
+
+        thresholdResults.forEach((result: any) => {
+            selectedPeers.push(result.peer);
+        });
+
+        console.log('Peers count:', selectedPeers.length);
+    }
+
+    // Extra external peers
+    const resultsSecondary: any = [];
+
+    if (selectedPeers.length < 3 && !isTestnet) {
+        console.log(
+            `Selecting Neutrino peers with ping times <${NEUTRINO_PING_THRESHOLD_MS}ms from alternate set`
+        );
+
+        peers = SECONDARY_NEUTRINO_PEERS_MAINNET;
+        for (let i = 0; i < peers.length; i++) {
+            const peer = peers[i];
+            await new Promise(async (resolve) => {
+                try {
+                    const ms = await Ping.start(peer, {
+                        timeout: NEUTRINO_PING_TIMEOUT_MS
+                    });
+                    console.log(`# ${peer} - ${ms}`);
+                    resultsSecondary.push({
+                        peer,
+                        ms
+                    });
+                    resolve(true);
+                } catch (e) {
+                    console.log('e', e);
+                    resultsSecondary.push({
+                        peer,
+                        ms: 'Timed out'
+                    });
+                    resolve(true);
+                }
+            });
+        }
+
+        const filteredResults = resultsMain.filter((result: any) => {
+            return (
+                Number.isInteger(result.ms) &&
+                result.ms < NEUTRINO_PING_THRESHOLD_MS
+            );
+        });
+
+        filteredResults.forEach((result: any) => {
+            selectedPeers.push(result.peer);
+        });
+
+        console.log('Peers count:', selectedPeers.length);
+    }
+
+    if (selectedPeers.length > 0) {
+        if (isTestnet) {
+            await stores.settingsStore.updateSettings({
+                neutrinoPeersTestnet: selectedPeers,
+                dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
+            });
+        } else {
+            await stores.settingsStore.updateSettings({
+                neutrinoPeersMainnet: selectedPeers,
+                dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
+            });
+        }
+
+        console.log('Selected the following Neutrino peers:', selectedPeers);
+    } else {
+        // TODO allow users to manually choose peers if we can't
+        // pick good defaults for them
+        console.log('Falling back to the default Neutrino peers.');
+    }
+
+    return;
 }
 
 export async function createLndWallet(

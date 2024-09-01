@@ -27,6 +27,7 @@ import Send from './../../assets/images/SVG/Send.svg';
 interface LightningSwipeableRowProps {
     navigation: StackNavigationProp<any, any>;
     lightning?: string;
+    offer?: string;
     locked?: boolean;
 }
 
@@ -52,6 +53,8 @@ export default class LightningSwipeableRow extends Component<
 
             if (text === localeString('general.receive')) {
                 this.props.navigation.navigate('Receive');
+            } else if (text === localeString('general.paycodes')) {
+                this.props.navigation.navigate('PayCodes');
             } else if (text === localeString('general.routing')) {
                 this.props.navigation.navigate('Routing');
             } else if (text === localeString('general.send')) {
@@ -75,6 +78,16 @@ export default class LightningSwipeableRow extends Component<
                     >
                         {text === localeString('general.routing') && (
                             <Routing
+                                fill={
+                                    themeColor('action') ||
+                                    themeColor('highlight')
+                                }
+                                width={30}
+                                height={30}
+                            />
+                        )}
+                        {text === localeString('general.paycodes') && (
+                            <Receive
                                 fill={
                                     themeColor('action') ||
                                     themeColor('highlight')
@@ -120,7 +133,11 @@ export default class LightningSwipeableRow extends Component<
     private renderActions = (progress: Animated.AnimatedInterpolation) => {
         const width =
             BackendUtils.supportsRouting() &&
-            BackendUtils.supportsLightningSends()
+            BackendUtils.supportsLightningSends() &&
+            BackendUtils.supportsOffers()
+                ? 280
+                : BackendUtils.supportsRouting() &&
+                  BackendUtils.supportsLightningSends()
                 ? 210
                 : BackendUtils.supportsRouting() ||
                   BackendUtils.supportsLightningSends()
@@ -139,6 +156,12 @@ export default class LightningSwipeableRow extends Component<
                     width,
                     progress
                 )}
+                {BackendUtils.supportsOffers() &&
+                    this.renderAction(
+                        localeString('general.paycodes'),
+                        width,
+                        progress
+                    )}
                 {BackendUtils.supportsRouting() &&
                     this.renderAction(
                         localeString('general.routing'),
@@ -170,8 +193,15 @@ export default class LightningSwipeableRow extends Component<
     };
 
     private fetchLnInvoice = () => {
-        const { lightning } = this.props;
-        if (lightning?.toLowerCase().startsWith('lnurl')) {
+        const { lightning, offer } = this.props;
+        if (offer) {
+            this.props.navigation.navigate('Send', {
+                destination: offer,
+                bolt12: offer,
+                transactionType: 'BOLT 12',
+                isValid: true
+            });
+        } else if (lightning?.toLowerCase().startsWith('lnurl')) {
             return getlnurlParams(lightning)
                 .then((params: any) => {
                     if (
@@ -221,8 +251,8 @@ export default class LightningSwipeableRow extends Component<
     };
 
     render() {
-        const { children, lightning, locked } = this.props;
-        if (locked && lightning) {
+        const { children, lightning, offer, locked } = this.props;
+        if (locked && (lightning || offer)) {
             return (
                 <TouchableOpacity
                     onPress={() => this.fetchLnInvoice()}
@@ -244,7 +274,7 @@ export default class LightningSwipeableRow extends Component<
             >
                 <TouchableOpacity
                     onPress={() =>
-                        lightning ? this.fetchLnInvoice() : this.open()
+                        lightning || offer ? this.fetchLnInvoice() : this.open()
                     }
                     activeOpacity={1}
                 >

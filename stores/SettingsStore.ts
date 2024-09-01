@@ -16,6 +16,7 @@ export interface Node {
     port?: string;
     url?: string;
     macaroonHex?: string;
+    rune?: string;
     accessKey?: string;
     implementation?: string;
     certVerification?: boolean;
@@ -42,6 +43,7 @@ interface DisplaySettings {
     displayNickname?: boolean;
     bigKeypadButtons?: boolean;
     showAllDecimalPlaces?: boolean;
+    showMillisatoshiAmounts?: boolean;
 }
 
 export enum PosEnabled {
@@ -102,6 +104,10 @@ interface LightningAddressSettings {
     notifications: number;
 }
 
+interface Bolt12AddressSettings {
+    localPart: string;
+}
+
 export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -139,6 +145,10 @@ export interface Settings {
     recovery: boolean;
     initialLoad: boolean;
     embeddedTor: boolean;
+    feeEstimator: string;
+    customFeeEstimator: string;
+    speedloader: string;
+    customSpeedloader: string;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -152,10 +162,11 @@ export interface Settings {
     lsps1PubkeyTestnet: string;
     lsps1HostMainnet: string;
     lsps1HostTestnet: string;
+    lsps1Token: string;
     lsps1ShowPurchaseButton: boolean;
-
     // Lightning Address
     lightningAddress: LightningAddressSettings;
+    bolt12Address: Bolt12AddressSettings;
     selectNodeOnStartup: boolean;
 }
 
@@ -197,15 +208,66 @@ export const MEMPOOL_RATES_KEYS = [
     }
 ];
 
+export const DEFAULT_FEE_ESTIMATOR =
+    'https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json';
+
+export const FEE_ESTIMATOR_KEYS = [
+    {
+        key: 'lightning.computer',
+        value: 'https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json'
+    },
+    {
+        key: 'strike.me',
+        value: 'https://bitcoinchainfees.strike.me/v1/fee-estimates'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom'
+    }
+];
+
+export const DEFAULT_SPEEDLOADER = 'https://egs.lnze.us/';
+
+export const SPEEDLOADER_KEYS = [
+    {
+        key: 'ZEUS',
+        value: 'https://egs.lnze.us/'
+    },
+    {
+        key: 'Blixt',
+        value: 'https://primer.blixtwallet.com/'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom'
+    }
+];
+
 export const INTERFACE_KEYS = [
     { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
-    { key: 'Core Lightning (c-lightning-REST)', value: 'c-lightning-REST' },
+    { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
     { key: 'LNDHub', value: 'lndhub' },
+    {
+        key: '[DEPRECATED] Core Lightning (c-lightning-REST)',
+        value: 'c-lightning-REST'
+    },
     { key: '[DEPRECATED] Core Lightning (Sparko)', value: 'spark' },
     { key: '[DEPRECATED] Eclair', value: 'eclair' }
 ];
+
+export type Implementations =
+    | 'embedded-lnd'
+    | 'lnd'
+    | 'lightning-node-connect'
+    | 'cln-rest'
+    | 'lndhub'
+    | 'c-lightning-REST'
+    | 'spark'
+    | 'eclair';
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
     { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
@@ -972,6 +1034,12 @@ export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
     'sg.lnolymp.us'
 ];
 
+export const SECONDARY_NEUTRINO_PEERS_MAINNET = [
+    'node.blixtwallet.com',
+    'bb1.breez.technology',
+    'bb2.breez.technology'
+];
+
 export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
     'testnet.lnolymp.us',
     'btcd-testnet.lightning.computer',
@@ -994,7 +1062,8 @@ export default class SettingsStore {
             defaultView: 'Keypad',
             displayNickname: false,
             bigKeypadButtons: false,
-            showAllDecimalPlaces: false
+            showAllDecimalPlaces: false,
+            showMillisatoshiAmounts: true
         },
         pos: {
             posEnabled: PosEnabled.Disabled,
@@ -1053,12 +1122,16 @@ export default class SettingsStore {
         recovery: false,
         initialLoad: true,
         embeddedTor: false,
+        feeEstimator: DEFAULT_FEE_ESTIMATOR,
+        customFeeEstimator: '',
+        speedloader: DEFAULT_SPEEDLOADER,
+        customSpeedloader: '',
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
         lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: '',
-        requestSimpleTaproot: false,
+        requestSimpleTaproot: true,
         //lsps1
         lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
         lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
@@ -1066,6 +1139,7 @@ export default class SettingsStore {
         lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
         lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
         lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+        lsps1Token: '',
         lsps1ShowPurchaseButton: true,
         // Lightning Address
         lightningAddress: {
@@ -1078,6 +1152,9 @@ export default class SettingsStore {
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
             notifications: 0
+        },
+        bolt12Address: {
+            localPart: ''
         },
         selectNodeOnStartup: false
     };
@@ -1092,8 +1169,9 @@ export default class SettingsStore {
     @observable port: string;
     @observable url: string;
     @observable macaroonHex: string;
+    @observable rune: string;
     @observable accessKey: string;
-    @observable implementation: string;
+    @observable implementation: Implementations;
     @observable certVerification: boolean | undefined;
     @observable public loggedIn = false;
     @observable public connecting = true;
@@ -1308,25 +1386,10 @@ export default class SettingsStore {
                         localeMigrationMapping[newSettings.locale];
                 }
 
-                // TODO PEGASUS
-                // temporarily toggle all beta users settings for now
-                const MOD_KEY = 'beta5-mod';
+                const MOD_KEY = 'lsp-taproot-mod';
                 const mod = await EncryptedStorage.getItem(MOD_KEY);
                 if (!mod) {
-                    newSettings.expressGraphSync = true;
-                    if (newSettings.payments) {
-                        newSettings.payments.defaultFeePercentage = '5.0';
-                        newSettings.payments.defaultFeeFixed = '1000';
-                    } else {
-                        newSettings.payments = {
-                            defaultFeeMethod: 'fixed', // deprecated
-                            defaultFeePercentage: '5.0',
-                            defaultFeeFixed: '1000',
-                            timeoutSeconds: '60',
-                            preferredMempoolRate: 'fastestFee'
-                        };
-                    }
-                    newSettings.automaticDisasterRecoveryBackup = true;
+                    newSettings.requestSimpleTaproot = true;
                     this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
@@ -1371,40 +1434,67 @@ export default class SettingsStore {
                     await EncryptedStorage.setItem(MOD_KEY3, 'true');
                 }
 
-                const MOD_KEY4 = 'lsps1-hosts';
+                const MOD_KEY4 = 'lsps1-hosts1';
                 const mod4 = await EncryptedStorage.getItem(MOD_KEY4);
                 if (!mod4) {
-                    if (!this.settings?.lsps1HostMainnet) {
-                        this.settings.lsps1HostMainnet =
+                    if (!newSettings?.lsps1HostMainnet) {
+                        newSettings.lsps1HostMainnet =
                             DEFAULT_LSPS1_HOST_MAINNET;
                     }
-                    if (!this.settings?.lsps1HostTestnet) {
-                        this.settings.lsps1HostTestnet =
+                    if (!newSettings?.lsps1HostTestnet) {
+                        newSettings.lsps1HostTestnet =
                             DEFAULT_LSPS1_HOST_TESTNET;
                     }
-                    if (!this.settings?.lsps1PubkeyMainnet) {
-                        this.settings.lsps1PubkeyMainnet =
+                    if (!newSettings?.lsps1PubkeyMainnet) {
+                        newSettings.lsps1PubkeyMainnet =
                             DEFAULT_LSPS1_PUBKEY_MAINNET;
                     }
-                    if (!this.settings?.lsps1PubkeyTestnet) {
-                        this.settings.lsps1PubkeyTestnet =
+                    if (!newSettings?.lsps1PubkeyTestnet) {
+                        newSettings.lsps1PubkeyTestnet =
                             DEFAULT_LSPS1_PUBKEY_TESTNET;
                     }
-                    if (!this.settings?.lsps1RestMainnet) {
-                        this.settings.lsps1RestMainnet =
+                    if (!newSettings?.lsps1RestMainnet) {
+                        newSettings.lsps1RestMainnet =
                             DEFAULT_LSPS1_REST_MAINNET;
                     }
-                    if (!this.settings?.lsps1RestTestnet) {
-                        this.settings.lsps1RestTestnet =
+                    if (!newSettings?.lsps1RestTestnet) {
+                        newSettings.lsps1RestTestnet =
                             DEFAULT_LSPS1_REST_TESTNET;
                     }
 
-                    if (!this.settings?.lsps1ShowPurchaseButton) {
-                        this.settings.lsps1ShowPurchaseButton = true;
+                    if (!newSettings?.lsps1Token) {
+                        newSettings.lsps1Token = '';
                     }
 
-                    this.setSettings(JSON.stringify(this.settings));
+                    if (!newSettings?.lsps1ShowPurchaseButton) {
+                        newSettings.lsps1ShowPurchaseButton = true;
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY4, 'true');
+                }
+
+                const MOD_KEY5 = 'millisat_amounts';
+                const mod5 = await EncryptedStorage.getItem(MOD_KEY5);
+                if (!mod5) {
+                    if (!newSettings?.display.showMillisatoshiAmounts) {
+                        newSettings.display.showMillisatoshiAmounts = true;
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY5, 'true');
+                }
+
+                const MOD_KEY6 = 'egs-host';
+                const mod6 = await EncryptedStorage.getItem(MOD_KEY6);
+                if (!mod6) {
+                    if (!newSettings?.speedloader) {
+                        newSettings.speedloader = DEFAULT_SPEEDLOADER;
+                        newSettings.customSpeedloader = '';
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY6, 'true');
                 }
 
                 // migrate old POS squareEnabled setting to posEnabled
@@ -1437,6 +1527,7 @@ export default class SettingsStore {
                     this.password = node.password;
                     this.lndhubUrl = node.lndhubUrl;
                     this.macaroonHex = node.macaroonHex;
+                    this.rune = node.rune;
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;

@@ -4,80 +4,41 @@ import {
     StyleSheet,
     Text,
     View,
-    Image,
-    TouchableOpacity,
-    TouchableWithoutFeedback
+    TouchableOpacity
 } from 'react-native';
-import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import AccountIcon from '../../assets/images/SVG/Account.svg';
-import AddIcon from '../../assets/images/SVG/Add.svg';
-import BlockIcon from '../../assets/images/SVG/Block.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
-import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
 import SecurityIcon from '../../assets/images/SVG/Lock.svg';
-import SignIcon from '../../assets/images/SVG/Pen.svg';
 import CurrencyIcon from '../../assets/images/SVG/Bitcoin.svg';
 import BrushIcon from '../../assets/images/SVG/Brush.svg';
 import LanguageIcon from '../../assets/images/SVG/Globe.svg';
-import NodeOn from '../../assets/images/SVG/Node On.svg';
-import Olympus from '../../assets/images/SVG/Olympus.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
-import KeyIcon from '../../assets/images/SVG/Key.svg';
-import NetworkIcon from '../../assets/images/SVG/Network.svg';
 import CloudIcon from '../../assets/images/SVG/Cloud.svg';
-import MailboxFlagUp from '../../assets/images/SVG/MailboxFlagUp.svg';
-import MailboxFlagDown from '../../assets/images/SVG/MailboxFlagDown.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
-import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 
 import Header from '../../components/Header';
-import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { getPhoto } from '../../utils/PhotoUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import UrlUtils from '../../utils/UrlUtils';
 
-import NodeInfoStore from '../../stores/NodeInfoStore';
-import LightningAddressStore from '../../stores/LightningAddressStore';
-import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
-import UnitsStore from '../../stores/UnitsStore';
-
-import { version } from '../../package.json';
+import SettingsStore from '../../stores/SettingsStore';
 
 interface SettingsProps {
     navigation: StackNavigationProp<any, any>;
-    NodeInfoStore: NodeInfoStore;
-    LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
-    UnitsStore: UnitsStore;
 }
 
-interface SettingsState {
-    showHiddenSettings: boolean;
-    easterEggCount: number;
-}
-
-@inject('NodeInfoStore', 'LightningAddressStore', 'SettingsStore', 'UnitsStore')
+@inject('SettingsStore')
 @observer
-export default class Settings extends React.Component<
-    SettingsProps,
-    SettingsState
-> {
-    state = {
-        showHiddenSettings: false,
-        easterEggCount: 0
-    };
-
+export default class Settings extends React.Component<SettingsProps, {}> {
     UNSAFE_componentWillMount() {
         const { SettingsStore, navigation } = this.props;
 
@@ -95,15 +56,8 @@ export default class Settings extends React.Component<
     handleFocus = () => this.props.SettingsStore.getSettings();
 
     render() {
-        const {
-            navigation,
-            NodeInfoStore,
-            LightningAddressStore,
-            SettingsStore
-        } = this.props;
-        const { showHiddenSettings, easterEggCount } = this.state;
-        const { implementation, settings, seedPhrase } = SettingsStore;
-        const { paid } = LightningAddressStore;
+        const { navigation, SettingsStore } = this.props;
+        const { implementation, settings } = SettingsStore;
 
         const selectedNode: any =
             (settings &&
@@ -111,35 +65,6 @@ export default class Settings extends React.Component<
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
-        const implementationDisplayValue = {};
-        INTERFACE_KEYS.forEach((item) => {
-            implementationDisplayValue[item.value] = item.key;
-        });
-
-        const OlympusButton = () => (
-            <TouchableOpacity
-                onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
-                accessibilityLabel={localeString('views.Settings.olympus')}
-            >
-                <Olympus width="37" height="30" fill={themeColor('text')} />
-            </TouchableOpacity>
-        );
-
-        let nodeSubtitle = '';
-
-        if (selectedNode) {
-            nodeSubtitle +=
-                implementationDisplayValue[selectedNode.implementation];
-
-            if (
-                selectedNode.embeddedLndNetwork &&
-                selectedNode.implementation === 'embedded-lnd'
-            ) {
-                nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
-            }
-        }
-
-        const youveGotSats = paid?.length > 0;
         const forwardArrowColor = themeColor('secondaryText');
 
         return (
@@ -153,7 +78,6 @@ export default class Settings extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={OlympusButton}
                     navigation={navigation}
                 />
                 <ScrollView
@@ -163,105 +87,6 @@ export default class Settings extends React.Component<
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {selectedNode ? (
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Nodes')}
-                        >
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    gap: 12,
-                                    marginBottom: 5,
-                                    paddingLeft: 12,
-                                    paddingVertical: 10,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                {selectedNode.photo ? (
-                                    <Image
-                                        source={{
-                                            uri: getPhoto(selectedNode.photo)
-                                        }}
-                                        style={styles.photo}
-                                    />
-                                ) : (
-                                    <NodeIdenticon
-                                        selectedNode={selectedNode}
-                                        width={50}
-                                        rounded
-                                    />
-                                )}
-                                <View style={{ flex: 1 }}>
-                                    <Text
-                                        style={{
-                                            fontSize: 20,
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {NodeTitle(selectedNode)}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontSize: 16,
-                                            color: themeColor('text'),
-                                            opacity: 0.6,
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {nodeSubtitle}
-                                    </Text>
-                                </View>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    ) : (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('NodeConfiguration', {
-                                        newEntry: true,
-                                        index: 0
-                                    })
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <AddIcon
-                                        fill={themeColor('highlight')}
-                                        width={18}
-                                        height={18}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('highlight')
-                                    }}
-                                >
-                                    {localeString('views.Settings.connectNode')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
                     {BackendUtils.supportsLSPs() && selectedNode && (
                         <View
                             style={{
@@ -305,303 +130,6 @@ export default class Settings extends React.Component<
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode &&
-                        BackendUtils.supportsCustomPreimages() &&
-                        !NodeInfoStore.testnet && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginVertical: 5
-                                }}
-                            >
-                                <TouchableOpacity
-                                    style={styles.columnField}
-                                    onPress={() =>
-                                        navigation.navigate(
-                                            'LightningAddress',
-                                            { skipStatus: youveGotSats }
-                                        )
-                                    }
-                                >
-                                    <View style={styles.icon}>
-                                        {youveGotSats ? (
-                                            <MailboxFlagUp
-                                                height={19.25}
-                                                width={22}
-                                                fill={themeColor('highlight')}
-                                            />
-                                        ) : (
-                                            <MailboxFlagDown
-                                                height={19.25}
-                                                width={22}
-                                                fill={themeColor('text')}
-                                            />
-                                        )}
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'general.lightningAddress'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-
-                    {selectedNode && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Contacts')}
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <ContactIcon
-                                            stroke={themeColor('text')}
-                                            width={27}
-                                            height={27}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.Contacts.contacts'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode && BackendUtils.supportsNodeInfo() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            {implementation === 'embedded-lnd' && (
-                                <>
-                                    {seedPhrase && (
-                                        <>
-                                            <TouchableOpacity
-                                                style={styles.columnField}
-                                                onPress={() =>
-                                                    navigation.navigate('Seed')
-                                                }
-                                            >
-                                                <View style={styles.icon}>
-                                                    <KeyIcon
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width={27}
-                                                        height={27}
-                                                    />
-                                                </View>
-                                                <Text
-                                                    style={{
-                                                        ...styles.columnText,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.Seed.title'
-                                                    )}
-                                                </Text>
-                                                <View
-                                                    style={styles.ForwardArrow}
-                                                >
-                                                    <ForwardIcon
-                                                        stroke={
-                                                            forwardArrowColor
-                                                        }
-                                                    />
-                                                </View>
-                                            </TouchableOpacity>
-
-                                            <View
-                                                style={styles.separationLine}
-                                            />
-                                        </>
-                                    )}
-
-                                    <TouchableOpacity
-                                        style={styles.columnField}
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                'EmbeddedNodeSettings'
-                                            )
-                                        }
-                                    >
-                                        <View style={styles.icon}>
-                                            <BlockIcon
-                                                color={themeColor('text')}
-                                                width={27}
-                                                height={27}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.EmbeddedNode.title'
-                                            )}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-
-                                    <View style={styles.separationLine} />
-                                </>
-                            )}
-
-                            {BackendUtils.supportsNodeInfo() && (
-                                <>
-                                    <TouchableOpacity
-                                        style={styles.columnField}
-                                        onPress={() =>
-                                            navigation.navigate('NodeInfo')
-                                        }
-                                    >
-                                        <View style={styles.icon}>
-                                            <NodeOn
-                                                color={themeColor('text')}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.NodeInfo.title'
-                                            )}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-                                </>
-                            )}
-
-                            {BackendUtils.supportsNetworkInfo() && (
-                                <>
-                                    <View style={styles.separationLine} />
-
-                                    <TouchableOpacity
-                                        style={styles.columnField}
-                                        onPress={() =>
-                                            navigation.navigate('NetworkInfo')
-                                        }
-                                    >
-                                        <View style={styles.icon}>
-                                            <NetworkIcon
-                                                fill={themeColor('text')}
-                                                width={24}
-                                                height={24}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.NetworkInfo.title'
-                                            )}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-                                </>
-                            )}
-                        </View>
-                    )}
-
-                    {BackendUtils.supportsAccounts() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Accounts')}
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <AccountIcon
-                                            fill={themeColor('text')}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.Accounts.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -669,36 +197,6 @@ export default class Settings extends React.Component<
                                         >
                                             {localeString(
                                                 'views.Wallet.Wallet.invoices'
-                                            )}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-                                    <View style={styles.separationLine} />
-                                    <TouchableOpacity
-                                        style={styles.columnField}
-                                        onPress={() =>
-                                            navigation.navigate('BumpFee')
-                                        }
-                                    >
-                                        <View style={styles.icon}>
-                                            <SpeedometerIcon
-                                                fill={themeColor('text')}
-                                                width={23}
-                                                height={23}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.BumpFee.title'
                                             )}
                                         </Text>
                                         <View style={styles.ForwardArrow}>
@@ -798,148 +296,61 @@ export default class Settings extends React.Component<
                                 </TouchableOpacity>
                             </View>
                         )}
-                    {selectedNode && BackendUtils.supportsMessageSigning() ? (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Privacy')}
                         >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('Privacy')}
+                            <View style={styles.icon}>
+                                <PrivacyIcon stroke={themeColor('text')} />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <PrivacyIcon stroke={themeColor('text')} />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.Settings.privacy')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
+                                {localeString('views.Settings.privacy')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
 
-                            <View style={styles.separationLine} />
+                        <View style={styles.separationLine} />
 
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('Security')}
-                            >
-                                <View style={styles.icon}>
-                                    <SecurityIcon
-                                        stroke={themeColor('text')}
-                                        width={26}
-                                        height={26}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.Settings.security')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-
-                            <View style={styles.separationLine} />
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('SignVerifyMessage')
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <SignIcon
-                                        fill={themeColor('text')}
-                                        width={18}
-                                        height={18}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.SignMessage.title'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Security')}
                         >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('Privacy')}
+                            <View style={styles.icon}>
+                                <SecurityIcon
+                                    stroke={themeColor('text')}
+                                    width={26}
+                                    height={26}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <PrivacyIcon stroke={themeColor('text')} />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.Settings.privacy')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-
-                            <View style={styles.separationLine} />
-
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('Security')}
-                            >
-                                <View style={styles.icon}>
-                                    <SecurityIcon
-                                        stroke={themeColor('text')}
-                                        width={26}
-                                        height={26}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.Settings.security')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                {localeString('views.Settings.security')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
 
                     <View
                         style={{
@@ -1100,101 +511,6 @@ export default class Settings extends React.Component<
                             </TouchableOpacity>
                         </View>
                     )}
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Support')}
-                        >
-                            <View style={styles.icon}>
-                                <Icon
-                                    name="favorite"
-                                    color={themeColor('text')}
-                                    underlayColor="transparent"
-                                    size={23}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.Support.titleAlt'
-                                )}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Help')}
-                        >
-                            <View style={styles.icon}>
-                                <Icon
-                                    name="support"
-                                    color={themeColor('text')}
-                                    underlayColor="transparent"
-                                    size={23}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('general.help')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                    <TouchableWithoutFeedback
-                        onPress={() => {
-                            if (!showHiddenSettings) {
-                                this.setState({
-                                    easterEggCount: easterEggCount + 1,
-                                    showHiddenSettings: easterEggCount >= 4
-                                });
-                            }
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                color: themeColor('secondaryText'),
-                                alignSelf: 'center',
-                                fontFamily: 'PPNeueMontreal-Book',
-                                marginTop: 5,
-                                marginBottom: 10
-                            }}
-                        >
-                            {`ZEUS v${version}`}
-                        </Text>
-                    </TouchableWithoutFeedback>
                 </ScrollView>
             </Screen>
         );

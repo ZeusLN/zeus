@@ -5,6 +5,7 @@ import LightningNodeConnect from '../backends/LightningNodeConnect';
 import EmbeddedLND from '../backends/EmbeddedLND';
 // Core Lightning
 import CLightningREST from '../backends/CLightningREST';
+import CLNRest from '../backends/CLNRest';
 import Spark from '../backends/Spark';
 // Eclair
 import Eclair from '../backends/Eclair';
@@ -16,6 +17,7 @@ class BackendUtils {
     lightningNodeConnect: LightningNodeConnect;
     embeddedLND: EmbeddedLND;
     clightningREST: CLightningREST;
+    clnRest: CLNRest;
     spark: Spark;
     eclair: Eclair;
     lndHub: LndHub;
@@ -24,6 +26,7 @@ class BackendUtils {
         this.lightningNodeConnect = new LightningNodeConnect();
         this.embeddedLND = new EmbeddedLND();
         this.clightningREST = new CLightningREST();
+        this.clnRest = new CLNRest();
         this.spark = new Spark();
         this.eclair = new Eclair();
         this.lndHub = new LndHub();
@@ -40,6 +43,8 @@ class BackendUtils {
                 return this.embeddedLND;
             case 'c-lightning-REST':
                 return this.clightningREST;
+            case 'cln-rest':
+                return this.clnRest;
             case 'spark':
                 return this.spark;
             case 'eclair':
@@ -75,6 +80,7 @@ class BackendUtils {
         this.call('subscribeCustomMessages', args);
     getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
     getNetworkInfo = (...args: any[]) => this.call('getNetworkInfo', args);
+    getRecoveryInfo = (...args: any[]) => this.call('getRecoveryInfo', args);
     getInvoices = (...args: any[]) => this.call('getInvoices', args);
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
@@ -119,7 +125,14 @@ class BackendUtils {
         this.call('subscribeTransactions', args);
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
 
-    //cln
+    // BOLT 12 / Offers
+    listOffers = (...args: any[]) => this.call('listOffers', args);
+    createOffer = (...args: any[]) => this.call('createOffer', args);
+    disableOffer = (...args: any[]) => this.call('disableOffer', args);
+    fetchInvoiceFromOffer = (...args: any[]) =>
+        this.call('fetchInvoiceFromOffer', args);
+
+    // cln
     supportsLSPS1customMessage = () => this.call('supportsLSPS1customMessage');
     supportsLSPS1rest = () => this.call('supportsLSPS1rest');
 
@@ -155,6 +168,7 @@ class BackendUtils {
     supportsSweep = () => this.call('supportsSweep');
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');
+    supportsOffers = () => this.call('supportsOffers');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC

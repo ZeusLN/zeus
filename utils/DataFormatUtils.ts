@@ -1,4 +1,7 @@
-import { snakeCase, isArray, isObject, transform } from 'lodash';
+import snakeCase from 'lodash/snakeCase';
+import isArray from 'lodash/isArray';
+import isObject from 'lodash/isObject';
+import transform from 'lodash/transform';
 
 /**
  * Recursively transforms an object's keys from camelCase to snake_case.

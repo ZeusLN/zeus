@@ -11,8 +11,7 @@ import {
     Text,
     TextInput
 } from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import { inject, observer } from 'mobx-react';
 import { Icon, Divider } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
@@ -29,6 +28,8 @@ import AddressUtils from '../../utils/AddressUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import ContactStore from '../../stores/ContactStore';
+
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../../assets/images/SVG/Key Security.svg';
@@ -39,14 +40,14 @@ import Star from '../../assets/images/SVG/Star.svg';
 
 interface AddContactProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<
-        'AddContact',
-        { isEdit: boolean; prefillContact: Contact; isNostrContact: boolean }
-    >;
+    route: Route<'AddContact', { isEdit: boolean; isNostrContact: boolean }>;
+    ContactStore: ContactStore;
 }
 
 interface Contact {
     lnAddress: string[];
+    bolt12Address: string[];
+    bolt12Offer: string[];
     onchainAddress: string[];
     nip05: string[];
     nostrNpub: string[];
@@ -61,6 +62,8 @@ interface Contact {
 interface AddContactState {
     contacts: Contact[];
     lnAddress: string[];
+    bolt12Address: string[];
+    bolt12Offer: string[];
     onchainAddress: string[];
     nip05: string[];
     nostrNpub: string[];
@@ -73,11 +76,15 @@ interface AddContactState {
     isFavourite: boolean;
     isValidOnchainAddress: boolean;
     isValidLightningAddress: boolean;
+    isValidBolt12Address: boolean;
+    isValidBolt12Offer: boolean;
     isValidNIP05: boolean;
     isValidNpub: boolean;
     isValidPubkey: boolean;
 }
 
+@inject('ContactStore')
+@observer
 export default class AddContact extends React.Component<
     AddContactProps,
     AddContactState
@@ -87,6 +94,8 @@ export default class AddContact extends React.Component<
         this.state = {
             contacts: [],
             lnAddress: [''],
+            bolt12Address: [''],
+            bolt12Offer: [''],
             onchainAddress: [''],
             nip05: [''],
             nostrNpub: [''],
@@ -99,6 +108,8 @@ export default class AddContact extends React.Component<
             isFavourite: false,
             isValidOnchainAddress: true,
             isValidLightningAddress: true,
+            isValidBolt12Address: true,
+            isValidBolt12Offer: true,
             isValidNIP05: true,
             isValidNpub: true,
             isValidPubkey: true
@@ -118,136 +129,21 @@ export default class AddContact extends React.Component<
     };
 
     saveContact = async () => {
-        const { navigation, route } = this.props;
-        const {
-            lnAddress,
-            onchainAddress,
-            nip05,
-            nostrNpub,
-            pubkey,
-            name,
-            description,
-            photo,
-            isFavourite
-        } = this.state;
-
-        const { isEdit, prefillContact, isNostrContact } = route.params ?? {};
-
-        try {
-            // Retrieve existing contacts from storage
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
-            );
-            const existingContacts: Contact[] = contactsString
-                ? JSON.parse(contactsString)
-                : [];
-
-            if (isEdit && prefillContact && !isNostrContact) {
-                // Editing an existing contact
-                const updatedContacts = existingContacts.map((contact) =>
-                    contact.contactId === prefillContact.contactId
-                        ? {
-                              ...contact,
-                              lnAddress,
-                              onchainAddress,
-                              nip05,
-                              nostrNpub,
-                              pubkey,
-                              name,
-                              description,
-                              photo,
-                              isFavourite
-                          }
-                        : contact
-                );
-
-                // Sort the updated contacts alphabetically
-                updatedContacts.sort((a, b) => a.name.localeCompare(b.name));
-
-                // Save the updated contacts to encrypted storage
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
-                    JSON.stringify(updatedContacts)
-                );
-
-                console.log('Contact updated successfully!');
-                navigation.popTo('Contacts');
-            } else {
-                // Creating a new contact
-                const contactId = uuidv4();
-
-                const newContact: Contact = {
-                    contactId,
-                    lnAddress,
-                    onchainAddress,
-                    nip05,
-                    nostrNpub,
-                    pubkey,
-                    name,
-                    description,
-                    photo,
-                    isFavourite
-                };
-
-                const updatedContacts = [...existingContacts, newContact].sort(
-                    (a, b) => a.name.localeCompare(b.name)
-                );
-
-                // Save the updated contacts to encrypted storage
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
-                    JSON.stringify(updatedContacts)
-                );
-
-                console.log('Contact saved successfully!');
-                navigation.popTo('Contacts');
-
-                // Reset the input fields after saving the contact
-                this.setState({
-                    contacts: updatedContacts,
-                    lnAddress: [],
-                    onchainAddress: [],
-                    nip05: [],
-                    nostrNpub: [],
-                    pubkey: [],
-                    name: '',
-                    description: '',
-                    photo: null
-                });
-            }
-        } catch (error) {
-            console.log('Error saving contacts:', error);
-        }
+        const { navigation, route, ContactStore } = this.props;
+        const { isEdit, isNostrContact } = route.params ?? {};
+        const contactDetails = { ...this.state };
+        await ContactStore.saveContact(
+            contactDetails,
+            isEdit,
+            isNostrContact,
+            navigation
+        );
     };
 
     deleteContact = async () => {
-        const { navigation, route } = this.props;
-        const prefillContact = route.params?.prefillContact;
+        const { navigation, ContactStore } = this.props;
 
-        if (prefillContact) {
-            try {
-                const contactsString = await EncryptedStorage.getItem(
-                    'zeus-contacts'
-                );
-                const existingContacts: Contact[] = contactsString
-                    ? JSON.parse(contactsString)
-                    : [];
-
-                const updatedContacts = existingContacts.filter(
-                    (contact) => contact.contactId !== prefillContact.contactId
-                );
-
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
-                    JSON.stringify(updatedContacts)
-                );
-
-                console.log('Contact deleted successfully!');
-                navigation.popTo('Contacts');
-            } catch (error) {
-                console.log('Error deleting contact:', error);
-            }
-        }
+        await ContactStore?.deleteContact(navigation);
     };
 
     selectPhoto = () => {
@@ -309,12 +205,27 @@ export default class AddContact extends React.Component<
         });
     };
 
+    onChangeBolt12Address = (text: string) => {
+        const isValid = AddressUtils.isValidLightningAddress(text);
+        this.setState({
+            isValidBolt12Address: isValid
+        });
+    };
+
+    onChangeBolt12Offer = (text: string) => {
+        const isValid = AddressUtils.isValidLightningOffer(text);
+        this.setState({
+            isValidBolt12Offer: isValid
+        });
+    };
+
     onChangeNIP05 = (text: string) => {
         const isValid = AddressUtils.isValidLightningAddress(text);
         this.setState({
             isValidNIP05: isValid
         });
     };
+
     onChangeNpub = (text: string) => {
         const isValid = AddressUtils.isValidNpub(text);
         this.setState({
@@ -340,37 +251,29 @@ export default class AddContact extends React.Component<
     }
 
     componentDidUpdate(prevProps: AddContactProps) {
-        const prefillContact = this.props.route.params?.prefillContact;
-        const prevPrefillContact = prevProps.route.params?.prefillContact;
-
-        // Check if the prefillContact prop has changed
-        if (prefillContact !== prevPrefillContact) {
+        const { ContactStore } = this.props;
+        if (
+            ContactStore.prefillContact !==
+            prevProps.ContactStore.prefillContact
+        ) {
             this.handlePrefillContact();
         }
     }
 
-    handlePrefillContact() {
-        const prefillContact = this.props.route.params?.prefillContact;
+    handlePrefillContact = () => {
+        const { ContactStore } = this.props;
 
-        if (prefillContact) {
-            this.setState({
-                lnAddress: prefillContact.lnAddress,
-                onchainAddress: prefillContact.onchainAddress,
-                nip05: prefillContact.nip05,
-                nostrNpub: prefillContact.nostrNpub,
-                pubkey: prefillContact.pubkey,
-                name: prefillContact.name,
-                description: prefillContact.description,
-                photo: prefillContact.photo,
-                isFavourite: prefillContact.isFavourite
-            });
+        if (ContactStore.prefillContact) {
+            this.setState({ ...ContactStore.prefillContact });
         }
-    }
+    };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, ContactStore } = this.props;
         const {
             lnAddress,
+            bolt12Address,
+            bolt12Offer,
             onchainAddress,
             nip05,
             nostrNpub,
@@ -380,21 +283,49 @@ export default class AddContact extends React.Component<
             photo,
             isValidOnchainAddress,
             isValidLightningAddress,
+            isValidBolt12Address,
+            isValidBolt12Offer,
             isValidNIP05,
             isValidNpub,
             isValidPubkey
         } = this.state;
 
         const dropdownValues = [
-            { key: 'LN address', translateKey: '', value: 'lnAddress' },
-            { key: 'Pubkey', translateKey: '', value: 'pubkey' },
+            {
+                key: 'LN address',
+                translateKey: 'general.lightningAddressCondensed',
+                value: 'lnAddress'
+            },
+            {
+                key: 'BOLT 12 address',
+                translateKey: 'views.Settings.Bolt12Address',
+                value: 'bolt12Address'
+            },
+            {
+                key: 'BOLT 12 offer',
+                translateKey: 'views.Settings.Bolt12Offer',
+                value: 'bolt12Offer'
+            },
+            {
+                key: 'Pubkey',
+                translateKey: 'views.NodeInfo.pubkey',
+                value: 'pubkey'
+            },
             {
                 key: 'Onchain address',
-                translateKey: '',
+                translateKey: 'views.Settings.AddContact.onchainAddress',
                 value: 'onchainAddress'
             },
-            { key: 'NIP-05', translateKey: '', value: 'nip05' },
-            { key: 'Nostr npub', translateKey: '', value: 'nostrNpub' }
+            {
+                key: 'NIP-05',
+                translateKey: 'views.Settings.AddContact.nip05',
+                value: 'nip05'
+            },
+            {
+                key: 'Nostr npub',
+                translateKey: 'views.Settings.AddContact.nostrNpub',
+                value: 'nostrNpub'
+            }
         ];
 
         const AddPhotos = () => (
@@ -416,7 +347,7 @@ export default class AddContact extends React.Component<
                 />
             </TouchableOpacity>
         );
-        const { isEdit, prefillContact } = this.props.route.params ?? {};
+        const { isEdit } = this.props.route.params ?? {};
 
         const ScanBadge = ({
             navigation
@@ -456,6 +387,9 @@ export default class AddContact extends React.Component<
                                 <ScanBadge navigation={navigation} />
                             </Row>
                         }
+                        onBack={() => {
+                            ContactStore?.clearPrefillContact();
+                        }}
                         containerStyle={{
                             borderBottomWidth: 0
                         }}
@@ -610,7 +544,7 @@ export default class AddContact extends React.Component<
                             color={
                                 lnAddress?.length == 1 &&
                                 !isValidLightningAddress &&
-                                'red'
+                                themeColor('error')
                             }
                         />
                         <View style={styles.inputContainer}>
@@ -653,7 +587,7 @@ export default class AddContact extends React.Component<
                                     color={
                                         index === lnAddress?.length - 2 &&
                                         !isValidLightningAddress &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -695,20 +629,255 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'lnAddress',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
+                                    {isValidLightningAddress && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'lnAddress',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </>
+                        ))}
+                        <Divider
+                            orientation="horizontal"
+                            style={{ marginTop: 10 }}
+                            color={
+                                bolt12Address?.length == 1 &&
+                                (!isValidLightningAddress ||
+                                    !isValidBolt12Address) &&
+                                themeColor('error')
+                            }
+                        />
+
+                        <View style={styles.inputContainer}>
+                            <View style={styles.icons}>
+                                <LightningBolt />
+                            </View>
+                            <TextInput
+                                onChangeText={(text) => {
+                                    this.onChangeBolt12Address(text);
+                                    const updatedAddresses = bolt12Address
+                                        ? [...bolt12Address]
+                                        : [];
+                                    updatedAddresses[0] = text;
+                                    this.setState({
+                                        bolt12Address: updatedAddresses
+                                    });
+                                    if (!text) {
+                                        this.setState({
+                                            isValidBolt12Address: true
+                                        });
+                                    }
+                                }}
+                                value={bolt12Address && bolt12Address[0]}
+                                placeholder={localeString(
+                                    'views.Settings.Bolt12Address'
+                                )}
+                                placeholderTextColor={themeColor(
+                                    'secondaryText'
+                                )}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
+                                autoCapitalize="none"
+                            />
+                        </View>
+                        {bolt12Address?.slice(1).map((address, index) => (
+                            <>
+                                <Divider
+                                    orientation="horizontal"
+                                    style={{ marginTop: 16 }}
+                                    color={
+                                        index === bolt12Address?.length - 2 &&
+                                        !isValidBolt12Address &&
+                                        themeColor('error')
+                                    }
+                                />
+                                <View key={index} style={styles.inputContainer}>
+                                    <View style={styles.icons}>
+                                        <LightningBolt />
+                                    </View>
+                                    <View>
+                                        <TextInput
+                                            onChangeText={(text) => {
+                                                this.onChangeBolt12Address(
+                                                    text
+                                                );
+                                                const updatedAddresses = [
+                                                    ...bolt12Address
+                                                ];
+                                                updatedAddresses[index + 1] =
+                                                    text;
+                                                this.setState({
+                                                    bolt12Address:
+                                                        updatedAddresses
+                                                });
+                                                if (!text) {
+                                                    this.setState({
+                                                        isValidBolt12Address:
+                                                            true
+                                                    });
+                                                }
+                                            }}
+                                            value={address}
+                                            placeholder={localeString(
+                                                'views.Settings.Bolt12Address'
+                                            )}
+                                            placeholderTextColor={themeColor(
+                                                'secondaryText'
+                                            )}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
+                                            autoCapitalize="none"
                                         />
-                                    </TouchableOpacity>
+                                    </View>
+                                    {isValidBolt12Address && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'bolt12Address',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </>
+                        ))}
+                        <Divider
+                            orientation="horizontal"
+                            style={{ marginTop: 10 }}
+                            color={
+                                bolt12Offer?.length == 1 &&
+                                (!isValidBolt12Address ||
+                                    !isValidBolt12Offer) &&
+                                themeColor('error')
+                            }
+                        />
+
+                        <View style={styles.inputContainer}>
+                            <View style={styles.icons}>
+                                <LightningBolt />
+                            </View>
+                            <TextInput
+                                onChangeText={(text) => {
+                                    this.onChangeBolt12Offer(text);
+                                    const updatedAddresses = bolt12Offer
+                                        ? [...bolt12Offer]
+                                        : [];
+                                    updatedAddresses[0] = text;
+                                    this.setState({
+                                        bolt12Offer: updatedAddresses
+                                    });
+                                    if (!text) {
+                                        this.setState({
+                                            isValidBolt12Offer: true
+                                        });
+                                    }
+                                }}
+                                value={bolt12Offer && bolt12Offer[0]}
+                                placeholder={localeString(
+                                    'views.Settings.Bolt12Offer'
+                                )}
+                                placeholderTextColor={themeColor(
+                                    'secondaryText'
+                                )}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
+                                autoCapitalize="none"
+                            />
+                        </View>
+                        {bolt12Offer?.slice(1).map((address, index) => (
+                            <>
+                                <Divider
+                                    orientation="horizontal"
+                                    style={{ marginTop: 16 }}
+                                    color={
+                                        index === bolt12Offer?.length - 2 &&
+                                        !isValidBolt12Offer &&
+                                        themeColor('error')
+                                    }
+                                />
+                                <View key={index} style={styles.inputContainer}>
+                                    <View style={styles.icons}>
+                                        <LightningBolt />
+                                    </View>
+                                    <View>
+                                        <TextInput
+                                            onChangeText={(text) => {
+                                                this.onChangeBolt12Offer(text);
+                                                const updatedAddresses = [
+                                                    ...bolt12Offer
+                                                ];
+                                                updatedAddresses[index + 1] =
+                                                    text;
+                                                this.setState({
+                                                    bolt12Offer:
+                                                        updatedAddresses
+                                                });
+                                                if (!text) {
+                                                    this.setState({
+                                                        isValidBolt12Offer: true
+                                                    });
+                                                }
+                                            }}
+                                            value={address}
+                                            placeholder={localeString(
+                                                'views.Settings.Bolt12Offer'
+                                            )}
+                                            placeholderTextColor={themeColor(
+                                                'secondaryText'
+                                            )}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
+                                            autoCapitalize="none"
+                                        />
+                                    </View>
+                                    {isValidBolt12Offer && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'bolt12Offer',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
@@ -717,10 +886,11 @@ export default class AddContact extends React.Component<
                             style={{ marginTop: 10 }}
                             color={
                                 pubkey?.length == 1 &&
-                                (!isValidLightningAddress || !isValidPubkey) &&
-                                'red'
+                                (!isValidBolt12Offer || !isValidPubkey) &&
+                                themeColor('error')
                             }
                         />
+
                         <View style={styles.inputContainer}>
                             <View style={styles.icons}>
                                 <LightningBolt />
@@ -764,7 +934,7 @@ export default class AddContact extends React.Component<
                                         index === pubkey?.length - 2 &&
                                         (!isValidPubkey ||
                                             !isValidLightningAddress) &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -803,20 +973,24 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'pubkey',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidPubkey && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'pubkey',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
@@ -828,7 +1002,7 @@ export default class AddContact extends React.Component<
                             color={
                                 onchainAddress?.length == 1 &&
                                 (!isValidOnchainAddress || !isValidPubkey) &&
-                                'red'
+                                themeColor('error')
                             }
                         />
                         <View style={styles.inputContainer}>
@@ -875,7 +1049,7 @@ export default class AddContact extends React.Component<
                                         index === onchainAddress?.length - 2 &&
                                         (!isValidOnchainAddress ||
                                             !isValidPubkey) &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -918,20 +1092,24 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'onchainAddress',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidOnchainAddress && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'onchainAddress',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
@@ -941,7 +1119,7 @@ export default class AddContact extends React.Component<
                             color={
                                 nip05?.length == 1 &&
                                 (!isValidOnchainAddress || !isValidNIP05) &&
-                                'red'
+                                themeColor('error')
                             }
                         />
                         <View style={styles.inputContainer}>
@@ -986,7 +1164,7 @@ export default class AddContact extends React.Component<
                                         index === nip05.length - 2 &&
                                         (!isValidOnchainAddress ||
                                             !isValidNIP05) &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -1025,20 +1203,24 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'nip05',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidNIP05 && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'nip05',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
@@ -1048,7 +1230,7 @@ export default class AddContact extends React.Component<
                             color={
                                 nostrNpub?.length == 1 &&
                                 (!isValidNIP05 || !isValidNpub) &&
-                                'red'
+                                themeColor('error')
                             }
                         />
                         <View style={styles.inputContainer}>
@@ -1092,7 +1274,7 @@ export default class AddContact extends React.Component<
                                     color={
                                         index === nostrNpub?.length - 2 &&
                                         (!isValidNIP05 || !isValidNpub) &&
-                                        'red'
+                                        themeColor('error')
                                     }
                                 />
                                 <View key={index} style={styles.inputContainer}>
@@ -1131,27 +1313,31 @@ export default class AddContact extends React.Component<
                                             autoCapitalize="none"
                                         />
                                     </View>
-                                    <TouchableOpacity style={styles.deleteIcon}>
-                                        <Icon
-                                            name="close"
-                                            onPress={() =>
-                                                this.removeExtraField(
-                                                    'nostrNpub',
-                                                    index
-                                                )
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={16}
-                                        />
-                                    </TouchableOpacity>
+                                    {isValidNpub && (
+                                        <TouchableOpacity
+                                            style={styles.deleteIcon}
+                                        >
+                                            <Icon
+                                                name="close"
+                                                onPress={() =>
+                                                    this.removeExtraField(
+                                                        'nostrNpub',
+                                                        index
+                                                    )
+                                                }
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={16}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </>
                         ))}
                         <Divider
                             orientation="horizontal"
                             style={{ marginTop: 10 }}
-                            color={!isValidNpub && 'red'}
+                            color={!isValidNpub && themeColor('error')}
                         />
                     </ScrollView>
                     {(lnAddress[0] || onchainAddress[0]) &&
@@ -1194,6 +1380,8 @@ export default class AddContact extends React.Component<
                                 opacity:
                                     isValidOnchainAddress &&
                                     isValidLightningAddress &&
+                                    isValidBolt12Address &&
+                                    isValidBolt12Offer &&
                                     isValidNIP05 &&
                                     isValidNpub &&
                                     isValidPubkey
@@ -1203,11 +1391,19 @@ export default class AddContact extends React.Component<
                             disabled={
                                 !isValidOnchainAddress ||
                                 !isValidLightningAddress ||
+                                !isValidBolt12Address ||
+                                !isValidBolt12Offer ||
                                 !isValidNIP05 ||
                                 !isValidNpub ||
                                 !isValidPubkey ||
                                 (lnAddress?.length > 1 &&
                                     lnAddress[lnAddress.length - 1] === '') ||
+                                (bolt12Address?.length > 1 &&
+                                    bolt12Address[bolt12Address.length - 1] ===
+                                        '') ||
+                                (bolt12Offer?.length > 1 &&
+                                    bolt12Offer[bolt12Offer.length - 1] ===
+                                        '') ||
                                 (pubkey?.length > 1 &&
                                     pubkey[pubkey.length - 1] === '') ||
                                 (onchainAddress?.length > 1 &&
@@ -1220,13 +1416,15 @@ export default class AddContact extends React.Component<
                                     nostrNpub[nostrNpub.length - 1] === '') ||
                                 !(
                                     lnAddress[0] ||
+                                    bolt12Address[0] ||
+                                    bolt12Offer[0] ||
                                     onchainAddress[0] ||
                                     pubkey[0]
                                 )
                             }
                         />
                     </View>
-                    {isEdit && prefillContact && (
+                    {isEdit && ContactStore?.prefillContact && (
                         <View style={styles.button}>
                             <Button
                                 title={
@@ -1283,9 +1481,6 @@ const styles = StyleSheet.create({
         marginLeft: 24,
         flexDirection: 'row',
         alignItems: 'center'
-    },
-    invalidInput: {
-        color: 'red'
     },
     icons: {
         paddingRight: 14,

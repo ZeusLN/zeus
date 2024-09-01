@@ -57,7 +57,7 @@ export default class LnurlChannel extends React.Component<
         } catch (err) {
             this.state = {
                 domain: '',
-                privateChannel: false,
+                privateChannel: true,
                 node_pubkey_string: '',
                 host: '',
                 k1: '',
@@ -89,7 +89,7 @@ export default class LnurlChannel extends React.Component<
             k1: lnurl.k1,
             localnodeids: [],
             localnodeid: '',
-            privateChannel: false,
+            privateChannel: true,
             connectingToPeer: false,
             peerSuccess: false,
             lnurlChannelSuccess: false,
@@ -246,10 +246,12 @@ export default class LnurlChannel extends React.Component<
                                     fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
-                                {localeString('views.OpenChannel.private')}
+                                {localeString(
+                                    'views.Wallet.Channels.announced'
+                                )}
                             </Text>
                             <Switch
-                                value={privateChannel}
+                                value={!privateChannel}
                                 onValueChange={() =>
                                     this.setState({
                                         privateChannel: !privateChannel

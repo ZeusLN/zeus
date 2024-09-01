@@ -2,6 +2,7 @@ import * as React from 'react';
 import { inject, observer } from 'mobx-react';
 import { ScrollView, View } from 'react-native';
 import moment from 'moment';
+import BigNumber from 'bignumber.js';
 
 import Screen from './Screen';
 import KeyValue from './KeyValue';
@@ -15,6 +16,7 @@ import UrlUtils from '../utils/UrlUtils';
 import InvoicesStore from '../stores/InvoicesStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import FiatStore from '../stores/FiatStore';
+import { ChannelItem } from './Channels/ChannelItem';
 
 interface LSPS1OrderResponseProps {
     navigation: any;
@@ -47,46 +49,37 @@ export default class LSPS1OrderResponse extends React.Component<
             <Screen>
                 <ScrollView>
                     <View style={{ paddingHorizontal: 20 }}>
-                        {orderResponse?.lsp_balance_sat && (
+                        <ChannelItem
+                            outbound={orderResponse?.client_balance_sat}
+                            inbound={orderResponse?.lsp_balance_sat}
+                            title={localeString('views.LSPS1.yourBalance')}
+                            secondTitle={localeString(
+                                'views.LSPS1.receiveLimit'
+                            )}
+                            noBorder
+                            highlightLabels
+                        />
+                        {orderResponse?.order_id && (
                             <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.lspBalance'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={orderResponse?.lsp_balance_sat}
-                                        sensitive
-                                        toggleable
-                                    />
-                                }
-                            />
-                        )}
-                        {orderResponse?.client_balance_sat && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.clientBalance'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={orderResponse?.client_balance_sat}
-                                        sensitive
-                                        toggleable
-                                    />
-                                }
+                                keyValue={localeString('views.LSPS1.orderId')}
+                                value={orderResponse?.order_id}
                             />
                         )}
                         {orderResponse?.lsp_balance_sat &&
                             orderResponse?.client_balance_sat && (
                                 <KeyValue
                                     keyValue={localeString(
-                                        'views.LSPS1.totalBalance'
+                                        'views.Channel.channelBalance'
                                     )}
                                     value={
                                         <Amount
-                                            sats={
-                                                orderResponse?.client_balance_sat +
-                                                orderResponse?.lsp_balance_sat
-                                            }
+                                            sats={new BigNumber(
+                                                orderResponse?.client_balance_sat
+                                            )
+                                                .plus(
+                                                    orderResponse?.lsp_balance_sat
+                                                )
+                                                .toNumber()}
                                             sensitive
                                             toggleable
                                         />
@@ -131,29 +124,6 @@ export default class LSPS1OrderResponse extends React.Component<
                                 }
                             />
                         )}
-                        {orderResponse?.created_at && (
-                            <KeyValue
-                                keyValue={localeString('general.createdAt')}
-                                value={moment(orderResponse?.created_at).format(
-                                    'MMM Do YYYY, h:mm:ss a'
-                                )}
-                            />
-                        )}
-                        {orderResponse?.expires_at && (
-                            <KeyValue
-                                keyValue={localeString('general.expiresAt')}
-                                value={moment(orderResponse?.expires_at).format(
-                                    'MMM Do YYYY, h:mm:ss a'
-                                )}
-                            />
-                        )}
-
-                        {orderResponse?.order_id && (
-                            <KeyValue
-                                keyValue={localeString('views.LSPS1.orderId')}
-                                value={orderResponse?.order_id}
-                            />
-                        )}
                         {orderResponse?.order_state && (
                             <KeyValue
                                 keyValue={localeString(
@@ -173,108 +143,271 @@ export default class LSPS1OrderResponse extends React.Component<
                                 }
                             />
                         )}
-                        <KeyValue
-                            keyValue={localeString('views.Payment.title')}
-                        />
-                        {payment?.fee_total_sat && (
+                        {orderResponse?.created_at && (
                             <KeyValue
-                                keyValue={localeString(
-                                    'views.Transaction.totalFees'
+                                keyValue={localeString('general.createdAt')}
+                                value={moment(orderResponse?.created_at).format(
+                                    'MMM Do YYYY, h:mm:ss a'
                                 )}
-                                value={
-                                    <Amount
-                                        sats={payment?.fee_total_sat}
-                                        sensitive
-                                        toggleable
+                            />
+                        )}
+                        {orderResponse?.expires_at && (
+                            <KeyValue
+                                keyValue={localeString('general.expiresAt')}
+                                value={moment(orderResponse?.expires_at).format(
+                                    'MMM Do YYYY, h:mm:ss a'
+                                )}
+                            />
+                        )}
+                        {/* Legacy format */}
+                        {payment && !payment.bolt11 && !payment.onchain && (
+                            <>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Payment.title'
+                                    )}
+                                />
+                                {payment?.state && (
+                                    <KeyValue
+                                        keyValue={localeString('general.state')}
+                                        value={payment?.state}
                                     />
-                                }
-                            />
-                        )}
-                        {(payment?.lightning_invoice ||
-                            payment?.bolt11_invoice) && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'general.lightningInvoice'
                                 )}
-                                value={
-                                    payment?.lightning_invoice ||
-                                    payment?.bolt11_invoice
-                                }
-                            />
-                        )}
-                        {payment?.state && (
-                            <KeyValue
-                                keyValue={localeString('general.state')}
-                                value={payment?.state}
-                            />
-                        )}
-                        {payment?.min_fee_for_0conf && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.miniFeeFor0Conf'
-                                )}
-                                value={payment?.min_fee_for_0conf}
-                            />
-                        )}
-                        {payment?.min_onchain_payment_confirmations && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.minOnchainPaymentConfirmations'
-                                )}
-                                value={
-                                    payment?.min_onchain_payment_confirmations
-                                }
-                            />
-                        )}
-                        {payment?.onchain_address && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Settings.AddContact.onchainAddress'
-                                )}
-                                value={payment?.onchain_address}
-                            />
-                        )}
-                        {payment?.onchain_payment && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.onchainPayment'
-                                )}
-                                value={payment?.onchain_payment}
-                            />
-                        )}
-                        {payment?.order_total_sat && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.totalOrderValue'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={payment.order_total_sat}
-                                        toggleable
-                                        sensitive
+                                {payment?.order_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.orderTotal'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={payment?.order_total_sat}
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
                                     />
-                                }
-                            />
+                                )}
+                                {payment?.fee_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.feeTotal'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={payment?.fee_total_sat}
+                                                sensitive
+                                                toggleable
+                                            />
+                                        }
+                                    />
+                                )}
+                                {(payment?.lightning_invoice ||
+                                    payment?.bolt11_invoice) && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'general.lightningInvoice'
+                                        )}
+                                        value={
+                                            payment?.lightning_invoice ||
+                                            payment?.bolt11_invoice
+                                        }
+                                    />
+                                )}
+                                {payment?.min_fee_for_0conf && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.miniFeeFor0Conf'
+                                        )}
+                                        value={payment?.min_fee_for_0conf}
+                                    />
+                                )}
+                                {payment?.min_onchain_payment_confirmations && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.minOnchainPaymentConfirmations'
+                                        )}
+                                        value={
+                                            payment?.min_onchain_payment_confirmations
+                                        }
+                                    />
+                                )}
+                                {payment?.onchain_address && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Settings.AddContact.onchainAddress'
+                                        )}
+                                        value={payment?.onchain_address}
+                                    />
+                                )}
+                                {payment?.onchain_payment && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.onchainPayment'
+                                        )}
+                                        value={payment?.onchain_payment}
+                                    />
+                                )}
+                            </>
+                        )}
+                        {/* BOLT11 */}
+                        {payment && payment.bolt11 && (
+                            <>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.LSPS1.bolt11Payment'
+                                    )}
+                                />
+                                {payment?.bolt11.state && (
+                                    <KeyValue
+                                        keyValue={localeString('general.state')}
+                                        value={payment?.bolt11.state}
+                                    />
+                                )}
+                                {payment?.bolt11?.order_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.orderTotal'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    payment?.bolt11
+                                                        ?.order_total_sat
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                )}
+                                {payment?.bolt11?.fee_total_sat &&
+                                    payment?.bolt11?.fee_total_sat !==
+                                        payment?.bolt11?.order_total_sat && (
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.LSPS1.feeTotal'
+                                            )}
+                                            value={
+                                                <Amount
+                                                    sats={
+                                                        payment?.bolt11
+                                                            ?.fee_total_sat
+                                                    }
+                                                    sensitive
+                                                    toggleable
+                                                />
+                                            }
+                                        />
+                                    )}
+                                {payment?.bolt11.expires_at && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'general.expiresAt'
+                                        )}
+                                        value={moment(
+                                            payment?.bolt11.expires_at
+                                        ).format('MMM Do YYYY, h:mm:ss a')}
+                                    />
+                                )}
+                                {payment?.bolt11.invoice && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Invoice.title'
+                                        )}
+                                        value={payment?.bolt11.invoice}
+                                    />
+                                )}
+                            </>
+                        )}
+                        {/* On-chain */}
+                        {payment && payment.onchain && (
+                            <>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'iews.LSPS1.onchainPayment'
+                                    )}
+                                />
+                                {payment?.onchain.fee_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Transaction.totalFees'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    payment?.onchain
+                                                        .fee_total_sat
+                                                }
+                                                sensitive
+                                                toggleable
+                                            />
+                                        }
+                                    />
+                                )}
+                                {payment?.onchain.order_total_sat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.totalOrderValue'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    payment?.onchain
+                                                        .order_total_sat
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                )}
+                                {payment?.onchain.expires_at && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'general.expiresAt'
+                                        )}
+                                        value={moment(
+                                            payment?.onchain.expires_at
+                                        ).format('MMM Do YYYY, h:mm:ss a')}
+                                    />
+                                )}
+                                {payment?.onchain.address && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'general.address'
+                                        )}
+                                        value={payment?.onchain.address}
+                                    />
+                                )}
+                                {payment?.onchain.min_fee_for_0conf && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.miniFeeFor0Conf'
+                                        )}
+                                        value={
+                                            payment?.onchain.min_fee_for_0conf
+                                        }
+                                    />
+                                )}
+                                {payment?.onchain
+                                    .min_onchain_payment_confirmations && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.minOnchainPaymentConfirmations'
+                                        )}
+                                        value={
+                                            payment?.onchain
+                                                .min_onchain_payment_confirmations
+                                        }
+                                    />
+                                )}
+                            </>
                         )}
                         {channel && (
                             <>
                                 <KeyValue
                                     keyValue={localeString(
                                         'views.Channel.title'
-                                    )}
-                                />
-                                <KeyValue
-                                    keyValue={localeString('general.expiresAt')}
-                                    value={moment(channel?.expires_at).format(
-                                        'MMM Do YYYY, h:mm:ss a'
-                                    )}
-                                />
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.LSPS1.fundedAt'
-                                    )}
-                                    value={moment(channel?.funded_at).format(
-                                        'MMM Do YYYY, h:mm:ss a'
                                     )}
                                 />
                                 <KeyValue
@@ -291,33 +424,98 @@ export default class LSPS1OrderResponse extends React.Component<
                                         )
                                     }
                                 />
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.LSPS1.fundedAt'
+                                    )}
+                                    value={moment(channel?.funded_at).format(
+                                        'MMM Do YYYY, h:mm:ss a'
+                                    )}
+                                />
+                                <KeyValue
+                                    keyValue={localeString('general.expiresAt')}
+                                    value={moment(channel?.expires_at).format(
+                                        'MMM Do YYYY, h:mm:ss a'
+                                    )}
+                                />
                             </>
                         )}
                         {orderResponse?.order_state === 'CREATED' && orderView && (
-                            <Button
-                                title={localeString('views.LSPS1.makePayment')}
-                                containerStyle={{
-                                    paddingVertical: 20
-                                }}
-                                onPress={() => {
-                                    InvoicesStore.getPayReq(
-                                        payment.lightning_invoice ||
-                                            payment.bolt11_invoice
-                                    )
-                                        .then(() => {
-                                            navigation.navigate(
-                                                'PaymentRequest',
-                                                {}
-                                            );
-                                        })
-                                        .catch((error: any) =>
-                                            console.error(
-                                                'Error fetching payment request:',
-                                                error
-                                            )
-                                        );
-                                }}
-                            />
+                            <>
+                                {(payment.bolt11?.invoice ||
+                                    payment.lightning_invoice ||
+                                    payment.bolt11_invoice) && (
+                                    <>
+                                        <Button
+                                            title={
+                                                payment.onchain
+                                                    ? localeString(
+                                                          'views.LSPS1.makePaymentLN'
+                                                      )
+                                                    : localeString(
+                                                          'views.LSPS1.makePayment'
+                                                      )
+                                            }
+                                            containerStyle={{
+                                                paddingVertical: 20
+                                            }}
+                                            onPress={() => {
+                                                InvoicesStore.getPayReq(
+                                                    payment.bolt11?.invoice ||
+                                                        payment.lightning_invoice ||
+                                                        payment.bolt11_invoice
+                                                )
+                                                    .then(() => {
+                                                        navigation.navigate(
+                                                            'PaymentRequest',
+                                                            {}
+                                                        );
+                                                    })
+                                                    .catch((error: any) =>
+                                                        console.error(
+                                                            'Error fetching payment request:',
+                                                            error
+                                                        )
+                                                    );
+                                            }}
+                                        />
+                                    </>
+                                )}
+                                {payment.onchain?.address &&
+                                    payment.onchain?.fee_total_sat && (
+                                        <>
+                                            <Button
+                                                title={
+                                                    payment.bolt11
+                                                        ? localeString(
+                                                              'views.LSPS1.makePaymentOnchain'
+                                                          )
+                                                        : localeString(
+                                                              'views.LSPS1.makePayment'
+                                                          )
+                                                }
+                                                containerStyle={{
+                                                    paddingVertical: 20
+                                                }}
+                                                onPress={() => {
+                                                    navigation.navigate(
+                                                        'Send',
+                                                        {
+                                                            destination:
+                                                                payment.onchain
+                                                                    ?.address,
+                                                            amount: payment
+                                                                .onchain
+                                                                ?.fee_total_sat,
+                                                            transactionType:
+                                                                'On-chain'
+                                                        }
+                                                    );
+                                                }}
+                                            />
+                                        </>
+                                    )}
+                            </>
                         )}
                     </View>
                 </ScrollView>

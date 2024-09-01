@@ -144,7 +144,12 @@ export default class NodeInfoStore {
         const zeroConfConfig = zeroConf && scidAlias;
 
         const restIsConfigured = certVerification && zeroConfConfig;
-        const lspNotConfigured = implementation === 'lnd' && !restIsConfigured;
+        const lspNotConfigured =
+            implementation === 'lnd'
+                ? !restIsConfigured
+                : implementation === 'embedded-lnd'
+                ? false
+                : true;
 
         return {
             lspNotConfigured,

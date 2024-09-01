@@ -62,6 +62,8 @@ export default class Invoice extends BaseModel {
     public paid_at: number;
     public expires_at: number;
     public status: string;
+    public amount_msat: number;
+    public invoice_amount_msat: string | number;
     // pay req
     public timestamp?: string | number;
     public destination?: string;
@@ -172,8 +174,8 @@ export default class Invoice extends BaseModel {
             const msatoshi = this.amount_msat.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
         }
-        if (this.millisatoshis) {
-            const msatoshi = this.millisatoshis;
+        if (this.millisatoshis || this.invoice_amount_msat) {
+            const msatoshi = this.millisatoshis || this.invoice_amount_msat;
             return Number(msatoshi) / 1000;
         }
         return Number(this.num_satoshis || 0);
@@ -208,12 +210,13 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getFormattedRhash(): string {
-        return this.r_hash
-            ? typeof this.r_hash === 'string'
-                ? this.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
-                : this.r_hash.data
-                ? Base64Utils.bytesToHex(this.r_hash.data)
-                : Base64Utils.bytesToHex(this.r_hash)
+        const rHash = this.r_hash || this.payment_hash;
+        return rHash
+            ? typeof rHash === 'string'
+                ? rHash.replace(/\+/g, '-').replace(/\//g, '_')
+                : rHash.data
+                ? Base64Utils.bytesToHex(rHash.data)
+                : Base64Utils.bytesToHex(rHash)
             : '';
     }
 

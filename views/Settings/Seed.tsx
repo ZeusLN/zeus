@@ -48,7 +48,8 @@ const MnemonicWord = ({ index, word }) => {
                 margin: 6,
                 marginTop: 4,
                 marginBottom: 4,
-                flexDirection: 'row'
+                flexDirection: 'row',
+                alignSelf: 'center'
             }}
         >
             <View style={{ width: 35 }}>

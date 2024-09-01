@@ -14,7 +14,6 @@ import {
     NativeEventSubscription
 } from 'react-native';
 import { Chip, Icon } from 'react-native-elements';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import NfcManager, {
@@ -34,6 +33,7 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
 import UTXOsStore from '../stores/UTXOsStore';
+import ContactStore from '../stores/ContactStore';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
@@ -52,6 +52,7 @@ import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
 
 import BackendUtils from '../utils/BackendUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 import NFCUtils from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -74,12 +75,14 @@ interface SendProps {
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     UTXOsStore: UTXOsStore;
+    ContactStore: ContactStore;
     route: Route<
         'Send',
         {
             destination: string;
             amount: string;
             transactionType: string | null;
+            bolt12: string | null;
             isValid: boolean;
             contactName: string;
             clearOnBackPress: boolean;
@@ -90,6 +93,7 @@ interface SendProps {
 interface SendState {
     isValid: boolean;
     transactionType: string | null;
+    bolt12: string | null;
     destination: string;
     amount: string;
     satAmount: string | number;
@@ -107,7 +111,6 @@ interface SendState {
     clipboard: string;
     loading: boolean;
     contactName: string;
-    contacts: Contact[];
     clearOnBackPress: boolean;
     account: string;
     additionalOutputs: Array<AdditionalOutput>;
@@ -120,7 +123,8 @@ interface SendState {
     'TransactionsStore',
     'BalanceStore',
     'SettingsStore',
-    'UTXOsStore'
+    'UTXOsStore',
+    'ContactStore'
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
@@ -130,8 +134,14 @@ export default class Send extends React.Component<SendProps, SendState> {
     constructor(props: SendProps) {
         super(props);
         const { route } = props;
-        const { destination, amount, transactionType, isValid, contactName } =
-            route.params ?? {};
+        const {
+            destination,
+            amount,
+            transactionType,
+            isValid,
+            contactName,
+            bolt12
+        } = route.params ?? {};
         const clearOnBackPress = route.params?.clearOnBackPress ?? !destination;
 
         if (transactionType === 'Lightning') {
@@ -141,6 +151,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.state = {
             isValid: isValid || false,
             transactionType,
+            bolt12,
             destination: destination || '',
             amount: amount || '',
             satAmount: '',
@@ -158,7 +169,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             clipboard: '',
             loading: false,
             contactName,
-            contacts: [],
             clearOnBackPress,
             account: 'default',
             additionalOutputs: []
@@ -184,7 +194,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { route } = nextProps;
-        const { destination, amount, transactionType, contactName } =
+        const { destination, bolt12, amount, transactionType, contactName } =
             route.params ?? {};
 
         if (transactionType === 'Lightning') {
@@ -194,6 +204,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.setState({
             transactionType,
             destination,
+            bolt12,
             isValid: true,
             contactName
         });
@@ -210,8 +221,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.validateAddress(this.state.destination);
         }
 
-        this.loadContacts();
-
         this.backPressSubscription = BackHandler.addEventListener(
             'hardwareBackPress',
             this.backPressed.bind(this)
@@ -221,25 +230,6 @@ export default class Send extends React.Component<SendProps, SendState> {
     componentWillUnmount(): void {
         this.backPressSubscription?.remove();
     }
-
-    loadContacts = async () => {
-        this.props.navigation.addListener('focus', async () => {
-            try {
-                const contactsString = await EncryptedStorage.getItem(
-                    'zeus-contacts'
-                );
-                if (contactsString) {
-                    const contacts: Contact[] = JSON.parse(contactsString);
-                    this.setState({ contacts, loading: false });
-                } else {
-                    this.setState({ loading: false });
-                }
-            } catch (error) {
-                console.error('Error loading contacts:', error);
-                this.setState({ loading: false });
-            }
-        });
-    };
 
     subscribePayment = (streamingCall: string) => {
         const { handlePayment, handlePaymentError } =
@@ -332,7 +322,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             utxos,
             utxoBalance,
             amount:
-                implementation === 'c-lightning-REST'
+                implementation === 'c-lightning-REST' ||
+                implementation === 'cln-rest'
                     ? 'all'
                     : prevState.amount,
             account
@@ -372,6 +363,60 @@ export default class Send extends React.Component<SendProps, SendState> {
                     error_msg: err.message
                 });
             });
+    };
+
+    payBolt12 = async () => {
+        const { amount, bolt12 } = this.state;
+        if (!bolt12) {
+            this.setState({
+                loading: false,
+                error_msg: localeString(
+                    'views.Send.payBolt12.offerFetchFailure'
+                )
+            });
+            return;
+        }
+        if (!amount || amount === '0') {
+            this.setState({
+                loading: false,
+                error_msg: localeString('views.Send.payBolt12.specifyAmount')
+            });
+            return;
+        }
+        try {
+            const split = bolt12.split('=');
+            this.setState({
+                loading: true,
+                error_msg: ''
+            });
+            const res = await BackendUtils.fetchInvoiceFromOffer(
+                // grok out overstring from Bitcoin URI
+                // eg. bitcoin:?lno=lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq2zapy7nz5yqcnygzsv9uk6etwwssyzerywfjhxuckyypvm779pgy7grg2m0j55f67e2du7359h4nad964309j93kqa0xshcs
+                split[1] || bolt12,
+                amount
+            );
+            if (!res.invoice) {
+                this.setState({
+                    loading: false,
+                    error_msg: localeString(
+                        'views.Send.payBolt12.invoiceFetchFailure'
+                    )
+                });
+                return;
+            }
+            this.props.InvoicesStore.getPayReq(res.invoice);
+            this.props.navigation.navigate('PaymentRequest');
+            this.setState({
+                loading: false,
+                error_msg: ''
+            });
+        } catch (e: any) {
+            this.setState({
+                loading: false,
+                error_msg: errorToUserFriendly(e)
+            });
+            return;
+        }
     };
 
     sendCoins = (satAmount: string | number) => {
@@ -463,6 +508,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         const contact = new Contact(item);
         const {
             hasLnAddress,
+            hasBolt12Address,
+            hasBolt12Offer,
             hasOnchainAddress,
             hasPubkey,
             hasMultiplePayableAddresses
@@ -479,6 +526,24 @@ export default class Send extends React.Component<SendProps, SendState> {
                       10
                   )}...${item.lnAddress[0].slice(-10)}`
                 : item.lnAddress[0];
+        }
+
+        if (hasBolt12Address) {
+            return item.bolt12Address[0].length > 23
+                ? `${item.bolt12Address[0].slice(
+                      0,
+                      10
+                  )}...${item.bolt12Address[0].slice(-10)}`
+                : item.bolt12Address[0];
+        }
+
+        if (hasBolt12Offer) {
+            return item.bolt12Offer[0].length > 23
+                ? `${item.bolt12Offer[0].slice(
+                      0,
+                      10
+                  )}...${item.bolt12Offer[0].slice(-10)}`
+                : item.bolt12Offer[0];
         }
 
         if (hasOnchainAddress) {
@@ -507,6 +572,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                 onPress={() => {
                     if (contact.isSingleLnAddress) {
                         this.validateAddress(item.lnAddress[0]);
+                    } else if (contact.isSingleBolt12Address) {
+                        this.validateAddress(item.bolt12Address[0]);
+                    } else if (contact.isSingleBolt12Offer) {
+                        this.validateAddress(item.bolt12Offer[0]);
                     } else if (contact.isSingleOnchainAddress) {
                         this.validateAddress(item.onchainAddress[0]);
                     } else if (contact.isSinglePubkey) {
@@ -577,8 +646,13 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     render() {
-        const { SettingsStore, BalanceStore, UTXOsStore, navigation } =
-            this.props;
+        const {
+            SettingsStore,
+            BalanceStore,
+            UTXOsStore,
+            ContactStore,
+            navigation
+        } = this.props;
         const {
             isValid,
             transactionType,
@@ -596,7 +670,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             clipboard,
             loading,
             contactName,
-            contacts,
             additionalOutputs
         } = this.state;
         const {
@@ -605,8 +678,16 @@ export default class Send extends React.Component<SendProps, SendState> {
             lightningBalance
         } = BalanceStore;
         const { implementation } = SettingsStore;
+        const { contacts } = ContactStore;
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
+
+        if (BackendUtils.supportsOffers()) {
+            paymentOptions.push(
+                localeString('views.Settings.Bolt12Address'),
+                localeString('views.Settings.Bolt12Offer')
+            );
+        }
 
         if (BackendUtils.supportsOnchainSends()) {
             paymentOptions.push(localeString('views.Send.btcAddress'));
@@ -699,6 +780,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                     contentContainerStyle={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
+                    {!!error_msg && !!destination && (
+                        <View style={{ marginVertical: 10 }}>
+                            <ErrorMessage
+                                message={error_msg}
+                                mainStyle={{ marginVertical: 10 }}
+                            />
+                        </View>
+                    )}
+
                     {!!destination &&
                         transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() &&
@@ -713,7 +803,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                         )}
                     {!!destination &&
                         (transactionType === 'Lightning' ||
-                            transactionType === 'Keysend') &&
+                            transactionType === 'Keysend' ||
+                            transactionType === 'BOLT 12') &&
                         lightningBalance === 0 && (
                             <View style={{ marginBottom: 10 }}>
                                 <WarningMessage
@@ -845,14 +936,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </>
                     )}
 
-                    {!!error_msg && !!destination && (
-                        <View style={{ marginVertical: 10 }}>
-                            <ErrorMessage
-                                message={error_msg}
-                                mainStyle={{ marginVertical: 10 }}
-                            />
-                        </View>
-                    )}
                     {!isValid && !!destination && error_msg && (
                         <Text
                             style={{
@@ -1125,6 +1208,24 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 </View>
                             </React.Fragment>
                         )}
+                    {transactionType === 'BOLT 12' &&
+                        BackendUtils.supportsOffers() && (
+                            <React.Fragment>
+                                <AmountInput
+                                    amount={amount}
+                                    title={localeString('views.Send.amount')}
+                                    onAmountChange={(
+                                        amount: string,
+                                        satAmount: string | number
+                                    ) => {
+                                        this.setState({
+                                            amount,
+                                            satAmount
+                                        });
+                                    }}
+                                />
+                            </React.Fragment>
+                        )}
                     {transactionType === 'Keysend' &&
                         BackendUtils.supportsKeysend() && (
                             <React.Fragment>
@@ -1142,34 +1243,35 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }}
                                 />
 
-                                {implementation !== 'c-lightning-REST' && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                marginTop: 10,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {`${localeString(
-                                                'views.Send.message'
-                                            )} (${localeString(
-                                                'general.optional'
-                                            )})`}
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="default"
-                                            value={message}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    message: text
-                                                })
-                                            }
-                                        />
-                                    </>
-                                )}
+                                {implementation !== 'c-lightning-REST' &&
+                                    implementation !== 'cln-rest' && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    marginTop: 10,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.Send.message'
+                                                )} (${localeString(
+                                                    'general.optional'
+                                                )})`}
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="default"
+                                                value={message}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        message: text
+                                                    })
+                                                }
+                                            />
+                                        </>
+                                    )}
 
                                 <FeeLimit
                                     satAmount={satAmount}
@@ -1346,6 +1448,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     navigation.navigate('PaymentRequest')
                                 }
                                 disabled={lightningBalance === 0}
+                            />
+                        </View>
+                    )}
+                    {destination && transactionType === 'BOLT 12' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.proceed')}
+                                onPress={async () => await this.payBolt12()}
                             />
                         </View>
                     )}

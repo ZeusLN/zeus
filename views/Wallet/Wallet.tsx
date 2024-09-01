@@ -23,6 +23,7 @@ import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 import { StackNavigationProp } from '@react-navigation/stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -36,6 +37,7 @@ import LayerBalances from '../../components/LayerBalances';
 import LoadingColumns from '../../components/LoadingColumns';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import WalletHeader from '../../components/WalletHeader';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
@@ -49,6 +51,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 
+import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
@@ -66,6 +69,7 @@ import SettingsStore, {
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
+import ContactStore from '../../stores/ContactStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
@@ -78,6 +82,7 @@ interface WalletProps {
     enterSetup: any;
     exitTransaction: any;
     navigation: StackNavigationProp<any, any>;
+    AlertStore: AlertStore;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
@@ -86,6 +91,7 @@ interface WalletProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     UTXOsStore: UTXOsStore;
+    ContactStore: ContactStore;
     ModalStore: ModalStore;
     SyncStore: SyncStore;
     LSPStore: LSPStore;
@@ -100,6 +106,7 @@ interface WalletState {
 }
 
 @inject(
+    'AlertStore',
     'BalanceStore',
     'ChannelsStore',
     'NodeInfoStore',
@@ -108,6 +115,7 @@ interface WalletState {
     'FiatStore',
     'PosStore',
     'UTXOsStore',
+    'ContactStore',
     'ModalStore',
     'SyncStore',
     'LSPStore',
@@ -232,8 +240,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async getSettingsAndNavigate() {
         const { SettingsStore, navigation } = this.props;
-        const { posStatus, setPosStatus, initialStart, setInitialStart } =
-            SettingsStore;
+        const { posStatus, setPosStatus, initialStart } = SettingsStore;
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
@@ -268,7 +275,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 settings.nodes.length > 0
             ) {
                 if (settings.selectNodeOnStartup && initialStart) {
-                    setInitialStart(false);
                     navigation.navigate('Nodes');
                 }
                 if (!this.state.unlocked) {
@@ -284,10 +290,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async fetchData() {
         const {
+            AlertStore,
             NodeInfoStore,
             BalanceStore,
             ChannelsStore,
             UTXOsStore,
+            ContactStore,
             SettingsStore,
             PosStore,
             FiatStore,
@@ -328,6 +336,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         let start;
         if (connecting) {
             start = new Date().getTime();
+            AlertStore.reset();
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
@@ -335,7 +344,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LightningAddressStore.reset();
             LSPStore.reset();
             ChannelBackupStore.reset();
+            UTXOsStore.reset();
         }
+
+        ContactStore.loadContacts();
 
         LnurlPayStore.reset();
 
@@ -353,6 +365,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
+                AlertStore.checkNeutrinoPeers();
                 await initializeLnd(
                     embeddedLndNetwork === 'Testnet',
                     rescan,
@@ -365,7 +378,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         initialLoad: false
                     });
                 } else {
-                    if (expressGraphSyncEnabled) await expressGraphSync();
+                    if (expressGraphSyncEnabled) {
+                        await expressGraphSync();
+                        if (settings.resetExpressGraphSyncOnStartup) {
+                            await updateSettings({
+                                resetExpressGraphSyncOnStartup: false
+                            });
+                        }
+                    }
                 }
 
                 await startLnd(
@@ -374,7 +394,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     embeddedLndNetwork === 'Testnet'
                 );
             }
+            if (implementation === 'embedded-lnd')
+                SyncStore.checkRecoveryStatus();
             await NodeInfoStore.getNodeInfo();
+            NodeInfoStore.getNetworkInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
             if (BackendUtils.supportsChannelManagement())
@@ -385,6 +408,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 });
             }
             if (recovery) {
+                const isBackedUp = await EncryptedStorage.getItem(
+                    'backup-complete'
+                );
+                if (!isBackedUp) {
+                    await EncryptedStorage.setItem(
+                        'backup-complete',
+                        JSON.stringify(true)
+                    );
+                }
                 if (isSyncing) return;
                 try {
                     await ChannelBackupStore.recoverStaticChannelBackup();
@@ -479,7 +511,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         // only navigate to initial url after connection and main calls are made
-        if (this.state.initialLoad) {
+        if (
+            this.state.initialLoad &&
+            !(
+                SettingsStore.settings.selectNodeOnStartup &&
+                SettingsStore.initialStart
+            )
+        ) {
             this.setState({
                 initialLoad: false
             });
@@ -765,19 +803,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 )}
                                         </>
                                     )}
-                                    <Tab.Screen
-                                        name="Camera"
-                                        component={CameraScreen}
-                                        listeners={{
-                                            tabPress: (e) => {
-                                                // Prevent default action
-                                                e.preventDefault();
-                                                navigation.navigate(
-                                                    'HandleAnythingQRScanner'
-                                                );
-                                            }
-                                        }}
-                                    />
+                                    {posStatus !== 'active' && (
+                                        <Tab.Screen
+                                            name="Camera"
+                                            component={CameraScreen}
+                                            listeners={{
+                                                tabPress: (e) => {
+                                                    // Prevent default action
+                                                    e.preventDefault();
+                                                    navigation.navigate(
+                                                        'HandleAnythingQRScanner'
+                                                    );
+                                                }
+                                            }}
+                                        />
+                                    )}
                                 </Tab.Navigator>
                             </NavigationContainer>
                         </NavigationIndependentTree>
@@ -785,6 +825,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 {connecting &&
                     (!loginRequired || posEnabled !== PosEnabled.Disabled) && (
                         <Screen>
+                            <View
+                                style={{
+                                    position: 'absolute',
+                                    zIndex: 1
+                                }}
+                            >
+                                <WalletHeader navigation={navigation} loading />
+                            </View>
                             <View
                                 style={{
                                     flex: 1,
@@ -886,7 +934,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         if (settings.nodes)
                                             protectedNavigation(
                                                 navigation,
-                                                'Settings'
+                                                'Menu'
                                             );
                                     }}
                                     adaptiveWidth

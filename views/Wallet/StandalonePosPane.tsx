@@ -575,7 +575,7 @@ export default class StandalonePosPane extends React.PureComponent<
                             alignItems: 'center'
                         }}
                         onPress={() => {
-                            protectedNavigation(navigation, 'Settings');
+                            protectedNavigation(navigation, 'Menu');
                         }}
                         adaptiveWidth
                     />
@@ -748,7 +748,12 @@ export default class StandalonePosPane extends React.PureComponent<
                                 title={`${localeString('general.charge')} (${
                                     currentOrder
                                         ? (itemQty > 0 ? `${itemQty} - ` : '') +
-                                          (this.state.totalMoneyDisplay || 0)
+                                          (fiatEnabled
+                                              ? this.state.totalMoneyDisplay
+                                              : ` ${this.props.UnitsStore.getAmountFromSats(
+                                                    currentOrder?.total_money
+                                                        ?.sats
+                                                )}`)
                                         : '0'
                                 })`}
                                 containerStyle={{

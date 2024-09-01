@@ -22,6 +22,9 @@ const lnInvoice =
     /^(lnbc|lntb|lntbs|lnbcrt|LNBC|LNTB|LNTBS|LNBCRT)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
+/* BOLT 12 */
+const lnOffer = /^(lno|LNO)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+
 /* testnet */
 const btcNonBechTestnet = /^[2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBechTestnet = /^(bc1|bcrt1|BC1|BCRT1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
@@ -67,7 +70,7 @@ export const CUSTODIAL_LNDHUBS = [
 ];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let amount, lightning;
+    let amount, lightning, offer;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
@@ -90,19 +93,23 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         lightning = result.lightning || result.LIGHTNING;
     }
 
-    return [value, amount, lightning];
+    if (result.lno || result.LNO) {
+        offer = result.lno || result.LNO;
+    }
+
+    return [value, amount, lightning, offer];
 };
 
 class AddressUtils {
     processSendAddress = (input: string) => {
-        let value, amount, lightning;
+        let value, amount, lightning, offer;
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
         if (input.includes('bitcoin:') || input.includes('BITCOIN:')) {
-            const [parsedValue, parsedAmount, parsedLightning] =
+            const [parsedValue, parsedAmount, parsedLightning, parsedOffer] =
                 bitcoinQrParser(
                     input,
                     input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
@@ -116,6 +123,10 @@ class AddressUtils {
             if (parsedLightning) {
                 lightning = parsedLightning;
             }
+
+            if (parsedOffer) {
+                offer = parsedOffer;
+            }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
         } else if (input.includes('LIGHTNING:')) {
@@ -126,7 +137,7 @@ class AddressUtils {
             value = input;
         }
 
-        return { value, amount, lightning };
+        return { value, amount, lightning, offer };
     };
 
     processLNDHubAddress = (input: string) => {
@@ -170,6 +181,7 @@ class AddressUtils {
     };
 
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
+    isValidLightningOffer = (input: string) => lnOffer.test(input);
 
     isValidLightningPubKey = (input: string) => lnPubKey.test(input);
 

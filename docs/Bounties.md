@@ -4,13 +4,21 @@ The ZEUS team is putting up the tasks listed below for bounty. Working code must
 
 ## Core Lightning: Commando/lnmessage connection
 
-Payout: 6,000,000 sats (0.06 BTC)
+Payout: 3,000,000 sats (0.03 BTC)
 
-Currently, ZEUS supports remote connections to Core Lightning (CLN) through c-lightning-REST and Spark. We'd like for users to connect to CLN nodes using the [Commando](https://lightning.readthedocs.io/lightning-commando.7.html) and [lnmessage](https://github.com/aaronbarnardsound/lnmessage). We've made some pretty good progress on [this branch](https://github.com/ZeusLN/zeus/compare/master...kaloudis:zeus:lnsocket) that you can use but we are having issues getting the socket to work. lnmessage has params for `socket` and `tcpSocket` that you should be able to configure and override.
+Currently, ZEUS supports remote connections to Core Lightning (CLN) through c-lightning-REST. We'd like for users to connect to CLN nodes using the [Commando](https://lightning.readthedocs.io/lightning-commando.7.html) and [lnmessage](https://github.com/aaronbarnardsound/lnmessage). We've made some pretty good progress on [this branch](https://github.com/ZeusLN/zeus/compare/master...kaloudis:zeus:lnsocket) that you can use but we are having issues getting the socket to work. lnmessage has params for `socket` and `tcpSocket` that you should be able to configure and override.
 
 Additional bounty patrons: @sathoarder, Seth For Privacy, denis2342
 
-## [WORK IN PROGRESS] Point of Sale: Clover integration
+## SATSCARD support
+
+Payout: 5,000,000 sats (0.05 BTC)
+
+We would like to add support for the SATSCARD NFC smartcard in ZEUS. Users should be able to initialize cards, check balances, shuffle through addresses, ,generate QR codes of addresses from cards, and sweep balances. SATSCARD should have its own dedicated view in the app to manage the cards. Bonus points if you expose the TapSigner endpoints for a future integration down the line.
+
+[This library](https://github.com/schjonhaug/tapcards) may prove helpful in the integration.
+
+## Point of Sale: Clover integration
 
 Payout: 1,500,000 sats (0.015 BTC)
 
@@ -67,7 +75,6 @@ Payout: 1,250,000 sats (0.0125 BTC)
 
 Currently, ZEUS supports lnurl-fallback, lnurl-withdraw, and lnurl-pay but not lnurl-auth or lnurl-channel. lnurl-auth will allow users to log into lnurl-auth powered sites using their lightning node. LND doesn't support it natively but it appears Breez has found a workaround - that may be a good starting point. You'll most likely have to leverage ZEUS' local database. Check out the spec [here](https://github.com/fiatjaf/lnurl-rfc/blob/master/lnurl-auth.md).
 
-
 ## Accessibility fixes
 Author: [sha-256](https://github.com/sha-265)
 
@@ -76,3 +83,14 @@ Author: [sha-256](https://github.com/sha-265)
 Payout: 1,000,000 sats (0.01 BTC)
 
 The fine folks over at the Bitcoin Design Community have detailed [an issue](https://github.com/ZeusLN/zeus/issues/1442) with our accessibility problems in ZEUS.
+
+## Core Lightning: CLNRest API
+Author: [niteshbalusu11](https://github.com/niteshbalusu11)
+
+[Pull Request](https://github.com/ZeusLN/zeus/pull/2228)
+
+Payout: 5,250,000 sats (0.0525 BTC)
+
+Currently, ZEUS supports remote connections to Core Lightning (CLN) through c-lightning-REST, which will soon be deprecated. We'd like to replace this interface with the new [CLNRest API](https://docs.corelightning.org/docs/rest), a lightweight Python-based built-in Core Lightning plugin (from v23.08) that transforms RPC calls into a REST service - which is officially supported by the Core Lightning team. For the bounty to be accepted it needs to have full feature parity with the c-lightning-REST interface in ZEUS, including the ability to pay and generate BOLT 12 offers.
+
+Additional bounty patrons: @sathoarder, Anonymous

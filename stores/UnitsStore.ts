@@ -213,17 +213,17 @@ export default class UnitsStore {
         const { fiat } = settings;
         const units = fixedUnits || this.units;
 
-        const [wholeSats] = value.toString().split('.');
         if (units === 'BTC') {
             // handle negative values
-            const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
+            const valueToProcess = value.toString() || '0';
             if (valueToProcess.includes('-')) {
                 const processedValue = valueToProcess.split('-')[1];
                 return `-₿${FeeUtils.toFixed(Number(processedValue))}`;
             }
 
-            return `₿${FeeUtils.toFixed(Number(wholeSats || 0))}`;
+            return `₿${FeeUtils.toFixed(Number(value || 0))}`;
         } else if (units === 'sats') {
+            const [wholeSats] = value.toString().split('.');
             const sats = `${
                 this.fiatStore.numberWithCommas(wholeSats || value) || 0
             } ${Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'}`;

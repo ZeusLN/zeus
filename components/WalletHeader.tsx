@@ -14,8 +14,10 @@ import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import AlertStore from '../stores/AlertStore';
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
+import ModalStore from '../stores/ModalStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
@@ -35,8 +37,11 @@ import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
+import Alert from '../assets/images/SVG/Alert.svg';
+import CaretUp from '../assets/images/SVG/Caret Up.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
-import Gear from '../assets/images/SVG/Gear.svg';
+import Menu from '../assets/images/SVG/Menu.svg';
+import Hourglass from '../assets/images/SVG/Hourglass.svg';
 import POS from '../assets/images/SVG/POS.svg';
 import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
@@ -89,18 +94,17 @@ const ActivityButton = ({
 }: {
     navigation: StackNavigationProp<any, any>;
 }) => (
-    <View style={{ width: 80 }}>
-        <Button
-            icon={{
-                name: 'list',
-                size: 40,
-                color: themeColor('text')
-            }}
-            containerStyle={{ top: -7 }}
-            iconOnly
-            onPress={() => navigation.navigate('Activity')}
+    <TouchableOpacity
+        onPress={() =>
+            navigation.navigate('Activity', { animation: 'slide_from_bottom' })
+        }
+    >
+        <CaretUp
+            fill={themeColor('text')}
+            width={45}
+            style={{ marginRight: 15, alignSelf: 'center' }}
         />
-    </View>
+    </TouchableOpacity>
 );
 
 const TempleButton = ({
@@ -113,25 +117,28 @@ const TempleButton = ({
     >
         <Temple
             fill={themeColor('text')}
-            width={20.17}
-            height={22}
-            style={{ top: -8, alignSelf: 'center' }}
+            width={30}
+            height={35}
+            style={{ alignSelf: 'center' }}
         />
     </TouchableOpacity>
 );
 
-const SettingsBadge = ({
+const MenuBadge = ({
     navigation
 }: {
     navigation: StackNavigationProp<any, any>;
 }) => (
     <TouchableOpacity
         onPress={() =>
-            navigation.navigate('Settings', { animation: 'slide_from_left' })
+            protectedNavigation(navigation, 'Menu', undefined, {
+                animation: 'fade'
+            })
         }
         accessibilityLabel={localeString('views.Settings.title')}
+        style={{ left: 4 }}
     >
-        <Gear fill={themeColor('text')} width={33} height={33} />
+        <Menu fill={themeColor('text')} width={38} height={38} />
     </TouchableOpacity>
 );
 
@@ -153,6 +160,23 @@ const ClipboardBadge = ({
     </TouchableOpacity>
 );
 
+const PendingHtlcBadge = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+    clipboard: string;
+}) => (
+    <TouchableOpacity
+        onPress={() =>
+            navigation.navigate('PendingHTLCs', {
+                animation: 'slide_from_bottom'
+            })
+        }
+    >
+        <Hourglass fill={themeColor('highlight')} width="30" height="30" />
+    </TouchableOpacity>
+);
+
 const POSBadge = ({
     setPosStatus,
     getOrders
@@ -166,13 +190,15 @@ const POSBadge = ({
             setPosStatus('active');
         }}
     >
-        <POS stroke={themeColor('text')} width="23" height="30" />
+        <POS stroke={themeColor('text')} width="30" height="35" />
     </TouchableOpacity>
 );
 
 interface WalletHeaderProps {
+    AlertStore?: AlertStore;
     ChannelsStore?: ChannelsStore;
     SettingsStore?: SettingsStore;
+    ModalStore?: ModalStore;
     NodeInfoStore?: NodeInfoStore;
     LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
@@ -189,8 +215,10 @@ interface WalletHeaderState {
 }
 
 @inject(
+    'AlertStore',
     'ChannelsStore',
     'LightningAddressStore',
+    'ModalStore',
     'SettingsStore',
     'NodeInfoStore',
     'PosStore',
@@ -228,14 +256,16 @@ export default class WalletHeader extends React.Component<
             title,
             channels,
             toggle,
+            AlertStore,
             SettingsStore,
             NodeInfoStore,
             ChannelsStore,
             LightningAddressStore,
+            ModalStore,
             PosStore,
             SyncStore
         } = this.props;
-        const { filteredPendingChannels } = ChannelsStore!;
+        const { filteredPendingChannels, pendingHTLCs } = ChannelsStore!;
         const { settings, posStatus, setPosStatus, implementation } =
             SettingsStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
@@ -271,7 +301,7 @@ export default class WalletHeader extends React.Component<
                 ) : (
                     <NodeIdenticon
                         selectedNode={selectedNode}
-                        width={35}
+                        width={36}
                         rounded
                     />
                 )}
@@ -373,6 +403,20 @@ export default class WalletHeader extends React.Component<
             </>
         );
 
+        const AlertButton = () => (
+            <TouchableOpacity
+                onPress={() => ModalStore.toggleAlertModal(true)}
+                accessibilityLabel={localeString('general.search')}
+            >
+                <Alert
+                    fill={themeColor('error')}
+                    width="35"
+                    height="35"
+                    style={{ alignSelf: 'center', marginRight: 15 }}
+                />
+            </TouchableOpacity>
+        );
+
         const SearchButton = () => (
             <TouchableOpacity
                 onPress={() => ChannelsStore!.toggleSearch()}
@@ -447,9 +491,9 @@ export default class WalletHeader extends React.Component<
             <Header
                 leftComponent={
                     loading ? undefined : (
-                        <Row>
-                            <SettingsBadge navigation={navigation} />
-                            {paid && paid.length > 0 && (
+                        <Row style={{ flex: 1 }}>
+                            <MenuBadge navigation={navigation} />
+                            {!loading && paid && paid.length > 0 && (
                                 <TouchableOpacity
                                     onPress={() =>
                                         navigation.navigate(
@@ -457,7 +501,7 @@ export default class WalletHeader extends React.Component<
                                             { skipStatus: true }
                                         )
                                     }
-                                    style={{ left: 18 }}
+                                    style={{ left: 20 }}
                                 >
                                     {redeemingAll ? (
                                         <MailboxAnimated />
@@ -471,17 +515,20 @@ export default class WalletHeader extends React.Component<
                 }
                 centerComponent={
                     title ? (
-                        <View style={{ top: 5 }}>
+                        <View style={{ flex: 1 }}>
                             {toggle ? (
                                 <View
-                                    style={{ top: -9, width: '100%' }}
+                                    style={{ flex: 1, width: '100%' }}
                                     accessibilityLiveRegion="polite"
                                 >
                                     <Button
                                         onPress={() => toggle()}
                                         title={title}
                                         noUppercase
-                                        buttonStyle={{ alignSelf: 'center' }}
+                                        buttonStyle={{
+                                            alignSelf: 'center',
+                                            height: 40
+                                        }}
                                         icon={
                                             filteredPendingChannels?.length > 0
                                                 ? {
@@ -501,7 +548,7 @@ export default class WalletHeader extends React.Component<
                             )}
                         </View>
                     ) : settings.display && settings.display.displayNickname ? (
-                        <View style={{ top: 5 }}>
+                        <View style={{ top: 0 }}>
                             <Row>
                                 <Text
                                     style={{
@@ -522,15 +569,19 @@ export default class WalletHeader extends React.Component<
                         </View>
                     ) : (
                         <Row style={{ alignItems: 'center', flexGrow: 1 }}>
-                            <StatusBadges />
+                            {!loading && <StatusBadges />}
                         </Row>
                     )
                 }
                 rightComponent={
                     posStatus === 'active' ? (
                         <Row>
-                            <ActivityButton navigation={navigation} />
-                            <TempleButton navigation={navigation} />
+                            {!loading && (
+                                <>
+                                    <ActivityButton navigation={navigation} />
+                                    <TempleButton navigation={navigation} />
+                                </>
+                            )}
                         </Row>
                     ) : channels ? (
                         <Row style={{ marginTop: 1 }}>
@@ -540,19 +591,20 @@ export default class WalletHeader extends React.Component<
                     ) : (
                         <View
                             style={{
-                                flexGrow: 1,
                                 flexDirection: 'row',
                                 alignItems: 'center'
                             }}
                         >
-                            {(stores.balanceStore.loadingBlockchainBalance ||
-                                stores.balanceStore.loadingLightningBalance ||
-                                laLoading) && (
-                                <View style={{ paddingRight: 15 }}>
-                                    <LoadingIndicator size={32} />
-                                </View>
-                            )}
-                            {!!clipboard && (
+                            {!loading &&
+                                (stores.balanceStore.loadingBlockchainBalance ||
+                                    stores.balanceStore
+                                        .loadingLightningBalance ||
+                                    laLoading) && (
+                                    <View style={{ paddingRight: 15 }}>
+                                        <LoadingIndicator size={35} />
+                                    </View>
+                                )}
+                            {!loading && !!clipboard && (
                                 <View style={{ marginRight: 15 }}>
                                     <ClipboardBadge
                                         navigation={navigation}
@@ -560,7 +612,15 @@ export default class WalletHeader extends React.Component<
                                     />
                                 </View>
                             )}
-                            {isSyncing && (
+                            {!loading && pendingHTLCs?.length > 0 && (
+                                <View style={{ marginRight: 15 }}>
+                                    <PendingHtlcBadge
+                                        navigation={navigation}
+                                        clipboard={clipboard}
+                                    />
+                                </View>
+                            )}
+                            {!loading && isSyncing && (
                                 <View
                                     style={{
                                         marginRight: 15
@@ -569,10 +629,13 @@ export default class WalletHeader extends React.Component<
                                     <SyncBadge navigation={navigation} />
                                 </View>
                             )}
-                            <View>
-                                <NodeButton />
-                            </View>
-                            {posEnabled !== PosEnabled.Disabled && (
+                            {!loading && AlertStore.hasError && <AlertButton />}
+                            {posEnabled === PosEnabled.Disabled && (
+                                <View>
+                                    <NodeButton />
+                                </View>
+                            )}
+                            {!loading && posEnabled !== PosEnabled.Disabled && (
                                 <View
                                     style={{
                                         marginLeft: 15

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, ScrollView, View } from 'react-native';
+import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Ping from 'react-native-ping';
@@ -17,16 +17,23 @@ import {
     WarningMessage,
     ErrorMessage
 } from '../../../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../../../components/LoadingIndicator';
 
 import SettingsStore, {
     DEFAULT_NEUTRINO_PEERS_MAINNET,
     DEFAULT_NEUTRINO_PEERS_TESTNET
 } from '../../../../stores/SettingsStore';
 
+import {
+    optimizeNeutrinoPeers,
+    NEUTRINO_PING_THRESHOLD_MS,
+    NEUTRINO_PING_TIMEOUT_MS
+} from '../../../../utils/LndMobileUtils';
 import { localeString } from '../../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../../utils/RestartUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
-import LoadingIndicator from '../../../../components/LoadingIndicator';
+
+import Stopwatch from '../../../../assets/images/SVG/Stopwatch.svg';
 
 interface NeutrinoPeersProps {
     navigation: StackNavigationProp<any, any>;
@@ -40,7 +47,7 @@ interface NeutrinoPeersState {
     pingTime: number;
     pingTimeout: boolean;
     pingHost: string;
-    pinging: boolean;
+    loading: boolean;
 }
 
 @inject('SettingsStore')
@@ -56,7 +63,7 @@ export default class NeutrinoPeers extends React.Component<
         pingTime: 0,
         pingTimeout: false,
         pingHost: '',
-        pinging: false
+        loading: false
     };
 
     remove = (arrOriginal, elementToRemove) => {
@@ -89,7 +96,7 @@ export default class NeutrinoPeers extends React.Component<
             pingTime,
             pingTimeout,
             pingHost,
-            pinging
+            loading
         } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
 
@@ -122,36 +129,36 @@ export default class NeutrinoPeers extends React.Component<
                         navigation={navigation}
                     />
                     <View style={{ flex: 1 }}>
-                        {pinging && <LoadingIndicator />}
+                        {loading && <LoadingIndicator />}
                         {!pingTimeout &&
-                            !pinging &&
+                            !loading &&
                             pingHost &&
-                            pingTime <= 100 && (
+                            pingTime <= 200 && (
                                 <SuccessMessage
                                     message={pingTimeMsg}
                                     dismissable
                                 />
                             )}
                         {!pingTimeout &&
-                            !pinging &&
+                            !loading &&
                             pingHost &&
-                            pingTime < 200 &&
-                            pingTime > 100 && (
+                            pingTime < NEUTRINO_PING_THRESHOLD_MS &&
+                            pingTime > 200 && (
                                 <WarningMessage
                                     message={pingTimeMsg}
                                     dismissable
                                 />
                             )}
                         {!pingTimeout &&
-                            !pinging &&
+                            !loading &&
                             pingHost &&
-                            pingTime >= 200 && (
+                            pingTime >= NEUTRINO_PING_THRESHOLD_MS && (
                                 <ErrorMessage
                                     message={pingTimeMsg}
                                     dismissable
                                 />
                             )}
-                        {!pinging && pingHost && !!pingTimeout && (
+                        {!loading && pingHost && !!pingTimeout && (
                             <ErrorMessage
                                 message={`${pingHost}: ${localeString(
                                     'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
@@ -253,22 +260,12 @@ export default class NeutrinoPeers extends React.Component<
                                     <Row>
                                         <View
                                             style={{
+                                                left: 10,
                                                 width: 50,
                                                 height: 60
                                             }}
                                         >
-                                            <Button
-                                                icon={{
-                                                    name: 'hourglass',
-                                                    type: 'font-awesome',
-                                                    size: 25,
-                                                    color: !addPeer
-                                                        ? themeColor(
-                                                              'secondaryText'
-                                                          )
-                                                        : themeColor('text')
-                                                }}
-                                                iconOnly
+                                            <TouchableOpacity
                                                 onPress={async () => {
                                                     if (!addPeer) return;
                                                     try {
@@ -276,28 +273,35 @@ export default class NeutrinoPeers extends React.Component<
                                                             pingTime: 0,
                                                             pingTimeout: false,
                                                             pingHost: addPeer,
-                                                            pinging: true
+                                                            loading: true
                                                         });
 
                                                         const ms =
                                                             await Ping.start(
                                                                 addPeer,
                                                                 {
-                                                                    timeout: 1000
+                                                                    timeout:
+                                                                        NEUTRINO_PING_TIMEOUT_MS
                                                                 }
                                                             );
                                                         this.setState({
                                                             pingTime: ms,
-                                                            pinging: false
+                                                            loading: false
                                                         });
                                                     } catch (e) {
                                                         this.setState({
                                                             pingTimeout: true,
-                                                            pinging: false
+                                                            loading: false
                                                         });
                                                     }
                                                 }}
-                                            />
+                                            >
+                                                <Stopwatch
+                                                    fill={themeColor('text')}
+                                                    width="35"
+                                                    height="35"
+                                                />
+                                            </TouchableOpacity>
                                         </View>
 
                                         <View style={{ width: 50, height: 60 }}>
@@ -313,7 +317,7 @@ export default class NeutrinoPeers extends React.Component<
                                                         : themeColor('text')
                                                 }}
                                                 iconOnly
-                                                onPress={() => {
+                                                onPress={async () => {
                                                     if (!addPeer) return;
                                                     const newNeutrinoPeers = [
                                                         ...neutrinoPeers,
@@ -328,7 +332,7 @@ export default class NeutrinoPeers extends React.Component<
                                                         embeddedLndNetwork ===
                                                         'Mainnet'
                                                     ) {
-                                                        updateSettings({
+                                                        await updateSettings({
                                                             neutrinoPeersMainnet:
                                                                 newNeutrinoPeers
                                                         });
@@ -336,11 +340,13 @@ export default class NeutrinoPeers extends React.Component<
                                                         embeddedLndNetwork ===
                                                         'Testnet'
                                                     ) {
-                                                        updateSettings({
+                                                        await updateSettings({
                                                             neutrinoPeersTestnet:
                                                                 newNeutrinoPeers
                                                         });
                                                     }
+
+                                                    restartNeeded();
                                                 }}
                                             />
                                         </View>
@@ -366,22 +372,12 @@ export default class NeutrinoPeers extends React.Component<
                                                 <Row>
                                                     <View
                                                         style={{
-                                                            alignSelf:
-                                                                'flex-end',
+                                                            left: 10,
                                                             width: 50,
                                                             height: 60
                                                         }}
                                                     >
-                                                        <Button
-                                                            icon={{
-                                                                name: 'hourglass',
-                                                                type: 'font-awesome',
-                                                                size: 25,
-                                                                color: themeColor(
-                                                                    'text'
-                                                                )
-                                                            }}
-                                                            iconOnly
+                                                        <TouchableOpacity
                                                             onPress={async () => {
                                                                 try {
                                                                     this.setState(
@@ -391,7 +387,7 @@ export default class NeutrinoPeers extends React.Component<
                                                                                 false,
                                                                             pingHost:
                                                                                 item,
-                                                                            pinging:
+                                                                            loading:
                                                                                 true
                                                                         }
                                                                     );
@@ -400,14 +396,15 @@ export default class NeutrinoPeers extends React.Component<
                                                                         await Ping.start(
                                                                             item,
                                                                             {
-                                                                                timeout: 1000
+                                                                                timeout:
+                                                                                    NEUTRINO_PING_TIMEOUT_MS
                                                                             }
                                                                         );
                                                                     this.setState(
                                                                         {
                                                                             pingTime:
                                                                                 ms,
-                                                                            pinging:
+                                                                            loading:
                                                                                 false
                                                                         }
                                                                     );
@@ -416,13 +413,21 @@ export default class NeutrinoPeers extends React.Component<
                                                                         {
                                                                             pingTimeout:
                                                                                 true,
-                                                                            pinging:
+                                                                            loading:
                                                                                 false
                                                                         }
                                                                     );
                                                                 }
                                                             }}
-                                                        />
+                                                        >
+                                                            <Stopwatch
+                                                                fill={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                width="35"
+                                                                height="35"
+                                                            />
+                                                        </TouchableOpacity>
                                                     </View>
                                                     <View
                                                         style={{
@@ -442,7 +447,7 @@ export default class NeutrinoPeers extends React.Component<
                                                                 )
                                                             }}
                                                             iconOnly
-                                                            onPress={() => {
+                                                            onPress={async () => {
                                                                 const newNeutrinoPeers =
                                                                     this.remove(
                                                                         neutrinoPeers,
@@ -456,7 +461,7 @@ export default class NeutrinoPeers extends React.Component<
                                                                     embeddedLndNetwork ===
                                                                     'Mainnet'
                                                                 ) {
-                                                                    updateSettings(
+                                                                    await updateSettings(
                                                                         {
                                                                             neutrinoPeersMainnet:
                                                                                 newNeutrinoPeers
@@ -466,13 +471,15 @@ export default class NeutrinoPeers extends React.Component<
                                                                     embeddedLndNetwork ===
                                                                     'Testnet'
                                                                 ) {
-                                                                    updateSettings(
+                                                                    await updateSettings(
                                                                         {
                                                                             neutrinoPeersTestnet:
                                                                                 newNeutrinoPeers
                                                                         }
                                                                     );
                                                                 }
+
+                                                                restartNeeded();
                                                             }}
                                                         />
                                                     </View>
@@ -501,20 +508,45 @@ export default class NeutrinoPeers extends React.Component<
                             </View>
                         </ScrollView>
                     </View>
+                    {embeddedLndNetwork === 'Mainnet' && (
+                        <View style={{ marginBottom: 10, marginTop: 10 }}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.EmbeddedNode.NeutrinoPeers.optimize'
+                                )}
+                                onPress={async () => {
+                                    this.setState({
+                                        loading: true
+                                    });
+                                    await optimizeNeutrinoPeers();
+                                    const { getSettings } = SettingsStore;
+                                    const settings = await getSettings();
+                                    this.setState({
+                                        loading: false,
+                                        neutrinoPeers:
+                                            settings.neutrinoPeersMainnet
+                                    });
+
+                                    restartNeeded();
+                                }}
+                                tertiary
+                            />
+                        </View>
+                    )}
                     {(dontAllowOtherPeers ||
                         mainnetPeersChanged ||
                         testnetPeersChanged) && (
                         <View style={{ marginBottom: 10, marginTop: 10 }}>
                             <Button
                                 title={localeString('general.reset')}
-                                onPress={() => {
+                                onPress={async () => {
                                     if (embeddedLndNetwork === 'Mainnet') {
                                         this.setState({
                                             neutrinoPeers:
                                                 DEFAULT_NEUTRINO_PEERS_MAINNET,
                                             dontAllowOtherPeers: false
                                         });
-                                        updateSettings({
+                                        await updateSettings({
                                             neutrinoPeersMainnet:
                                                 DEFAULT_NEUTRINO_PEERS_MAINNET,
                                             dontAllowOtherPeers: false
@@ -527,12 +559,14 @@ export default class NeutrinoPeers extends React.Component<
                                                 DEFAULT_NEUTRINO_PEERS_TESTNET,
                                             dontAllowOtherPeers: false
                                         });
-                                        updateSettings({
+                                        await updateSettings({
                                             neutrinoPeersTestnet:
                                                 DEFAULT_NEUTRINO_PEERS_TESTNET,
                                             dontAllowOtherPeers: false
                                         });
                                     }
+
+                                    restartNeeded();
                                 }}
                             />
                         </View>
