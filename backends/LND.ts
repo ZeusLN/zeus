@@ -21,11 +21,59 @@ export default class LND {
     torSocksPort?: number = undefined;
 
     clearCachedCalls = () => calls.clear();
-
+    private handleTorRequest(
+        url: string,
+        method: RequestMethod,
+        data: any,
+        headers: Headers | any
+    ) {
+        return doTorRequest(url, method, JSON.stringify(data), headers);
+    }
+    private async handleRegularRequest(
+        url: string,
+        method: RequestMethod,
+        data: any,
+        headers: Headers | any,
+        certVerification?: boolean
+    ) {
+        const response = await ReactNativeBlobUtil.config({
+            trusty: !certVerification
+        }).fetch(method, url, headers, data ? JSON.stringify(data) : undefined);
+        if (response.info().status < 300) {
+            return this.handleSuccessResponse(response);
+        } else {
+            this.handleErrorResponse(response);
+        }
+    }
+    private handleSuccessResponse(response: any): any {
+        if (response.data.includes('\n')) {
+            const split = response.data.split('\n');
+            return JSON.parse(split[split.length - 2]);
+        }
+        return response.json();
+    }
+    private handleErrorResponse(response: any): never {
+        try {
+            const errorInfo = response.json();
+            throw new Error(
+                (errorInfo.error && errorInfo.error.message) ||
+                    errorInfo.message ||
+                    errorInfo.error
+            );
+        } catch (e) {
+            if (response.data && typeof response.data === 'string') {
+                throw new Error(response.data);
+            } else {
+                throw new Error(
+                    localeString('backends.LND.restReq.connectionError')
+                );
+            }
+        }
+    }
     restReq = async (
         headers: Headers | any,
         url: string,
-        method: any,
+        method: RequestMethod,
         data?: any,
         certVerification?: boolean,
         useTor?: boolean
@@ -38,71 +86,22 @@ export default class LND {
         }
         // API is a bit of a mess but
         // If tor enabled in setting, start up the daemon here
-        if (useTor === true) {
-            calls.set(
-                id,
-                doTorRequest(
-                    url,
-                    method as RequestMethod,
-                    JSON.stringify(data),
-                    headers
-                ).then((response: any) => {
-                    calls.delete(id);
-                    return response;
-                })
-            );
-        } else {
-            calls.set(
-                id,
-                ReactNativeBlobUtil.config({
-                    trusty: !certVerification
-                })
-                    .fetch(
-                        method,
-                        url,
-                        headers,
-                        data ? JSON.stringify(data) : data
-                    )
-                    .then((response: any) => {
-                        calls.delete(id);
-                        if (response.info().status < 300) {
-                            // handle ws responses
-                            if (response.data.includes('\n')) {
-                                const split = response.data.split('\n');
-                                const length = split.length;
-                                // last instance is empty
-                                return JSON.parse(split[length - 2]);
-                            }
-                            return response.json();
-                        } else {
-                            try {
-                                const errorInfo = response.json();
-                                throw new Error(
-                                    (errorInfo.error &&
-                                        errorInfo.error.message) ||
-                                        errorInfo.message ||
-                                        errorInfo.error
-                                );
-                            } catch (e) {
-                                if (
-                                    response.data &&
-                                    typeof response.data === 'string'
-                                ) {
-                                    throw new Error(response.data);
-                                } else {
-                                    throw new Error(
-                                        localeString(
-                                            'backends.LND.restReq.connectionError'
-                                        )
-                                    );
-                                }
-                            }
-                        }
-                    })
-            );
+        const request = useTor
+            ? this.handleTorRequest(url, method, data, headers)
+            : this.handleRegularRequest(
+                  url,
+                  method,
+                  data,
+                  headers,
+                  certVerification
+              );
+        calls.set(id, request);
+        try {
+            const response = await request;
+            return response;
+        } finally {
+            calls.delete(id);
         }
-
-        return await calls.get(id);
     };
 
     supports = (minVersion: string, eosVersion?: string) => {
@@ -190,7 +189,12 @@ export default class LND {
         return `${baseUrl}${route}`;
     };
 
-    request = (route: string, method: string, data?: any, params?: any) => {
+    request = (
+        route: string,
+        method: RequestMethod,
+        data?: any,
+        params?: any
+    ) => {
         const {
             host,
             lndhubUrl,
@@ -222,10 +226,11 @@ export default class LND {
     };
 
     getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
+        this.request(route, RequestMethod.GET, null, data);
     postRequest = (route: string, data?: any) =>
-        this.request(route, 'post', data);
-    deleteRequest = (route: string) => this.request(route, 'delete', null);
+        this.request(route, RequestMethod.POST, data);
+    deleteRequest = (route: string) =>
+        this.request(route, RequestMethod.DELETE, null);
 
     getTransactions = (data: any) =>
         this.getRequest(
@@ -327,11 +332,11 @@ export default class LND {
         let request: any = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
-            local_funding_amount: data.local_funding_amount,
-            min_confs: data.min_confs,
-            node_pubkey_string: data.node_pubkey_string,
-            sat_per_vbyte: data.sat_per_vbyte,
-            spend_unconfirmed: data.spend_unconfirmed
+            local_funding_amount: data.localFundingAmount,
+            min_confs: data.minConfs,
+            node_pubkey_string: data.nodePubkeyString,
+            sat_per_vbyte: data.satoshis,
+            spend_unconfirmed: data.spendUnconfirmed
         };
 
         if (data.fundMax) {
@@ -359,11 +364,11 @@ export default class LND {
         let request: any = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
-            local_funding_amount: data.local_funding_amount,
-            min_confs: data.min_confs,
-            node_pubkey_string: data.node_pubkey_string,
-            sat_per_vbyte: data.sat_per_vbyte,
-            spend_unconfirmed: data.spend_unconfirmed
+            local_funding_amount: data.localFundingAmount,
+            min_confs: data.minConfs,
+            node_pubkey_string: data.nodePubkeyString,
+            sat_per_vbyte: data.satPerByte,
+            spend_unconfirmed: data.spendUnconfirmed
         };
 
         if (data.fundMax) {
@@ -384,14 +389,14 @@ export default class LND {
             });
         }
 
-        if (data.node_pubkey_string) {
+        if (data.nodePubkeyString) {
             request.node_pubkey = Base64Utils.hexToBase64(
-                data.node_pubkey_string
+                data.nodePubkeyString
             );
         }
 
-        if (data.funding_shim) {
-            request.funding_shim = data.funding_shim;
+        if (data.fundingShim) {
+            request.funding_shim = data.fundingShim;
             delete request.sat_per_vbyte;
         }
 

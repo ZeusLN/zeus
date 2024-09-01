@@ -64,7 +64,6 @@ export default class LncCredentialStore implements CredentialStore {
     get isPaired() {
         return !!this._remoteKey || !!this._pairingPhrase;
     }
-
     /** Clears any persisted data in the store */
     clear() {
         this._serverHost = '';
@@ -72,4 +71,5 @@ export default class LncCredentialStore implements CredentialStore {
         this._remoteKey = '';
         this._pairingPhrase = '';
     }
+   
 }

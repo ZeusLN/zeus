@@ -27,6 +27,7 @@ export interface LncConfig {
  * authentication and connection process.
  */
 export interface CredentialStore {
+    load(pairingPhrase: string): unknown;
     /** Stores the LNC pairing phrase used to initialize the connection to the LNC proxy */
     pairingPhrase: string;
     /** Stores the host:port of the Lightning Node Connect proxy server to connect to */

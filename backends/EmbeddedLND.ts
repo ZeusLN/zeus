@@ -92,13 +92,13 @@ export default class EmbeddedLND extends LND {
         await newAddress(data.type, data.account);
     openChannelSync = async (data: OpenChannelRequest) =>
         await openChannelSync(
-            data.node_pubkey_string,
-            Number(data.local_funding_amount),
+            data.nodePubkeyString,
+            Number(data.localFundingAmount),
             data.privateChannel || false,
-            data.sat_per_vbyte ? Number(data.sat_per_vbyte) : undefined,
+            data.satPerVbyte ? Number(data.satPerVbyte) : undefined,
             data.scidAlias,
-            data.min_confs,
-            data.spend_unconfirmed,
+            data.minConfs,
+            data.spendUnconfirmed,
             data.simpleTaprootChannel,
             data.fundMax,
             data.utxos
@@ -126,19 +126,19 @@ export default class EmbeddedLND extends LND {
             });
 
             openChannel(
-                data.node_pubkey_string,
-                Number(data.local_funding_amount),
+                data.nodePubkeyString,
+                Number(data.localFundingAmount),
                 data.privateChannel || false,
-                data.sat_per_vbyte && !data.funding_shim
-                    ? Number(data.sat_per_vbyte)
+                data.satPerVbyte && !data.fundingShim
+                    ? Number(data.satPerVbyte)
                     : undefined,
                 data.scidAlias,
-                data.min_confs,
-                data.spend_unconfirmed,
+                data.minConfs,
+                data.spendUnconfirmed,
                 data.simpleTaprootChannel,
                 data.fundMax,
                 data.utxos,
-                data.funding_shim
+                data.fundingShim
             );
         });
     };
@@ -200,9 +200,9 @@ export default class EmbeddedLND extends LND {
         );
     };
 
-    getNodeInfo = async (urlParams?: Array<string>) =>
+    getNodeInfo = async (urlParams: string[]) =>
         await getNodeInfo(urlParams[0]);
-    signMessage = async (msg: Uint8Array) => {
+    signMessage = async (msg: string) => {
         return await signMessageNodePubkey(Base64Utils.stringToUint8Array(msg));
     };
     verifyMessage = async (data: any) => {

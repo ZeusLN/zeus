@@ -256,9 +256,9 @@ export default class Eclair {
         this.api('getnewaddress').then((address: any) => ({ address }));
     openChannelSync = (data: OpenChannelRequest) =>
         this.api('open', {
-            nodeId: data.node_pubkey_string,
+            nodeId: data.nodePubkeyString,
             fundingSatoshis: data.satoshis,
-            fundingFeerateSatByte: data.sat_per_vbyte,
+            fundingFeerateSatByte: data.satPerVbyte,
             channelFlags: data.privateChannel ? 0 : 1
         }).then(() => ({}));
     connectPeer = (data: any) =>
