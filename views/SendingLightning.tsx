@@ -372,46 +372,21 @@ export default class SendingLightning extends React.Component<
                                     localeString(
                                         'error.failureReasonNoRoute'
                                     )) && (
-                                <>
-                                    <Text
-                                        style={{
-                                            textAlign: 'center',
-                                            color: 'white',
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            padding: 20,
-                                            fontSize: 14
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.SendingLightning.lowFeeLimitMessage'
-                                        )}
-                                    </Text>
-                                    <Button
-                                        title={localeString(
-                                            'views.SendingLightning.tryAgain'
-                                        )}
-                                        icon={{
-                                            name: 'return-up-back',
-                                            type: 'ionicon',
-                                            size: 25
-                                        }}
-                                        onPress={() => navigation.goBack()}
-                                        buttonStyle={{
-                                            backgroundColor: 'white',
-                                            height: 40
-                                        }}
-                                        containerStyle={{
-                                            width: '100%',
-                                            margin: 10
-                                        }}
-                                    />
-                                </>
+                                <Text
+                                    style={{
+                                        textAlign: 'center',
+                                        color: 'white',
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        padding: 20,
+                                        fontSize: 14
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.SendingLightning.lowFeeLimitMessage'
+                                    )}
+                                </Text>
                             )}
-                            {(payment_error == 'FAILURE_REASON_TIMEOUT' ||
-                                payment_error ==
-                                    localeString(
-                                        'error.failureReasonTimeout'
-                                    )) && (
+                            {payment_error && (
                                 <Button
                                     title={localeString(
                                         'views.SendingLightning.tryAgain'
