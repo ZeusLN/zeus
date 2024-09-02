@@ -1,3 +1,4 @@
+/* eslint-disable import/no-unresolved */
 import {
     CommitmentType,
     OutPoint
@@ -34,13 +35,13 @@ export default class OpenChannelRequest extends BaseModel {
     public fundMax?: boolean;
     public outpoints?: OutPoint[];
     public commitmentType: CommitmentType;
-    public remoteMaxHtlcs:number
+    public remoteMaxHtlcs: number;
     public closeAddress: string;
-    public remoteMaxValueInFlightMsat:string;
-    public maxLocalCsv:number;
-    public baseFee:string;
-    public feeRate:string;
-    public zeroConf:boolean;
+    public remoteMaxValueInFlightMsat: string;
+    public maxLocalCsv: number;
+    public baseFee: string;
+    public feeRate: string;
+    public zeroConf: boolean;
     // external accoutn funding
     public account?: string;
     public fundingShim: {

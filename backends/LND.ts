@@ -456,7 +456,7 @@ export default class LND {
         });
     };
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
-    decodePaymentRequest = (urlParams?: Array<string>) =>
+    decodePaymentRequest = (urlParams: Array<string>) =>
         this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
     payLightningInvoice = async (data: any) => {
         if (data.pubkey) delete data.pubkey;
@@ -498,7 +498,7 @@ export default class LND {
 
         return this.deleteRequest(requestString);
     };
-    getNodeInfo = (urlParams?: Array<string>) =>
+    getNodeInfo = (urlParams: Array<string>) =>
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
     setFees = (data: any) => {
@@ -535,7 +535,7 @@ export default class LND {
             min_htlc_msat_specified: min_htlc ? true : false
         });
     };
-    getRoutes = (urlParams?: Array<string>) =>
+    getRoutes = (urlParams: Array<string>) =>
         this.getRequest(
             `/v1/graph/routes/${urlParams && urlParams[0]}/${
                 urlParams && urlParams[1]

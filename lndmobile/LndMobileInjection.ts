@@ -181,7 +181,7 @@ export interface ILndMobileInjections {
             payment_request,
             amt,
             max_shard_size_msat,
-            max_parts = 1,
+            max_parts,
             fee_limit_sat,
             last_hop_pubkey,
             message,
@@ -222,7 +222,7 @@ export interface ILndMobileInjections {
         sendKeysendPaymentV2: ({
             amt,
             max_shard_size_msat,
-            max_parts = 1,
+            max_parts,
             fee_limit_sat,
             message,
             cltv_limit,
@@ -543,4 +543,4 @@ export default {
     scheduledSync: {
         checkScheduledSyncWorkStatus
     }
-} as ILndMobileInjections;
+} as unknown as ILndMobileInjections;

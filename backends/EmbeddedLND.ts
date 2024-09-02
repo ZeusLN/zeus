@@ -8,6 +8,7 @@ import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
 } from '../utils/LndMobileUtils';
+import Long from 'long';
 
 const {
     addInvoice,
@@ -146,7 +147,7 @@ export default class EmbeddedLND extends LND {
     };
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
-    decodePaymentRequest = async (urlParams?: string[]) =>
+    decodePaymentRequest = async (urlParams: Array<string>) =>
         await decodePayReq(urlParams && urlParams[0]);
     payLightningInvoice = async (data: any) => {
         const sendPaymentReq = {
@@ -202,7 +203,7 @@ export default class EmbeddedLND extends LND {
         );
     };
 
-    getNodeInfo = async (urlParams: string[]) =>
+    getNodeInfo = async (urlParams: Array<string>) =>
         await getNodeInfo(urlParams[0]);
     signMessage = async (msg: string) => {
         return await signMessageNodePubkey(Base64Utils.stringToUint8Array(msg));
@@ -217,8 +218,9 @@ export default class EmbeddedLND extends LND {
 
     // getFees = () => N/A;
     // setFees = () => N/A;
-    getRoutes = async (urlParams?: Array<string>) =>
-        urlParams && (await queryRoutes(urlParams[0], urlParams[1]));
+    getRoutes = async (urlParams: Array<string | Long>) =>
+        urlParams &&
+        (await queryRoutes(urlParams[0] as string, urlParams[1] as Long));
     // getForwardingHistory = () => N/A
     // // Coin Control
     fundPsbt = async (data: any) => await fundPsbt(data);
