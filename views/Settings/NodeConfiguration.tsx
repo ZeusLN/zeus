@@ -762,7 +762,7 @@ export default class NodeConfiguration extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            'views.Settings.AddEditNode.nodeConfig'
+                            'views.Settings.AddEditNode.walletConfig'
                         ),
                         style: { ...styles.text, color: themeColor('text') }
                     }}
