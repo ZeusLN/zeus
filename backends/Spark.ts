@@ -231,9 +231,9 @@ export default class Spark {
     getNewAddress = () => this.rpc('newaddr');
     openChannelSync = (data: OpenChannelRequest) =>
         this.rpc('fundchannel', {
-            id: data.node_pubkey_string,
+            id: data.nodePubkeyString,
             amount: data.satoshis,
-            feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
+            feerate: `${Number(data.satPerVbyte) * 1000}perkb`,
             announce: !data.privateChannel
         }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>

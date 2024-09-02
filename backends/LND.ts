@@ -307,7 +307,6 @@ export default class LND {
             console.log('subscribeCustomMessages ws close');
         });
     };
-    getNetworkInfo = () => this.getRequest('/v1/graph/info');
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = (data: any) =>
         this.getRequest(
@@ -337,17 +336,11 @@ export default class LND {
             min_confs: data.minConfs,
             node_pubkey_string: data.nodePubkeyString,
             sat_per_vbyte: data.satoshis,
-            spend_unconfirmed: data.spendUnconfirmed,
-            local_funding_amount: data.local_funding_amount || 0,
-            min_confs: data.min_confs,
-            node_pubkey_string: data.node_pubkey_string,
-            sat_per_vbyte: data.sat_per_vbyte,
-            spend_unconfirmed: data.spend_unconfirmed
+            spend_unconfirmed: data.spendUnconfirmed
         };
 
         if (data.fundMax) {
             request.fund_max = true;
-            delete request.local_funding_amount;
         }
 
         if (data.simpleTaprootChannel) {
@@ -673,14 +666,13 @@ export default class LND {
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
     supportsLSPs = () => true;
-    supportsNetworkInfo = () => true;
+    supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
+    isLNDBased = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
-    supportsOffers = (): Promise<boolean> | boolean => false;
-    isLNDBased = () => true;
 }
