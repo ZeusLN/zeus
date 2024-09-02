@@ -18,6 +18,7 @@ import LightningLoadingPattern from '../components/LightningLoadingPattern';
 import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
 import SuccessAnimation from '../components/SuccessAnimation';
+import { Row } from '../components/layout/Row';
 
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
@@ -387,14 +388,13 @@ export default class SendingLightning extends React.Component<
                                 )}
                         </View>
 
-                        <View
+                        <Row
+                            align="flex-end"
                             style={{
-                                flexDirection: isPaymentPathExist && 'row',
-                                justifyContent: 'space-between',
-                                width: isPaymentPathExist ? '48%' : '100%',
-                                marginLeft: isPaymentPathExist && 19,
-                                gap: 15,
-                                bottom: 38
+                                marginLeft: isPaymentPathExist ? 10 : 0,
+                                marginRight: isPaymentPathExist ? 10 : 0,
+                                bottom: 30,
+                                alignSelf: 'center'
                             }}
                         >
                             {isPaymentPathExist && (
@@ -414,6 +414,12 @@ export default class SendingLightning extends React.Component<
                                         })
                                     }
                                     secondary
+                                    buttonStyle={{ height: 40, width: '100%' }}
+                                    containerStyle={{
+                                        backgroundColor: 'red',
+                                        maxWidth: '45%',
+                                        margin: 10
+                                    }}
                                 />
                             )}
                             {noteKey && !error && !payment_error && (
@@ -433,10 +439,16 @@ export default class SendingLightning extends React.Component<
                                         })
                                     }
                                     secondary
-                                    buttonStyle={{ height: 40 }}
+                                    buttonStyle={{ height: 40, width: '100%' }}
+                                    containerStyle={{
+                                        maxWidth: isPaymentPathExist
+                                            ? '45%'
+                                            : '100%',
+                                        margin: 10
+                                    }}
                                 />
                             )}
-                        </View>
+                        </Row>
 
                         <View
                             style={[
