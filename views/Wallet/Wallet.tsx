@@ -345,9 +345,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.reset();
             ChannelBackupStore.reset();
             UTXOsStore.reset();
+            ContactStore.loadContacts();
         }
-
-        ContactStore.loadContacts();
 
         LnurlPayStore.reset();
 
