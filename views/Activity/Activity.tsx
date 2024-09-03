@@ -603,8 +603,13 @@ export default class Activity extends React.PureComponent<
                                                                 'text'
                                                             ),
                                                             fontFamily:
-                                                                'Lato-Regular'
+                                                                'Lato-Regular',
+                                                            flexShrink: 0,
+                                                            flex: 0,
+                                                            width: 'auto',
+                                                            overflow: 'hidden'
                                                         }}
+                                                        numberOfLines={1}
                                                     >
                                                         {localeString(
                                                             'general.note'
@@ -618,10 +623,18 @@ export default class Activity extends React.PureComponent<
                                                                 'secondaryText'
                                                             ),
                                                             fontFamily:
-                                                                'Lato-Regular'
+                                                                'Lato-Regular',
+                                                            flexWrap: 'wrap',
+                                                            flexShrink: 1
                                                         }}
+                                                        ellipsizeMode="tail"
                                                     >
-                                                        {note}
+                                                        {note.length > 150
+                                                            ? `${note.substring(
+                                                                  0,
+                                                                  150
+                                                              )}...`
+                                                            : note}
                                                     </ListItem.Subtitle>
                                                 </View>
                                             )}
