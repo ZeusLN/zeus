@@ -193,45 +193,11 @@ export default class LightningNodeConnect {
         });
         return snakeize(response);
     }
-    getMyNodeInfo = async () =>
-        await this.lnc.lnd.lightning
-            .getInfo({})
-            .then((data: lnrpc.GetInfoResponse) => snakeize(data));
-    getNetworkInfo = async () =>
-        await this.lnc.lnd.lightning
-            .getNetworkInfo({})
-            .then((data: lnrpc.NetworkInfo) => snakeize(data));
-    getInvoices = async () =>
-        await this.lnc.lnd.lightning
-            .listInvoices({ reversed: true, num_max_invoices: 100 })
-            .then((data: lnrpc.ListInvoiceResponse) => snakeize(data));
-    createInvoice = async (data: any) =>
-        await this.lnc.lnd.lightning
-            .addInvoice({
-                memo: data.memo,
-                value_msat: data.value_msat || Number(data.value) * 1000,
-                expiry: data.expiry,
-                is_amp: data.is_amp,
-                private: data.private,
-                r_preimage: data.preimage
-                    ? Base64Utils.hexToBase64(data.preimage)
-                    : undefined,
-                route_hints: data.route_hints
-            })
-            .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
-    getPayments = async () =>
-        await this.lnc.lnd.lightning
-            .listPayments({
-                include_incomplete: true
-            })
-            .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
-    getNewAddress = async (data: any) =>
-        await this.lnc.lnd.lightning
-            .newAddress({
-                type: ADDRESS_TYPES[data.type],
-                account: data.account || 'default'
-            })
-            .then((data: lnrpc.NewAddressResponse) => snakeize(data));
+
+    async getNetworkInfo(): Promise<lnrpc.NetworkInfo> {
+        const info = await this.lnc.lnd.lightning.getNetworkInfo({});
+        return snakeize(info);
+    }
 
     async getPayments(): Promise<lnrpc.ListPaymentsResponse> {
         const data = await this.lnc.lnd.lightning.listPayments({
@@ -255,37 +221,6 @@ export default class LightningNodeConnect {
             this.createOpenChannelRequest(data);
         const response = await this.lnc.lnd.lightning.openChannelSync(request);
         return snakeize(response);
-        let request: lnrpc.OpenChannelRequest = {
-            private: data.privateChannel,
-            scid_alias: data.scidAlias,
-            local_funding_amount: data.local_funding_amount || 0,
-            min_confs: data.min_confs,
-            node_pubkey_string: data.node_pubkey_string,
-            sat_per_vbyte: data.sat_per_vbyte,
-            spend_unconfirmed: data.spend_unconfirmed
-        };
-
-        if (data.fundMax) {
-            request.fund_max = true;
-            delete request.local_funding_amount;
-        }
-
-        if (data.simpleTaprootChannel) {
-            request.commitment_type = lnrpc.CommitmentType['SIMPLE_TAPROOT'];
-        }
-
-        if (data.utxos && data.utxos.length > 0) {
-            request.outpoints = data.utxos.map((utxo: string) => {
-                const [txid_str, output_index] = utxo.split(':');
-                return {
-                    txid_str,
-                    output_index: Number(output_index)
-                };
-            });
-        }
-        return await this.lnc.lnd.lightning
-            .openChannelSync(request)
-            .then((data: lnrpc.ChannelPoint) => snakeize(data));
     };
 
     openChannelStream = (data: OpenChannelRequest) => {
@@ -597,23 +532,5 @@ export default class LightningNodeConnect {
     isLNDBased = (): boolean => true;
     supportsLSPS1customMessage = (): boolean => true;
     supportsLSPS1rest = (): boolean => false;
-    supportsHopPicking = () => this.permOpenChannel;
-    supportsAccounts = () => this.permImportAccount;
-    supportsRouting = () => this.permForwardingHistory;
-    supportsNodeInfo = () => true;
-    singleFeesEarnedTotal = () => false;
-    supportsAddressTypeSelection = () => true;
-    supportsTaproot = () => this.supports('v0.15.0');
-    supportsBumpFee = () => true;
-    supportsLSPs = () => false;
-    supportsNetworkInfo = () => true;
-    supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
-    supportsCustomPreimages = () => true;
-    supportsSweep = () => true;
-    supportsOnchainBatching = () => true;
-    supportsChannelBatching = () => true;
-    supportsLSPS1customMessage = () => true;
-    supportsLSPS1rest = () => false;
     supportsOffers = () => false;
-    isLNDBased = () => true;
 }
