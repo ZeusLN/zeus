@@ -162,7 +162,7 @@ export default class SendingLightning extends React.Component<
 
         const enhancedPath = currentPayment?.enhancedPath;
 
-        const isPaymentPathExist =
+        const paymentPathExists =
             enhancedPath?.length > 0 && enhancedPath[0][0];
 
         const success = this.successfullySent(TransactionsStore);
@@ -391,13 +391,13 @@ export default class SendingLightning extends React.Component<
                         <Row
                             align="flex-end"
                             style={{
-                                marginLeft: isPaymentPathExist ? 10 : 0,
-                                marginRight: isPaymentPathExist ? 10 : 0,
-                                bottom: 30,
+                                marginLeft: paymentPathExists ? 10 : 0,
+                                marginRight: paymentPathExists ? 10 : 0,
+                                bottom: 25,
                                 alignSelf: 'center'
                             }}
                         >
-                            {isPaymentPathExist && (
+                            {paymentPathExists && (
                                 <Button
                                     title={`${localeString(
                                         'views.Payment.title'
@@ -441,7 +441,7 @@ export default class SendingLightning extends React.Component<
                                     secondary
                                     buttonStyle={{ height: 40, width: '100%' }}
                                     containerStyle={{
-                                        maxWidth: isPaymentPathExist
+                                        maxWidth: paymentPathExists
                                             ? '45%'
                                             : '100%',
                                         margin: 10
