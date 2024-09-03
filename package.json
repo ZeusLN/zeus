@@ -31,7 +31,6 @@
     "fetch-libraries": "bash fetch-libraries.sh"
   },
   "dependencies": {
-    "@json2csv/plainjs": "7.0.6",
     "@keystonehq/bc-ur-registry": "0.4.2",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
     "@ngraveio/bc-ur": "1.1.12",

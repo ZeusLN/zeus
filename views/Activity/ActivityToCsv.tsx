@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-    StyleSheet,
-    View,
-    PermissionsAndroid,
-    Platform,
-    Alert,
-    Modal
-} from 'react-native';
+import { StyleSheet, View, Platform, Alert, Modal } from 'react-native';
 import RNFS from 'react-native-fs';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
@@ -63,14 +56,15 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             } else if (item instanceof Payment) {
                 paymentKeys.forEach((key) => {
                     switch (key) {
+                        case 'payment_hash':
+                            filteredItem[key] = item.paymentHash;
+                            break;
                         case 'payment_addr':
                             filteredItem[key] = item.getDestination;
                             break;
                         case 'value':
-                            filteredItem[key] = item.getAmount;
-                            break;
                         case 'amount_msat':
-                            filteredItem[key] = item.amount_msat;
+                            filteredItem[key] = item.getAmount;
                             break;
                         case 'creation_date':
                             filteredItem[key] = item.getDisplayTime;
@@ -117,9 +111,9 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
         ];
 
         const paymentKeysToInclude = [
-            { label: 'Payment Address', value: 'payment_addr' },
+            { label: 'Destination', value: 'payment_addr' },
+            { label: 'Payment Hash', value: 'payment_hash' },
             { label: 'Value', value: 'value' },
-            { label: 'Amount (msat)', value: 'amount_msat' },
             { label: 'Creation Date', value: 'creation_date' }
         ];
 
@@ -160,7 +154,7 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                     (item) => item.amt_paid
                 );
                 const paymentData = filteredData.filter(
-                    (item) => item.creation_date
+                    (item) => item.payment_addr
                 );
 
                 const invoiceSection = [
@@ -190,27 +184,6 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             return '';
         }
     };
-
-    const requestAndroidPermissions = async () => {
-        try {
-            const granted = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-                {
-                    title: 'Storage Permission Required',
-                    message:
-                        'This app needs access to your storage to save CSV files',
-                    buttonNeutral: 'Ask Me Later',
-                    buttonNegative: 'Cancel',
-                    buttonPositive: 'OK'
-                }
-            );
-            return granted === PermissionsAndroid.RESULTS.GRANTED;
-        } catch (err) {
-            console.error('Failed to request permission ', err);
-            return false;
-        }
-    };
-
     const downloadCsv = async () => {
         const invoicePaymentCsv = await convertJsonToCsv(
             filteredActivity.filter((item) => !(item instanceof Transaction)),
@@ -224,14 +197,6 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
         if (!invoicePaymentCsv && !transactionCsv) return;
 
         try {
-            if (Platform.OS === 'android') {
-                const hasPermission = await requestAndroidPermissions();
-                if (!hasPermission) {
-                    console.error('Storage permission denied');
-                    return;
-                }
-            }
-
             const dateTime = getFormattedDateTime();
             const baseFileName = customFileName || `data_${dateTime}`;
             const invoicePaymentFileName = `${baseFileName}_invoice_payment.csv`;
@@ -284,7 +249,16 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             onRequestClose={closeAndClearInput}
         >
             <View style={styles.modalOverlay}>
-                <View style={styles.modalView}>
+                <View
+                    style={{
+                        width: '80%',
+                        backgroundColor: themeColor('background'),
+                        padding: 20,
+                        borderRadius: 10,
+                        alignItems: 'center',
+                        elevation: 5
+                    }}
+                >
                     <TextInput
                         placeholder={localeString(
                             'views.ActivityToCsv.textInputPlaceholder'
@@ -322,14 +296,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
         alignItems: 'center'
-    },
-    modalView: {
-        width: '80%',
-        backgroundColor: themeColor('background'),
-        padding: 20,
-        borderRadius: 10,
-        alignItems: 'center',
-        elevation: 5
     },
     buttonContainer: {
         width: '100%',
