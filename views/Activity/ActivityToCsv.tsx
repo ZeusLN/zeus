@@ -8,9 +8,11 @@ import { themeColor } from '../../utils/ThemeUtils';
 import Invoice from '../../models/Invoice';
 import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const [customFileName, setCustomFileName] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const closeAndClearInput = () => {
         setCustomFileName('');
@@ -157,9 +159,19 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                     (item) => item.payment_addr
                 );
 
+                const invoiceHeader = [
+                    'Amount Paid',
+                    'Amount Paid (Sat)',
+                    'CLTV Expiry',
+                    'Creation Date',
+                    '',
+                    '',
+                    'Expiry'
+                ].join(',');
+
                 const invoiceSection = [
                     'Invoice Section',
-                    invoiceKeysToInclude.map((field) => field.label).join(','),
+                    invoiceHeader,
                     ...invoiceData.map((item) =>
                         invoiceKeysToInclude
                             .map((field) => item[field.value] || '')
@@ -184,61 +196,72 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             return '';
         }
     };
+
     const downloadCsv = async () => {
-        const invoicePaymentCsv = await convertJsonToCsv(
-            filteredActivity.filter((item) => !(item instanceof Transaction)),
-            'invoice_payment'
-        );
-        const transactionCsv = await convertJsonToCsv(
-            filteredActivity.filter((item) => item instanceof Transaction),
-            'transaction'
-        );
+        setIsLoading(true);
+        setTimeout(async () => {
+            const invoicePaymentCsv = await convertJsonToCsv(
+                filteredActivity.filter(
+                    (item) => !(item instanceof Transaction)
+                ),
+                'invoice_payment'
+            );
+            const transactionCsv = await convertJsonToCsv(
+                filteredActivity.filter((item) => item instanceof Transaction),
+                'transaction'
+            );
 
-        if (!invoicePaymentCsv && !transactionCsv) return;
-
-        try {
-            const dateTime = getFormattedDateTime();
-            const baseFileName = customFileName || `data_${dateTime}`;
-            const invoicePaymentFileName = `${baseFileName}_invoice_payment.csv`;
-            const transactionFileName = `${baseFileName}_transaction.csv`;
-
-            const invoicePaymentFilePath =
-                Platform.OS === 'android'
-                    ? `${RNFS.DownloadDirectoryPath}/${invoicePaymentFileName}`
-                    : `${RNFS.DocumentDirectoryPath}/${invoicePaymentFileName}`;
-
-            const transactionFilePath =
-                Platform.OS === 'android'
-                    ? `${RNFS.DownloadDirectoryPath}/${transactionFileName}`
-                    : `${RNFS.DocumentDirectoryPath}/${transactionFileName}`;
-
-            if (invoicePaymentCsv) {
-                await RNFS.writeFile(
-                    invoicePaymentFilePath,
-                    invoicePaymentCsv,
-                    'utf8'
-                );
+            if (!invoicePaymentCsv && !transactionCsv) {
+                setIsLoading(false);
+                return;
             }
 
-            if (transactionCsv) {
-                await RNFS.writeFile(
-                    transactionFilePath,
-                    transactionCsv,
-                    'utf8'
-                );
-            }
+            try {
+                const dateTime = getFormattedDateTime();
+                const baseFileName = customFileName || `data_${dateTime}`;
+                const invoicePaymentFileName = `${baseFileName}_invoice_payment.csv`;
+                const transactionFileName = `${baseFileName}_transaction.csv`;
 
-            Alert.alert(
-                localeString('views.ActivityToCsv.csvDownloadSuccess'),
-                localeString('views.ActivityToCsv.csvDownloaded')
-            );
-            closeModal();
-        } catch (err) {
-            console.error(
-                localeString('views.ActivityToCsv.csvDownloadFailed'),
-                err
-            );
-        }
+                const invoicePaymentFilePath =
+                    Platform.OS === 'android'
+                        ? `${RNFS.DownloadDirectoryPath}/${invoicePaymentFileName}`
+                        : `${RNFS.DocumentDirectoryPath}/${invoicePaymentFileName}`;
+
+                const transactionFilePath =
+                    Platform.OS === 'android'
+                        ? `${RNFS.DownloadDirectoryPath}/${transactionFileName}`
+                        : `${RNFS.DocumentDirectoryPath}/${transactionFileName}`;
+
+                if (invoicePaymentCsv) {
+                    await RNFS.writeFile(
+                        invoicePaymentFilePath,
+                        invoicePaymentCsv,
+                        'utf8'
+                    );
+                }
+
+                if (transactionCsv) {
+                    await RNFS.writeFile(
+                        transactionFilePath,
+                        transactionCsv,
+                        'utf8'
+                    );
+                }
+
+                Alert.alert(
+                    localeString('views.ActivityToCsv.csvDownloadSuccess'),
+                    localeString('views.ActivityToCsv.csvDownloaded')
+                );
+                closeModal();
+            } catch (err) {
+                console.error(
+                    localeString('views.ActivityToCsv.csvDownloadFailed'),
+                    err
+                );
+            } finally {
+                setIsLoading(false);
+            }
+        }, 0);
     };
 
     return (
@@ -259,31 +282,37 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                         elevation: 5
                     }}
                 >
-                    <TextInput
-                        placeholder={localeString(
-                            'views.ActivityToCsv.textInputPlaceholder'
-                        )}
-                        value={customFileName}
-                        onChangeText={setCustomFileName}
-                    />
-                    <View style={styles.buttonContainer}>
-                        <Button
-                            title={localeString(
-                                'views.ActivityToCsv.downloadButton'
-                            )}
-                            onPress={downloadCsv}
-                            buttonStyle={{
-                                marginBottom: 10
-                            }}
-                        />
-                        <Button
-                            title={localeString(
-                                'views.ActivityToCsv.closeButton'
-                            )}
-                            onPress={closeAndClearInput}
-                            secondary
-                        />
-                    </View>
+                    {isLoading ? (
+                        <LoadingIndicator />
+                    ) : (
+                        <>
+                            <TextInput
+                                placeholder={localeString(
+                                    'views.ActivityToCsv.textInputPlaceholder'
+                                )}
+                                value={customFileName}
+                                onChangeText={setCustomFileName}
+                            />
+                            <View style={styles.buttonContainer}>
+                                <Button
+                                    title={localeString(
+                                        'views.ActivityToCsv.downloadButton'
+                                    )}
+                                    onPress={downloadCsv}
+                                    buttonStyle={{
+                                        marginBottom: 10
+                                    }}
+                                />
+                                <Button
+                                    title={localeString(
+                                        'views.ActivityToCsv.closeButton'
+                                    )}
+                                    onPress={closeAndClearInput}
+                                    secondary
+                                />
+                            </View>
+                        </>
+                    )}
                 </View>
             </View>
         </Modal>
