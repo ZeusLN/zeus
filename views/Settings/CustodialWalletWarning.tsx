@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Modal } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { CheckBox } from 'react-native-elements';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -12,6 +13,14 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
 
+interface CustodialWalletWarningState {
+    checkbox1: boolean;
+    checkbox2: boolean;
+    checkbox3: boolean;
+    checkbox4: boolean;
+    showModal: boolean;
+}
+
 interface CustodialWalletWarningProps {
     SettingsStore: SettingsStore;
     navigation: StackNavigationProp<any, any>;
@@ -21,10 +30,37 @@ interface CustodialWalletWarningProps {
 @observer
 export default class CustodialWalletWarning extends React.Component<
     CustodialWalletWarningProps,
-    {}
+    CustodialWalletWarningState
 > {
+    constructor(props: CustodialWalletWarningProps) {
+        super(props);
+        this.state = {
+            checkbox1: false,
+            checkbox2: false,
+            checkbox3: false,
+            checkbox4: false,
+            showModal: false
+        };
+    }
+
+    areAllChecked = () => {
+        const { checkbox1, checkbox2, checkbox3, checkbox4 } = this.state;
+        return checkbox1 && checkbox2 && checkbox3 && checkbox4;
+    };
+
+    toggleModal = () => {
+        this.setState({
+            showModal: !this.state.showModal,
+            checkbox1: false,
+            checkbox2: false,
+            checkbox3: false,
+            checkbox4: false
+        });
+    };
+
     render() {
         const { SettingsStore, navigation } = this.props;
+        const { showModal } = this.state;
         const nodes = SettingsStore?.settings?.nodes || [];
 
         // check if user has embedded node wallet configured already
@@ -111,10 +147,7 @@ export default class CustodialWalletWarning extends React.Component<
                     <View style={{ bottom: 10 }}>
                         <View
                             style={{
-                                paddingTop: 30,
-                                paddingBottom: 15,
-                                paddingLeft: 10,
-                                paddingRight: 10
+                                paddingBottom: 10
                             }}
                         >
                             <Button
@@ -135,6 +168,86 @@ export default class CustodialWalletWarning extends React.Component<
                         </View>
                     </View>
                 )}
+
+                <Modal
+                    visible={showModal}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={this.toggleModal}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View
+                            style={{
+                                ...styles.modalContainer,
+                                backgroundColor: themeColor('background')
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Please confirm the following to dismiss the
+                                warning:
+                            </Text>
+                            {[
+                                "I know that I don't have custody of the funds in this wallet without the 12 or 24 word seed phrase",
+                                'I know that an LNDHub account password is not the same as a seed phrase',
+                                'I either set up this connection myself or I trust the person who set it up',
+                                "I'm not just lying to get this over with"
+                            ].map((title, index) => (
+                                <CheckBox
+                                    key={index}
+                                    title={title}
+                                    checked={this.state[`checkbox${index + 1}`]}
+                                    onPress={() =>
+                                        this.setState((prevState) => ({
+                                            [`checkbox${index + 1}`]:
+                                                !prevState[
+                                                    `checkbox${index + 1}`
+                                                ]
+                                        }))
+                                    }
+                                    containerStyle={{
+                                        backgroundColor: 'transparent',
+                                        borderWidth: 0
+                                    }}
+                                    textStyle={{
+                                        ...styles.text,
+                                        color: themeColor('text')
+                                    }}
+                                />
+                            ))}
+                            <View style={styles.modalButtonContainer}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.CustodialWalletWarning.dismissWarning'
+                                    )}
+                                    disabled={!this.areAllChecked()}
+                                    onPress={() => {
+                                        this.toggleModal();
+                                    }}
+                                    containerStyle={{ paddingBottom: 20 }}
+                                />
+                                <Button
+                                    title="CLOSE"
+                                    onPress={() => {
+                                        this.toggleModal();
+                                    }}
+                                    secondary
+                                />
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+                <Button
+                    title={localeString(
+                        'views.Settings.CustodialWalletWarning.dismissWarning'
+                    )}
+                    onPress={this.toggleModal}
+                    secondary
+                />
             </Screen>
         );
     }
@@ -142,7 +255,29 @@ export default class CustodialWalletWarning extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontSize: 18,
+        fontSize: 16,
+        fontWeight: 'normal',
         paddingTop: 12
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    modalContainer: {
+        width: '86%',
+        padding: 22,
+        borderRadius: 10,
+        alignItems: 'center'
+    },
+    modalButtonContainer: {
+        marginTop: 20,
+        width: '100%',
+        alignItems: 'center'
+    },
+    closeButton: {
+        marginTop: 10,
+        color: 'blue'
     }
 });
